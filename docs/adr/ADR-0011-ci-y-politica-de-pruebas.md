@@ -222,3 +222,50 @@ sostiene el aplicativo.
 - `update-agent-skills.yml` corre los lunes y no toca código del aplicativo.
 - La política de qué merece una ADR y qué no la fija
   [docs/adr/README.md](README.md); la CI no la comprueba.
+
+## Adenda — 2026-09-15
+
+**La guarda del paso de Codecov miraba lo que no era.** Esta ADR dio por hecho
+que quien se queda sin `CODECOV_TOKEN` es un PR desde un fork, y la escribió
+así:
+
+```yaml
+if: ${{ !github.event.pull_request.head.repo.fork }}
+```
+
+El primer día del repositorio publicado quedó claro que no basta. Dependabot
+abrió seis PR y **los seis fallaron**, todos en el mismo sitio:
+
+```
+Token length: 0
+error -- Upload queued for processing failed: {"message":"Token required because branch is protected"}
+```
+
+Un PR de Dependabot **no es un fork**: es una rama de este mismo repositorio.
+Pero GitHub tampoco le pasa los secretos del repositorio, porque Dependabot
+tiene su propio almacén de secretos. Así que la guarda no lo reconocía, el paso
+corría con el token vacío y `fail_ci_if_error: true` —que sigue siendo lo
+correcto— tumbaba el PR. En `main` no se veía, porque ahí el secreto sí llega y
+el commit inicial pasó en verde.
+
+La condición se sustituye por la que expresa el motivo real, que cubre los dos
+casos y cualquier tercero que venga:
+
+```yaml
+if: ${{ !github.event.pull_request.head.repo.fork && secrets.CODECOV_TOKEN != '' }}
+```
+
+Lo que **no** cambia: `fail_ci_if_error: true` se queda. La lección de la que
+salió —un primer intento en verde con el token vacío y sin informe— sigue
+valiendo. Lo que estaba mal no era avisar del fallo: era correr el paso cuando
+no había nada con lo que subir.
+
+Se apunta también lo que enseña de esta ADR: la consecuencia decía «en un PR
+desde un fork el paso se salta entero, así que un fork no tiene estado de
+cobertura». Sigue siendo cierto, y ahora vale igual para Dependabot.
+
+Y una nota de mantenimiento: el cuerpo de esta ADR cita la guarda como
+`ci.yml:169-171`. Esa cita ya no apunta a donde apuntaba, y **no se corrige en
+el texto** porque la ADR está publicada. La forma de citarla que no caduca es
+por el nombre del paso: **«Upload coverage reports to Codecov»**, en
+`.github/workflows/ci.yml`.

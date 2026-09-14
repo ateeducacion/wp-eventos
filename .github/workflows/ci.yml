@@ -166,9 +166,12 @@ jobs:
         run: make coverage
 
       - name: Upload coverage reports to Codecov
-        # El secreto no viaja a un PR desde un fork, y con fail_ci_if_error el
-        # paso tumbaría el PR por no tener token, no por la cobertura.
-        if: ${{ !github.event.pull_request.head.repo.fork }}
+        # Se salta cuando no hay token, que es la condición de verdad. Un PR
+        # desde un fork no lo recibe, pero tampoco lo recibe un PR de
+        # Dependabot —que no es un fork, sino una rama de este repositorio, con
+        # su propio almacén de secretos—. Con fail_ci_if_error el paso tumbaría
+        # el PR por no tener token, no por la cobertura.
+        if: ${{ !github.event.pull_request.head.repo.fork && secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

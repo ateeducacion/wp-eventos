@@ -441,3 +441,16 @@ opción, que es única en la base de datos, y caduca pronto para que una petici�
 muerta no deje el evento bloqueado. Se escribe también la carrera que **no** se
 hace —contar en PHP y escribir—, para que no vuelva por parecer la natural. Y se
 apunta el techo: las elecciones de un mismo evento se serializan.
+
+**Adenda a la ADR-0011, 2026-09-15: la guarda de Codecov.** Primera adenda del
+repositorio, y llega el día después de publicarlo, que es cuando se ve lo que
+no se había visto. La
+[ADR-0011](ADR-0011-ci-y-politica-de-pruebas.md) saltaba el paso de Codecov
+cuando el PR venía de un fork, porque ahí no llega el secreto. Dependabot abrió
+seis PR y los seis fallaron: **un PR de Dependabot no es un fork** —es una rama
+de este repositorio— pero tampoco recibe los secretos del repositorio, porque
+Dependabot tiene su propio almacén. La condición pasa a mirar el motivo de
+verdad, que es si hay token, y así cubre los dos casos. `fail_ci_if_error` se
+queda: lo que estaba mal no era avisar del fallo, sino correr el paso sin nada
+que subir. **Va como adenda y no reescribiendo el texto**: desde el primer
+commit, los identificadores y el texto están congelados.
