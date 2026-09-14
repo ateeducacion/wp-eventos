@@ -113,6 +113,11 @@ jobs:
     # Ver el comentario de EVT_RUNNER en el job `lint`.
     runs-on: ${{ vars.EVT_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    # El secreto se copia aquí porque el contexto `secrets` no se puede leer
+    # desde un `if`, y `env` sí. Vacío cuando no llega —un fork, un PR de
+    # Dependabot—, que es justo lo que la condición del paso comprueba.
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v7
 
@@ -166,12 +171,20 @@ jobs:
         run: make coverage
 
       - name: Upload coverage reports to Codecov
-        # El secreto no viaja a un PR desde un fork, y con fail_ci_if_error el
-        # paso tumbaría el PR por no tener token, no por la cobertura.
-        if: ${{ !github.event.pull_request.head.repo.fork }}
+        # Se salta cuando no hay token, que es la condición de verdad. Un PR
+        # desde un fork no lo recibe, pero tampoco lo recibe un PR de
+        # Dependabot —que no es un fork, sino una rama de este repositorio, con
+        # su propio almacén de secretos—. Con fail_ci_if_error el paso tumbaría
+        # el PR por no tener token, no por la cobertura.
+        #
+        # Se mira `env` y no `secrets`: el contexto `secrets` **no está
+        # disponible en un `if`** —GitHub rechaza el fichero entero, no el
+        # paso—, así que el secreto se copia a una variable de entorno del job
+        # y la condición lee esa.
+        if: ${{ !github.event.pull_request.head.repo.fork && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           slug: ateeducacion/wp-eventos
           files: ./coverage.xml
           # Si la subida falla, que se vea: sin esto el primer intento pasa en
