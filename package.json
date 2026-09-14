@@ -3,7 +3,7 @@
     "@erseco/code-snippets-client": "0.1.6",
     "@wordpress/env": "^11.14.0",
     "bootstrap": "5.3.8",
-    "bootstrap-icons": "1.11.3",
+    "bootstrap-icons": "1.13.1",
     "playwright": "^1.49.0",
     "sweetalert2": "11.26.25"
   },
