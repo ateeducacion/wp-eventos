@@ -1,0 +1,18 @@
+{
+  "devDependencies": {
+    "@erseco/code-snippets-client": "0.1.6",
+    "@wordpress/env": "^11.14.0",
+    "bootstrap": "5.3.3",
+    "bootstrap-icons": "1.11.3",
+    "playwright": "^1.49.0",
+    "sweetalert2": "11.26.25"
+  },
+  "scripts": {
+    "wp-env": "wp-env",
+    "test:browser": "node tests/browser/confirmacion.js",
+    "snippets": "wp-code-snippets --env-file .env"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  }
+}

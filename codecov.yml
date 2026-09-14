@@ -1,0 +1,35 @@
+# Codecov: el porcentaje y su variación, en un comentario de cada PR.
+# El total del proyecto es informativo; lo que tumba un PR es el parche.
+#
+# El suelo del parche arranca en el 10 % a propósito. El repositorio está
+# vacío: las primeras entregas son andamiaje (CPT, taxonomías, arranque) que
+# se prueba a base de pocos tests grandes, y un listón alto ahí solo enseña a
+# escribir tests de adorno para pasar el guardia. Se sube cuando el aplicativo
+# tenga sus pantallas y la cobertura del proyecto se estabilice —en el
+# repositorio de referencia el salto fue de 10 % a 90 % con la casa ya en
+# orden—, y se sube en un PR propio que diga por qué.
+# Recetas de docs.codecov.com/docs/common-recipe-list.
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+  hide_project_coverage: false
+
+# `App::boot()` corre en el arranque, antes de que PHPUnit empiece a medir, y
+# es idempotente: ningún test puede volver a ejecutar su cuerpo. Medirlo solo
+# añade ruido. Lo que hace sí está probado, en `test-load-order.php`:
+# que el arranque dejó enganchado lo que sostiene el aplicativo.
+ignore:
+  - "src/Evt/App.php"
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        target: 10%
+        informational: false

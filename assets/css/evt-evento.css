@@ -1,0 +1,416 @@
+/*
+ * evt-evento.css — la hoja de la página pública de un evento.
+ *
+ * Mobile-first y sin una sola media query que decida una rejilla: las rejillas
+ * son `repeat(auto-fit, minmax(min(Npx,100%),1fr))`, que mide el CONTENEDOR y
+ * no la ventana. Ya se corrigió una vez —las `col-*` de Bootstrap creían que
+ * cabían cuatro columnas dentro de un contenedor de 645 px— y no se vuelve
+ * atrás.
+ *
+ * TODO el aspecto sale de las propiedades personalizadas de abajo. El CSS a
+ * medida de un evento cambia UN token y no pelea con la especificidad de nadie:
+ *
+ *     :root { --evt-fondo: #7b1e3a; --evt-radio: 0; }
+ *
+ * Los valores que el evento elige en el panel de apariencia los escribe
+ * `EventLayout::tokens()` en un `<style>` propio, después de esta hoja y antes
+ * del CSS a medida. Aquí solo están los valores por defecto.
+ */
+
+:root {
+	/* Los colores de la cabecera, que es lo que cada evento elige. */
+	--evt-fondo: #0a3d62;
+	--evt-texto: #ffffff;
+
+	/* Las dos tipografías. Vacías = las del navegador. */
+	--evt-tipo-titulo: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif;
+	--evt-tipo-texto: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif;
+
+	/* La página. */
+	--evt-papel: #ffffff;
+	--evt-tinta: #1d2b36;
+	--evt-suave: #f5f9fb;
+	--evt-borde: rgba(0, 0, 0, 0.12);
+	--evt-enlace: #1155aa;
+	--evt-foco: #b8860b;
+	--evt-sombra: 0 2px 12px rgba(0, 0, 0, 0.14);
+
+	/* Medidas. El gutter se define AQUÍ y en ningún otro sitio. */
+	--evt-ancho: 1080px;
+	--evt-espacio: clamp(1rem, 4vw, 2rem);
+	--evt-radio: 0.4rem;
+
+	/* Forma de las fotos de personas: 0 cuadrada, 50% redonda. */
+	--evt-forma: 0;
+
+	/* Tipografía fluida: un solo sitio donde se decide cada escalón. */
+	--evt-t-titulo: clamp(1.9rem, 1.2rem + 3.2vw, 2.9rem);
+	--evt-t-lema: clamp(1.05rem, 0.95rem + 0.6vw, 1.35rem);
+	--evt-t-h2: clamp(1.4rem, 1.2rem + 1vw, 1.9rem);
+	--evt-t-texto: clamp(1rem, 0.97rem + 0.15vw, 1.08rem);
+	--evt-t-menudo: 0.9rem;
+}
+
+/* ─── el documento ────────────────────────────────────────────────────── */
+
+.evt-ev {
+	margin: 0;
+	background: var(--evt-papel);
+	color: var(--evt-tinta);
+	font-family: var(--evt-tipo-texto);
+	font-size: var(--evt-t-texto);
+	line-height: 1.65;
+	/* A 320 px no se desborda nada: ni una palabra larga ni una URL pegada. */
+	overflow-wrap: break-word;
+}
+
+.evt-ev * {
+	box-sizing: border-box;
+}
+
+.evt-ev img,
+.evt-ev svg,
+.evt-ev video,
+.evt-ev iframe {
+	max-width: 100%;
+	height: auto;
+}
+
+.evt-ev h1,
+.evt-ev h2,
+.evt-ev h3,
+.evt-ev h4 {
+	font-family: var(--evt-tipo-titulo);
+	line-height: 1.25;
+}
+
+.evt-ev a {
+	color: var(--evt-enlace);
+}
+
+/* Foco visible, siempre y sobre cualquier fondo: dos anillos, uno claro y
+   otro oscuro, para que se vea igual sobre la cabecera de color y sobre el
+   papel blanco. */
+.evt-ev :focus-visible {
+	outline: 3px solid var(--evt-foco);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* El único sitio donde se define el gutter lateral. */
+.evt-ev__ancho {
+	width: 100%;
+	max-width: var(--evt-ancho);
+	margin-inline: auto;
+	padding-inline: var(--evt-espacio);
+}
+
+/* Saltar al contenido: fuera de la vista hasta que recibe el foco. */
+.evt-ev__saltar {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	z-index: 100;
+	padding: 0.6rem 1rem;
+	background: var(--evt-papel);
+	color: var(--evt-tinta);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.evt-ev__saltar:focus {
+	left: 0;
+}
+
+/* Lo que solo lee quien usa un lector de pantalla. La define WordPress y la
+   define Bootstrap con otro nombre; aquí también, para que la hoja aguante
+   sola si no llega ninguna de las dos. */
+.evt-ev .screen-reader-text {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* ─── navegación entre secciones ──────────────────────────────────────── */
+
+.evt-ev__nav {
+	background: var(--evt-papel);
+	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__nav ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin: 0;
+	padding-block: 0.5rem;
+	list-style: none;
+}
+
+.evt-ev__nav a {
+	display: block;
+	padding: 0.5rem 0.9rem;
+	border-radius: var(--evt-radio);
+	color: var(--evt-tinta);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.evt-ev__nav a:hover {
+	background: var(--evt-suave);
+}
+
+.evt-ev__nav [aria-current="page"] {
+	background: var(--evt-fondo);
+	color: var(--evt-texto);
+}
+
+/* ─── portada de la cabecera ──────────────────────────────────────────── */
+
+.evt-ev__portada {
+	position: relative;
+	background: var(--evt-fondo);
+	color: var(--evt-texto);
+	padding-block: calc(var(--evt-espacio) * 1.6) calc(var(--evt-espacio) * 2.4);
+}
+
+.evt-ev__portada a {
+	color: inherit;
+}
+
+.evt-ev__logo {
+	max-height: 90px;
+	width: auto;
+	margin-bottom: 1rem;
+}
+
+.evt-ev__madre {
+	margin: 0 0 0.4rem;
+	font-size: var(--evt-t-menudo);
+	opacity: 0.9;
+}
+
+.evt-ev__titulo {
+	margin: 0;
+	font-size: var(--evt-t-titulo);
+	font-weight: 500;
+}
+
+.evt-ev__lema {
+	margin: 0.6rem 0 0;
+	font-family: var(--evt-tipo-titulo);
+	font-size: var(--evt-t-lema);
+	font-weight: 400;
+}
+
+.evt-ev__linea {
+	width: 90px;
+	height: 2px;
+	margin: 1.2rem 0;
+	background: currentColor;
+	opacity: 0.7;
+}
+
+.evt-ev__datos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.9rem;
+	margin: 0;
+}
+
+.evt-ev__acciones {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem;
+	margin: 1.1rem 0 0;
+}
+
+.evt-ev__estado {
+	padding: 0.15rem 0.7rem;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	font-size: var(--evt-t-menudo);
+}
+
+.evt-ev__hashtag {
+	font-size: var(--evt-t-menudo);
+	opacity: 0.9;
+}
+
+/* Los dos van con `.evt-ev__acciones` delante para poder con
+   `.evt-ev__portada a{color:inherit}`, que es más específica que una clase
+   sola y dejaba el botón de inscripción en blanco sobre blanco. */
+.evt-ev__acciones .evt-ev__boton,
+.evt-ev__acciones .evt-ev__gestion {
+	display: inline-block;
+	padding: 0.45rem 1rem;
+	border: 1px solid currentColor;
+	border-radius: var(--evt-radio);
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.evt-ev__acciones .evt-ev__boton {
+	background: var(--evt-texto);
+	color: var(--evt-fondo);
+}
+
+/* La silueta del pie de la cabecera, pegada al borde de abajo. */
+.evt-ev__separador {
+	position: absolute;
+	left: 0;
+	bottom: -1px;
+	display: block;
+	width: 100%;
+	height: 60px;
+}
+
+/* ─── el cuerpo: los bloques ──────────────────────────────────────────────
+ *
+ * Cada bloque con nombre —`contenido`, `cartel`, `secciones` y los que
+ * registren las pantallas que vengan— sale envuelto en
+ * `<section class="evt-ev__bloque evt-ev__bloque--NOMBRE">`. Lo que viste a
+ * cada uno se escribe aquí y SOLO con los tokens de arriba: ni un color, ni un
+ * espacio ni un radio a fuego, para que el CSS a medida de un evento cambie un
+ * token y no tenga que pelearse con la especificidad de nadie.
+ */
+
+.evt-ev__main {
+	display: block;
+	padding-block: calc(var(--evt-espacio) * 1.4);
+}
+
+.evt-ev__bloque + .evt-ev__bloque {
+	margin-top: calc(var(--evt-espacio) * 1.4);
+}
+
+.evt-ev__bloque > h2 {
+	font-size: var(--evt-t-h2);
+	margin-top: 0;
+}
+
+/* Toda rejilla de la página, con o sin Bootstrap: mide el contenedor. */
+.evt-ev__rejilla {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+	gap: var(--evt-espacio);
+}
+
+.evt-ev__tarjeta {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+	background: var(--evt-suave);
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__tarjeta img {
+	display: block;
+	width: 100%;
+}
+
+.evt-ev__tarjeta h3 {
+	margin: 0;
+	padding: 0.9rem 1rem 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	text-align: center;
+}
+
+.evt-ev__tarjeta h3 a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.evt-ev__tarjeta p {
+	margin: 0;
+	padding: 0.6rem 1rem 1.2rem;
+}
+
+/* Las fotos de personas toman la forma que elija el evento. */
+.evt-ev__retrato {
+	border-radius: var(--evt-forma);
+	aspect-ratio: 1;
+	object-fit: cover;
+}
+
+.evt-ev__cartel {
+	margin: 0 auto;
+	max-width: min(520px, 100%);
+	text-align: center;
+}
+
+.evt-ev__cartel img {
+	border-radius: var(--evt-radio);
+	box-shadow: var(--evt-sombra);
+}
+
+.evt-ev__cartel figcaption {
+	margin-top: 0.5rem;
+	font-size: var(--evt-t-menudo);
+	opacity: 0.8;
+}
+
+/* Una tabla nunca empuja la página: se desplaza ella sola. */
+.evt-ev__bloque table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	border-collapse: collapse;
+}
+
+/* ─── el pie institucional ────────────────────────────────────────────── */
+
+.evt-ev__pie {
+	background: var(--evt-suave);
+	border-top: 1px solid var(--evt-borde);
+	padding-block: var(--evt-espacio);
+	font-size: var(--evt-t-menudo);
+}
+
+.evt-ev__pie > div {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 0.5rem 1.5rem;
+}
+
+.evt-ev__pie a {
+	color: var(--evt-tinta);
+	text-decoration: none;
+}
+
+.evt-ev__pie a:hover,
+.evt-ev__pie a:focus-visible {
+	text-decoration: underline;
+}
+
+.evt-ev__pie-enlaces {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1.2rem;
+}
+
+/* ─── impresión ───────────────────────────────────────────────────────── */
+
+@media print {
+	.evt-ev__nav,
+	.evt-ev__saltar,
+	.evt-ev__acciones {
+		display: none;
+	}
+
+	.evt-ev__portada {
+		color: #000;
+		background: none;
+	}
+}

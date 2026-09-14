@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    :root{
+      --pri:#1b4f8a; --pri-c:#e3ecf7; --sup:#fff; --sup2:#f4f6f9; --fondo:#f7f8fa;
+      --tx:#1c2024; --tx2:#5a6672; --linea:#e4e7eb; --pie:#05395c;
+      --ok:#1f6b45; --ok-c:#e4f0e8; --esp:#8a5a12; --esp-c:#f9efe0;
+      --mal:#a8342c; --mal-c:#fae9e7;
+      --adm-f:#fdf6dd; --adm-b:#a67c00; --adm-t:#4a3a05; --adm-m:#6b5200;
+      --e1:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+      --e2:0 2px 4px rgba(16,24,40,.05),0 4px 12px rgba(16,24,40,.09);
+      --r:12px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--fondo);color:var(--tx);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.5}
+    a{color:var(--pri);text-decoration:none} a:hover{color:#123a68;text-decoration:underline}
+    .cab{background:var(--sup);border-bottom:1px solid var(--linea)}
+    .cab-in{max-width:1128px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px}
+    .escudo{width:38px;height:38px;border-radius:7px;background:var(--pri);color:#fff;display:flex;
+      align-items:center;justify-content:center;font-weight:700;font-size:13px;letter-spacing:-.03em;flex:none}
+    .marca small{display:block;font-size:11.5px;color:var(--tx2);line-height:1.3;max-width:250px}
+    .marca-app{font-size:18px;font-weight:700;color:var(--pri);padding-left:16px;margin-left:16px;
+      border-left:1px solid var(--linea)}
+    .yo{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .yo-ava{width:36px;height:36px;border-radius:50%;background:var(--pri-c);color:var(--pri);
+      display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+    .yo-n{font-size:14px;font-weight:600} .yo-r{font-size:12.5px;color:var(--tx2)}
+    .yo-a{font-size:12.5px;font-weight:600;color:var(--pri)}
+    .yo-a::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+      background:currentColor;margin-right:6px;vertical-align:1px}
+    .tabs{background:var(--sup);border-bottom:1px solid var(--linea)}
+    .tabs-f{max-width:1128px;margin:0 auto;padding:0 24px;display:flex;gap:4px}
+    .tab{padding:13px 14px;font-size:14.5px;color:var(--tx2);border-bottom:2px solid transparent;
+      display:flex;align-items:center;gap:7px}
+    .tab-on{color:var(--pri);font-weight:700;border-bottom-color:var(--pri)}
+    .tab-n{background:var(--sup2);color:var(--tx2);border-radius:999px;padding:1px 7px;
+      font-size:12px;font-weight:700}
+    .tab-on .tab-n{background:var(--pri-c);color:var(--pri)}
+    .env{max-width:1128px;margin:0 auto;padding:24px}
+    .h1{font-size:27px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+    .sub{color:var(--tx2);font-size:14.5px;margin:0}
+    .tarjeta{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);box-shadow:var(--e1)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;
+      padding:0 18px;border:0;border-radius:999px;background:var(--pri-c);color:var(--pri);
+      font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+    .btn-pri{background:var(--pri);color:#fff}
+    .btn-mal{background:var(--mal-c);color:var(--mal)}
+    .btn-s{min-height:36px;padding:0 14px;font-size:14px}
+    .ico{width:36px;height:36px;min-height:36px;padding:0;border-radius:10px;background:var(--pri-c);
+      color:var(--pri);display:inline-flex;align-items:center;justify-content:center;border:0;cursor:pointer}
+    .ico-mal{background:var(--mal-c);color:var(--mal)}
+    .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;
+      font-size:12.5px;font-weight:700;white-space:nowrap}
+    .p-ok{background:var(--ok-c);color:var(--ok)} .p-esp{background:var(--esp-c);color:var(--esp)}
+    .p-inf{background:var(--pri-c);color:var(--pri)} .p-mal{background:var(--mal-c);color:var(--mal)}
+    .p-gris{background:var(--sup2);color:var(--tx2)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:12px 14px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--linea)}
+    thead th{background:var(--sup2);font-size:13px;font-weight:700;white-space:nowrap}
+    tbody tr:last-child td{border-bottom:0}
+    .slug{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--tx2)}
+    .adm{background:var(--adm-f);border:1px solid var(--adm-b);border-radius:var(--r);padding:16px 18px;color:var(--adm-t)}
+    .adm-m{display:inline-flex;align-items:center;gap:6px;background:var(--adm-m);color:#fff;
+      border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;letter-spacing:.02em}
+    .campo{display:block;font-size:13.5px;font-weight:600;margin:0 0 6px}
+    .ayuda{font-size:12.5px;color:var(--tx2);margin:6px 0 0}
+    .inp{width:100%;min-height:44px;padding:0 14px;border:1px solid var(--linea);border-radius:10px;
+      background:var(--sup);font:inherit;color:var(--tx)}
+    .sw{width:44px;height:26px;border-radius:999px;background:var(--linea);position:relative;flex:none}
+    .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+      background:#fff;box-shadow:var(--e1)}
+    .sw-on{background:var(--ok)} .sw-on::after{left:21px}
+
+    .migas{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx2)}
+    .dias{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+    .d-i{display:flex;flex-direction:column;gap:1px;border:1px solid var(--linea);border-radius:11px;
+      padding:9px 15px;background:var(--sup);cursor:pointer;min-width:128px}
+    .d-on{border-color:var(--pri);background:var(--pri-c)}
+    .d-n{font-size:13.5px;font-weight:700} .d-on .d-n{color:var(--pri)}
+    .d-s{font-size:12px;color:var(--tx2)}
+    .d-mas{border-style:dashed;color:var(--pri);justify-content:center;align-items:center;
+      flex-direction:row;gap:7px;font-size:13.5px;font-weight:600}
+    .dia{background:var(--sup);border:1px solid var(--linea);border-radius:var(--r);
+      box-shadow:var(--e1);overflow:hidden;margin-bottom:16px}
+    .dia-c{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--linea)}
+    .dia-n{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+    .dia-s{font-size:12.5px;color:var(--tx2);margin-top:1px}
+    .hora{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;white-space:nowrap}
+    .hora span{display:block;font-weight:400;font-size:12.5px;color:var(--tx2)}
+    .rapida{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end;padding:15px 18px;
+      background:var(--sup2);border-top:1px solid var(--linea)}
+    .rapida .inp,.rapida .sel{min-height:38px;font-size:14px}
+    .r-c{display:flex;flex-direction:column;gap:4px}
+    .r-c label{font-size:12px;font-weight:600;color:var(--tx2)}
+    .sel{padding:0 11px;border:1px solid var(--linea);border-radius:9px;background:var(--sup);
+      font:inherit;color:var(--tx)}
+  </style>
+</helmet>
+<div>
+  <div class="cab"><div class="cab-in">
+    <div class="escudo">OE</div>
+    <div class="marca"><small>Organización de ejemplo<br>Dirección de Educación</small></div>
+    <div class="marca-app">Eventos</div>
+    <div class="yo"><div class="yo-ava">MR</div>
+      <div><div class="yo-n">Marta Ruiz</div><div class="yo-r">Organización</div>
+        <div class="yo-a">Área de Innovación</div></div></div>
+  </div></div>
+  <div class="tabs"><div class="tabs-f">
+    <div class="tab">Páginas <span class="tab-n">6</span></div>
+    <div class="tab">Ponentes <span class="tab-n">8</span></div>
+    <div class="tab tab-on">Programa <span class="tab-n">14</span></div>
+    <div class="tab">Talleres <span class="tab-n">6</span></div>
+    <div class="tab">Participantes <span class="tab-n">182</span></div>
+    <div class="tab">Ajustes</div>
+  </div></div>
+  <p class="migas" style="max-width:1128px;margin:18px auto 0;padding:0 24px"><a href="#">Mis eventos</a> <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg> III Jornadas de Tecnología Educativa</p>
+  <div class="env">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin:14px 0 18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px"><h1 class="h1">Programa</h1>
+        <p class="sub">Lo que se publica es este dato: cambie una hora aquí y cambia en la web. No hay que tocar la página.</p></div>
+      <button class="btn btn-s"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar de otro evento</button>
+      <button class="btn btn-pri btn-s"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Añadir actividad</button>
+    </div>
+
+    <div class="dias">
+      <div class="d-i d-on"><div class="d-n">Todos</div><div class="d-s">14 actividades</div></div>
+      <div class="d-i"><div class="d-n">Mié 28 oct</div><div class="d-s">Sede Central · 6</div></div>
+      <div class="d-i"><div class="d-n">Jue 29 oct</div><div class="d-s">Sede Central · 5</div></div>
+      <div class="d-i"><div class="d-n">Vie 30 oct</div><div class="d-s">Sede Sur · 3</div></div>
+      <div class="d-i d-mas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Añadir día</div>
+    </div>
+
+      <div class="dia">
+        <div class="dia-c">
+          <div><div class="dia-n">Miércoles 28 de octubre</div><div class="dia-s">Centro de formación Sur · 6 actividades</div></div>
+          <button class="btn btn-s" style="margin-left:auto;min-height:34px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Añadir aquí</button>
+        </div>
+        <table><thead><tr><th style="width:92px">Hora</th><th style="width:128px">Tipo</th>
+          <th>Actividad</th><th>Sala</th><th style="width:80px;text-align:center">Visible</th><th style="width:120px"></th></tr></thead>
+        <tbody>
+        <tr>
+          <td class="hora">09:00<span>09:30</span></td>
+          <td><span class="pill p-inf">Inauguración</span></td>
+          <td><div style="font-weight:600">Acto de apertura</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Dirección General de Ordenación</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Salón de actos</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">09:30<span>10:30</span></td>
+          <td><span class="pill p-inf">Conferencia</span></td>
+          <td><div style="font-weight:600">El aula que viene: enseñar con y sobre la tecnología</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Luis Gil Santana</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Salón de actos</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">10:30<span>11:00</span></td>
+          <td><span class="pill p-gris">Pausa</span></td>
+          <td><div style="font-weight:600">Café</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Hall</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">11:00<span>12:30</span></td>
+          <td><span class="pill p-ok">Taller</span></td>
+          <td><div style="font-weight:600">Pensamiento computacional sin ordenador</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Ana Pérez Molina</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Aula 12</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">11:00<span>12:30</span></td>
+          <td><span class="pill p-ok">Taller</span></td>
+          <td><div style="font-weight:600">Robótica en Infantil</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Marta Cabrera Déniz</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Taller de tecnología</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr style="background:var(--esp-c)">
+          <td class="hora">11:00<span>12:30</span></td>
+          <td><span class="pill p-ok">Taller</span></td>
+          <td><div style="font-weight:600">Evaluar con rúbricas digitales</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Javier Ramos Ortega</div><div style="display:flex;align-items:center;gap:7px;margin-top:5px;font-size:12.5px;color:var(--esp);font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>Se solapa con «Robótica en Infantil» en la misma sala</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Taller de tecnología</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        </tbody></table>
+      </div>
+      <div class="dia">
+        <div class="dia-c">
+          <div><div class="dia-n">Jueves 29 de octubre</div><div class="dia-s">Centro de formación Sur · 5 actividades</div></div>
+          <button class="btn btn-s" style="margin-left:auto;min-height:34px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Añadir aquí</button>
+        </div>
+        <table><thead><tr><th style="width:92px">Hora</th><th style="width:128px">Tipo</th>
+          <th>Actividad</th><th>Sala</th><th style="width:80px;text-align:center">Visible</th><th style="width:120px"></th></tr></thead>
+        <tbody>
+        <tr>
+          <td class="hora">09:30<span>11:00</span></td>
+          <td><span class="pill p-inf">Mesa redonda</span></td>
+          <td><div style="font-weight:600">La tecnología que sí usamos en el centro</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Cuatro centros de la zona</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Salón de actos</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">11:30<span>13:00</span></td>
+          <td><span class="pill p-ok">Taller</span></td>
+          <td><div style="font-weight:600">Radio escolar: del guion al pódcast</div><div style="font-size:12.5px;color:var(--tx2);margin-top:2px">Sara Hernández Vega</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Aula de música</td>
+          <td style="text-align:center"><div class="sw sw-on"></div></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        <tr>
+          <td class="hora">13:00<span>13:30</span></td>
+          <td><span class="pill p-inf">Clausura</span></td>
+          <td><div style="font-weight:600">Cierre y entrega de certificados</div></td>
+          <td style="font-size:13.5px;color:var(--tx2);white-space:nowrap">Salón de actos</td>
+          <td style="text-align:center"><span class="pill p-esp">Borrador</span></td>
+          <td><div style="display:flex;gap:6px"><button class="ico" title="Editar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button class="ico" title="Duplicar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><button class="ico ico-mal" title="Papelera"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div></td>
+        </tr>
+        </tbody></table>
+      </div>
+
+    <div class="tarjeta" style="overflow:hidden">
+      <div class="rapida">
+        <div class="r-c" style="min-width:86px"><label>Empieza</label><input class="inp" value="16:00"></div>
+        <div class="r-c" style="min-width:86px"><label>Termina</label><input class="inp" value="17:00"></div>
+        <div class="r-c"><label>Tipo</label><select class="sel"><option>Conferencia</option></select></div>
+        <div class="r-c" style="flex:1;min-width:220px"><label>Título</label><input class="inp" placeholder="Qué es esta actividad…"></div>
+        <div class="r-c"><label>Sala</label><input class="inp" value="Salón de actos" style="min-width:150px"></div>
+        <button class="btn btn-pri btn-s">Añadir</button>
+      </div>
+    </div>
+    <p class="ayuda" style="margin-top:12px">Los días salen de las actividades y de las fechas del evento: no hay que declararlos en otro sitio.
+      La hora de fin se propone desde la de inicio, y el día y la sala se heredan de la última.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

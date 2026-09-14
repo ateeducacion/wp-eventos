@@ -1,0 +1,956 @@
+/* Aplicativo de eventos: armazón (cabecera, pestañas, pie) y las piezas que
+   comparten sus pantallas —tarjetas, tablas, formularios y el panel de
+   apariencia—. Una sola hoja: el aplicativo tiene cinco pantallas y partirla
+   en tres solo añade un sitio más donde mirar.
+
+   Se monta encima de Bootstrap 5, que en el subsitio de eventos lo carga un
+   snippet aparte. Donde Bootstrap no está, `body.evt-sin-bootstrap` pinta lo
+   imprescindible por su cuenta: botones, avisos y pastillas. */
+
+:root {
+  /* Un azul sobrio como primario: es el color con el que se dibujó el diseño
+     (.design/) y el que usan las capturas de la documentación. Quien despliegue
+     el aplicativo lo cambia aquí, o desde su propio CSS. */
+  --evt-pri: #1b4f8a;
+  --evt-pri-cont: #e3ecf7;
+  --evt-sup: #fff;
+  --evt-sup-2: #f4f6f9;
+  --evt-fondo: #f7f8fa;
+  --evt-texto: #1c2024;
+  --evt-texto-2: #5a6672;
+  --evt-pie-fondo: #05395c;
+  --evt-linea: #e4e7eb;
+  --evt-ok: #1f6b45;
+  --evt-ok-cont: #e4f0e8;
+  --evt-esp: #8a5a12;
+  --evt-esp-cont: #f9efe0;
+  --evt-mal: #a8342c;
+  --evt-mal-cont: #fae9e7;
+  --evt-inf: #1b4f8a;
+  --evt-inf-cont: #e3ecf7;
+  --evt-e1: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .07);
+  --evt-e2: 0 2px 4px rgba(16, 24, 40, .05), 0 4px 12px rgba(16, 24, 40, .09);
+  --evt-e3: 0 4px 8px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .14);
+  --evt-r: 12px;
+  /* El recuadro amarillo de «Solo administración». Los contrastes están
+     medidos, no supuestos (fórmula de luminancia relativa de la WCAG 2.1):
+
+       texto  #4a3a05 sobre fondo #fdf6dd → 10,22:1   (pide 4,5:1) ✔
+       marca  #ffffff sobre fondo #6b5200 →  7,42:1   (pide 4,5:1) ✔
+       borde  #a67c00 sobre la caja       →  3,52:1   (pide 3:1)   ✔
+       borde  #a67c00 sobre la página     →  3,59:1   (pide 3:1)   ✔
+
+     El amarillo no es el único indicador: la etiqueta «Solo administración»
+     va escrita dentro del recuadro. */
+  --evt-adm-fondo: #fdf6dd;
+  --evt-adm-borde: #a67c00;
+  --evt-adm-texto: #4a3a05;
+  --evt-adm-marca: #6b5200;
+  --evt-ancho: 1128px;
+}
+
+/* --- página plana -------------------------------------------------------- */
+
+/* La cabecera y el pie los pintamos nosotros, así que los del tema sobran, y
+   también el título de la entrada: lo repite nuestro `h1`. Solo en nuestras
+   páginas (`body.evt-app`, que pone Shell) y por selector, no por
+   `!important`: si un tema no trae estos elementos, no pasa nada.
+
+   Algunos temas los llaman `#main-header` y `#main-footer`, y con su maquetador son
+   plantillas propias (`.et-l--header`, `.et-l--footer`). Los temas de bloques
+   los sacan en `wp-block-template-part`, que NO cuelga de `body`, así que aquí
+   no vale el combinador `>`. */
+body.evt-app #main-header,
+body.evt-app #top-header,
+body.evt-app .et-l--header,
+body.evt-app .et-l--footer,
+body.evt-app #main-footer,
+body.evt-app .site-header,
+body.evt-app .site-footer,
+body.evt-app header.wp-block-template-part,
+body.evt-app footer.wp-block-template-part,
+body.evt-app .et_pb_title_container,
+body.evt-app .entry-title,
+body.evt-app .page-title,
+body.evt-app .wp-block-post-title {
+  display: none;
+}
+
+body.evt-app { background: var(--evt-fondo); overflow-x: clip; }
+body.evt-app #page-container { padding-top: 0; }
+
+/* Hay temas que reservan la columna de la barra lateral aunque no haya ninguna
+   (`et_right_sidebar`): eso descentra el contenido, y con él la cabecera y las
+   pestañas de ancho completo, que se calculan contra su contenedor. */
+body.evt-app #main-content .container,
+body.evt-app #main-content #content-area,
+body.evt-app #main-content #left-area {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+body.evt-app #main-content #sidebar { display: none; }
+/* Y la raya vertical que la separaba, que algunos temas dibujan con un pseudoelemento
+   absoluto y sobrevive a esconder la columna. */
+body.evt-app #main-content .container::before { display: none; }
+
+/* El tema mete el contenido en una columna estrecha con su propio relleno. La
+   cabecera, las pestañas y el pie son de ancho completo, así que rompen esa
+   columna y vuelven a centrarse por dentro (`--evt-ancho`).
+
+   `left: 50%` + `translateX(-50%)` y no márgenes negativos: los márgenes se
+   calculan contra el contenedor y fallan si el tema no lo tiene centrado. */
+body.evt-app .evt-top,
+body.evt-app .evt-tabs,
+body.evt-app .evt-hoja,
+body.evt-app .evt-pie {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  max-width: 100vw;
+}
+
+/* El pie, abajo del todo: `sticky` con `top: 100vh` lo deja pegado al borde
+   inferior mientras sobre sitio, y baja con la página cuando el contenido es
+   largo. Con `sticky`, `left` ya no desplaza —marca el umbral de pegado—, así
+   que el ancho completo lo dan los márgenes negativos de siempre. */
+body.evt-app .evt-pie {
+  position: sticky;
+  top: 100vh;
+  left: auto;
+  transform: none;
+  width: auto;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+}
+
+/* Sin la cabecera del tema, su hueco superior sobra. */
+body.evt-app .wp-site-blocks,
+body.evt-app .wp-site-blocks > main,
+body.evt-app main.wp-block-group,
+body.evt-app .site-main,
+body.evt-app #content,
+body.evt-app #main-content,
+body.evt-app .wp-site-blocks > *,
+body.evt-app .entry-content,
+body.evt-app .wp-block-post-content {
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+body.evt-app .et_pb_row,
+body.evt-app .et_pb_section,
+body.evt-app .site-content,
+body.evt-app #et-main-area {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* El único `!important` del armazón, y con motivo: los temas de bloques le
+   escriben al `<main>` un `style="margin-top: …"` en la propia plantilla, y
+   contra un estilo en línea no gana ningún selector. */
+body.evt-app main { margin-top: 0 !important; margin-bottom: 0 !important; }
+body.evt-app main > .wp-block-group { padding-top: 0 !important; padding-bottom: 0 !important; }
+
+/* Una tabla más ancha que la pantalla —aunque vaya en su caja con scroll—
+   hacía crecer el viewport en el móvil. Va en <html>: en <body> no basta. */
+html:has(> body.evt-app) { overflow-x: clip; }
+
+/* --- cabecera ------------------------------------------------------------ */
+
+/* El transform de ancho completo crea una capa: el menú de la persona debe
+   quedar por encima de las pestañas y del contenido, que también la tienen. */
+.evt-top { z-index: 1; background: var(--evt-sup); border-bottom: 1px solid var(--evt-linea); }
+
+.evt-top-fila {
+  max-width: var(--evt-ancho);
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* El escudo institucional. Va incrustado y no enlazado: el artefacto de
+   producción es un Code Snippet, no hay carpeta desde la que servir un
+   fichero. */
+.evt-logo {
+  display: block;
+  width: 104px;
+  height: 60px;
+  flex: 0 0 auto;
+  background: url(data:image/png;base64,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) center / contain no-repeat;
+}
+
+.evt-marca { line-height: 1.3; }
+.evt-marca small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--evt-texto-2);
+  max-width: 30ch;
+  border-left: 1px solid var(--evt-linea);
+  padding-left: 14px;
+}
+
+.evt-marca-app {
+  margin-left: 12px;
+  padding-left: 14px;
+  border-left: 1px solid var(--evt-linea);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--evt-pri);
+  text-decoration: none;
+}
+
+/* --- quién eres y con qué área ------------------------------------------- */
+
+/* Tres líneas —nombre, rol y área— y no una píldora: en un aplicativo acotado
+   por área, saber con cuál se está mirando es media respuesta a «¿por qué no
+   veo este evento?». El menú es un `details` nativo: sin guion, y se cierra
+   solo al navegar. */
+.evt-yo { margin-left: auto; position: relative; }
+.evt-yo > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 4px 6px;
+}
+.evt-yo > summary::-webkit-details-marker { display: none; }
+.evt-yo > summary:hover, .evt-yo[open] > summary { background: var(--evt-sup-2); }
+.evt-yo-ava {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--evt-sup-2);
+  color: var(--evt-texto);
+}
+.evt-yo-txt { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
+.evt-yo-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--evt-texto); }
+.evt-yo-r { font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-yo-a { font-weight: 600; color: var(--evt-pri); }
+.evt-yo-a::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
+.evt-yo-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 12rem;
+  padding: 6px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: 12px;
+  box-shadow: var(--evt-e2);
+  z-index: 30;
+  display: grid;
+}
+.evt-yo-menu a { padding: 10px 12px; border-radius: 8px; color: var(--evt-texto); text-decoration: none; font-size: 14px; }
+.evt-yo-menu a:hover { background: var(--evt-sup-2); color: var(--evt-pri); }
+
+/* --- pestañas ------------------------------------------------------------ */
+
+.evt-tabs { background: var(--evt-sup); border-bottom: 1px solid var(--evt-linea); }
+
+.evt-tabs-fila {
+  max-width: var(--evt-ancho);
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.evt-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 14.5px;
+  color: var(--evt-texto-2);
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.evt-tab:hover { color: var(--evt-pri); text-decoration: none; }
+.evt-tab-on { color: var(--evt-pri); font-weight: 700; border-bottom-color: var(--evt-pri); }
+
+.evt-tab-n {
+  padding: .05em .5em;
+  border-radius: 999px;
+  background: var(--evt-esp-cont);
+  color: var(--evt-esp);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* --- lienzo -------------------------------------------------------------- */
+
+.evt-hoja { max-width: var(--evt-ancho); margin: 0 auto; padding: 28px 24px 44px; }
+
+/* Al romper la columna del tema, la hoja pasa a ser de ancho completo: el
+   centrado del contenido lo hace este relleno lateral. */
+body.evt-app .evt-hoja {
+  padding-left: max(24px, calc(50% - var(--evt-ancho) / 2));
+  padding-right: max(24px, calc(50% - var(--evt-ancho) / 2));
+}
+
+.evt-hoja .evt-tabs { margin: 0 0 28px; }
+
+.evt-h1 { font-size: 27px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 4px; }
+.evt-sub { margin: 0 0 22px; color: var(--evt-texto-2); font-size: 14.5px; max-width: 70ch; }
+
+/* La fila del título con su acción principal a la derecha. */
+.evt-h1-fila { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 0 0 4px; }
+.evt-h1-fila .evt-h1 { margin: 0; }
+.evt-h1-fila .evt-acciones { margin-left: auto; }
+
+.evt-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Dentro de una tabla, los botones de acción no se parten en varias líneas:
+   la columna es estrecha y dos iconos apilados se leen como dos filas. Que la
+   tabla se desplace en horizontal es lo que ya hace `.evt-tabla-caja`. */
+.evt-tabla td .evt-acciones { flex-wrap: nowrap; }
+.evt-tabla td .evt-acciones > * { flex: 0 0 auto; }
+
+/* --- pie ----------------------------------------------------------------- */
+
+.evt-pie { position: sticky; top: 100vh; background: var(--evt-pie-fondo); color: #fff; }
+
+.evt-pie div {
+  max-width: var(--evt-ancho);
+  margin: 0 auto;
+  padding: 18px 24px;
+  display: flex;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.evt-pie-quien { display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: baseline; }
+.evt-pie-ate { color: rgba(255, 255, 255, .72); }
+.evt-pie-enlaces { display: flex; gap: 18px; flex-wrap: wrap; }
+.evt-pie a { color: #fff; text-decoration: underline; }
+.evt-pie a:hover { color: #fff; text-decoration: none; }
+
+/* --- la portada ---------------------------------------------------------- */
+
+.evt-inicio-accesos { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.evt-inicio-acceso {
+  display: block;
+  padding: 20px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+  box-shadow: var(--evt-e1);
+  text-decoration: none;
+  color: var(--evt-texto);
+}
+.evt-inicio-acceso:hover { border-color: var(--evt-pri); color: var(--evt-pri); text-decoration: none; }
+.evt-inicio-titulo { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.evt-inicio-texto { display: block; margin-top: 4px; font-size: 13.5px; color: var(--evt-texto-2); }
+
+/* --- fichas de recuento -------------------------------------------------- */
+
+.evt-cifras { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin: 0 0 22px; padding: 0; list-style: none; }
+.evt-cifra {
+  padding: 18px 20px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+  box-shadow: var(--evt-e1);
+}
+.evt-cifra strong { display: block; font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.evt-cifra span { display: block; margin-top: 2px; font-size: 13.5px; color: var(--evt-texto-2); }
+
+/* --- tarjetas y bloques de formulario ------------------------------------ */
+
+.evt-tarjeta {
+  padding: 20px;
+  margin: 0 0 16px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+  box-shadow: var(--evt-e1);
+}
+.evt-tarjeta > legend,
+.evt-tarjeta > h2 { float: none; width: auto; margin: 0 0 14px; padding: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.evt-tarjeta > p { margin: -8px 0 14px; font-size: 13.5px; color: var(--evt-texto-2); max-width: 68ch; }
+
+.evt-form { max-width: 100%; }
+.evt-form label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px; }
+.evt-form input[type="text"],
+.evt-form input[type="url"],
+.evt-form input[type="date"],
+.evt-form input[type="number"],
+.evt-form input[type="search"],
+.evt-form select,
+.evt-form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--evt-texto);
+  background: var(--evt-sup);
+  border: 1px solid #c3cad2;
+  border-radius: 8px;
+}
+.evt-form textarea { min-height: 8rem; line-height: 1.5; }
+.evt-form input::placeholder, .evt-form textarea::placeholder { color: #767676; font-style: italic; opacity: 1; }
+.evt-form small, .evt-form .evt-nota { display: block; margin-top: 4px; font-size: 12.5px; color: var(--evt-texto-2); max-width: 60ch; }
+
+/* Los campos cortos caben en una línea y se apilan solos cuando no. */
+.evt-form-fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+.evt-form-fila > * { min-width: 0; }
+.evt-form-campo { margin-bottom: 14px; }
+
+/* Casillas en columna, con el rótulo pegado a su casilla. En vertical y no en
+   línea porque los nombres de los ponentes son largos y desiguales: en línea,
+   el nombre de uno acaba al lado de la casilla del siguiente. */
+.evt-check { display: flex; gap: 8px; align-items: baseline; margin: 0 0 6px; }
+
+/* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
+   tabla de la sede anterior y parece su pie, no el encabezado del bloque
+   siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */
+.evt-tarjeta .evt-tabla-caja + h3 { margin-top: 22px; }
+
+/* La fila del filtro de participantes: los dos formularios —el de buscar y el
+   de exportar— alineados por abajo, para que «Filtrar» y «Exportar a CSV»
+   queden a la misma altura. Con `evt-form-fila` el segundo se subía arriba,
+   porque es más corto. */
+/* --- la botonera ---------------------------------------------------------
+   Botones de icono: cuadrados, con el icono centrado y el texto solo para
+   lectores de pantalla. El bocadillo lo pone Bootstrap si está; si no, queda
+   el `title` del navegador. El tamaño no baja de 36 px porque es el objetivo
+   táctil mínimo que se puede acertar con el dedo. */
+.evt-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
+  line-height: 0;
+}
+.evt-icono svg { display: block; }
+
+/* --- el interruptor de publicación --------------------------------------
+   La casilla de verdad sigue ahí, invisible pero enfocable: el `:focus-visible`
+   se dibuja sobre la pista, así que con teclado se ve dónde está. El rótulo va
+   escrito al lado —«Publicado» / «Borrador»— porque el color y la posición no
+   pueden ser el único indicador. */
+.evt-switch { display: inline-flex; align-items: center; gap: 8px; }
+.evt-switch-caja { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; }
+.evt-switch-input { position: absolute; opacity: 0; width: 36px; height: 20px; margin: 0; cursor: pointer; }
+.evt-switch-pista {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--evt-linea);
+  transition: background .15s ease-in-out;
+}
+.evt-switch-pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--evt-e1);
+  transition: transform .15s ease-in-out;
+}
+.evt-switch-input:checked + .evt-switch-pista { background: var(--evt-pri); }
+.evt-switch-input:checked + .evt-switch-pista::after { transform: translateX(16px); }
+.evt-switch-input:focus-visible + .evt-switch-pista { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
+.evt-switch-input:disabled + .evt-switch-pista { opacity: .6; }
+.evt-switch-txt { font-size: 13px; color: var(--evt-texto-2); }
+
+@media ( prefers-reduced-motion: reduce ) {
+  .evt-switch-pista,
+  .evt-switch-pista::after { transition: none; }
+}
+
+.evt-filtro { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-bottom: 22px; }
+.evt-filtro > form { flex: 1 1 22rem; margin: 0; }
+.evt-filtro > form:last-child { flex: 0 0 auto; }
+.evt-check input { margin: 0; }
+
+/* Un evento cerrado se abre entero, pero sin poder guardar. El `fieldset`
+   `disabled` ya apaga los controles; esto lo hace visible, porque un botón
+   apagado sin señal se lee como una avería. El borde no es el único
+   indicador: arriba hay un aviso escrito que dice por qué. */
+.evt-solo-lectura { margin: 0; padding: 0; border: 0; opacity: .72; }
+.evt-solo-lectura button,
+.evt-solo-lectura input,
+.evt-solo-lectura select,
+.evt-solo-lectura textarea { cursor: not-allowed; }
+
+/* Un dato que no se puede cambiar: se enseña como lo que es, un hecho, y no
+   como un campo apagado. Un `<select disabled>` invita a intentarlo y no
+   explica por qué no se puede; el candado y el `<small>` de al lado sí.
+   El tipo de una sección es el caso (ADR-0019). */
+.evt-rotulo { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
+.evt-fijo {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	min-height: 44px;
+	padding: 0 14px;
+	border: 1px solid var(--evt-linea);
+	border-radius: 10px;
+	background: var(--evt-sup-2);
+	color: var(--evt-texto);
+}
+.evt-fijo svg { color: var(--evt-texto-2); flex: none; }
+
+.evt-error { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--evt-mal); }
+
+/* Un anillo de foco visible en todo lo que se puede pulsar o escribir: sin él
+   no se sabe dónde está el cursor al navegar con el tabulador. */
+.evt-app a:focus-visible,
+.evt-app button:focus-visible,
+.evt-app input:focus-visible,
+.evt-app select:focus-visible,
+.evt-app textarea:focus-visible,
+.evt-app summary:focus-visible {
+  outline: 2px solid var(--evt-pri);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- tablas -------------------------------------------------------------- */
+
+.evt-tabla-caja { overflow-x: auto; background: var(--evt-sup); border: 1px solid var(--evt-linea); border-radius: var(--evt-r); box-shadow: var(--evt-e1); }
+.evt-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.evt-tabla th, .evt-tabla td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--evt-linea); }
+.evt-tabla thead th { background: var(--evt-sup-2); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.evt-tabla tbody tr:last-child td { border-bottom: 0; }
+.evt-tabla .evt-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.evt-tabla .evt-slug { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-tabla .evt-acciones { justify-content: flex-start; }
+.evt-tabla [hidden] { display: none !important; }
+
+/* En pantalla estrecha la tabla pasa a tarjetas: cada fila, un bloque, y cada
+   celda rotulada con el `data-rotulo` que pinta la pantalla. */
+@media (max-width: 720px) {
+  .evt-tabla-caja { border: 0; background: none; box-shadow: none; }
+  .evt-tabla, .evt-tabla tbody, .evt-tabla tr, .evt-tabla td { display: block; width: auto; }
+  .evt-tabla thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .evt-tabla tr {
+    margin-bottom: 12px;
+    padding: 6px 14px;
+    background: var(--evt-sup);
+    border: 1px solid var(--evt-linea);
+    border-radius: var(--evt-r);
+    box-shadow: var(--evt-e1);
+  }
+  .evt-tabla td { border-bottom: 0; padding: 6px 0; display: flex; gap: 12px; }
+  .evt-tabla td::before {
+    content: attr(data-rotulo);
+    flex: 0 0 8rem;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--evt-texto-2);
+  }
+  .evt-tabla td:empty { display: none; }
+}
+
+/* --- pastillas de estado ------------------------------------------------- */
+
+.evt-state {
+  display: inline-block;
+  padding: .3em .72em;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--evt-sup-2);
+  color: var(--evt-texto-2);
+}
+.evt-state-abierto { background: var(--evt-ok-cont); color: var(--evt-ok); }
+.evt-state-proximo { background: var(--evt-inf-cont); color: var(--evt-inf); }
+.evt-state-finalizado { background: var(--evt-sup-2); color: var(--evt-texto-2); }
+.evt-state-draft { background: var(--evt-esp-cont); color: var(--evt-esp); }
+.evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
+
+/* --- avisos -------------------------------------------------------------- */
+
+.evt-aviso { margin: 0 0 18px; }
+.evt-sin-bootstrap .evt-aviso {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--evt-inf-cont);
+  color: #143a63;
+  font-size: 14px;
+}
+.evt-sin-bootstrap .evt-aviso-warning { background: var(--evt-esp-cont); color: #5f3f0e; }
+.evt-sin-bootstrap .evt-aviso-success { background: var(--evt-ok-cont); color: #175034; }
+.evt-sin-bootstrap .evt-aviso-danger { background: var(--evt-mal-cont); color: #7d2620; }
+
+.evt-vacio { padding: 40px 20px; text-align: center; color: var(--evt-texto-2); font-size: 14.5px; }
+
+/* --- botones ------------------------------------------------------------- */
+
+/* El aspecto lo ponemos nosotros solo donde no hay Bootstrap; donde lo hay,
+   `Assets::button_class()` ya trae sus clases y el botón es el del sitio. */
+.evt-sin-bootstrap .evt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--evt-pri-cont);
+  color: var(--evt-pri);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.evt-sin-bootstrap .evt-btn-primary { background: var(--evt-pri); color: #fff; }
+.evt-sin-bootstrap .evt-btn:hover { text-decoration: none; filter: brightness(.95); }
+
+/* Con Bootstrap: solo sus variables, y solo bajo `body.evt-app`. Fuera de
+   estas páginas Bootstrap sigue siendo el de siempre. `.btn-primary` no lee
+   `--bs-primary` —la 5.3 le escribe el color en `--bs-btn-bg`—, así que hay
+   que tocar las del botón. */
+body.evt-app {
+  --bs-primary: #1b4f8a;
+  --bs-primary-rgb: 27, 79, 138;
+  --bs-link-color: #1b4f8a;
+  --bs-link-hover-color: #123a68;
+}
+body.evt-app .btn { border-radius: 999px; min-height: 44px; font-weight: 600; }
+body.evt-app .btn-primary {
+  --bs-btn-bg: var(--evt-pri);
+  --bs-btn-border-color: var(--evt-pri);
+  --bs-btn-hover-bg: #163f6f;
+  --bs-btn-hover-border-color: #163f6f;
+  --bs-btn-active-bg: #163f6f;
+  --bs-btn-active-border-color: #163f6f;
+}
+body.evt-app .btn-light {
+  --bs-btn-bg: var(--evt-pri-cont);
+  --bs-btn-border-color: var(--evt-pri-cont);
+  --bs-btn-color: var(--evt-pri);
+  --bs-btn-hover-bg: #d6e4f3;
+  --bs-btn-hover-border-color: #d6e4f3;
+  --bs-btn-hover-color: var(--evt-pri);
+}
+/* La acción destructiva se distingue sin gritar: tonal, no roja rellena. */
+body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border-color: var(--evt-mal-cont); --bs-btn-color: var(--evt-mal); }
+.evt-sin-bootstrap .evt-btn-borrar { background: var(--evt-mal-cont); color: var(--evt-mal); }
+
+/* El diálogo de confirmación (SweetAlert2) se pinta al final del `body`, así
+   que sus clases —`evt-app`, `evt-sin-bootstrap`— siguen valiendo y los botones
+   del diálogo son exactamente los mismos que los de la página. Con
+   `buttonsStyling: false` la librería no pone los suyos, y aquí solo queda
+   devolverles la separación que ella daba y darle al cuadro nuestro radio.
+   Si SweetAlert2 no llega, estas reglas no aplican a nada. */
+.swal2-popup { border-radius: var(--evt-r); font: inherit; }
+.swal2-popup .swal2-title { font-size: 20px; color: var(--evt-texto); }
+.swal2-popup .swal2-html-container { font-size: 15px; color: var(--evt-texto-2); }
+.swal2-popup .swal2-actions { gap: 8px; }
+
+/* Los botoncitos de una fila de tabla: subir, bajar, editar, borrar. */
+.evt-mini { min-height: 36px; padding: 0 12px; font-size: 13px; }
+.evt-mini-icono { width: 36px; min-height: 36px; padding: 0; flex: 0 0 auto; }
+
+/* --- panel de apariencia y su vista previa ------------------------------- */
+
+/* Un `color` nativo al lado de su campo hexadecimal: los dos escriben el mismo
+   dato y el guion los mantiene a la par. Quien tenga el guion bloqueado sigue
+   pudiendo teclear el hexadecimal, que es el que se guarda. */
+.evt-color { display: flex; align-items: center; gap: 8px; }
+.evt-color input[type="color"] { width: 44px; height: 44px; padding: 2px; border: 1px solid #c3cad2; border-radius: 8px; background: var(--evt-sup); cursor: pointer; flex: 0 0 auto; }
+.evt-color input[type="text"] { max-width: 10rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* La vista previa de la cabecera del evento, con lo elegido y en la misma
+   pantalla: es la única forma de decidir un color sin publicar y mirar. */
+.evt-preview {
+  margin: 0 0 16px;
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+  overflow: hidden;
+  box-shadow: var(--evt-e1);
+}
+.evt-preview-cabecera {
+  position: relative;
+  padding: 36px 24px 60px;
+  text-align: center;
+  background: var(--evt-pri);
+  color: #fff;
+}
+.evt-preview-logo { max-height: 72px; width: auto; margin: 0 auto 14px; display: block; }
+.evt-preview-titulo { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.2; }
+.evt-preview-lema { margin: 8px 0 0; font-size: 17px; opacity: .9; }
+/* El color lo toma la silueta con `currentColor`: es el de la hoja que hay
+   debajo, igual que en la página del evento. */
+.evt-preview-sep { position: absolute; left: 0; right: 0; bottom: -1px; height: 44px; color: var(--evt-sup); }
+.evt-preview-sep > span { display: block; height: 100%; }
+.evt-preview-sep > span[hidden] { display: none; }
+.evt-preview-sep svg { display: block; width: 100%; height: 100%; }
+.evt-preview-cuerpo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  background: var(--evt-sup);
+  font-size: 14.5px;
+  color: var(--evt-texto-2);
+}
+.evt-preview-cuerpo > span { flex: none; }
+
+/* La forma de las imágenes de personas, la que elige el evento. */
+.evt-shape-square img, img.evt-shape-square { border-radius: 8px; }
+.evt-shape-circle img, img.evt-shape-circle { border-radius: 50%; aspect-ratio: 1; object-fit: cover; }
+
+/* Las seis familias de `EventMetaKeys::fonts()`. Se declaran como clase y no
+   en línea para que la salida siga escapada y sin `style` que revisar. La
+   familia se carga fuera de aquí; si no llega, la pila de respaldo funciona. */
+.evt-font-open-sans { font-family: "Open Sans", system-ui, sans-serif; }
+.evt-font-lato { font-family: Lato, system-ui, sans-serif; }
+.evt-font-montserrat { font-family: Montserrat, system-ui, sans-serif; }
+.evt-font-source-serif { font-family: "Source Serif 4", Georgia, serif; }
+.evt-font-merriweather { font-family: Merriweather, Georgia, serif; }
+
+/* --- las tres imágenes del evento ---------------------------------------- */
+
+/* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
+   adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
+   está es lo que llena la biblioteca de duplicados. La ficha de arriba enseña
+   lo que hay puesto —miniatura, nombre de fichero y dimensiones—, porque el
+   campo de fichero no enseñaba nada y no se sabía qué había. */
+.evt-media {
+  padding: 14px;
+  border: 1px solid var(--evt-linea);
+  border-radius: 10px;
+  background: var(--evt-sup);
+}
+.evt-media + .evt-media { margin-top: 12px; }
+.evt-media-rotulo { display: block; margin-bottom: 10px; font-weight: 600; }
+.evt-media-ficha { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.evt-media-miniatura {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  border: 1px solid var(--evt-linea);
+  border-radius: 8px;
+  background: var(--evt-sup-2);
+}
+.evt-media-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.evt-media-datos strong { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.evt-media-datos small { font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.evt-media-vacia { margin: 0 0 10px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-media-botones { margin: 0 0 4px; }
+.evt-media noscript > label { display: block; margin-top: 8px; }
+/* `hidden` lo pone y lo quita el guion, y `display:flex` le gana al valor por
+   defecto del navegador: hay que decirlo aquí. */
+.evt-media [hidden] { display: none; }
+
+/* --- lo que solo ve la administración ------------------------------------ */
+
+/* Una convención del aplicativo, no un adorno de una pantalla: todo lo que
+   solo ve quien administra se pinta aquí dentro y se reconoce sin leerlo. Lo
+   pinta `Shell::admin_box()`, en un sitio, para que cualquier pantalla futura
+   lo reutilice. Los contrastes de estos cuatro colores están calculados arriba,
+   en la paleta. */
+.evt-solo-admin {
+  margin: 0 0 18px;
+  padding: 16px 18px 4px;
+  background: var(--evt-adm-fondo);
+  border: 1px solid var(--evt-adm-borde);
+  border-left-width: 5px;
+  border-radius: var(--evt-r);
+  color: var(--evt-adm-texto);
+}
+.evt-solo-admin + .evt-solo-admin { margin-top: 18px; }
+
+/* La etiqueta en texto, para quien no distingue el color. */
+.evt-solo-admin-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--evt-adm-marca);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.evt-solo-admin-marca svg { flex: 0 0 auto; }
+
+.evt-solo-admin-titulo { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--evt-adm-texto); }
+.evt-solo-admin-porque { margin: 0 0 14px; font-size: 13.5px; max-width: 70ch; color: var(--evt-adm-texto); }
+
+/* Dentro del recuadro el texto sigue siendo el oscuro sobre amarillo: si un
+   rótulo o una ayuda heredara el gris de fuera, se caería del 4,5:1.
+
+   La etiqueta «Solo administración» queda FUERA de esta regla: es un `<p>`, así
+   que `.evt-solo-admin p` (0,2,0) le ganaba a `.evt-solo-admin-marca` (0,1,0) y
+   la pintaba del marrón oscuro sobre su propio fondo marrón — medido en el
+   navegador: 1,49:1, ilegible. Con el `:not()` no la toca y se queda con su
+   blanco sobre `--evt-adm-marca`, que son 7,42:1. */
+.evt-solo-admin label,
+.evt-solo-admin small,
+.evt-solo-admin p:not(.evt-solo-admin-marca),
+.evt-solo-admin legend { color: var(--evt-adm-texto); }
+.evt-solo-admin .evt-form-campo:last-child,
+.evt-solo-admin .evt-code:last-child { margin-bottom: 14px; }
+
+/* --- los campos de código ------------------------------------------------ */
+
+/* El editor es el de WordPress (`wp_enqueue_code_editor()`, CodeMirror). Aquí
+   solo se le da tamaño y se le pone el mismo marco que a los demás campos:
+   su tema de color lo trae la hoja `code-editor` del núcleo. Sin él —quien
+   desactiva el resaltado en su perfil— queda el `<textarea>`, y estas mismas
+   reglas lo dejan legible. */
+.evt-code { margin-bottom: 16px; }
+.evt-code > label { display: block; margin-bottom: 4px; font-weight: 600; }
+
+.evt-code-area {
+  width: 100%;
+  min-height: 12rem;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  tab-size: 2;
+  color: var(--evt-texto);
+  background: var(--evt-sup);
+  border: 1px solid #c3cad2;
+  border-radius: 8px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+/* CodeMirror sustituye el textarea por su propio bloque: el marco y la altura
+   se los pone aquí, que si no sale una tira de tres líneas sin borde. */
+.evt-code .CodeMirror {
+  height: 20rem;
+  border: 1px solid #c3cad2;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.evt-code .CodeMirror-focused { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
+/* La barra de errores de CSSLint y JSHint, debajo del editor. */
+.evt-code .CodeMirror-lint-markers { width: 16px; }
+.evt-code-plano { display: block; margin-top: 6px; font-size: 12.5px; font-style: italic; }
+
+/* --- el aviso de que lo está editando otra persona ------------------------ */
+
+/* El aviso del bloqueo (`EditLock::render()`) sale de dos maneras y tiene que
+   verse igual en las dos: el servidor lo pinta como `<dialog open>` —sin
+   JavaScript, que es justo el motivo de haber elegido un `<dialog>` y no
+   SweetAlert2— y el Heartbeat lo abre con `showModal()` cuando el bloqueo se
+   pierde sin recargar. Sin estilo, un `<dialog open>` es un bloque
+   `position: absolute` sin capa ni sombreado, y la pantalla se le pinta encima:
+   el aviso está en el HTML y no se lee. */
+.evt-dialogo[open] {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 24px 26px;
+  overflow: auto;
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+  background: var(--evt-sup);
+  color: var(--evt-texto);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+}
+
+/* El sombreado del fondo lo pone el navegador en `::backdrop`, pero solo
+   cuando el diálogo se abrió con `showModal()`. El que llega abierto desde el
+   servidor no lo tiene, así que se le pinta a mano; `:not(:modal)` es
+   exactamente ese caso y evita oscurecer dos veces. */
+.evt-dialogo[open]:not(:modal) {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .28), 0 0 0 100vmax rgba(15, 23, 42, .55);
+}
+.evt-dialogo::backdrop { background: rgba(15, 23, 42, .55); }
+.evt-dialogo h2 { margin: 0 0 14px; font-size: 20px; line-height: 1.3; }
+.evt-dialogo p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.55; }
+.evt-dialogo .evt-accion { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+
+/* --- móvil --------------------------------------------------------------- */
+
+/* A 400 px de ancho tiene que seguir siendo usable: es la pantalla desde la
+   que se corrige una sección a mitad de una jornada. */
+@media (max-width: 640px) {
+  .evt-top-fila { padding: 11px 16px; gap: 10px; flex-wrap: nowrap; }
+  .evt-marca { display: none; }
+  .evt-marca-app { margin-left: 0; padding-left: 0; border-left: 0; font-size: 16px; }
+  .evt-yo-txt { display: none; }
+  .evt-yo > summary { padding: 0; }
+  .evt-yo-ava { width: 40px; height: 40px; }
+  .evt-logo { width: 78px; height: 45px; }
+  .evt-tabs-fila { padding: 0 16px; }
+  body.evt-app .evt-hoja { padding: 18px 16px 40px; }
+  .evt-h1 { font-size: 23px; }
+  .evt-h1-fila .evt-acciones { margin-left: 0; width: 100%; }
+  .evt-tarjeta { padding: 16px; }
+  .evt-preview-cabecera { padding: 24px 16px; }
+  .evt-preview-titulo { font-size: 23px; }
+  .evt-solo-admin { padding: 14px 14px 2px; }
+  .evt-code .CodeMirror { height: 15rem; }
+  /* En el móvil el pie no cabe: la pantalla es para el trabajo, y lo legal
+     está a un toque en cualquier otra página del sitio. */
+  .evt-pie { display: none; }
+}
+
+/* Etiqueta solo para lectores de pantalla. La trae WordPress y casi todos los
+   temas, pero el aplicativo no puede darla por hecha: sin ella los rótulos de
+   las casillas salen escritos en pantalla. */
+.evt-app .screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Quien pide menos movimiento, menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .evt-app * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

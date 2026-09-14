@@ -1,0 +1,108 @@
+{
+  "artboards": [
+    {
+      "file": "Crear.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 900,
+      "h": 1180,
+      "title": "1 · Crear el evento"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 990,
+      "y": 0,
+      "w": 1260,
+      "h": 1180,
+      "title": "2 · El taller del evento"
+    },
+    {
+      "file": "NuevaPagina.dc.html",
+      "x": 2340,
+      "y": 0,
+      "w": 940,
+      "h": 1180,
+      "title": "3 · Añadir una página"
+    },
+    {
+      "file": "Ponentes.dc.html",
+      "x": 0,
+      "y": 1360,
+      "w": 1260,
+      "h": 1000,
+      "title": "4 · Ponentes"
+    },
+    {
+      "file": "Programa.dc.html",
+      "x": 1400,
+      "y": 1360,
+      "w": 1260,
+      "h": 1560,
+      "title": "5 · Programa"
+    },
+    {
+      "file": "Talleres.dc.html",
+      "x": 2800,
+      "y": 1360,
+      "w": 1260,
+      "h": 1000,
+      "title": "6 · Talleres y aforo"
+    },
+    {
+      "file": "Participantes.dc.html",
+      "x": 0,
+      "y": 3060,
+      "w": 1260,
+      "h": 1000,
+      "title": "7 · Participantes"
+    },
+    {
+      "file": "Consentimiento.dc.html",
+      "x": 1400,
+      "y": 3060,
+      "w": 1000,
+      "h": 1180,
+      "title": "8 · El consentimiento, simplificado"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-recorrido",
+      "x": 0,
+      "y": -230,
+      "w": 640,
+      "text": "Rediseño de la gestión de eventos\n\nMismos colores, botones y tipografía del aplicativo: azul del escudo #1b4f8a, botones píldora de 44 px, radio 12, y el amarillo de «Solo administración» con sus contrastes medidos.\n\nEl recorrido va de izquierda a derecha y de arriba abajo: crear, gestionar, y cada bloque del evento."
+    },
+    {
+      "id": "nota-tipo",
+      "x": 2340,
+      "y": -230,
+      "w": 620,
+      "text": "El tipo se elige al crear y NO se cambia después.\n\nCada tipo trae sus elementos preparados: una página de programa y una de contacto no llevan lo mismo dentro. Si te equivocas, la mandas a la papelera y creas la buena: todavía no habrás escrito nada."
+    },
+    {
+      "id": "nota-taller",
+      "x": 990,
+      "y": 1215,
+      "w": 600,
+      "text": "El taller es la pantalla central.\n\nA la izquierda, las páginas del evento, arrastrables. A la derecha, la página elegida y SUS elementos, cada uno con su interruptor: parrilla, texto, PDF, botón de inscripción, aviso.\n\nSe ve en todo momento que estás dentro de un evento concreto."
+    },
+    {
+      "id": "nota-consent",
+      "x": 1400,
+      "y": 4290,
+      "w": 620,
+      "text": "Simplificación administrativa.\n\nSe lee, se marca «Acepto» y vale. Sin imprimir, sin firmar a mano, sin escanear ni subir nada.\n\nSe guarda la versión exacta del texto aceptado y el momento: un consentimiento sin constancia de qué se aceptó no sirve si alguien lo reclama."
+    },
+    {
+      "id": "nota-programa",
+      "x": 1400,
+      "y": 2970,
+      "w": 600,
+      "text": "El programa es dato, no maquetación.\n\nCambiar una hora aquí cambia lo que se publica. Hoy la sede, el día y la fecha viajan copiados dentro del contenido de la página, así que cambiar la fecha no cambia lo que se ve.\n\nLos días se deducen de las actividades y del rango del evento. Y avisa de los solapes en la misma sala, que es el error típico."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

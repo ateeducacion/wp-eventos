@@ -1,0 +1,99 @@
+<?php
+/**
+ * Tests for the three event taxonomies.
+ *
+ * @package Evt
+ */
+
+use Evt\Access\EventAccess;
+use Evt\PostType\ActivityPostType;
+use Evt\PostType\EventPostType;
+use Evt\PostType\SpeakerPostType;
+use Evt\Taxonomy\EventTaxonomies;
+
+/**
+ * Las tres taxonomías que sustituyen a la única `convocatoria` de hoy.
+ */
+class Test_Taxonomies extends WP_UnitTestCase {
+
+	use Evt_Fixtures;
+
+	/**
+	 * Tipos, taxonomías y roles registrados.
+	 */
+	public function set_up() {
+		parent::set_up();
+		$this->app();
+	}
+
+	/**
+	 * Las tres están montadas sobre el evento. El área, además, sobre los
+	 * ponentes y las actividades: es el eje de permisos de los tres tipos, que
+	 * es lo que permite que un área gestione su evento entero. La tipología y
+	 * el curso escolar describen al evento y solo a él.
+	 */
+	public function test_the_three_taxonomies_sit_on_the_event() {
+		$sobre = array(
+			EventTaxonomies::AREA   => array( EventPostType::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE ),
+			EventTaxonomies::TYPE   => array( EventPostType::POST_TYPE ),
+			EventTaxonomies::COURSE => array( EventPostType::POST_TYPE ),
+		);
+		foreach ( $sobre as $slug => $tipos ) {
+			$this->assertTrue( taxonomy_exists( $slug ), $slug );
+
+			$tax = get_taxonomy( $slug );
+			$this->assertSame( $tipos, $tax->object_type, $slug );
+			// Jerárquicas para que salgan como casillas: un vocabulario cerrado
+			// no se amplía por una errata al teclear.
+			$this->assertTrue( $tax->hierarchical, $slug );
+			$this->assertTrue( $tax->show_in_rest, $slug );
+		}
+	}
+
+	/**
+	 * El estado no es una taxonomía: se calcula de las fechas.
+	 */
+	public function test_the_state_is_not_a_taxonomy() {
+		$this->assertFalse( taxonomy_exists( 'evt_state' ) );
+		$this->assertFalse( taxonomy_exists( 'convocatoria' ) );
+	}
+
+	/**
+	 * Las capacidades de los términos son las del contrato y, sobre todo,
+	 * existen de verdad en algún rol.
+	 *
+	 * Es justo lo que le falta al código heredado: exige
+	 * `edit_guides`/`publish_guides`, que no las tiene nadie en el sitio, y por
+	 * eso nadie puede administrar los términos.
+	 */
+	public function test_the_term_capabilities_exist_for_real() {
+		$tax = get_taxonomy( EventTaxonomies::AREA );
+
+		$this->assertSame( EventAccess::CAP_MANAGE, $tax->cap->manage_terms );
+		$this->assertSame( EventAccess::CAP_MANAGE, $tax->cap->edit_terms );
+		$this->assertSame( EventAccess::CAP_MANAGE, $tax->cap->delete_terms );
+		$this->assertSame( 'edit_evt_events', $tax->cap->assign_terms );
+
+		$admin = (int) self::factory()->user->create( array( 'role' => 'administrator' ) );
+		foreach ( (array) $tax->cap as $clave => $cap ) {
+			$this->assertTrue( user_can( $admin, $cap ), $clave . ' → ' . $cap );
+		}
+
+		// La organización marca el área de su evento, pero no inventa áreas.
+		$organiser = $this->organiser();
+		$this->assertTrue( user_can( $organiser, $tax->cap->assign_terms ) );
+		$this->assertFalse( user_can( $organiser, $tax->cap->manage_terms ) );
+	}
+
+	/**
+	 * Y un término se le puede poner de verdad a un evento.
+	 */
+	public function test_an_area_term_lands_on_the_event() {
+		$area   = $this->area( 'Ordenación e Innovación Educativa' );
+		$evento = $this->event( $this->administrator(), array( $area ) );
+
+		$terminos = get_the_terms( $evento, EventTaxonomies::AREA );
+		$this->assertIsArray( $terminos );
+		$this->assertSame( array( $area ), array_map( 'intval', wp_list_pluck( $terminos, 'term_id' ) ) );
+	}
+}
