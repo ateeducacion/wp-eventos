@@ -269,3 +269,24 @@ Y una nota de mantenimiento: el cuerpo de esta ADR cita la guarda como
 el texto** porque la ADR está publicada. La forma de citarla que no caduca es
 por el nombre del paso: **«Upload coverage reports to Codecov»**, en
 `.github/workflows/ci.yml`.
+
+**Corrección del mismo día.** El primer intento de esta adenda escribió la
+condición como `secrets.CODECOV_TOKEN != ''`, y eso **no es válido**: el
+contexto `secrets` no se puede leer desde un `if`. GitHub no salta el paso ni
+avisa en el job —rechaza el **fichero entero**, y la ejecución sale en rojo a
+los cero segundos con «This run likely failed because of a workflow file
+issue», sin un solo job—. La forma que funciona es copiar el secreto a una
+variable de entorno del job y que la condición lea `env`:
+
+```yaml
+  test:
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Upload coverage reports to Codecov
+        if: ${{ !github.event.pull_request.head.repo.fork && env.CODECOV_TOKEN != '' }}
+```
+
+Queda escrito porque el modo de fallar es el peligroso: un fichero de workflow
+inválido **no se parece a un test roto**. No hay job que mirar, no hay paso que
+abrir y el mensaje no dice qué línea está mal.
