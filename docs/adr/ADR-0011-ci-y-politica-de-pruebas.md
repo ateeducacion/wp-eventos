@@ -290,3 +290,45 @@ variable de entorno del job y que la condición lea `env`:
 Queda escrito porque el modo de fallar es el peligroso: un fichero de workflow
 inválido **no se parece a un test roto**. No hay job que mirar, no hay paso que
 abrir y el mensaje no dice qué línea está mal.
+
+## Adenda — 2026-09-15 (2): el suelo sube al 90 %, y en los dos ejes
+
+Esta ADR eligió la **opción C** —«10 % que sube cuando la casa esté en orden»—
+y escribió cuándo tocaba subirlo: «cuando el aplicativo tenga pantallas y la
+cobertura del proyecto se estabilice». Ese momento es este, y se anota el dato
+que lo justifica en vez de la impresión: **la cobertura de `src/Evt` está en el
+90,74 % (5.887 de 6.488 líneas)** medida con `make coverage` sobre este commit.
+
+Lo que cambia en `codecov.yml`:
+
+| | Antes | Ahora |
+|---|---|---|
+| Parche | 10 %, bloqueante | **90 %, bloqueante** |
+| Proyecto | informativo | **90 %, bloqueante**, con 1 % de holgura |
+
+**El proyecto deja de ser informativo, y esa es la mitad importante.** Con solo
+el suelo del parche, un PR puede pasar tocando poco y bien mientras el total
+baja PR a PR sin que nada lo diga. Las dos condiciones juntas son «lo que tocas
+va con sus tests» **y** «no se compensa tocando poco».
+
+El `threshold: 1%` del proyecto no es una rendija: es lo que evita que una línea
+de más en un fichero ya cubierto mueva el total lo justo para tumbar un PR que
+no ha empeorado nada. El del parche no lo lleva, porque ahí no hay redondeo que
+perdonar: o el código nuevo trae sus pruebas o no las trae.
+
+**Lo que se descubrió al subir**, y vale más que el número: las fixtures de los
+tests dejaban el mundo a medias. `reset_post_types()` de `WP_UnitTestCase`
+desregistra en cada `tear_down` todo tipo de contenido que no sea del núcleo, y
+`unregister_post_type()` se lleva con él las `register_post_meta()` de ese tipo.
+El `app()` de `tests/EvtFixtures.php` reponía los tipos pero **no las metas**,
+así que a partir del segundo test de cada clase las metas se escribían sin
+`sanitize_callback` y sin `auth_callback` —justo lo que protege las de una
+inscripción ([ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md))—.
+Al reponerlas, dos tests que llevaban tiempo en verde se cayeron: esperaban
+cadena vacía donde una meta entera declarada con defecto `0` devuelve `0`. Es
+decir, **describían un mundo que en producción no existe**. Subir el listón no
+solo añade tests: enseña los que estaban midiendo mal.
+
+`src/Evt/App.php` sigue fuera de la medición, por lo que ya decía el propio
+`codecov.yml`: su cuerpo corre en el arranque, antes de que PHPUnit empiece a
+medir, y lo que hace está probado en `test-load-order.php`.

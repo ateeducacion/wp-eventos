@@ -18,7 +18,8 @@ use Evt\PublicFront\Participants;
  * son de este aplicativo y se gestionarán aquí, con formulario de inscripción
  * propio; mientras ese formulario no exista, las filas entran por el filtro
  * `evt_participants` (ADR-0027). Cuando nadie contesta, aquí no se finge una
- * lista vacía: se dice que la inscripción está por construir.
+ * lista vacía: se dice dónde se abre la inscripción, en vez de dejar una tabla
+ * sin filas que parece un fallo.
  *
  * Solo pinta: no lee la petición, no consulta, no decide.
  */
@@ -197,9 +198,10 @@ final class EventParticipantsPanel {
 				filtrar y exportar a CSV.
 			</p>
 			<p>
-				<strong>El formulario de inscripción todavía está por construir.</strong>
-				Hasta que lo esté, esta pestaña no tiene de dónde sacar a nadie y se
-				queda así. No es un fallo del evento.
+				Si la inscripción de este evento está cerrada, nadie puede apuntarse
+				todavía: se abre en la pestaña
+				<a href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SIGNUP ) ); ?>">Inscripción</a>,
+				junto con las preguntas propias del evento. No es un fallo del evento.
 			</p>
 			<?php if ( $viejo > 0 ) : ?>
 				<p>

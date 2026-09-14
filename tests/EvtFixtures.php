@@ -9,8 +9,12 @@
 
 use Evt\Access\EventAccess;
 use Evt\Meta\EventMetaKeys;
+use Evt\Meta\EventMetaRegistration;
+use Evt\Meta\ProgrammeMetaRegistration;
+use Evt\Meta\RegistrationMetaRegistration;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
+use Evt\PostType\RegistrationPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\PublicFront\ExitSignal;
 use Evt\PublicFront\Shell;
@@ -36,6 +40,19 @@ trait Evt_Fixtures {
 		EventPostType::register();
 		SpeakerPostType::register();
 		ActivityPostType::register();
+		RegistrationPostType::register();
+
+		// Y sus metas, que se van con el tipo. `reset_post_types()` de
+		// WP_UnitTestCase desregistra en cada `tear_down` todo tipo que no sea
+		// del núcleo, y `unregister_post_type()` se lleva por delante las
+		// `register_post_meta()` de ese tipo. Sin reponerlas, a partir del
+		// **segundo** test de cada clase el mundo está a medias: las metas se
+		// escriben igual, pero sin `sanitize_callback` y sin `auth_callback`,
+		// que es justo lo que protege las de una inscripción (ADR-0032).
+		EventMetaRegistration::register_meta();
+		ProgrammeMetaRegistration::register_meta();
+		RegistrationMetaRegistration::register_meta();
+
 		EventPostType::grant_caps_to_roles();
 	}
 
