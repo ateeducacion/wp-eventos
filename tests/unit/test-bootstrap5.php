@@ -82,7 +82,7 @@ class Test_Bootstrap5 extends WP_UnitTestCase {
 
 		$vendors = evt_bootstrap5_versions();
 		$this->assertSame( $vendors['bootstrap-css']['url'], wp_styles()->registered['bootstrap-css']->src );
-		$this->assertSame( '5.3.3', wp_styles()->registered['bootstrap-css']->ver );
+		$this->assertSame( $vendors['bootstrap-css']['ver'], wp_styles()->registered['bootstrap-css']->ver );
 		$this->assertSame( $vendors['bootstrap-js']['url'], wp_scripts()->registered['bootstrap-js']->src );
 		$this->assertTrue( wp_style_is( 'bootstrap-icons', 'enqueued' ) );
 
@@ -182,7 +182,11 @@ class Test_Bootstrap5 extends WP_UnitTestCase {
 	 *
 	 * Es la pega que la ADR-0015 se apunta como negativa: sin esto, subir una
 	 * versión en el PHP y no en `package.json` devuelve las pruebas al CDN sin
-	 * que nadie se entere.
+	 * que nadie se entere. Y al revés, que es el caso que trae Dependabot: sube
+	 * `package.json` y no toca ni la URL, ni el `$ver`, ni el `integrity`. Sin
+	 * recalcular el SRI el navegador rechaza el fichero **en silencio**, así que
+	 * este test es lo único que separa un salto de versión de una página que se
+	 * ve mal sin que nadie sepa por qué.
 	 */
 	public function test_the_pinned_versions_match_package_json() {
 		$package = dirname( __DIR__, 2 ) . '/package.json';
@@ -191,8 +195,18 @@ class Test_Bootstrap5 extends WP_UnitTestCase {
 		$datos = json_decode( (string) file_get_contents( $package ), true );
 		$dev   = $datos['devDependencies'];
 
-		$this->assertSame( '5.3.3', $dev['bootstrap'], 'versión exacta, sin ^ ni ~' );
-		$this->assertSame( '1.11.3', $dev['bootstrap-icons'] );
+		// La versión **exacta**, sin `^` ni `~`: con un rango, npm instalaría
+		// una y el SRI de la URL seguiría siendo el de otra. Se comprueba la
+		// forma y no el número: clavar aquí el número convertiría este test en
+		// un cuarto sitio donde vive la versión, y subirla pasaría por
+		// editar el test, que es justo lo que no puede hacer falta.
+		foreach ( array( 'bootstrap', 'bootstrap-icons' ) as $paquete ) {
+			$this->assertMatchesRegularExpression(
+				'/^\d+\.\d+\.\d+$/',
+				(string) $dev[ $paquete ],
+				$paquete . ': versión exacta, sin ^ ni ~'
+			);
+		}
 
 		$paquetes = array(
 			'bootstrap-css'   => 'bootstrap',
