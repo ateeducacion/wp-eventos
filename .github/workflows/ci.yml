@@ -182,7 +182,7 @@ jobs:
         # paso—, así que el secreto se copia a una variable de entorno del job
         # y la condición lee esa.
         if: ${{ !github.event.pull_request.head.repo.fork && env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ env.CODECOV_TOKEN }}
           slug: ateeducacion/wp-eventos
