@@ -14,12 +14,14 @@ namespace Evt\PublicFront;
  * formulario de inscripción propio; el sistema anterior no se lee y no se le
  * construye ningún puente (ADR-0027).
  *
- * Ese formulario **todavía no está escrito**, así que esta clase declara la
- * forma de una fila y pregunta por ellas con el filtro `evt_participants`. Es
- * la costura por la que entrarán las inscripciones el día que existan, y la
- * que deja probar hoy lo que ya funciona sin inventarse un almacén. Sin nadie
- * que conteste, la lista está vacía y el panel dice que la inscripción está
- * por construir, en vez de fingir que nadie se ha apuntado.
+ * Esta clase declara la **forma de una fila** y pregunta por ellas con el
+ * filtro `evt_participants`. Quien contesta de serie es el propio aplicativo
+ * con sus `evt_registration` ({@see Registrations::participants()}, ADR-0032);
+ * la costura se queda puesta porque es lo que permite a un despliegue traer sus
+ * participantes de otro sitio desde un snippet, y lo que deja probar el filtro
+ * y el CSV sin ningún almacén detrás. Sin nadie que conteste, la lista está
+ * vacía y el panel dice dónde se abre la inscripción, en vez de fingir que
+ * nadie se ha apuntado.
  *
  * Lo que sí es de aquí, y es lo que se pidió: **el filtro y la exportación a
  * CSV**, puros y probados sin WordPress.

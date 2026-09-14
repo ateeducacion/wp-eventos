@@ -376,4 +376,95 @@ class Test_Signup_Form extends WP_UnitTestCase {
 			)
 		);
 	}
+	// ─── la pantalla de quien ya está inscrita ─────────────────────────────
+
+	/**
+	 * Con su enlace, ve su inscripción y el taller que puede elegir.
+	 */
+	public function test_with_their_link_they_see_their_registration() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_OPEN, true );
+		$taller = $this->taller( $evento, 'Taller de radio escolar' );
+
+		$this->enviar( $evento, $this->datos() );
+		$id    = (int) Registrations::all( $evento )[0]->ID;
+		$token = (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true );
+
+		$_GET[ SignupForm::ARG_TOKEN ] = $token;
+		$html                          = $this->pintar( $evento );
+		unset( $_GET[ SignupForm::ARG_TOKEN ] );
+
+		$this->assertStringContainsString( 'Su inscripción está registrada', $html );
+		$this->assertStringContainsString( 'Ana Martín Cabrera', $html );
+		$this->assertStringContainsString( 'Guardar el taller', $html );
+		$this->assertStringContainsString( 'Taller de radio escolar', $html );
+		$this->assertStringContainsString( SignupForm::OP_WORKSHOP, $html );
+		// Y no se le vuelve a pedir el documento: ya está inscrita.
+		$this->assertStringNotContainsString( 'name="tax_id"', $html );
+		unset( $taller );
+	}
+
+	/**
+	 * Con el plazo de talleres cerrado, se lo dice y no pinta formulario.
+	 */
+	public function test_with_the_window_closed_they_are_told_so() {
+		list( $evento ) = $this->evento_abierto();
+		$this->enviar( $evento, $this->datos() );
+		$id = (int) Registrations::all( $evento )[0]->ID;
+
+		$_GET[ SignupForm::ARG_TOKEN ] = (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true );
+		$html                          = $this->pintar( $evento );
+		unset( $_GET[ SignupForm::ARG_TOKEN ] );
+
+		$this->assertStringContainsString( 'Su inscripción está registrada', $html );
+		$this->assertStringContainsString( 'no está abierto', $html );
+		$this->assertStringNotContainsString( 'Guardar el taller', $html );
+	}
+
+	/**
+	 * Los dos textos del consentimiento salen para leerlos ahí mismo.
+	 */
+	public function test_the_two_consent_texts_are_there_to_be_read() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, '<p>Quién trata sus datos.</p>' );
+		update_post_meta( $evento, RegistrationMetaKeys::CONSENT_IMAGE, '<p>Grabación de las sesiones.</p>' );
+
+		$html = $this->pintar( $evento );
+
+		$this->assertStringContainsString( 'Información sobre el tratamiento de sus datos', $html );
+		$this->assertStringContainsString( 'Consentimiento informado', $html );
+		$this->assertStringContainsString( 'Quién trata sus datos.', $html );
+		$this->assertStringContainsString( 'Grabación de las sesiones.', $html );
+		// Se leen sin salir de la inscripción.
+		$this->assertStringContainsString( '<details', $html );
+	}
+
+	/**
+	 * Y sin plazas libres en ningún taller, se dice en vez de dejar la lista sola.
+	 */
+	public function test_when_no_workshop_has_room_it_says_so() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_OPEN, true );
+
+		$taller = Programme::save_activity(
+			$evento,
+			0,
+			array(
+				'title'    => 'Taller lleno',
+				'kind'     => ProgrammeMetaKeys::KIND_WORKSHOP,
+				'date'     => '2026-10-28',
+				'start'    => '10:00',
+				'end'      => '12:00',
+				'venue'    => 'Sede Central',
+				'room'     => 'Aula 1',
+				'seats'    => 1,
+				'summary'  => '',
+				'speakers' => array(),
+			)
+		);
+		$this->enviar( $evento, $this->datos( array( 'evt_workshop' => (string) $taller ) ) );
+
+		$html = $this->pintar( $evento );
+		$this->assertStringContainsString( 'no queda ningún taller con plazas libres', $html );
+	}
 }

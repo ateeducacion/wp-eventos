@@ -7318,12 +7318,14 @@ namespace Evt\PublicFront;
  * formulario de inscripción propio; el sistema anterior no se lee y no se le
  * construye ningún puente (ADR-0027).
  *
- * Ese formulario **todavía no está escrito**, así que esta clase declara la
- * forma de una fila y pregunta por ellas con el filtro `evt_participants`. Es
- * la costura por la que entrarán las inscripciones el día que existan, y la
- * que deja probar hoy lo que ya funciona sin inventarse un almacén. Sin nadie
- * que conteste, la lista está vacía y el panel dice que la inscripción está
- * por construir, en vez de fingir que nadie se ha apuntado.
+ * Esta clase declara la **forma de una fila** y pregunta por ellas con el
+ * filtro `evt_participants`. Quien contesta de serie es el propio aplicativo
+ * con sus `evt_registration` ({@see Registrations::participants()}, ADR-0032);
+ * la costura se queda puesta porque es lo que permite a un despliegue traer sus
+ * participantes de otro sitio desde un snippet, y lo que deja probar el filtro
+ * y el CSV sin ningún almacén detrás. Sin nadie que conteste, la lista está
+ * vacía y el panel dice dónde se abre la inscripción, en vez de fingir que
+ * nadie se ha apuntado.
  *
  * Lo que sí es de aquí, y es lo que se pidió: **el filtro y la exportación a
  * CSV**, puros y probados sin WordPress.
@@ -11495,7 +11497,8 @@ use Evt\PublicFront\Participants;
  * son de este aplicativo y se gestionarán aquí, con formulario de inscripción
  * propio; mientras ese formulario no exista, las filas entran por el filtro
  * `evt_participants` (ADR-0027). Cuando nadie contesta, aquí no se finge una
- * lista vacía: se dice que la inscripción está por construir.
+ * lista vacía: se dice dónde se abre la inscripción, en vez de dejar una tabla
+ * sin filas que parece un fallo.
  *
  * Solo pinta: no lee la petición, no consulta, no decide.
  */
@@ -11674,9 +11677,10 @@ final class EventParticipantsPanel {
 				filtrar y exportar a CSV.
 			</p>
 			<p>
-				<strong>El formulario de inscripción todavía está por construir.</strong>
-				Hasta que lo esté, esta pestaña no tiene de dónde sacar a nadie y se
-				queda así. No es un fallo del evento.
+				Si la inscripción de este evento está cerrada, nadie puede apuntarse
+				todavía: se abre en la pestaña
+				<a href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SIGNUP ) ); ?>">Inscripción</a>,
+				junto con las preguntas propias del evento. No es un fallo del evento.
 			</p>
 			<?php if ( $viejo > 0 ) : ?>
 				<p>

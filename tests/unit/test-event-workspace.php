@@ -732,8 +732,10 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::LOGO_ID, true ) );
-		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::POSTER_ID, true ) );
+		// Cero y no cadena vacía: las dos son metas declaradas como enteras
+		// con defecto 0, así que 'vacía' se lee como 0 (`register_post_meta()`).
+		$this->assertSame( 0, (int) get_post_meta( $evento, EventMetaKeys::LOGO_ID, true ) );
+		$this->assertSame( 0, (int) get_post_meta( $evento, EventMetaKeys::POSTER_ID, true ) );
 		$this->assertSame( 0, (int) get_post_thumbnail_id( $evento ) );
 	}
 
@@ -750,7 +752,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 
 		$this->submit( $ajena, EventWorkspace::PANEL_LOOK, $evento, 0, array( EventMetaKeys::LOGO_ID => (string) $imagen ) );
 
-		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::LOGO_ID, true ) );
+		$this->assertSame( 0, (int) get_post_meta( $evento, EventMetaKeys::LOGO_ID, true ) );
 		$this->assertSame( 'error', $this->flash( $ajena )['tipo'] );
 	}
 

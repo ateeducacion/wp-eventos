@@ -1,13 +1,16 @@
 # Codecov: el porcentaje y su variación, en un comentario de cada PR.
-# El total del proyecto es informativo; lo que tumba un PR es el parche.
 #
-# El suelo del parche arranca en el 10 % a propósito. El repositorio está
-# vacío: las primeras entregas son andamiaje (CPT, taxonomías, arranque) que
-# se prueba a base de pocos tests grandes, y un listón alto ahí solo enseña a
-# escribir tests de adorno para pasar el guardia. Se sube cuando el aplicativo
-# tenga sus pantallas y la cobertura del proyecto se estabilice —en el
-# repositorio de referencia el salto fue de 10 % a 90 % con la casa ya en
-# orden—, y se sube en un PR propio que diga por qué.
+# **El suelo es el 90 %, en los dos ejes**: el del proyecto y el del parche.
+# Arrancó en el 10 % a propósito, porque en un repositorio vacío las primeras
+# entregas son andamiaje que se prueba con pocos tests grandes y un listón alto
+# solo enseña a escribir tests de adorno para pasar al guardia. Ya no es ese
+# repositorio: el aplicativo tiene sus pantallas, su formulario de inscripción y
+# su aforo, la cobertura se ha estabilizado por encima del 90 % y el listón sube
+# —ADR-0011, adenda del 2026-09-15—.
+#
+# Lo que eso significa en un PR: lo que se toca va con sus tests (el parche), y
+# no se puede compensar tocando poco (el proyecto). Un PR que baje el total
+# tumba, no avisa.
 # Recetas de docs.codecov.com/docs/common-recipe-list.
 comment:
   layout: "diff, flags, files"
@@ -28,8 +31,13 @@ coverage:
   status:
     project:
       default:
-        informational: true
+        target: 90%
+        # Un punto de holgura: sin esto, una línea de más en un fichero que ya
+        # estaba cubierto puede mover el total lo justo para tumbar un PR que no
+        # ha empeorado nada.
+        threshold: 1%
+        informational: false
     patch:
       default:
-        target: 10%
+        target: 90%
         informational: false

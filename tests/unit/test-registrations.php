@@ -516,4 +516,141 @@ class Test_Registrations extends WP_UnitTestCase {
 		$this->assertTrue( Registrations::lock( $evento ), 'el candado no se quedó cogido al rechazar' );
 		Registrations::unlock( $evento );
 	}
+	// ─── los bordes que quedaban sin pisar ─────────────────────────────────
+
+	/**
+	 * Una lista de preguntas ilegible no rompe nada: se queda en nada.
+	 */
+	public function test_unreadable_questions_read_as_none() {
+		$this->assertSame( array(), SignupQuestions::read( 'esto no es json' ) );
+		$this->assertSame( array(), SignupQuestions::read( '' ) );
+		$this->assertSame( array(), SignupQuestions::read( 42 ) );
+		$this->assertSame( array(), SignupQuestions::read( array( 'ni', 'esto' ) ) );
+	}
+
+	/**
+	 * Las opciones se escriben una por línea, y se limpian al leerlas.
+	 */
+	public function test_the_options_are_read_one_per_line() {
+		$this->assertSame(
+			array( 'Gluten', 'Lactosa' ),
+			SignupQuestions::options( "Gluten\r\n  Lactosa  \n\n Gluten \n" ),
+			'sin vacías, sin repetidas y sin espacios de sobra'
+		);
+		$this->assertSame( array(), SignupQuestions::options( 42 ) );
+
+		// Y hay un tope, para que una lista pegada de un tirón no se convierta
+		// en una meta enorme.
+		$muchas = SignupQuestions::options( range( 1, SignupQuestions::MAX_OPTIONS + 20 ) );
+		$this->assertCount( SignupQuestions::MAX_OPTIONS, $muchas );
+	}
+
+	/**
+	 * Una pregunta sin identificador recibe uno, y no se repite.
+	 */
+	public function test_a_question_without_an_id_gets_one() {
+		$n         = 0;
+		$preguntas = SignupQuestions::with_ids(
+			array(
+				array(
+					'id'    => '',
+					'label' => 'Una',
+				),
+				array(
+					'id'    => '',
+					'label' => 'Otra',
+				),
+				array(
+					'id'    => 'qyatengo00001',
+					'label' => 'Ya tenía',
+				),
+			),
+			static function () use ( &$n ): string {
+				++$n;
+				return str_pad( (string) $n, 12, 'abcdef' );
+			}
+		);
+
+		$this->assertTrue( SignupQuestions::is_id( $preguntas[0]['id'] ) );
+		$this->assertTrue( SignupQuestions::is_id( $preguntas[1]['id'] ) );
+		$this->assertNotSame( $preguntas[0]['id'], $preguntas[1]['id'] );
+		$this->assertSame( 'qyatengo00001', $preguntas[2]['id'], 'el que ya tenía no se toca' );
+	}
+
+	/**
+	 * Cada tipo de respuesta se lee como el texto que va en su columna.
+	 */
+	public function test_an_answer_reads_as_the_text_of_its_column() {
+		$casilla = array( 'type' => 'check' );
+		$this->assertSame( 'Sí', SignupQuestions::as_text( $casilla, true ) );
+		$this->assertSame( 'No', SignupQuestions::as_text( $casilla, false ) );
+
+		$varias = array( 'type' => 'many' );
+		$this->assertSame( 'Gluten, Lactosa', SignupQuestions::as_text( $varias, array( 'Gluten', 'Lactosa' ) ) );
+
+		$texto = array( 'type' => 'text' );
+		$this->assertSame( 'algo', SignupQuestions::as_text( $texto, 'algo' ) );
+		$this->assertSame( '', SignupQuestions::as_text( $texto, null ) );
+	}
+
+	/**
+	 * Un texto corto se corta: una meta no es un sitio donde pegar un libro.
+	 */
+	public function test_a_short_text_is_cut() {
+		$preguntas = SignupQuestions::read(
+			array(
+				array(
+					'id'    => 'qlibre0000001',
+					'label' => 'Observaciones',
+					'type'  => 'text',
+				),
+			)
+		);
+		$r         = SignupQuestions::answers( $preguntas, array( 'qlibre0000001' => str_repeat( 'a', 400 ) ) );
+
+		$this->assertSame( 250, mb_strlen( $r['data']['qlibre0000001'] ) );
+	}
+
+	/**
+	 * Soltar el taller sin coger otro deja la plaza libre.
+	 */
+	public function test_releasing_without_taking_frees_the_seat() {
+		$evento = $this->un_evento();
+		$taller = $this->taller( $evento, 5 );
+		$id     = $this->inscribir( $evento );
+
+		Registrations::seat( $evento, $id, $taller );
+		$this->assertSame( 1, Registrations::taken( $evento, $taller ) );
+
+		$this->assertTrue( Registrations::seat( $evento, $id, 0 )['ok'] );
+		$this->assertSame( 0, Registrations::taken( $evento, $taller ) );
+	}
+
+	/**
+	 * Y pedir el que ya se tiene no hace nada, ni falla.
+	 */
+	public function test_asking_for_the_same_workshop_is_a_no_op() {
+		$evento = $this->un_evento();
+		$taller = $this->taller( $evento, 1 );
+		$id     = $this->inscribir( $evento );
+
+		$this->assertTrue( Registrations::seat( $evento, $id, $taller )['ok'] );
+		// Aunque esté lleno —lo llena esta misma persona—, repetir vale.
+		$this->assertTrue( Registrations::seat( $evento, $id, $taller )['ok'] );
+		$this->assertSame( 1, Registrations::taken( $evento, $taller ) );
+	}
+
+	/**
+	 * Una inscripción de otro evento no coge plaza aquí.
+	 */
+	public function test_a_registration_of_another_event_takes_nothing() {
+		$evento = $this->un_evento();
+		$otro   = $this->event( $this->administrator(), array( $this->area( 'Salud' ) ) );
+		$taller = $this->taller( $evento, 5 );
+		$ajena  = $this->inscribir( $otro );
+
+		$res = Registrations::seat( $evento, $ajena, $taller );
+		$this->assertFalse( $res['ok'] );
+		$this->assertSame( 'no_es_de_este_evento', $res['error'] );
+	}
 }

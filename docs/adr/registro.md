@@ -454,3 +454,17 @@ verdad, que es si hay token, y así cubre los dos casos. `fail_ci_if_error` se
 queda: lo que estaba mal no era avisar del fallo, sino correr el paso sin nada
 que subir. **Va como adenda y no reescribiendo el texto**: desde el primer
 commit, los identificadores y el texto están congelados.
+
+**Segunda adenda a la ADR-0011, 2026-09-15: el suelo de cobertura sube al 90 %.**
+La [ADR-0011](ADR-0011-ci-y-politica-de-pruebas.md) eligió empezar en el 10 % y
+dejó escrito cuándo subirlo: «cuando el aplicativo tenga pantallas y la
+cobertura del proyecto se estabilice». Con el formulario de inscripción y el
+aforo dentro, la medición dice **90,74 %**, así que el parche pasa de 10 % a
+90 % y el proyecto **deja de ser informativo** y pasa a bloquear también al
+90 %. Las dos condiciones juntas son «lo que tocas va con sus tests» y «no se
+compensa tocando poco»: con solo la primera, el total puede bajar PR a PR sin
+que nada lo diga. De camino salió algo que valía más que el número: el `app()`
+de las fixtures reponía los tipos de contenido pero no sus metas, que
+`unregister_post_type()` se lleva en cada `tear_down`, así que medio banco de
+pruebas corría **sin `sanitize_callback` ni `auth_callback`**. Al arreglarlo, dos
+tests en verde se cayeron por describir un mundo que en producción no existe.
