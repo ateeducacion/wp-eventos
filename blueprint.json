@@ -1,26 +1,51 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "landingPage": "/wp-admin/edit.php?post_type=evt_event",
-  "preferredVersions": { "php": "8.3", "wp": "latest" },
-  "features": { "networking": true },
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
   "login": true,
-  "siteOptions": { "blogname": "Eventos: encuentros, jornadas y congresos" },
+  "siteOptions": {
+    "blogname": "Eventos: encuentros, jornadas y congresos"
+  },
   "steps": [
-    { "step": "setSiteLanguage", "language": "es_ES" },
     {
-      "step": "installPlugin",
-      "pluginData": { "resource": "wordpress.org/plugins", "slug": "code-snippets" },
-      "options": { "activate": true }
+      "step": "setSiteLanguage",
+      "language": "es_ES"
     },
     {
       "step": "installPlugin",
-      "pluginData": { "resource": "wordpress.org/plugins", "slug": "members" },
-      "options": { "activate": true }
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "code-snippets"
+      },
+      "options": {
+        "activate": true
+      }
     },
     {
       "step": "installPlugin",
-      "pluginData": { "resource": "wordpress.org/plugins", "slug": "wpfront-user-role-editor" },
-      "options": { "activate": true }
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "members"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "wpfront-user-role-editor"
+      },
+      "options": {
+        "activate": true
+      }
     },
     {
       "step": "writeFiles",
@@ -29,7 +54,8 @@
         "resource": "git:directory",
         "url": "https://github.com/ateeducacion/wp-eventos.git",
         "ref": "main",
-        "path": "snippets"
+        "path": "snippets",
+        "refType": "branch"
       }
     },
     {
@@ -39,7 +65,8 @@
         "resource": "git:directory",
         "url": "https://github.com/ateeducacion/wp-eventos.git",
         "ref": "main",
-        "path": "scripts"
+        "path": "scripts",
+        "refType": "branch"
       }
     },
     {
@@ -49,7 +76,8 @@
         "resource": "git:directory",
         "url": "https://github.com/ateeducacion/wp-eventos.git",
         "ref": "main",
-        "path": "src"
+        "path": "src",
+        "refType": "branch"
       }
     },
     {
@@ -68,5 +96,10 @@
       "step": "runPHP",
       "code": "<?php require_once '/wordpress/wp-load.php'; require '/wordpress/wp-content/evt-dev/scripts/seed-demo.php';"
     }
-  ]
+  ],
+  "meta": {
+    "title": "Eventos — aplicativo de encuentros, jornadas y congresos",
+    "author": "ateeducacion",
+    "description": "Prueba el aplicativo completo: tipos de contenido, roles, taller del evento e inscripción, con datos de demostración."
+  }
 }
