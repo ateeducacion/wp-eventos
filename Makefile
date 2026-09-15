@@ -216,6 +216,12 @@ check: lint phpmd check-public check-provision check-skills test ## Ejecuta lint
 #                     directorio de WordPress.org. AGENTS.md lo prohíbe.
 #   offloading_files  Las librerías se cargan desde jsDelivr con SRI, y es una
 #                     decisión tomada (ADR-0015), no un descuido.
+#
+# **Los avisos también tumban.** No se pasa `--ignore-warnings`: con esas dos
+# exclusiones el código sale a cero avisos, así que tragárselos solo serviría
+# para que el primero que aparezca no lo vea nadie. Y por eso el recuento mira
+# ERROR **y** WARNING: quitar la bandera sin contar los avisos habría sido no
+# quitarla.
 
 PLUGIN_CHECK_SLUG = evt-eventos
 PLUGIN_CHECK_DIR = .evt-plugin-check
@@ -231,17 +237,16 @@ check-plugin: start-if-not-running bundle ## Pasa WordPress Plugin Check sobre e
 	@INFORME=$$(mktemp); \
 	npx wp-env run cli wp plugin check $(PLUGIN_CHECK_SLUG) \
 		--exclude-checks=plugin_readme,offloading_files \
-		--ignore-warnings \
 		--color 2>&1 | tee "$$INFORME"; \
-	ERRORES=$$(sed 's/\x1B\[[0-9;]*[mK]//g' "$$INFORME" | grep -cE '\bERROR\b' || true); \
+	ERRORES=$$(sed 's/\x1B\[[0-9;]*[mK]//g' "$$INFORME" | grep -cE '\b(ERROR|WARNING)\b' || true); \
 	rm -f "$$INFORME"; \
 	npx wp-env run cli rm -rf wp-content/plugins/$(PLUGIN_CHECK_SLUG) > /dev/null 2>&1 || true; \
 	rm -rf $(PLUGIN_CHECK_DIR); \
 	if [ "$$ERRORES" -gt 0 ]; then \
-		echo "Plugin Check: $$ERRORES error(es). El comando sale con 0 aunque los haya, así que lo que manda es este recuento."; \
+		echo "Plugin Check: $$ERRORES aviso(s) o error(es). El comando sale con 0 aunque los haya, así que lo que manda es este recuento."; \
 		exit 1; \
 	fi; \
-	echo "Plugin Check: sin errores."
+	echo "Plugin Check: sin errores ni avisos."
 
 # ─── Skills de agentes ────────────────────────────────────────────────────────
 #

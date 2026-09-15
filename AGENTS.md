@@ -130,7 +130,7 @@ Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.
 | Empezar de cero | `make destroy && make up` |
 | Probar sin Docker | `make playground` |
 | Antes de commit/PR | `make check` |
-| Comprobar el código como lo revisaría WordPress.org | `make check-plugin` |
+| Comprobar el código como lo revisaría WordPress.org | `make check-plugin` (errores **y avisos**) |
 | Publicar una versión | `make release` (tras cerrar el bloque del CHANGELOG) |
 | Llevar un snippet al sitio de destino | `npm run snippets -- push <id> --file snippets/… --dry-run` (sin `--yes` no escribe) |
 
@@ -199,8 +199,11 @@ rápida, la REST API y las acciones en bloque. La capa que protege es
 - **Idiomas:** ver [más abajo](#idiomas); en corto, identificadores en
   **inglés** y todo lo que lee una persona en **castellano**.
 - **Prefijo:** `evt_` / `EVT_`; namespace `Evt`; snippets `EVT — …`.
-- **Estilo:** WPCS, tabuladores, Yoda conditions, escape de salida.
-  `make lint` / `make fix`.
+- **Estilo:** WPCS (`wp-coding-standards/wpcs`, `<rule ref="WordPress">`),
+  tabuladores, Yoda conditions, escape de salida. `make lint` / `make fix`.
+  Cubre `src/`, `snippets/`, `scripts/`, `tests/` **y `build/`**; en `build/` se
+  apagan solo las reglas que exigen `WP_Filesystem`, porque esos guiones corren
+  desde la línea de órdenes y ahí no hay WordPress.
 - **`declare(strict_types=1)` está prohibido** (ver arriba).
 - **Aplicativo:** editar solo `src/Evt/`; no editar a mano
   `snippets/*.bundle.php` (regenerar con `make bundle`).
