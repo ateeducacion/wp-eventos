@@ -197,7 +197,33 @@ phpmd: ## Ejecuta PHP Mess Detector con las reglas de phpmd.xml
 check-provision: ## Comprueba que la provisión propaga los fallos obligatorios
 	node scripts/check-provision.mjs
 
-check: lint phpmd check-public check-provision test ## Ejecuta lint, phpmd, check-public, check-provision y tests
+check: lint phpmd check-public check-provision check-skills test ## Ejecuta lint, phpmd, check-public, check-provision, check-skills y tests
+
+# ─── Skills de agentes ────────────────────────────────────────────────────────
+#
+# Las canónicas viven en .agents/skills/ y .claude/skills/ lleva una COPIA, no
+# un enlace: en Windows los enlaces simbólicos no funcionan sin habilitarlos a
+# mano, y `gh skill` tampoco enlaza, copia. El precio de duplicar es que las dos
+# pueden divergir, así que `make check` lo comprueba.
+
+skills-sync: ## Iguala .claude/skills/ con las canónicas de .agents/skills/
+	@rm -rf .claude/skills
+	@mkdir -p .claude/skills
+	@for d in .agents/skills/*/; do cp -R "$$d" ".claude/skills/$$(basename $$d)"; done
+	@echo "Skills sincronizadas: $$(ls -1 .claude/skills | wc -l | tr -d ' ')"
+
+check-skills: ## Comprueba que las dos copias de las skills son iguales
+	@salida=0; \
+	for d in .agents/skills/*/ .claude/skills/*/; do \
+		n=$$(basename "$$d"); \
+		if [ ! -d ".agents/skills/$$n" ] || [ ! -d ".claude/skills/$$n" ]; then \
+			echo "Skills: $$n está en una carpeta y no en la otra."; salida=1; \
+		elif ! diff -r ".agents/skills/$$n" ".claude/skills/$$n" > /dev/null 2>&1; then \
+			echo "Skills: $$n no coincide entre .agents/ y .claude/."; salida=1; \
+		fi; \
+	done; \
+	if [ "$$salida" != "0" ]; then echo "Ejecute: make skills-sync"; exit 1; fi; \
+	echo "Skills: las dos copias coinciden."
 
 # ─── WordPress Playground (local, sin Docker) ─────────────────────────────────
 

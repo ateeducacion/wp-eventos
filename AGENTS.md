@@ -366,9 +366,11 @@ Viven en:
   comparten esa ruta
 - `.claude/skills/` — Claude Code
 
-Las copias canónicas viven en `.agents/skills/`. Claude Code las ve en
-`.claude/skills/` como **enlaces** a esas carpetas — `.gitignore` ignora
-directorios reales ahí (`.claude/skills/*/`).
+Las copias canónicas viven en `.agents/skills/`, y `.claude/skills/` lleva una
+**copia** de cada una. Copia y no enlace porque **en Windows los enlaces
+simbólicos no funcionan** sin habilitarlos a mano, y `gh skill` tampoco enlaza.
+Las dos carpetas se igualan con `make skills-sync`, y `make check` falla si
+difieren.
 
 **Las que hay hoy** —todas de terceros y verbatim, con su índice y su origen en
 [`.agents/skills/README.md`](.agents/skills/README.md)—:
@@ -378,19 +380,21 @@ directorios reales ahí (`.claude/skills/*/`).
 | Seguridad | `security-audit`, `wp-plugin-security`, `github-actions-hardening` |
 | WordPress | `wp-plugin-development`, `wp-performance`, `wp-wpcli-and-ops`, `wp-project-triage`, `wp-playground`, `blueprint` |
 | Pruebas | `playwright-cli` |
+| Propia | `changelog` — el bloque de versión y `make release` |
 
-Skills propias: créalas en `.agents/skills/<nombre>/` y
-`ln -s ../../.agents/skills/<nombre> .claude/skills/<nombre>`. Las de terceros,
-instálalas solo para Copilot y enlázalas igual:
+Skills propias: créalas en `.agents/skills/<nombre>/` y ejecuta
+`make skills-sync`. Las de terceros, instálalas solo para Copilot y sincroniza
+igual:
 
 ```bash
 gh skill add WordPress/agent-skills wp-performance --agent github-copilot
-ln -s ../../.agents/skills/wp-performance .claude/skills/wp-performance
 gh skill update --all
+make skills-sync
 ```
 
 `gh skill` mete la procedencia en el frontmatter del `SKILL.md`. No instales
-`--agent claude-code` ni `--agent grok` en este repo. Las de terceros van
+`--agent claude-code` ni `--agent grok` en este repo: escribirían en
+`.claude/skills/` por su cuenta y la canónica dejaría de ser la de `.agents/`. Las de terceros van
 **verbatim**: no las reformatees, divergir de upstream complica
 `gh skill update`.
 
