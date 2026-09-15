@@ -131,6 +131,7 @@ Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.
 | Probar sin Docker | `make playground` |
 | Antes de commit/PR | `make check` |
 | Comprobar el código como lo revisaría WordPress.org | `make check-plugin` (errores **y avisos**) |
+| Ver cómo queda todo después de un cambio | `make capturas` — y en cada PR sale solo, comentado |
 | Publicar una versión | `make release` (tras cerrar el bloque del CHANGELOG) |
 | Llevar un snippet al sitio de destino | `npm run snippets -- push <id> --file snippets/… --dry-run` (sin `--yes` no escribe) |
 

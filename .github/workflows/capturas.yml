@@ -1,0 +1,194 @@
+# Recorre las pantallas con `make capturas` en cada push del PR y deja un
+# comentario fijo con la galería.
+#
+# **Dónde viven las imágenes.** En ningún sitio del repositorio: no se
+# commitean con el código. Van a una rama `capturas`, con un directorio por PR
+# y **un solo commit huérfano** cada vez, así que esa rama pesa lo que pesan
+# las capturas vigentes y no arrastra su historia. Como el repositorio es
+# público, el comentario las enlaza por `raw.githubusercontent.com`, que GitHub
+# sirve como imagen sin parámetros ni permisos.
+#
+# Se miró si había algo más simple. Un artefacto no vale: se descarga en zip y
+# no se puede incrustar en un comentario. Una URL `data:` tampoco: el cuerpo de
+# un comentario tiene un tope de 65 KB y una captura pesa más que eso. Ser
+# público ahorra la autenticación de los enlaces, pero no el sitio donde
+# dejarlos: una rama es lo más simple que renderiza dentro del PR.
+
+name: Capturas
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+# Un empujón nuevo deja sin valor al anterior. Entre PR distintos, la
+# publicación se protege con --force-with-lease y reintenta.
+concurrency:
+  group: capturas-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  capturas:
+    runs-on: ${{ vars.EVT_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install npm dependencies
+        run: npm install
+
+      # PHP solo hace falta para `make bundle` dentro de la provisión.
+      - name: Preparar PHP (runners de GitHub)
+        if: runner.environment == 'github-hosted'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Start wp-env
+        run: npx wp-env start --update
+
+      # Sin tolerancia: con una provisión a medias las capturas mienten.
+      - name: Provision environment
+        run: make provision
+
+      - name: Install Chromium
+        run: |
+          if [ "${RUNNER_ENVIRONMENT}" = "github-hosted" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+
+      - name: Capturar las pantallas
+        run: make capturas
+
+      # A 256 colores una captura de interfaz no se distingue y pesa la mitad.
+      # Fichero a fichero: pngquant sale con 98/99 cuando decide no tocar uno,
+      # y eso no es un error.
+      - name: Optimizar las imágenes
+        if: ${{ !cancelled() && hashFiles('capturas/indice.json') != '' }}
+        run: |
+          command -v pngquant > /dev/null || sudo apt-get install -y -qq pngquant > /dev/null
+          echo "antes:   $(du -sh capturas/img | cut -f1)"
+          for f in capturas/img/*.png; do
+            pngquant --force --ext .png --skip-if-larger --speed 1 -- "$f" || true
+          done
+          echo "después: $(du -sh capturas/img | cut -f1)"
+
+      - name: Guardar el informe como artefacto
+        if: ${{ !cancelled() && hashFiles('capturas/indice.json') != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: capturas
+          path: capturas/
+          retention-days: 30
+
+      - name: Publicar las imágenes en la rama capturas
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && hashFiles('capturas/indice.json') != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          DEST="${RUNNER_TEMP}/rama-capturas"
+          for intento in 1 2 3; do
+            rm -rf "${DEST}"
+            if git clone -q --depth 1 --branch capturas "${REPO_URL}" "${DEST}" 2>/dev/null; then
+              BASE="$(git -C "${DEST}" rev-parse HEAD)"
+            else
+              # La primera vez la rama no existe todavía: fallar aquí es normal.
+              mkdir -p "${DEST}" && git -C "${DEST}" init -q && BASE=""
+            fi
+            rm -rf "${DEST}/pr-${PR}"
+            mkdir -p "${DEST}/pr-${PR}"
+            cp -R "${GITHUB_WORKSPACE}/capturas/." "${DEST}/pr-${PR}/"
+            cd "${DEST}"
+            git checkout -q --orphan publicar
+            git add -A
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "capturas: PR #${PR} en ${SHA}"
+            if git push -q --force-with-lease="refs/heads/capturas:${BASE}" "${REPO_URL}" HEAD:refs/heads/capturas; then
+              exit 0
+            fi
+            # O la rama cambió bajo los pies —de eso va el lease— o la red del
+            # runner parpadeó. Sin esperar, los tres intentos se gastan en dos
+            # segundos y no dan tiempo a que se recupere nada.
+            echo "No se pudo publicar; reintento ${intento} en $(( intento * 5 ))s."
+            sleep $(( intento * 5 ))
+            cd "${GITHUB_WORKSPACE}"
+          done
+          exit 1
+
+      - name: Comentar la galería en el PR
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && hashFiles('capturas/indice.json') != '' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const marcador = '<!-- evt-capturas -->';
+            const pr = context.payload.pull_request.number;
+            const sha = context.payload.pull_request.head.sha.slice(0, 7);
+            const indice = JSON.parse(fs.readFileSync('capturas/indice.json', 'utf8'));
+            const base = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/capturas/pr-${pr}/`;
+
+            // El ordenador en una columna ancha; el móvil, estrecho y en su
+            // propia sección: son cosas distintas y mezclarlas no ayuda.
+            const fila = (c) => {
+              const url = `${base}${c.img}`;
+              const ancho = c.pantalla === 'movil' ? 240 : 760;
+              const aviso = c.ok ? '' : `> ✗ **${c.error}**\n\n`;
+              return `${aviso}<a href="${url}"><img src="${url}" width="${ancho}"></a>`;
+            };
+
+            let cuerpo = '';
+            let capitulo = '';
+            for (const c of indice) {
+              if (c.capitulo !== capitulo) {
+                capitulo = c.capitulo;
+                cuerpo += `\n### ${capitulo}\n`;
+              }
+              cuerpo += `\n<details${c.ok ? '' : ' open'}><summary><b>${c.titulo}</b> — ${c.nota}</summary>\n\n${fila(c)}\n\n</details>\n`;
+            }
+
+            const fallos = indice.filter((c) => !c.ok).length;
+            const ejecucion = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marcador,
+              `## Capturas — \`${sha}\``,
+              '',
+              `${indice.length} pantallas; ${fallos ? `**${fallos} sin completar** (abiertas abajo)` : 'todas completadas'}. ` +
+                `El informe HTML está en el artefacto \`capturas\` de [esta ejecución](${ejecucion}).`,
+              cuerpo,
+            ].join('\n');
+
+            const { data: comentarios } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, per_page: 100,
+            });
+            const previo = comentarios.find((c) => c.body && c.body.includes(marcador));
+            if (previo) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: previo.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, body });
+            }
+
+      # En un runner propio los contenedores se quedarían corriendo entre
+      # ejecuciones, ocupando los puertos y arrastrando la base de datos de la
+      # anterior. Con `always()` también se limpia cuando el job falla, que es
+      # cuando más falta hace.
+      - name: Parar wp-env
+        if: always()
+        run: npx wp-env stop || true
