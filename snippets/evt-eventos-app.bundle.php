@@ -20,6 +20,12 @@
 
 namespace Evt\Meta;
 
+// La guarda de acceso directo va AQUÍ y no en la cabecera: antes de un
+// `namespace` no puede haber ninguna sentencia, y el bundle empieza por el
+// suyo. Code Snippets evalúa este código, no lo incluye, así que no hay
+// acceso directo que valga; va igual por si el fichero acaba servido.
+defined( 'ABSPATH' ) || exit;
+
 // Code Snippets vuelve a evaluar un snippet activo al guardarlo: si el
 // bundle ya se cargó hay que salir, o el segundo eval() muere redeclarando
 // clases. Una constante, porque class_exists() ya es cierto al compilar.

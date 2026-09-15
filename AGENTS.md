@@ -130,6 +130,7 @@ Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.
 | Empezar de cero | `make destroy && make up` |
 | Probar sin Docker | `make playground` |
 | Antes de commit/PR | `make check` |
+| Comprobar el código como lo revisaría WordPress.org | `make check-plugin` |
 | Publicar una versión | `make release` (tras cerrar el bloque del CHANGELOG) |
 | Llevar un snippet al sitio de destino | `npm run snippets -- push <id> --file snippets/… --dry-run` (sin `--yes` no escribe) |
 
@@ -338,7 +339,7 @@ también a `scripts/check-public.mjs`: esa lista es donde vive lo aprendido.
 ## Definición de hecho
 
 1. `make lint` sin errores.
-2. `make test` sin fallos.
+2. `make test` sin fallos, y `make check-plugin` sin errores de Plugin Check.
 3. `make bundle` genera un bundle que pasa `php -l`, y `make snippet-check`
    pasa con el entorno arrancado.
 4. `make up` / provisión OK (<http://localhost:8798>, `admin` / `password`).
