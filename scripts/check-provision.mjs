@@ -14,7 +14,6 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
-import yaml from 'js-yaml';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -100,20 +99,23 @@ const STEPS = [
 ];
 
 /**
- * Comprueba que los workflows son YAML válido y que su JavaScript compila.
+ * Comprueba que el JavaScript de los workflows compila.
  *
- * Los dos modos de fallar de un workflow son silenciosos en local:
+ * `actions/github-script` lleva su código **dentro de una cadena YAML**, así
+ * que nadie lo compila hasta que el job corre: tres minutos después de
+ * empujar, y solo si el resto del job llegó hasta ahí. Un identificador
+ * repetido o un paréntesis suelto se descubren en CI y no en local.
  *
- * - **El fichero entero inválido.** GitHub no se salta el paso malo: rechaza el
- *   workflow y la ejecución sale en rojo **a los cero segundos**, sin un solo
- *   job que abrir y sin decir qué línea está mal.
- * - **El JavaScript de `github-script` con un error de sintaxis.** Va dentro de
- *   una cadena YAML, así que nadie lo compila hasta que el job corre — tres
- *   minutos después de empujar, y solo si el resto del job llegó hasta ahí.
+ * El bloque se saca por indentación y no con un analizador de YAML, para que
+ * este guion siga **sin dependencias**: lo único que hay que entender es
+ * `script: |` seguido de líneas más indentadas, que es como está escrito en
+ * este repositorio.
  *
- * Las dos cosas se cazan aquí en un segundo. `js-yaml` entra como dependencia
- * declarada —venía de rebote con wp-env, y de rebote llegaba la 3, donde
- * `load()` no es la variante segura— y `vm` es de Node.
+ * **Lo que esto NO comprueba**, y conviene no confundirlo: que las expresiones
+ * `${{ … }}` sean válidas. Un `if` que lea un contexto que ahí no existe
+ * —`secrets`, por ejemplo— es YAML perfectamente válido y JavaScript que ni se
+ * mira; GitHub lo rechaza al recibir el fichero y ninguna comprobación local lo
+ * ve venir. Eso solo lo dice GitHub.
  *
  * @return {void}
  */
@@ -126,42 +128,46 @@ function comprobarWorkflows() {
 	let guiones = 0;
 
 	for ( const nombre of ficheros ) {
-		const ruta = join( dir, nombre );
-		let workflow;
-		try {
-			workflow = yaml.load( readFileSync( ruta, 'utf8' ) );
-		} catch ( error ) {
-			expect( false, `.github/workflows/${ nombre } no es YAML válido`, error.message );
-		}
-		expect( workflow && workflow.jobs, `.github/workflows/${ nombre } no declara ningún job` );
+		const lineas = readFileSync( join( dir, nombre ), 'utf8' ).split( '\n' );
 
-		// El `script:` de actions/github-script es JavaScript dentro de YAML:
-		// se compila sin ejecutarlo, que es lo que basta para ver un identificador
-		// repetido o un paréntesis suelto.
-		for ( const [ job, def ] of Object.entries( workflow.jobs ) ) {
-			for ( const paso of def.steps || [] ) {
-				const codigo = paso.with && paso.with.script;
-				if ( 'string' !== typeof codigo || ! String( paso.uses || '' ).includes( 'github-script' ) ) {
+		for ( let i = 0; i < lineas.length; i++ ) {
+			const apertura = lineas[ i ].match( /^(\s*)script:\s*\|/ );
+			if ( ! apertura ) {
+				continue;
+			}
+			// El bloque son las líneas siguientes con más indentación que la
+			// clave; una línea en blanco no lo corta.
+			const sangria = apertura[ 1 ].length;
+			const bloque = [];
+			let j = i + 1;
+			for ( ; j < lineas.length; j++ ) {
+				const linea = lineas[ j ];
+				if ( '' === linea.trim() ) {
+					bloque.push( '' );
 					continue;
 				}
-				guiones += 1;
-				try {
-					// Como lo envuelve la propia acción: una función asíncrona.
-					new vm.Script( `(async () => {\n${ codigo }\n})` );
-				} catch ( error ) {
-					expect(
-						false,
-						`${ nombre } → ${ job } → «${ paso.name || paso.uses }»: el script no compila`,
-						error.message
-					);
+				if ( linea.search( /\S/ ) <= sangria ) {
+					break;
 				}
+				bloque.push( linea );
+			}
+			i = j - 1;
+
+			const corte = Math.min( ...bloque.filter( ( l ) => '' !== l ).map( ( l ) => l.search( /\S/ ) ) );
+			const codigo = bloque.map( ( l ) => l.slice( corte ) ).join( '\n' );
+			guiones += 1;
+
+			try {
+				// Como lo envuelve la propia acción: una función asíncrona.
+				new vm.Script( `(async () => {\n${ codigo }\n})` );
+			} catch ( error ) {
+				expect( false, `${ nombre }, línea ${ apertura.index + i }: el script no compila`, error.message );
 			}
 		}
 	}
 
-	console.log(
-		`Workflows: ${ ficheros.length } fichero(s) con YAML válido y ${ guiones } guion(es) de github-script que compilan.`
-	);
+	expect( guiones > 0, 'no se encontró ningún bloque script: | en los workflows' );
+	console.log( `Workflows: ${ guiones } guion(es) de github-script compilan, en ${ ficheros.length } fichero(s).` );
 }
 
 const workdir = mkdtempSync( join( tmpdir(), 'evt-provision-' ) );
