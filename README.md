@@ -17,7 +17,16 @@ sube ([ADR-0030](docs/adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.m
 [`blueprint.json`](blueprint.json) en WordPress Playground —WordPress entero
 compilado a WebAssembly, corriendo en la pestaña del navegador—. Levanta el
 sitio con los tres plugins, sincroniza los snippets, crea los roles, el
-vocabulario y los datos de demostración, y aterriza en el listado de eventos.
+vocabulario, las páginas y los datos de demostración, y **aterriza en el
+aplicativo**, no en el escritorio: en «Gestión de eventos», que es lo que se
+viene a ver.
+
+Lleva también el mu-plugin de desarrollo, así que desde la barra superior se
+puede **cambiar de cuenta** —`organizacion`, `organizacion2`, `organizacion3`,
+`coordinacion`— y ver el aplicativo con cada rol y cada área, que es la mitad de
+lo que hay que probar aquí. Volver a la propia cuenta se hace desde la misma
+barra.
+
 Tarda un par de minutos la primera vez y **no toca nada de tu máquina**: al
 cerrar la pestaña no queda rastro. En cada PR sale además su propio enlace, con
 el código de esa rama.

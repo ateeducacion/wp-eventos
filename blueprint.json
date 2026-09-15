@@ -1,6 +1,6 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-  "landingPage": "/wp-admin/edit.php?post_type=evt_event",
+  "landingPage": "/eventos-gestion/",
   "preferredVersions": {
     "php": "8.3",
     "wp": "latest"
@@ -81,6 +81,17 @@
       }
     },
     {
+      "step": "writeFiles",
+      "writeToPath": "/wordpress/wp-content/mu-plugins",
+      "filesTree": {
+        "resource": "git:directory",
+        "url": "https://github.com/ateeducacion/wp-eventos.git",
+        "ref": "main",
+        "refType": "branch",
+        "path": "scripts/mu-plugins"
+      }
+    },
+    {
       "step": "runPHP",
       "code": "<?php require_once '/wordpress/wp-load.php'; require '/wordpress/wp-content/evt-dev/scripts/sync-snippets.php';"
     },
@@ -91,6 +102,10 @@
     {
       "step": "runPHP",
       "code": "<?php require_once '/wordpress/wp-load.php'; require '/wordpress/wp-content/evt-dev/scripts/setup-vocabulary.php';"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; require '/wordpress/wp-content/evt-dev/scripts/setup-pages.php';"
     },
     {
       "step": "runPHP",
