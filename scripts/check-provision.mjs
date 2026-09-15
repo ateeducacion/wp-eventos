@@ -12,7 +12,9 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import vm from 'node:vm';
+import yaml from 'js-yaml';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +99,71 @@ const STEPS = [
 	'seed-demo.php',
 ];
 
+/**
+ * Comprueba que los workflows son YAML válido y que su JavaScript compila.
+ *
+ * Los dos modos de fallar de un workflow son silenciosos en local:
+ *
+ * - **El fichero entero inválido.** GitHub no se salta el paso malo: rechaza el
+ *   workflow y la ejecución sale en rojo **a los cero segundos**, sin un solo
+ *   job que abrir y sin decir qué línea está mal.
+ * - **El JavaScript de `github-script` con un error de sintaxis.** Va dentro de
+ *   una cadena YAML, así que nadie lo compila hasta que el job corre — tres
+ *   minutos después de empujar, y solo si el resto del job llegó hasta ahí.
+ *
+ * Las dos cosas se cazan aquí en un segundo. `js-yaml` entra como dependencia
+ * declarada —venía de rebote con wp-env, y de rebote llegaba la 3, donde
+ * `load()` no es la variante segura— y `vm` es de Node.
+ *
+ * @return {void}
+ */
+function comprobarWorkflows() {
+	const dir = join( ROOT, '.github/workflows' );
+	const ficheros = readdirSync( dir ).filter( ( f ) => f.endsWith( '.yml' ) || f.endsWith( '.yaml' ) );
+
+	expect( ficheros.length > 0, 'no hay ningún workflow en .github/workflows' );
+
+	let guiones = 0;
+
+	for ( const nombre of ficheros ) {
+		const ruta = join( dir, nombre );
+		let workflow;
+		try {
+			workflow = yaml.load( readFileSync( ruta, 'utf8' ) );
+		} catch ( error ) {
+			expect( false, `.github/workflows/${ nombre } no es YAML válido`, error.message );
+		}
+		expect( workflow && workflow.jobs, `.github/workflows/${ nombre } no declara ningún job` );
+
+		// El `script:` de actions/github-script es JavaScript dentro de YAML:
+		// se compila sin ejecutarlo, que es lo que basta para ver un identificador
+		// repetido o un paréntesis suelto.
+		for ( const [ job, def ] of Object.entries( workflow.jobs ) ) {
+			for ( const paso of def.steps || [] ) {
+				const codigo = paso.with && paso.with.script;
+				if ( 'string' !== typeof codigo || ! String( paso.uses || '' ).includes( 'github-script' ) ) {
+					continue;
+				}
+				guiones += 1;
+				try {
+					// Como lo envuelve la propia acción: una función asíncrona.
+					new vm.Script( `(async () => {\n${ codigo }\n})` );
+				} catch ( error ) {
+					expect(
+						false,
+						`${ nombre } → ${ job } → «${ paso.name || paso.uses }»: el script no compila`,
+						error.message
+					);
+				}
+			}
+		}
+	}
+
+	console.log(
+		`Workflows: ${ ficheros.length } fichero(s) con YAML válido y ${ guiones } guion(es) de github-script que compilan.`
+	);
+}
+
 const workdir = mkdtempSync( join( tmpdir(), 'evt-provision-' ) );
 
 try {
@@ -167,6 +234,8 @@ try {
 		.map( ( line ) => line.trim() )
 		.find( ( line ) => line.includes( 'run:' ) && line.includes( 'make phpmd' ) );
 	expect( Boolean( order ), 'el workflow de PHPMD ya no llama a `make phpmd`' );
+
+	comprobarWorkflows();
 
 	// Lo que va detrás de `run:`, sin la palabra `make`, es lo que se le pasa.
 	// Se trocea como lo haría una shell y no por espacios: uno de los

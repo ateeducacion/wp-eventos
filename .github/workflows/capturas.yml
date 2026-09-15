@@ -164,18 +164,18 @@ jobs:
               scenes.get(key).shots.push(s);
             }
 
-            let body = '';
+            let gallery = '';
             let chapter = '';
             for (const scene of scenes.values()) {
               if (scene.chapter !== chapter) {
                 chapter = scene.chapter;
-                body += `\n### ${chapter}\n`;
+                gallery += `\n### ${chapter}\n`;
               }
               const broken = scene.shots.some((s) => !s.ok);
               const imgs = scene.shots
                 .map((s) => `**${s.screen === 'mobile' ? 'Móvil' : 'Ordenador'}**\n\n${image(s)}`)
                 .join('\n\n');
-              body += `\n<details${broken ? ' open' : ''}><summary><b>${scene.title}</b> — ${scene.note}</summary>\n\n${imgs}\n\n</details>\n`;
+              gallery += `\n<details${broken ? ' open' : ''}><summary><b>${scene.title}</b> — ${scene.note}</summary>\n\n${imgs}\n\n</details>\n`;
             }
 
             const failed = shots.filter((s) => !s.ok).length;
@@ -185,7 +185,7 @@ jobs:
               '',
               `${shots.length} capturas de ${scenes.size} pantallas; ${failed ? `**${failed} sin completar** (abiertas abajo)` : 'todas completadas'}. ` +
                 `El informe HTML está en el artefacto \`capturas\` de [esta ejecución](${ejecucion}).`,
-              body,
+              gallery,
             ].join('\n');
 
             // Va en la descripción del PR, entre marcadores, y no en un
