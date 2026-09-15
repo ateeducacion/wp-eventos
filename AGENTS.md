@@ -178,8 +178,15 @@ segundo `eval()` de Code Snippets muera con «Cannot redeclare class». Es una
 constante y no un `class_exists()` a propósito: PHP resuelve pronto las clases
 sin padre y `App` ya existiría en la primera pasada.
 
-**El bundle no lo cubren los tests**: `tests/bootstrap.php` carga los módulos de
-`src/Evt/` y se salta `*.bundle.php`. Por eso `make bundle` hace `php -l` del
+**El bundle sale sin comentarios**: el empaquetador se los quita con el
+analizador léxico de PHP —no con expresiones regulares— para que el snippet sea
+más pequeño y manejable en el editor de Code Snippets. Los comentarios se leen
+en `src/Evt/`, que es donde están enteros. La **cabecera no se toca**: de ella
+salen el nombre, el ámbito y la prioridad del snippet, y el `@version` que mira
+`make release`.
+
+**Al bundle solo lo miran sus propios tests** (`tests/unit/test-bundle.php`):
+`tests/bootstrap.php` carga los módulos de `src/Evt/` y se salta `*.bundle.php`. Por eso `make bundle` hace `php -l` del
 resultado — un `declare(strict_types=1)` es legal por fichero y **fatal** al
 concatenar. Por eso también está prohibido.
 
