@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml/badge.svg)](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ateeducacion/wp-eventos/graph/badge.svg?token=oYuGLf1luI)](https://codecov.io/gh/ateeducacion/wp-eventos)
+[![Probar en WordPress Playground](https://img.shields.io/badge/Probar%20en%20WordPress%20Playground-3858E9?logo=wordpress&logoColor=white)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ateeducacion/wp-eventos/main/blueprint.json)
 
 Entorno de desarrollo del aplicativo de **eventos** (encuentros, jornadas y
 congresos): WordPress + **Code Snippets** + **Members** + **WPFront User Role
@@ -11,6 +12,24 @@ un único snippet con `make bundle`.
 
 Dónde se despliega **no está en el repositorio**: va en el `.env`, que no se
 sube ([ADR-0030](docs/adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
+
+**[Pruébalo sin instalar nada](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ateeducacion/wp-eventos/main/blueprint.json)**: el botón de arriba abre
+[`blueprint.json`](blueprint.json) en WordPress Playground —WordPress entero
+compilado a WebAssembly, corriendo en la pestaña del navegador—. Levanta el
+sitio con los tres plugins, sincroniza los snippets, crea los roles, el
+vocabulario, las páginas y los datos de demostración, y **aterriza en el
+aplicativo**, no en el escritorio: en «Gestión de eventos», que es lo que se
+viene a ver.
+
+Lleva también el mu-plugin de desarrollo, así que desde la barra superior se
+puede **cambiar de cuenta** —`organizacion`, `organizacion2`, `organizacion3`,
+`coordinacion`— y ver el aplicativo con cada rol y cada área, que es la mitad de
+lo que hay que probar aquí. Volver a la propia cuenta se hace desde la misma
+barra.
+
+Tarda un par de minutos la primera vez y **no toca nada de tu máquina**: al
+cerrar la pestaña no queda rastro. En cada PR sale además su propio enlace, con
+el código de esa rama.
 
 > **Este repositorio NO es un plugin de WordPress.** No lleva cabecera de
 > plugin, ni `readme.txt`, ni `register_activation_hook()`, ni rutas de plugin.
