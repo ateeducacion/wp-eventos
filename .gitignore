@@ -32,12 +32,14 @@ Thumbs.db
 /.idea/
 .vscode/
 
-# Local agent state (las skills de .claude/skills/ SÍ se versionan: son enlaces)
+# Local agent state. Las skills de .claude/skills/ SÍ se versionan, y como
+# **copia**: en Windows los enlaces simbólicos no funcionan salvo que estén
+# habilitados a mano, y `gh skill` tampoco enlaza, copia. Así el árbol es el
+# mismo en macOS, Linux y Windows.
 .omc/
 .playwright-mcp/
 .claude/*
 !.claude/skills/
-.claude/skills/*/
 security-scans/
 
 # Capturas de pantalla generadas a mano (se regeneran, no se versionan)

@@ -110,7 +110,7 @@ const SKIP = [
 	'snippets/evt-eventos-app.bundle.php',
 	'scripts/check-public.mjs', // este fichero nombra lo que busca
 ];
-const EXTENSIONS = new Set( [ '.php', '.md', '.js', '.mjs', '.css', '.html', '.json', '.yml', '.yaml', '.xml', '.dist', '.txt', '.py' ] );
+const EXTENSIONS = new Set( [ '.php', '.md', '.js', '.mjs', '.css', '.html', '.json', '.yml', '.yaml', '.xml', '.dist', '.txt', '.py', '.cjs', '.sh' ] );
 const NO_EXTENSION = new Set( [ 'Makefile', 'Dockerfile' ] );
 
 /**

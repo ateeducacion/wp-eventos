@@ -174,6 +174,7 @@ Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
 | `make sync-snippets` | Sincroniza `snippets/*.php` → Code Snippets |
 | `make snippet-check` | Comprueba que los snippets sobreviven al guardado (doble eval) |
 | `make test` | PHPUnit (admite `FILE=…` y `FILTER=…`) |
+| `make skills-sync` | Copia `.agents/skills/` sobre `.claude/skills/` |
 | `make test-browser` | Los tres escalones de la confirmación en un navegador real |
 | `make coverage` | Cobertura de `src/Evt` (reinicia wp-env con Xdebug) |
 | `make lint` / `make fix` | PHPCS / PHPCBF |
