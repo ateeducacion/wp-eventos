@@ -85,6 +85,42 @@ if ( ! function_exists( 'evt_dev_wpfront_switching' ) ) {
 	}
 }
 
+if ( ! function_exists( 'evt_dev_ensure_switch_cap' ) ) {
+	/**
+	 * Make sure administration really holds `switch_users`.
+	 *
+	 * WPFront no concede esa capacidad al activarse: la añade al rol de
+	 * administración a través del filtro
+	 * `wpfront_ure_administrator_caps_to_process`, y ese filtro **solo corre
+	 * cuando alguien entra en su interfaz del escritorio**. En un wp-env se
+	 * entra tarde o temprano y por eso allí funciona; en **WordPress
+	 * Playground**, que aterriza en el aplicativo y se aprovisiona sin abrir
+	 * wp-admin, no entra nadie, la capacidad no llega nunca y el «Cambiar a…»
+	 * responde «Permission denied» (su propio `wp_die`, 403).
+	 *
+	 * Así que se hace aquí lo mismo que haría el plugin: dársela al rol de
+	 * administración, y a nadie más. Solo escribe cuando falta, así que en un
+	 * entorno donde WPFront ya la puso no toca la base de datos.
+	 *
+	 * Esto es **solo desarrollo**: este mu-plugin no se despliega nunca.
+	 *
+	 * @return void
+	 */
+	function evt_dev_ensure_switch_cap(): void {
+		if ( ! evt_dev_wpfront_switching() ) {
+			return;
+		}
+		$rol = get_role( 'administrator' );
+		if ( $rol instanceof WP_Role && ! $rol->has_cap( 'switch_users' ) ) {
+			$rol->add_cap( 'switch_users' );
+		}
+	}
+}
+
+// Después de que WPFront se haya cargado —él engancha su propio `init` con
+// prioridad 1— y antes de que ninguna pantalla pregunte por la capacidad.
+add_action( 'init', 'evt_dev_ensure_switch_cap', 5 );
+
 if ( ! function_exists( 'evt_dev_switch_to_user_url' ) ) {
 	/**
 	 * Build the WPFront switch-to-user URL, or null when the plugin is not there.
