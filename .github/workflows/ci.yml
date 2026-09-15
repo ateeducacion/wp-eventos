@@ -167,6 +167,12 @@ jobs:
       - name: Provision environment
         run: make provision
 
+      # Plugin Check sobre un envoltorio desechable: este repositorio no es un
+      # plugin (ADR-0001), pero el código que corre dentro de WordPress es el
+      # mismo y las comprobaciones valen igual.
+      - name: Run WordPress Plugin Check
+        run: make check-plugin
+
       - name: Run unit tests with coverage
         run: make coverage
 

@@ -77,7 +77,7 @@ foreach ( $order as $rel ) {
 	if ( $rel === $order[0] ) {
 		$code = preg_replace(
 			'/^namespace [^;]+;/m',
-			"$0\n\n// Code Snippets vuelve a evaluar un snippet activo al guardarlo: si el\n// bundle ya se cargó hay que salir, o el segundo eval() muere redeclarando\n// clases. Una constante, porque class_exists() ya es cierto al compilar.\nif ( \\defined( 'EVT_BUNDLE_LOADED' ) ) {\n\treturn;\n}\n\\define( 'EVT_BUNDLE_LOADED', true );",
+			"$0\n\n// La guarda de acceso directo va AQUÍ y no en la cabecera: antes de un\n// `namespace` no puede haber ninguna sentencia, y el bundle empieza por el\n// suyo. Code Snippets evalúa este código, no lo incluye, así que no hay\n// acceso directo que valga; va igual por si el fichero acaba servido.\ndefined( 'ABSPATH' ) || exit;\n\n// Code Snippets vuelve a evaluar un snippet activo al guardarlo: si el\n// bundle ya se cargó hay que salir, o el segundo eval() muere redeclarando\n// clases. Una constante, porque class_exists() ya es cierto al compilar.\nif ( \\defined( 'EVT_BUNDLE_LOADED' ) ) {\n\treturn;\n}\n\\define( 'EVT_BUNDLE_LOADED', true );",
 			(string) $code,
 			1,
 			$n

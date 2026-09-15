@@ -8,6 +8,13 @@
  * @package Evt
  */
 
+// Code Snippets evalúa esto, no lo incluye como fichero, así que aquí no hay
+// «acceso directo» que valga. La guarda va igual porque no cuesta nada y porque
+// el día que este código acabe en un fichero servido —una copia, un envoltorio,
+// una carpeta de plugins— la diferencia entre volcar el código y no volcarlo es
+// esta línea.
+defined( 'ABSPATH' ) || exit;
+
 if ( ! function_exists( 'evt_sweetalert_vendor' ) ) {
 	/**
 	 * Pinned SweetAlert2 build and its subresource integrity hash.

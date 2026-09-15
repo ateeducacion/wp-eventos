@@ -199,6 +199,50 @@ check-provision: ## Comprueba que la provisión propaga los fallos obligatorios
 
 check: lint phpmd check-public check-provision check-skills test ## Ejecuta lint, phpmd, check-public, check-provision, check-skills y tests
 
+# ─── Plugin Check ─────────────────────────────────────────────────────────────
+#
+# Plugin Check son las comprobaciones con las que WordPress.org revisa un
+# plugin: escapado tardío, saneado, consultas directas, i18n, encolados. Este
+# repositorio **no es un plugin** (ADR-0001) y no va a serlo, pero el código sí
+# es el mismo que corre dentro de WordPress, así que las comprobaciones valen.
+#
+# Para poder pasarlas se monta un envoltorio **desechable**: una carpeta de
+# plugin con una cabecera de mentira y los snippets dentro, que se crea, se
+# revisa y se borra. Nada de eso entra en el repositorio ni se despliega.
+#
+# Dos comprobaciones quedan fuera, y por escrito:
+#
+#   plugin_readme     No hay readme.txt ni lo va a haber: esto no se sube al
+#                     directorio de WordPress.org. AGENTS.md lo prohíbe.
+#   offloading_files  Las librerías se cargan desde jsDelivr con SRI, y es una
+#                     decisión tomada (ADR-0015), no un descuido.
+
+PLUGIN_CHECK_SLUG = evt-eventos
+PLUGIN_CHECK_DIR = .evt-plugin-check
+
+check-plugin: start-if-not-running bundle ## Pasa WordPress Plugin Check sobre el código de los snippets
+	@npx wp-env run cli wp plugin install plugin-check --activate --color > /dev/null 2>&1 || true
+	@rm -rf $(PLUGIN_CHECK_DIR)
+	@mkdir -p $(PLUGIN_CHECK_DIR)/$(PLUGIN_CHECK_SLUG)
+	@cp snippets/*.php $(PLUGIN_CHECK_DIR)/$(PLUGIN_CHECK_SLUG)/
+	@php build/plugin-check-wrapper.php $(PLUGIN_CHECK_DIR)/$(PLUGIN_CHECK_SLUG)/$(PLUGIN_CHECK_SLUG).php
+	@npx wp-env run cli sh -c "rm -rf wp-content/plugins/$(PLUGIN_CHECK_SLUG) && cp -R wp-content/evt-dev/$(PLUGIN_CHECK_DIR)/$(PLUGIN_CHECK_SLUG) wp-content/plugins/$(PLUGIN_CHECK_SLUG)" > /dev/null
+	@echo "Pasando WordPress Plugin Check..."
+	@INFORME=$$(mktemp); \
+	npx wp-env run cli wp plugin check $(PLUGIN_CHECK_SLUG) \
+		--exclude-checks=plugin_readme,offloading_files \
+		--ignore-warnings \
+		--color 2>&1 | tee "$$INFORME"; \
+	ERRORES=$$(sed 's/\x1B\[[0-9;]*[mK]//g' "$$INFORME" | grep -cE '\bERROR\b' || true); \
+	rm -f "$$INFORME"; \
+	npx wp-env run cli rm -rf wp-content/plugins/$(PLUGIN_CHECK_SLUG) > /dev/null 2>&1 || true; \
+	rm -rf $(PLUGIN_CHECK_DIR); \
+	if [ "$$ERRORES" -gt 0 ]; then \
+		echo "Plugin Check: $$ERRORES error(es). El comando sale con 0 aunque los haya, así que lo que manda es este recuento."; \
+		exit 1; \
+	fi; \
+	echo "Plugin Check: sin errores."
+
 # ─── Skills de agentes ────────────────────────────────────────────────────────
 #
 # Las canónicas viven en .agents/skills/ y .claude/skills/ lleva una COPIA, no

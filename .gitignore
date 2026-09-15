@@ -51,3 +51,4 @@ security-scans/
 # Cómo se regenera: .design/README.md
 /.design/*.html
 !/.design/*.dc.html
+.evt-plugin-check/
