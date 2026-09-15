@@ -1,6 +1,7 @@
 # Eventos — entorno de desarrollo
 
 [![CI](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml/badge.svg)](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ateeducacion/wp-eventos/graph/badge.svg?token=oYuGLf1luI)](https://codecov.io/gh/ateeducacion/wp-eventos)
 
 Entorno de desarrollo del aplicativo de **eventos** (encuentros, jornadas y
 congresos): WordPress + **Code Snippets** + **Members** + **WPFront User Role
@@ -222,6 +223,24 @@ No edites a mano `snippets/*.bundle.php`: se regenera.
 **El gestor de formularios no se instala en el entorno.** En producción
 convive con el aplicativo (las inscripciones siguen ahí), pero nada de
 `src/Evt/` depende de él y los tests no lo cargan.
+
+## Cobertura
+
+El suelo es el **90 %**, y bloquea en los dos ejes: el del parche —lo que se
+toca en un PR va con sus tests— y el del proyecto —no se compensa tocando
+poco—. Está en [`codecov.yml`](codecov.yml) y la decisión, con su porqué y lo
+que se descubrió al subirla, en la
+[ADR-0011](docs/adr/ADR-0011-ci-y-politica-de-pruebas.md).
+
+En local se mide con `make coverage`, que reinicia wp-env con Xdebug.
+
+[![Mapa de cobertura](https://codecov.io/gh/ateeducacion/wp-eventos/graphs/tree.svg?token=oYuGLf1luI)](https://codecov.io/gh/ateeducacion/wp-eventos)
+
+Cada rectángulo es un fichero de `src/Evt` y su tamaño son sus líneas; el color
+va de rojo a verde según lo cubierto. Sirve para lo que un porcentaje no dice:
+**dónde** está lo que no se prueba. `src/Evt/App.php` no sale porque está
+excluido de la medición —su cuerpo corre en el arranque, antes de que PHPUnit
+empiece a medir, y lo que hace se comprueba en `test-load-order.php`—.
 
 ## Documentación
 
