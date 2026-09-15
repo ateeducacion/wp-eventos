@@ -99,6 +99,68 @@ foreach ( $order as $rel ) {
 // sale en la página, sin error que lo delate. El orden de este mapa da igual: es
 // una búsqueda por ruta, y quien decide en qué orden se cargan es
 // `Assets::register_assets()`.
+/**
+ * Strip every comment from the bundled body, keeping its line structure.
+ *
+ * El bundle es un artefacto: se pega en Code Snippets, no se lee ni se edita
+ * —AGENTS.md lo prohíbe— y `src/Evt/` conserva los comentarios enteros, que es
+ * donde se leen. Quitarlos aquí hace el snippet bastante más pequeño y más
+ * manejable en el editor del plugin, que es lo que se pidió.
+ *
+ * Se hace con el analizador léxico de PHP y **no con expresiones regulares**:
+ * un `//` dentro de una cadena o una URL no es un comentario, y un reemplazo a
+ * ciegas se llevaría por delante medio fichero. `token_get_all()` sabe la
+ * diferencia.
+ *
+ * Cada comentario se sustituye por sus propios saltos de línea, no por nada:
+ * así el número de línea del bundle sigue significando algo cuando PHP informa
+ * de un error, y la guarda del empaquetador —que el primer fichero abra con su
+ * `namespace`— se sigue viendo donde estaba.
+ *
+ * **La cabecera no pasa por aquí.** Es un docblock y la leen dos cosas:
+ * `evt_parse_snippet_header()` al sincronizar —de ahí salen el nombre, el
+ * ámbito y la prioridad del snippet— y `make release`, que busca su
+ * `@version`. Sin ella el snippet no se puede publicar.
+ *
+ * @param string $code Concatenated body of the bundle.
+ * @return string The same code without comments.
+ */
+function evt_strip_comments( string $code ): string {
+	// El `<?php` de entrada no es decorativo: sin él `token_get_all()` empieza
+	// en modo HTML y devuelve el fichero entero como un solo T_INLINE_HTML…
+	// hasta que tropieza con un `<?php` metido dentro de una cadena, y a
+	// partir de ahí tokeniza desincronizado. Se le da la apertura y se le quita
+	// después el token que corresponde.
+	$tokens = token_get_all( '<?php ' . $code );
+	$out    = '';
+	$abrio  = false;
+
+	foreach ( $tokens as $token ) {
+		if ( ! $abrio && is_array( $token ) && T_OPEN_TAG === $token[0] ) {
+			$abrio = true;
+			continue;
+		}
+		if ( is_string( $token ) ) {
+			$out .= $token;
+			continue;
+		}
+		if ( T_COMMENT === $token[0] || T_DOC_COMMENT === $token[0] ) {
+			// Los saltos que tuviera dentro se conservan; el texto no.
+			$out .= str_repeat( "\n", substr_count( $token[1], "\n" ) );
+			continue;
+		}
+		$out .= $token[1];
+	}
+
+	// Un comentario que ocupaba su línea deja la sangría suelta detrás. Se
+	// recoge, pero **solo eso**: colapsar líneas en blanco tocaría también las
+	// de dentro de las cadenas del CSS y el JavaScript inlineados, que son
+	// contenido y no formato.
+	$out = (string) preg_replace( '/^[ \t]+$/m', '', $out );
+
+	return $out;
+}
+
 $assets = array();
 foreach ( array( 'css', 'js' ) as $tipo ) {
 	$encontrados = glob( $root . '/assets/' . $tipo . '/*.' . $tipo );
@@ -135,6 +197,8 @@ if ( \class_exists( \Evt\App::class ) ) {
 // phpcs:enable
 
 FTR;
+
+$body = evt_strip_comments( $body );
 
 if ( false === file_put_contents( $out, $header . $body . $footer ) ) {
 	fwrite( STDERR, "Cannot write {$out}\n" );

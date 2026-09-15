@@ -11,226 +11,226 @@
 
 // phpcs:disable
 
-// ---- src/Evt/Meta/EventMetaKeys.php ----
-/**
- * Meta keys and closed vocabularies for the evt_event CPT.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
-// La guarda de acceso directo va AQUÍ y no en la cabecera: antes de un
-// `namespace` no puede haber ninguna sentencia, y el bundle empieza por el
-// suyo. Code Snippets evalúa este código, no lo incluye, así que no hay
-// acceso directo que valga; va igual por si el fichero acaba servido.
+
+
+
+
 defined( 'ABSPATH' ) || exit;
 
-// Code Snippets vuelve a evaluar un snippet activo al guardarlo: si el
-// bundle ya se cargó hay que salir, o el segundo eval() muere redeclarando
-// clases. Una constante, porque class_exists() ya es cierto al compilar.
+
+
+
 if ( \defined( 'EVT_BUNDLE_LOADED' ) ) {
 	return;
 }
 \define( 'EVT_BUNDLE_LOADED', true );
 
-/**
- * Event post meta keys (never hardcode these strings elsewhere).
- *
- * Los valores de `section_types()` van en castellano a propósito: son el
- * vocabulario del campo «Tipo de página» del formulario del sistema anterior,
- * calcado 1:1 para que las páginas que ya existen se puedan migrar sin
- * traducir nada. Lo mismo con los estados, que hoy son términos de la
- * taxonomía `convocatoria` (`evento-abierto`, `evento-finalizado`) puestos a
- * mano.
- *
- * Las claves de apariencia sustituyen a los campos de diseño de ese formulario
- * que sí se portan: fondo y texto de la cabecera, las dos tipografías, la forma
- * de las imágenes y el separador. Los demás —el mosaico, el HTML de
- * sustitución, el CSS por página— no se portan, y por qué está escrito en
- * SDD-0002.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventMetaKeys {
 
-	/**
-	 * Qué es esta página dentro del evento. Vacía en la raíz del evento.
-	 */
+
+
+
 	public const SECTION_TYPE = 'evt_section_type';
 
-	/**
-	 * Primer día del evento, en Y-m-d.
-	 */
+
+
+
 	public const START_DATE = 'evt_start_date';
 
-	/**
-	 * Último día del evento, en Y-m-d. Vacío cuando dura un solo día.
-	 */
+
+
+
 	public const END_DATE = 'evt_end_date';
 
-	/**
-	 * Sede, tal y como se anuncia.
-	 */
+
+
+
 	public const VENUE = 'evt_venue';
 
-	/**
-	 * Lema del evento: la línea que acompaña al título.
-	 */
+
+
+
 	public const TAGLINE = 'evt_tagline';
 
-	/**
-	 * Etiqueta de redes, sin la almohadilla.
-	 */
+
+
+
 	public const HASHTAG = 'evt_hashtag';
 
-	/**
-	 * Texto introductorio de la portada del evento. Admite HTML de entrada.
-	 */
+
+
+
 	public const INTRO = 'evt_intro';
 
-	/**
-	 * Si la portada enseña el botón de inscripción.
-	 */
+
+
+
 	public const SIGNUP_SHOW = 'evt_signup_show';
 
-	/**
-	 * Rótulo del botón de inscripción.
-	 */
+
+
+
 	public const SIGNUP_LABEL = 'evt_signup_label';
 
-	/**
-	 * Dirección a la que lleva el botón de inscripción.
-	 */
+
+
+
 	public const SIGNUP_URL = 'evt_signup_url';
 
-	/**
-	 * HISTÓRICO: identificador del formulario de inscripción del sistema viejo.
-	 *
-	 * Existe solo para los eventos que vienen del sistema anterior, donde la
-	 * inscripción era un formulario por evento del plugin que se sustituye. El
-	 * aplicativo **no lo lee para nada más que para seguir pintando ese
-	 * formulario en los eventos migrados**: los participantes pasan a
-	 * gestionarse aquí, con formulario propio (ADR-0027).
-	 *
-	 * **Es previsible que desaparezca.** Cuando no quede ningún evento vivo que
-	 * lo use, se retira esta clave, su campo en «Ajustes» y la rama de
-	 * `EventView::has_form()` que lo consulta. No se le añadan usos nuevos.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public const SIGNUP_FORM_ID = 'evt_signup_form_id';
 
-	/**
-	 * Color de fondo de la cabecera del evento, hexadecimal.
-	 */
+
+
+
 	public const HEADER_BG = 'evt_header_bg';
 
-	/**
-	 * Color del texto de la cabecera del evento, hexadecimal.
-	 */
+
+
+
 	public const HEADER_TEXT = 'evt_header_text';
 
-	/**
-	 * Tipografía de los títulos.
-	 */
+
+
+
 	public const TITLE_FONT = 'evt_title_font';
 
-	/**
-	 * Tipografía del cuerpo.
-	 */
+
+
+
 	public const BODY_FONT = 'evt_body_font';
 
-	/**
-	 * ID del adjunto con el logo acompañante de la cabecera.
-	 */
+
+
+
 	public const LOGO_ID = 'evt_logo_id';
 
-	/**
-	 * ID del adjunto con el cartel del evento.
-	 */
+
+
+
 	public const POSTER_ID = 'evt_poster_id';
 
-	/**
-	 * Forma de las imágenes de personas: cuadrada o redonda.
-	 */
+
+
+
 	public const IMAGE_SHAPE = 'evt_image_shape';
 
-	/**
-	 * Separador al pie de la cabecera del evento.
-	 */
+
+
+
 	public const SEPARATOR = 'evt_separator';
 
-	/**
-	 * CSS a medida de esta página. Se guarda en crudo: es código, no texto.
-	 *
-	 * En la raíz del evento viste todas sus páginas; en una página satélite,
-	 * solo esa, y va después del del evento para poder afinarlo. Nunca sale
-	 * fuera de las páginas de su evento.
-	 */
+
+
+
+
+
+
+
 	public const CUSTOM_CSS = 'evt_custom_css';
 
-	/**
-	 * JavaScript a medida de esta página. También en crudo, y también acotado.
-	 *
-	 * Esto es ejecución de código en el navegador de cada visitante, así que
-	 * su capacidad es propia y más estrecha que la del CSS
-	 * ({@see \Evt\Access\EventAccess::can_edit_custom_js()}).
-	 */
+
+
+
+
+
+
+
 	public const CUSTOM_JS = 'evt_custom_js';
 
-	/**
-	 * Evento cerrado a edición para siempre: el estado «histórico».
-	 *
-	 * La marca la pone y la quita a mano quien administra el aplicativo
-	 * (`evt_manage_app`), y con ella puesta el área deja de poder editar el
-	 * evento y todo lo que cuelga de él. No es un despublicado: la página
-	 * pública se sigue viendo igual, y el taller se sigue abriendo en solo
-	 * lectura.
-	 *
-	 * No se confunde con `evt_legacy`, que la pone el guion de migración y
-	 * significa otra cosa: que el contenido es contenido del maquetador, congelado del sistema
-	 * viejo y no se regenera. La migración pone las dos; un evento nacido
-	 * aquí puede recibir esta y nunca tendrá aquella.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public const ARCHIVED = 'evt_archived';
 
-	/**
-	 * Sección que no encaja en ninguna de las demás.
-	 */
+
+
+
 	public const SECTION_OTHER = 'otra';
 
-	/**
-	 * Aún no ha empezado.
-	 */
+
+
+
 	public const STATE_UPCOMING = 'proximo';
 
-	/**
-	 * Está ocurriendo.
-	 */
+
+
+
 	public const STATE_OPEN = 'abierto';
 
-	/**
-	 * Ya pasó.
-	 */
+
+
+
 	public const STATE_FINISHED = 'finalizado';
 
-	/**
-	 * Imagen cuadrada. Es la forma por defecto.
-	 */
+
+
+
 	public const SHAPE_SQUARE = 'square';
 
-	/**
-	 * Imagen recortada en círculo.
-	 */
+
+
+
 	public const SHAPE_CIRCLE = 'circle';
 
-	/**
-	 * La tipografía del tema: ni se elige ni se carga nada.
-	 */
+
+
+
 	public const FONT_DEFAULT = '';
 
-	/**
-	 * All meta keys stored on an event post.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function all(): array {
 		return array(
 			self::SECTION_TYPE,
@@ -258,24 +258,24 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * The two keys that hold code instead of content.
-	 *
-	 * Se listan aparte porque en todas partes se tratan distinto: no se
-	 * escapan al salir, no los escribe cualquiera que edite el evento y viven
-	 * dentro del recuadro de «Solo administración».
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
 	public static function code_keys(): array {
 		return array( self::CUSTOM_CSS, self::CUSTOM_JS );
 	}
 
-	/**
-	 * Closed vocabulary of satellite page types.
-	 *
-	 * @return array<string, string> slug => etiqueta.
-	 */
+
+
+
+
+
 	public static function section_types(): array {
 		return array(
 			'programa'          => 'Programa',
@@ -292,11 +292,11 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * Closed vocabulary of derived event states.
-	 *
-	 * @return array<string, string> slug => etiqueta.
-	 */
+
+
+
+
+
 	public static function states(): array {
 		return array(
 			self::STATE_UPCOMING => 'Próximo',
@@ -305,19 +305,19 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * Closed vocabulary of typefaces.
-	 *
-	 * Hoy la tipografía sale de un desplegable con las 1.461 familias de Google
-	 * Fonts, y el resultado —está medido, y el material está en `.local/`— son
-	 * decenas de combinaciones distintas conviviendo en el mismo sitio. Aquí son
-	 * seis, elegidas por legibilidad y por pares que combinan, y una de ellas es
-	 * «la del tema»: el valor vacío, que no carga nada. El slug es el que va en
-	 * la clave; la etiqueta, el nombre de la familia tal y como lo pide la hoja
-	 * de estilos.
-	 *
-	 * @return array<string, string> slug => nombre de la familia.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function fonts(): array {
 		return array(
 			self::FONT_DEFAULT => 'La del tema',
@@ -329,11 +329,11 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * Closed vocabulary of image shapes for people's photographs.
-	 *
-	 * @return array<string, string> slug => etiqueta.
-	 */
+
+
+
+
+
 	public static function image_shapes(): array {
 		return array(
 			self::SHAPE_SQUARE => 'Cuadrada',
@@ -341,16 +341,16 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * Closed vocabulary of header separators.
-	 *
-	 * El formulario anterior ofrece hoy las veinticinco siluetas del tema. Se
-	 * conservan las seis que se dibujan con una silueta propia y se usan de
-	 * verdad; una que llegue de la migración fuera de esta lista se queda sin
-	 * separador, que es el valor vacío y el aspecto por defecto.
-	 *
-	 * @return array<string, string> slug => etiqueta.
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function separators(): array {
 		return array(
 			''         => 'Sin separador',
@@ -362,59 +362,59 @@ final class EventMetaKeys {
 		);
 	}
 
-	/**
-	 * Keep a value only when the closed list has it.
-	 *
-	 * @param mixed                 $value    Raw value.
-	 * @param array<string, string> $allowed  One of the vocabularies above.
-	 * @param string                $fallback What to return otherwise.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function in_list( $value, array $allowed, string $fallback = '' ): string {
 		$value = trim( (string) $value );
 		return isset( $allowed[ $value ] ) ? $value : $fallback;
 	}
 }
 
-// ---- src/Evt/Meta/EventMetaRegistration.php ----
-/**
- * Formal registration of evt_event post meta (types, sanitisation, auth).
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
 use Evt\Access\EventAccess;
 use Evt\PostType\EventPostType;
 
-/**
- * Registers every event meta key with register_post_meta().
- *
- * Los sanitize callbacks corren en cada update_post_meta() (sanitize_meta),
- * así que da igual por dónde entre el dato —formulario, escritorio, WP-CLI—:
- * siempre se normaliza en el mismo sitio.
- */
+
+
+
+
+
+
+
 final class EventMetaRegistration {
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'register_meta' ), 12 );
 	}
 
-	/**
-	 * Every meta key with its storage type, its sanitiser and, when it needs
-	 * one of its own, its authorisation callback.
-	 *
-	 * Sin `auth` la clave la escribe quien pueda editar el evento
-	 * ({@see auth_edit_event()}); las dos de código piden además su capacidad.
-	 *
-	 * @return array<string, array{type:string, sanitize:callable, auth?:callable}>
-	 */
+
+
+
+
+
+
+
+
+
 	public static function schema(): array {
 		return array(
 			EventMetaKeys::SECTION_TYPE   => array(
@@ -511,11 +511,11 @@ final class EventMetaRegistration {
 		);
 	}
 
-	/**
-	 * Register all event meta keys.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register_meta(): void {
 		$defaults = array(
 			'string'  => '',
@@ -539,115 +539,115 @@ final class EventMetaRegistration {
 		}
 	}
 
-	/**
-	 * Only users who may edit the event can write its meta directly.
-	 *
-	 * @param bool   $allowed  Current permission.
-	 * @param string $meta_key Meta key.
-	 * @param int    $post_id  Post ID.
-	 * @param int    $user_id  User ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	public static function auth_edit_event( bool $allowed, string $meta_key, int $post_id, int $user_id ): bool {
 		unset( $allowed, $meta_key );
 		return user_can( $user_id, 'edit_post', $post_id );
 	}
 
-	/**
-	 * The custom CSS needs its own capability, on top of editing the event.
-	 *
-	 * @param bool   $allowed  Current permission.
-	 * @param string $meta_key Meta key.
-	 * @param int    $post_id  Post ID.
-	 * @param int    $user_id  User ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	public static function auth_custom_css( bool $allowed, string $meta_key, int $post_id, int $user_id ): bool {
 		unset( $allowed, $meta_key );
 		return EventAccess::can_edit_custom_css( $user_id, $post_id );
 	}
 
-	/**
-	 * The custom JavaScript needs its own, stricter, capability.
-	 *
-	 * Aquí y no solo en la pantalla: sin esto, la REST, la edición rápida y
-	 * cualquier `update_post_meta()` de otro complemento serían la puerta de al
-	 * lado de un campo que ejecuta código en el navegador de cada visitante.
-	 *
-	 * @param bool   $allowed  Current permission.
-	 * @param string $meta_key Meta key.
-	 * @param int    $post_id  Post ID.
-	 * @param int    $user_id  User ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function auth_custom_js( bool $allowed, string $meta_key, int $post_id, int $user_id ): bool {
 		unset( $allowed, $meta_key );
 		return EventAccess::can_edit_custom_js( $user_id, $post_id );
 	}
 
-	/**
-	 * The «histórico» mark follows the same asymmetry by every route.
-	 *
-	 * Aquí no se sabe qué valor se va a escribir, así que la pregunta se hace
-	 * sobre el estado de ahora: con el evento abierto la marca la pone su
-	 * área; con el evento ya cerrado, solo la quita administración. Sin esto,
-	 * un área que ya no puede editar el evento se lo desmarcaría con un
-	 * `update_post_meta()` desde cualquier otro sitio y volvería a poder.
-	 *
-	 * @param bool   $allowed  Current permission.
-	 * @param string $meta_key Meta key.
-	 * @param int    $post_id  Post ID.
-	 * @param int    $user_id  User ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function auth_archived( bool $allowed, string $meta_key, int $post_id, int $user_id ): bool {
 		unset( $allowed, $meta_key );
 		return EventAccess::can_toggle_archived( $user_id, $post_id );
 	}
 
-	/**
-	 * Custom CSS, stored raw: only the tag escape is taken away.
-	 *
-	 * No pasa por `wp_kses` ni por `sanitize_textarea_field`: los dos
-	 * convierten `>` en `&gt;` y dejan el CSS sin selectores de hijo directo.
-	 * Lo único que no puede quedar es una etiqueta, porque el CSS se imprime
-	 * dentro de un `<style>` y un `</style` ahí dentro lo cierra y convierte el
-	 * resto en HTML del visitante.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function sanitize_custom_css( $value ): string {
-		// `wp_strip_all_tags()` se lleva las etiquetas y el contenido de un
-		// `<script>` o un `<style>` incrustados; el `preg_replace` remata el
-		// cierre suelto que se queda sin `>` al final de la cadena.
+
+
+
 		$css = wp_strip_all_tags( (string) $value );
 		return (string) preg_replace( '#</\s*style#i', '', $css );
 	}
 
-	/**
-	 * Custom JavaScript, stored raw: only the script closing tag is defused.
-	 *
-	 * El JavaScript **no se escapa**: es código, y escaparlo lo rompe. Lo único
-	 * que se le hace es impedir la fuga: el analizador de HTML cierra un
-	 * `<script>` en cuanto lee `</script`, esté donde esté —también dentro de
-	 * una cadena—, así que esa secuencia se escribe con la barra escapada.
-	 * `'</script>'` y `'<\/script>'` son la misma cadena para JavaScript, de
-	 * modo que el código sigue haciendo lo mismo.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function sanitize_custom_js( $value ): string {
 		return (string) preg_replace( '#</(?=script)#i', '<\\\\/', (string) $value );
 	}
 
-	/**
-	 * Keep only a valid Y-m-d calendar date.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_date( $value ): string {
 		$value = trim( (string) $value );
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
@@ -657,12 +657,12 @@ final class EventMetaRegistration {
 		return checkdate( $parts[1], $parts[2], $parts[0] ) ? $value : '';
 	}
 
-	/**
-	 * Whitelist satellite page types ('' = the event root itself).
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_section_type( $value ): string {
 		$value = trim( (string) $value );
 		if ( '' === $value ) {
@@ -671,27 +671,27 @@ final class EventMetaRegistration {
 		return isset( EventMetaKeys::section_types()[ $value ] ) ? $value : EventMetaKeys::SECTION_OTHER;
 	}
 
-	/**
-	 * A hashtag without its hash and without spaces.
-	 *
-	 * El formulario del sistema anterior ya pide «no poner el símbolo #» y la
-	 * gente lo pone igual.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function sanitize_hashtag( $value ): string {
 		$value = sanitize_text_field( (string) $value );
 		$value = ltrim( trim( $value ), '#' );
 		return (string) preg_replace( '/\s+/u', '', $value );
 	}
 
-	/**
-	 * A checkbox: stored as a real boolean.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function sanitize_bool( $value ): bool {
 		if ( is_string( $value ) ) {
 			return in_array( strtolower( trim( $value ) ), array( '1', 'on', 'true', 'si', 'sí', 'yes' ), true );
@@ -699,171 +699,171 @@ final class EventMetaRegistration {
 		return (bool) $value;
 	}
 
-	/**
-	 * A positive attachment or form ID; 0 when there is none.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return int
-	 */
+
+
+
+
+
+
 	public static function sanitize_id( $value ): int {
 		$id = (int) $value;
 		return $id > 0 ? $id : 0;
 	}
 
-	/**
-	 * An http(s) address, or nothing.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_url( $value ): string {
 		$url = esc_url_raw( trim( (string) $value ), array( 'http', 'https' ) );
 		return is_string( $url ) ? $url : '';
 	}
 
-	/**
-	 * A hexadecimal colour, or nothing (which means «the default one»).
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_color( $value ): string {
 		$color = sanitize_hex_color( trim( (string) $value ) );
 		return is_string( $color ) ? $color : '';
 	}
 
-	/**
-	 * One of the six typefaces, or the theme's.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_font( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT );
 	}
 
-	/**
-	 * Square or circle; square when it is neither.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_image_shape( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::image_shapes(), EventMetaKeys::SHAPE_SQUARE );
 	}
 
-	/**
-	 * One of the header separators; none when it is not one of ours.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_separator( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::separators(), '' );
 	}
 }
 
-// ---- src/Evt/Meta/ProgrammeMetaKeys.php ----
-/**
- * Meta keys of what hangs from an event: speakers and programme activities.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
-/**
- * Las claves de meta de `evt_speaker` y `evt_activity`, y sus listas cerradas.
- *
- * Están aparte de {@see EventMetaKeys} porque son de otros dos tipos de
- * contenido: `all()` de aquella significa «las metas del evento» y mezclarlas
- * volvería esa lista una mentira.
- *
- * **Ni el ponente ni la actividad guardan a qué evento pertenecen en una
- * meta**: cuelgan del evento por `post_parent`, que es lo que hace que el
- * acotado por área y el cierre por histórico les alcancen sin una línea de
- * código más ({@see \Evt\Access\EventAccess::root_id()}).
- */
+
+
+
+
+
+
+
+
+
+
+
+
 final class ProgrammeMetaKeys {
 
-	/**
-	 * What the speaker does: «Asesora de formación», «Catedrático de Secundaria».
-	 */
+
+
+
 	public const SPEAKER_ROLE = 'evt_speaker_role';
 
-	/**
-	 * Where the speaker comes from: centro, universidad, empresa.
-	 */
+
+
+
 	public const SPEAKER_ORG = 'evt_speaker_org';
 
-	/**
-	 * What kind of slot this is: ponencia, taller, mesa redonda…
-	 */
+
+
+
 	public const ACTIVITY_KIND = 'evt_activity_kind';
 
-	/**
-	 * Day of the activity, `Y-m-d`.
-	 */
+
+
+
 	public const ACTIVITY_DATE = 'evt_activity_date';
 
-	/**
-	 * Start time, `H:i`.
-	 */
+
+
+
 	public const ACTIVITY_START = 'evt_activity_start';
 
-	/**
-	 * End time, `H:i`. Empty means «hasta la siguiente».
-	 */
+
+
+
 	public const ACTIVITY_END = 'evt_activity_end';
 
-	/**
-	 * Sede of this activity.
-	 *
-	 * Es de la actividad y no del día: un mismo día puede tener dos sedes, y
-	 * la parrilla agrupa por día y, dentro, por sede (ADR-0024). No hay
-	 * ninguna pantalla donde «dar de alta una sede»: la lista de sedes de un
-	 * evento sale de sus actividades.
-	 */
+
+
+
+
+
+
+
+
 	public const ACTIVITY_VENUE = 'evt_activity_venue';
 
-	/**
-	 * Room inside the sede: «Aula 2», «Salón de actos».
-	 */
+
+
+
 	public const ACTIVITY_ROOM = 'evt_activity_room';
 
-	/**
-	 * Seats of a workshop; 0 means «sin límite».
-	 */
+
+
+
 	public const ACTIVITY_SEATS = 'evt_activity_seats';
 
-	/**
-	 * Speakers of this activity: post IDs of `evt_speaker`, comma separated.
-	 *
-	 * Una sola meta y no una por ponente: se lee y se escribe entera, nunca
-	 * se consulta por ella, y `register_post_meta()` con `single => true` es
-	 * lo que deja la escritura pasando por un solo saneado.
-	 */
+
+
+
+
+
+
+
 	public const ACTIVITY_SPEAKERS = 'evt_activity_speakers';
 
-	/**
-	 * The kind that takes seats and enrolment.
-	 */
+
+
+
 	public const KIND_WORKSHOP = 'taller';
 
-	/**
-	 * All meta keys stored on a speaker.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function speaker_keys(): array {
 		return array( self::SPEAKER_ROLE, self::SPEAKER_ORG );
 	}
 
-	/**
-	 * All meta keys stored on an activity.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function activity_keys(): array {
 		return array(
 			self::ACTIVITY_KIND,
@@ -877,14 +877,14 @@ final class ProgrammeMetaKeys {
 		);
 	}
 
-	/**
-	 * Closed vocabulary of activity kinds.
-	 *
-	 * En código y no en taxonomía, por la misma lección que los tipos de
-	 * sección: una lista abierta acaba mezclando ejes (ADR-0004).
-	 *
-	 * @return array<string, string> slug => etiqueta.
-	 */
+
+
+
+
+
+
+
+
 	public static function activity_kinds(): array {
 		return array(
 			'ponencia'     => 'Ponencia',
@@ -899,56 +899,56 @@ final class ProgrammeMetaKeys {
 		);
 	}
 
-	/**
-	 * The label of one kind, or the fallback one.
-	 *
-	 * @param string $kind Kind slug.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function kind_label( string $kind ): string {
 		$lista = self::activity_kinds();
 		return $lista[ $kind ] ?? $lista['otra'];
 	}
 }
 
-// ---- src/Evt/Meta/ProgrammeMetaRegistration.php ----
-/**
- * Register the meta keys of speakers and programme activities.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\SpeakerPostType;
 
-/**
- * Lo mismo que hace {@see EventMetaRegistration} con el evento, para los dos
- * tipos que cuelgan de él.
- *
- * El `auth_callback` es el de siempre —`edit_post` sobre la ficha—, y eso
- * basta: como el ponente y la actividad cuelgan del evento por `post_parent`,
- * `edit_post` desemboca en {@see \Evt\Access\EventAccess::can_edit()} con las
- * áreas del evento y con su cierre por histórico. No hay una segunda regla que
- * mantener al día.
- */
+
+
+
+
+
+
+
+
+
+
 final class ProgrammeMetaRegistration {
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'register_meta' ), 12 );
 	}
 
-	/**
-	 * Speaker meta keys with their type and sanitiser.
-	 *
-	 * @return array<string, array{type:string, sanitize:callable}>
-	 */
+
+
+
+
+
 	public static function speaker_schema(): array {
 		return array(
 			ProgrammeMetaKeys::SPEAKER_ROLE => array(
@@ -962,11 +962,11 @@ final class ProgrammeMetaRegistration {
 		);
 	}
 
-	/**
-	 * Activity meta keys with their type and sanitiser.
-	 *
-	 * @return array<string, array{type:string, sanitize:callable}>
-	 */
+
+
+
+
+
 	public static function activity_schema(): array {
 		return array(
 			ProgrammeMetaKeys::ACTIVITY_KIND     => array(
@@ -1004,11 +1004,11 @@ final class ProgrammeMetaRegistration {
 		);
 	}
 
-	/**
-	 * Register every speaker and activity meta key.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register_meta(): void {
 		$defaults = array(
 			'string'  => '',
@@ -1037,16 +1037,16 @@ final class ProgrammeMetaRegistration {
 		}
 	}
 
-	/**
-	 * Keep the kind inside the closed list; anything else becomes «otra».
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_kind( $value ): string {
-		// El mapa entero y no sus claves: `in_list()` pregunta con `isset()`
-		// sobre el array que recibe, así que una lista posicional haría que
-		// todo cayera en «otra» sin que nada avisara.
+
+
+
 		return EventMetaKeys::in_list(
 			is_scalar( $value ) ? (string) $value : '',
 			ProgrammeMetaKeys::activity_kinds(),
@@ -1054,17 +1054,17 @@ final class ProgrammeMetaRegistration {
 		);
 	}
 
-	/**
-	 * Keep a time of day, or nothing.
-	 *
-	 * Una hora mal escrita se guarda vacía en vez de romper el guardado, igual
-	 * que hace `sanitize_date()` con las fechas. Quien teclea ve el aviso de
-	 * {@see \Evt\Domain\ActivityInput}, que sí lo marca como error antes de
-	 * llegar aquí; esto es la red de debajo, para REST y WP-CLI.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function sanitize_time( $value ): string {
 		$texto = is_scalar( $value ) ? trim( (string) $value ) : '';
 		if ( ! preg_match( '/^([01]\d|2[0-3]):([0-5]\d)$/', $texto ) ) {
@@ -1073,12 +1073,12 @@ final class ProgrammeMetaRegistration {
 		return $texto;
 	}
 
-	/**
-	 * Keep a comma separated list of post IDs, and nothing else.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_id_list( $value ): string {
 		if ( is_array( $value ) ) {
 			$partes = $value;
@@ -1096,33 +1096,33 @@ final class ProgrammeMetaRegistration {
 	}
 }
 
-// ---- src/Evt/Meta/RegistrationMetaKeys.php ----
-/**
- * Meta keys of a registration, and of the signup settings of its event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
-/**
- * Las claves de una inscripción y las de la inscripción de un evento.
- *
- * Dos grupos que no hay que confundir:
- *
- * - `REG_*` cuelgan de la **inscripción** (`evt_registration`): son los datos
- *   de una persona. Su `auth_callback` devuelve `false` siempre: no hay
- *   ninguna vía por la que se escriban desde fuera del aplicativo (ADR-0032).
- * - `SIGNUP_*` cuelgan del **evento**: son los ajustes de su inscripción —el
- *   plazo, las preguntas, los textos del consentimiento— y los edita quien
- *   organiza.
- *
- * El núcleo de la inscripción son los siete campos que fijó la ADR-0031, y
- * está aquí entero y en un solo sitio para que se vea que no crece solo.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class RegistrationMetaKeys {
 
-	// ─── El núcleo de la inscripción (ADR-0031) ────────────────────────────
+
 
 	public const REG_TAX_ID  = 'evt_reg_tax_id';
 	public const REG_NAME    = 'evt_reg_name';
@@ -1131,75 +1131,75 @@ final class RegistrationMetaKeys {
 	public const REG_PHONE   = 'evt_reg_phone';
 	public const REG_CENTRE  = 'evt_reg_centre';
 
-	/**
-	 * Which version of the consent texts this person accepted, and when.
-	 *
-	 * Las dos juntas son la constancia que pide la ADR-0020: una casilla sin
-	 * saber qué texto se aceptó y cuándo no vale si alguien lo reclama.
-	 */
+
+
+
+
+
+
 	public const REG_CONSENT_VERSION = 'evt_reg_consent_version';
 	public const REG_CONSENT_AT      = 'evt_reg_consent_at';
 
-	/**
-	 * The activity ID of the chosen workshop, 0 for none.
-	 *
-	 * Un identificador y no un título: el título se retoca y la elección
-	 * seguiría apuntando al taller que es (ADR-0033).
-	 */
+
+
+
+
+
+
 	public const REG_WORKSHOP = 'evt_reg_workshop';
 
-	/**
-	 * Answers to the questions of the event, as JSON keyed by question ID.
-	 *
-	 * Por identificador y nunca por rótulo: reescribir el rótulo de una
-	 * pregunta no puede desconectar lo que ya contestó nadie (ADR-0032).
-	 */
+
+
+
+
+
+
 	public const REG_ANSWERS = 'evt_reg_answers';
 
-	/**
-	 * The one-time token that lets this person back into their registration.
-	 *
-	 * No es una sesión: abre esta inscripción y nada más del sitio (ADR-0033).
-	 */
+
+
+
+
+
 	public const REG_TOKEN = 'evt_reg_token';
 
-	// ─── Los ajustes de inscripción, en el evento ──────────────────────────
 
-	/**
-	 * Whether the signup form is open at all.
-	 */
+
+
+
+
 	public const SIGNUP_OPEN = 'evt_signup_open';
 
-	/**
-	 * The questions of this event, as JSON.
-	 */
+
+
+
 	public const SIGNUP_QUESTIONS = 'evt_signup_questions';
 
-	/**
-	 * The window in which workshops can be chosen, and its own switch.
-	 *
-	 * Tiene plazo propio porque se abre cuando quien organiza ha cerrado el
-	 * programa, que casi nunca es cuando se abre la inscripción (ADR-0033).
-	 */
+
+
+
+
+
+
 	public const WORKSHOP_OPEN  = 'evt_workshop_open';
 	public const WORKSHOP_START = 'evt_workshop_start';
 	public const WORKSHOP_END   = 'evt_workshop_end';
 
-	/**
-	 * The two consent texts and the version they are on.
-	 *
-	 * La versión sube cuando se cambia cualquiera de los dos textos, y **no**
-	 * reescribe lo que ya aceptó nadie (ADR-0020).
-	 */
+
+
+
+
+
+
 	public const CONSENT_PRIVACY = 'evt_consent_privacy';
 	public const CONSENT_IMAGE   = 'evt_consent_image';
 	public const CONSENT_VERSION = 'evt_consent_version';
 
-	/**
-	 * Every meta key that hangs off a registration.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function registration_keys(): array {
 		return array(
 			self::REG_TAX_ID,
@@ -1216,11 +1216,11 @@ final class RegistrationMetaKeys {
 		);
 	}
 
-	/**
-	 * Every meta key of the signup settings of an event.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function signup_keys(): array {
 		return array(
 			self::SIGNUP_OPEN,
@@ -1234,15 +1234,15 @@ final class RegistrationMetaKeys {
 		);
 	}
 
-	/**
-	 * The four field types a question may have, with their label.
-	 *
-	 * Lista cerrada y corta a propósito: son las cuatro de la ADR-0031, y
-	 * añadir una quinta es mover la raya que separa esto de un constructor de
-	 * formularios.
-	 *
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
+
+
+
 	public static function question_types(): array {
 		return array(
 			'check' => 'Casilla',
@@ -1252,56 +1252,56 @@ final class RegistrationMetaKeys {
 		);
 	}
 
-	/**
-	 * Whether a question type carries a list of options.
-	 *
-	 * @param string $type Question type.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function has_options( string $type ): bool {
 		return 'one' === $type || 'many' === $type;
 	}
 }
 
-// ---- src/Evt/Domain/DateRange.php ----
-/**
- * A range of days written the way Spanish writes it.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
-/**
- * Escribe las fechas de un evento en castellano.
- *
- * Hasta ahora la cabecera pública pegaba dos fechas sueltas con un «al» y las
- * pintaba con el formato del ajuste `date_format` del sitio, que por defecto es
- * el inglés `F j, Y`. El resultado, verificado en la portada de un evento, era
- * «Del septiembre 12, 2026 al septiembre 14, 2026». Y no se arregla cambiando
- * el ajuste: un intervalo en castellano no es dos fechas sueltas, porque el mes
- * y el año se dicen una sola vez cuando los dos días los comparten.
- *
- *   un solo día ............. «12 de septiembre de 2026»
- *   mismo mes y año ......... «Del 12 al 14 de septiembre de 2026»
- *   mismo año, otro mes ..... «Del 30 de septiembre al 2 de octubre de 2026»
- *   otro año ................ «Del 30 de diciembre de 2026 al 2 de enero de 2027»
- *   solo el primer día ...... «Desde el 12 de septiembre de 2026»
- *   fecha que no es fecha ... cadena vacía, y quien la pinta se calla la línea
- *
- * Pura salvo por los nombres de mes, que salen de `WP_Locale` y nunca de un
- * array escrito a mano: traducirlos aquí sería tener dos veces lo que
- * WordPress ya tiene traducido.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class DateRange {
 
-	/**
-	 * A range of days, written out.
-	 *
-	 * @param string $start First day, Y-m-d.
-	 * @param string $end   Last day, Y-m-d ('' when there is none yet).
-	 * @return string Empty when the first day is missing or is not a real date.
-	 */
+
+
+
+
+
+
+
 	public static function of( string $start, string $end = '' ): string {
 		$desde = self::parts( $start );
 		if ( array() === $desde ) {
@@ -1313,8 +1313,8 @@ final class DateRange {
 			return 'Desde el ' . self::day( $desde );
 		}
 
-		// Un último día anterior al primero es una errata: el intervalo no se
-		// invierte, se escribe el primer día y ya. Igual que hace EventState.
+
+
 		if ( $hasta['n'] <= $desde['n'] ) {
 			return self::day( $desde );
 		}
@@ -1327,26 +1327,26 @@ final class DateRange {
 		return sprintf( 'Del %d al %s', $desde['d'], self::day( $hasta ) );
 	}
 
-	/**
-	 * One day, written in full.
-	 *
-	 * @param array{n:int,y:int,m:int,d:int} $day What parts() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function day( array $day ): string {
 		return sprintf( '%d de %s de %d', $day['d'], self::month( $day['m'] ), $day['y'] );
 	}
 
-	/**
-	 * Year, month and day of a Y-m-d string.
-	 *
-	 * `n` es la fecha como número comparable (20260912): las que llegan de la
-	 * migración no siempre traen el cero de relleno, así que comparar cadenas
-	 * pondría el 9 después del 10.
-	 *
-	 * @param string $ymd Day, Y-m-d.
-	 * @return array{n:int,y:int,m:int,d:int}|array{} Empty when it is not a real date.
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function parts( string $ymd ): array {
 		if ( 1 !== preg_match( '/^(\d{4})-(\d{1,2})-(\d{1,2})$/', trim( $ymd ), $trozos ) ) {
 			return array();
@@ -1367,50 +1367,50 @@ final class DateRange {
 		);
 	}
 
-	/**
-	 * The name of a month, as the locale writes it.
-	 *
-	 * En castellano los meses van en minúscula, y el resto de la frase —«Del»,
-	 * «al», «de»— ya está en castellano, así que se pasa a minúscula lo que
-	 * devuelva la locale.
-	 *
-	 * @param int $month Month, 1-12.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function month( int $month ): string {
 		global $wp_locale;
 		return mb_strtolower( (string) $wp_locale->get_month( $month ), 'UTF-8' );
 	}
 }
 
-// ---- src/Evt/Domain/ActivityInput.php ----
-/**
- * Pure validation for speaker and activity form input.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
 use Evt\Meta\ProgrammeMetaKeys;
 
-/**
- * Valida y normaliza lo que se teclea en «Ponentes» y en «Programa».
- *
- * Pura: ni una llamada a WordPress, para que se pueda probar sin cargarlo,
- * igual que {@see EventInput}.
- */
+
+
+
+
+
+
 final class ActivityInput {
 
-	/**
-	 * Validate a submitted speaker payload.
-	 *
-	 * El nombre es lo único obligatorio. El cargo y la entidad se enseñan
-	 * debajo del nombre en la página pública y muchas fichas no los traen.
-	 *
-	 * @param array<string, mixed> $raw Raw fields.
-	 * @return array{ok:bool, errors:string[], data:array<string, string>}
-	 */
+
+
+
+
+
+
+
+
+
 	public static function speaker( array $raw ): array {
 		$name   = self::text( $raw, 'name' );
 		$errors = '' === $name ? array( 'name' ) : array();
@@ -1427,17 +1427,17 @@ final class ActivityInput {
 		);
 	}
 
-	/**
-	 * Validate a submitted activity payload.
-	 *
-	 * Lo obligatorio es el título y el día: sin día una actividad no cabe en
-	 * ninguna parrilla y se quedaría fuera de la pantalla sin decir por qué.
-	 * La hora no lo es —hay actividades «por la tarde», sin hora fijada—, pero
-	 * si viene tiene que ser una hora.
-	 *
-	 * @param array<string, mixed> $raw Raw fields.
-	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function activity( array $raw ): array {
 		$errors = array();
 
@@ -1463,8 +1463,8 @@ final class ActivityInput {
 		if ( '' !== $end && ! self::is_time( $end ) ) {
 			$errors[] = 'end';
 		}
-		// Solo se comparan cuando las dos son horas: si una está mal escrita,
-		// el error que hay que enseñar es el suyo y no un orden imposible.
+
+
 		if ( self::is_time( $start ) && self::is_time( $end ) && $end < $start ) {
 			$errors[] = 'time_order';
 		}
@@ -1490,12 +1490,12 @@ final class ActivityInput {
 		);
 	}
 
-	/**
-	 * Why a payload was refused, in Spanish.
-	 *
-	 * @param string[] $errors Error codes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function why( array $errors ): string {
 		$textos = array(
 			'name'       => 'el nombre',
@@ -1519,23 +1519,23 @@ final class ActivityInput {
 		return 'No se ha podido guardar. Revise ' . implode( ', ', $faltan ) . '.';
 	}
 
-	/**
-	 * One trimmed field of the payload.
-	 *
-	 * @param array<string, mixed> $raw   Raw fields.
-	 * @param string               $clave Field name.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function text( array $raw, string $clave ): string {
 		return isset( $raw[ $clave ] ) ? trim( (string) $raw[ $clave ] ) : '';
 	}
 
-	/**
-	 * A list of post IDs, cleaned of everything that is not one.
-	 *
-	 * @param mixed $valor Raw value.
-	 * @return int[]
-	 */
+
+
+
+
+
+
 	private static function ids( $valor ): array {
 		if ( is_string( $valor ) ) {
 			$valor = explode( ',', $valor );
@@ -1553,12 +1553,12 @@ final class ActivityInput {
 		return $out;
 	}
 
-	/**
-	 * Whether the string is a calendar date in Y-m-d form.
-	 *
-	 * @param string $date Date string.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_date( string $date ): bool {
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
 			return false;
@@ -1567,12 +1567,12 @@ final class ActivityInput {
 		return checkdate( $parts[1], $parts[2], $parts[0] );
 	}
 
-	/**
-	 * Whether the string is a time of day in H:i form.
-	 *
-	 * @param string $time Time string.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_time( string $time ): bool {
 		if ( ! preg_match( '/^([01]\d|2[0-3]):([0-5]\d)$/', $time ) ) {
 			return false;
@@ -1581,52 +1581,52 @@ final class ActivityInput {
 	}
 }
 
-// ---- src/Evt/Domain/SignupQuestions.php ----
-/**
- * Pure handling of the per-event signup questions and their answers.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
 use Evt\Meta\RegistrationMetaKeys;
 
-/**
- * Las preguntas propias de un evento, y lo que se contesta a ellas.
- *
- * Pura: ni una llamada a WordPress, como {@see EventInput} y
- * {@see ActivityInput}.
- *
- * Una pregunta tiene exactamente cuatro cosas —rótulo, tipo, opciones y si es
- * obligatoria— y ninguna más (ADR-0031). No hay lógica condicional y no hay
- * reglas de validación propias: **el tipo es toda la validación que existe**.
- * Si alguna vez se añade una de esas dos cosas, esto deja de ser una lista de
- * preguntas y pasa a ser el constructor de formularios del que se sale.
- *
- * Y lleva una quinta cosa que no se teclea: un **identificador inmutable** que
- * se genera al crear la pregunta. Las respuestas se guardan bajo él, así que
- * reescribir un rótulo no desconecta lo ya contestado (ADR-0032).
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class SignupQuestions {
 
-	/**
-	 * Cuántas opciones como mucho en una pregunta.
-	 *
-	 * No es una regla del dominio: es el tope que impide que una lista de
-	 * opciones pegada de un tirón se convierta en una meta enorme.
-	 */
+
+
+
+
+
+
 	public const MAX_OPTIONS = 50;
 
-	/**
-	 * Read a stored question list.
-	 *
-	 * Lo que hay guardado es JSON, y puede venir de una versión anterior o
-	 * estar a medias: se normaliza siempre y lo que no se entiende se cae.
-	 *
-	 * @param mixed $stored Raw meta value.
-	 * @return array<int, array{id:string, label:string, type:string, options:string[], required:bool}>
-	 */
+
+
+
+
+
+
+
+
+
 	public static function read( $stored ): array {
 		if ( is_string( $stored ) ) {
 			$stored = '' === trim( $stored ) ? array() : json_decode( $stored, true );
@@ -1651,12 +1651,12 @@ final class SignupQuestions {
 		return $out;
 	}
 
-	/**
-	 * Normalise one question.
-	 *
-	 * @param array<string, mixed> $raw Raw question.
-	 * @return array{id:string, label:string, type:string, options:string[], required:bool}
-	 */
+
+
+
+
+
+
 	private static function one( array $raw ): array {
 		$type = isset( $raw['type'] ) ? (string) $raw['type'] : '';
 		if ( ! isset( RegistrationMetaKeys::question_types()[ $type ] ) ) {
@@ -1674,12 +1674,12 @@ final class SignupQuestions {
 		);
 	}
 
-	/**
-	 * Normalise a list of options: trimmed, no blanks, no repeats, capped.
-	 *
-	 * @param mixed $raw Raw options: an array or one per line.
-	 * @return string[]
-	 */
+
+
+
+
+
+
 	public static function options( $raw ): array {
 		if ( is_string( $raw ) ) {
 			$raw = preg_split( '/\r\n|\r|\n/', $raw );
@@ -1705,37 +1705,37 @@ final class SignupQuestions {
 		return $out;
 	}
 
-	/**
-	 * Keep an ID to the shape we generate, or say it is missing.
-	 *
-	 * @param string $id Raw ID.
-	 * @return string '' when it has to be generated.
-	 */
+
+
+
+
+
+
 	private static function clean_id( string $id ): string {
 		$id = strtolower( trim( $id ) );
 		return (bool) preg_match( '/^q[a-z0-9]{6,32}$/', $id ) ? $id : '';
 	}
 
-	/**
-	 * Whether a question ID is one we could have generated.
-	 *
-	 * @param string $id Question ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function is_id( string $id ): bool {
 		return '' !== self::clean_id( $id );
 	}
 
-	/**
-	 * Give every question without one an ID, using the supplied entropy.
-	 *
-	 * La entropía entra por parámetro para que esto siga siendo puro y para
-	 * que un test pueda comprobar la forma sin depender del azar.
-	 *
-	 * @param array<int, array<string, mixed>> $preguntas Normalised questions.
-	 * @param callable                         $entropy   Returns a random hex string.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function with_ids( array $preguntas, callable $entropy ): array {
 		$vistos = array();
 		foreach ( $preguntas as $i => $pregunta ) {
@@ -1750,20 +1750,20 @@ final class SignupQuestions {
 		return $preguntas;
 	}
 
-	/**
-	 * Why a new question list cannot replace the stored one.
-	 *
-	 * Es la única regla que hace falta para que una respuesta guardada siga
-	 * significando lo mismo (ADR-0032): con gente ya inscrita, a una pregunta
-	 * se le puede cambiar el rótulo y **añadir** opciones, pero no cambiarle el
-	 * tipo ni **quitar** una opción. Borrar la pregunta entera sí se puede: no
-	 * borra lo contestado, lo deja de enseñar.
-	 *
-	 * @param array<int, array<string, mixed>> $antes  Stored questions.
-	 * @param array<int, array<string, mixed>> $ahora  Proposed questions.
-	 * @param bool                             $locked Whether anybody signed up already.
-	 * @return string[] Error codes; empty when it can be saved.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function refuse( array $antes, array $ahora, bool $locked ): array {
 		if ( ! $locked ) {
 			return array();
@@ -1793,16 +1793,16 @@ final class SignupQuestions {
 		return $errores;
 	}
 
-	/**
-	 * Validate the answers of one person against the questions of the event.
-	 *
-	 * El tipo es toda la validación que hay: una opción de la lista es una de
-	 * la lista, y un texto corto es un texto corto.
-	 *
-	 * @param array<int, array<string, mixed>> $preguntas Normalised questions.
-	 * @param array<string, mixed>             $raw       Raw answers, keyed by question ID.
-	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function answers( array $preguntas, array $raw ): array {
 		$errores = array();
 		$datos   = array();
@@ -1858,13 +1858,13 @@ final class SignupQuestions {
 		);
 	}
 
-	/**
-	 * One stored answer, as the text that goes in a column.
-	 *
-	 * @param array<string, mixed> $pregunta  Normalised question.
-	 * @param mixed                $respuesta Stored answer.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function as_text( array $pregunta, $respuesta ): string {
 		if ( 'check' === $pregunta['type'] ) {
 			return $respuesta ? 'Sí' : 'No';
@@ -1876,39 +1876,39 @@ final class SignupQuestions {
 	}
 }
 
-// ---- src/Evt/Domain/RegistrationInput.php ----
-/**
- * Pure validation of the fixed core of the signup form.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
-/**
- * Valida y normaliza los siete campos del núcleo de la inscripción.
- *
- * Pura: ni una llamada a WordPress. Es la parte del formulario que **está
- * medida y no cambia** (ADR-0031), así que se escribe una vez, se valida una
- * vez y se corrige una vez, en vez de repetirse en el formulario de cada
- * evento como pasaba antes.
- *
- * Lo que aquí no está —las preguntas propias del evento— lo valida
- * {@see SignupQuestions}, y su validación es solo el tipo.
- */
+
+
+
+
+
+
+
+
+
+
+
 final class RegistrationInput {
 
-	/**
-	 * Validate a submitted signup payload.
-	 *
-	 * Obligatorios: identificador fiscal, nombre, apellidos, correo, centro y
-	 * el consentimiento. El teléfono no: hay quien no lo da, y exigirlo es
-	 * fabricar teléfonos falsos.
-	 *
-	 * @param array<string, mixed> $raw     Raw fields.
-	 * @param string[]             $centres Valid centre codes; empty means «no catalogue loaded».
-	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function core( array $raw, array $centres = array() ): array {
 		$errors = array();
 
@@ -1932,10 +1932,10 @@ final class RegistrationInput {
 		if ( ! self::is_email( $email ) ) {
 			$errors[] = 'email';
 		}
-		// El centro se elige de un catálogo y **nunca se teclea** (ADR-0031):
-		// si hay catálogo, lo que llegue tiene que estar en él. Sin catálogo
-		// cargado no se inventa una validación: se exige que venga algo y el
-		// aviso lo da la pantalla.
+
+
+
+
 		if ( '' === $centre || ( array() !== $centres && ! in_array( $centre, $centres, true ) ) ) {
 			$errors[] = 'centre';
 		}
@@ -1958,12 +1958,12 @@ final class RegistrationInput {
 		);
 	}
 
-	/**
-	 * Why a signup was refused, in Spanish.
-	 *
-	 * @param string[] $errors Error codes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function why( array $errors ): string {
 		$textos = array(
 			'tax_id'  => 'el documento de identidad',
@@ -1992,98 +1992,98 @@ final class RegistrationInput {
 		return 'Revise ' . implode( ', ', $faltan ) . ' y ' . $ultimo . '.';
 	}
 
-	/**
-	 * A tax ID as it gets stored: upper case, no spaces, no dashes.
-	 *
-	 * Normalizar es lo que evita que la misma persona entre dos veces escrita
-	 * de dos maneras.
-	 *
-	 * @param string $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function tax_id( string $value ): string {
 		return strtoupper( (string) preg_replace( '/[\s.\-]/', '', $value ) );
 	}
 
-	/**
-	 * Whether a tax ID has a shape we accept.
-	 *
-	 * Se comprueba la **forma**, no el dígito de control: aquí se inscribe
-	 * también gente con documento de otro país, y un validador nacional
-	 * dejaría fuera a quien tiene que poder inscribirse. Ocho o nueve
-	 * caracteres alfanuméricos, que es lo que distingue un documento de un
-	 * campo relleno a lo loco.
-	 *
-	 * @param string $value Normalised value.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function is_tax_id( string $value ): bool {
 		return (bool) preg_match( '/^[A-Z0-9]{6,15}$/', $value );
 	}
 
-	/**
-	 * Whether an address looks like an address.
-	 *
-	 * Sin `filter_var()` para que la clase siga siendo pura y el resultado sea
-	 * el mismo en cualquier PHP: algo, una arroba, algo, un punto y algo.
-	 *
-	 * @param string $value Raw value.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	public static function is_email( string $value ): bool {
 		return (bool) preg_match( '/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/', $value );
 	}
 
-	/**
-	 * A phone number with the noise taken out.
-	 *
-	 * @param string $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function phone( string $value ): string {
 		return trim( (string) preg_replace( '/[^\d+ ]/', '', $value ) );
 	}
 
-	/**
-	 * One trimmed field.
-	 *
-	 * @param array<string, mixed> $raw Raw fields.
-	 * @param string               $key Field name.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function text( array $raw, string $key ): string {
 		$value = $raw[ $key ] ?? '';
 		return is_scalar( $value ) ? trim( (string) $value ) : '';
 	}
 }
 
-// ---- src/Evt/Domain/EventInput.php ----
-/**
- * Pure validation for event form input.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
 use Evt\Meta\EventMetaKeys;
 
-/**
- * Validates and normalises the raw fields of an event or of one of its pages.
- *
- * Pura: ni una llamada a WordPress, para que se pueda probar sin cargarlo.
- */
+
+
+
+
+
 final class EventInput {
 
-	/**
-	 * Validate a submitted event payload.
-	 *
-	 * Una página satélite es el mismo tipo de contenido con `parent` y
-	 * `section_type`: por eso valida las dos cosas el mismo método.
-	 *
-	 * @param array<string, mixed> $raw Raw fields.
-	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
-	 */
+
+
+
+
+
+
+
+
+
 	public static function validate( array $raw ): array {
 		$errors = array();
 
@@ -2098,8 +2098,8 @@ final class EventInput {
 			$errors[] = 'title';
 		}
 
-		// La raíz del evento necesita fechas; una página satélite las hereda del
-		// evento y no las repite.
+
+
 		$is_root = $parent <= 0;
 
 		if ( $is_root && ! self::is_valid_date( $start ) ) {
@@ -2133,12 +2133,12 @@ final class EventInput {
 		);
 	}
 
-	/**
-	 * Whether the string is a calendar date in Y-m-d form.
-	 *
-	 * @param string $date Date string.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_valid_date( string $date ): bool {
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
 			return false;
@@ -2148,44 +2148,44 @@ final class EventInput {
 	}
 }
 
-// ---- src/Evt/Domain/EventState.php ----
-/**
- * Derived state of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Domain;
 
 use Evt\Meta\EventMetaKeys;
 
-/**
- * Deriva el estado del evento de sus fechas.
- *
- * Hoy en producción el estado es un término de la taxonomía `convocatoria`
- * que alguien marca a mano al crear el evento, y que nadie vuelve a tocar: de
- * 50 términos, 32 páginas están en «evento-finalizado» y 2 en «evento-abierto»
- * porque el resto se quedó sin actualizar. Un dato que se puede calcular no se
- * guarda.
- *
- * Pura: ni una llamada a WordPress.
- */
+
+
+
+
+
+
+
+
+
+
+
 final class EventState {
 
-	/**
-	 * State of an event given its dates.
-	 *
-	 * @param string $start First day, Y-m-d ('' when unknown).
-	 * @param string $end   Last day, Y-m-d ('' = same as the first).
-	 * @param string $today Reference day, Y-m-d ('' = today, UTC).
-	 * @return string One of EventMetaKeys::states().
-	 */
+
+
+
+
+
+
+
+
 	public static function of( string $start, string $end, string $today = '' ): string {
 		$start = trim( $start );
 		$end   = trim( $end );
 		$today = '' !== trim( $today ) ? trim( $today ) : gmdate( 'Y-m-d' );
 
-		// Un evento que todavía no tiene fechas se está preparando.
+
 		if ( '' === $start ) {
 			return EventMetaKeys::STATE_UPCOMING;
 		}
@@ -2201,23 +2201,23 @@ final class EventState {
 		return EventMetaKeys::STATE_OPEN;
 	}
 
-	/**
-	 * Human label for a state.
-	 *
-	 * @param string $state State slug.
-	 * @return string Empty when the slug is not one of ours.
-	 */
+
+
+
+
+
+
 	public static function label( string $state ): string {
 		return (string) ( EventMetaKeys::states()[ $state ] ?? '' );
 	}
 }
 
-// ---- src/Evt/Access/EventAccess.php ----
-/**
- * Capability checks for events: who edits and publishes what, scoped by área.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Access;
 
@@ -2227,69 +2227,69 @@ use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * El único guardián del aplicativo: aquí se responde «¿quién puede qué?».
- *
- * Falla en cerrado. Quien no tiene ningún área en su perfil y tampoco
- * `evt_edit_all_areas` no edita nada: abrir cuando falta el dato es como un
- * área acaba tocando los eventos de otra.
- */
+
+
+
+
+
+
+
 final class EventAccess {
 
-	/**
-	 * User meta con uno o varios term_id de `evt_area`.
-	 */
+
+
+
 	public const USER_AREA_META = 'evt_area';
 
-	/**
-	 * Cap propia del aplicativo: ajustes y diagnóstico.
-	 */
+
+
+
 	public const CAP_MANAGE = 'evt_manage_app';
 
-	/**
-	 * Cap propia del aplicativo: saltarse el acotado por área.
-	 */
+
+
+
 	public const CAP_ALL_AREAS = 'evt_edit_all_areas';
 
-	/**
-	 * Cap propia del aplicativo: escribir el CSS a medida de un evento.
-	 *
-	 * La tienen `evt_organiser` —acotada a su área, como todo lo demás— y
-	 * `administrator`. Dar aspecto a la jornada es parte de organizarla, y
-	 * quien la organiza es quien sabe cómo tiene que verse.
-	 */
+
+
+
+
+
+
+
 	public const CAP_CUSTOM_CSS = 'evt_edit_custom_css';
 
-	/**
-	 * Cap propia del aplicativo: escribir el JavaScript a medida de un evento.
-	 *
-	 * Solo `administrator`, y distinta a propósito de la del CSS porque el
-	 * riesgo no es el mismo: una hoja de estilos cambia cómo se ve una página;
-	 * un guion ejecuta código en el navegador de cada persona que la visite.
-	 * Ahí es donde está la raya, y es la única de las dos que no cruza el área.
-	 */
+
+
+
+
+
+
+
+
 	public const CAP_CUSTOM_JS = 'evt_edit_custom_js';
 
-	/**
-	 * Register filters.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		add_action( 'save_post_' . SpeakerPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 		add_action( 'save_post_' . ActivityPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 	}
 
-	/**
-	 * The post types this guard scopes, each with the cap that opens its list.
-	 *
-	 * Los tres van juntos porque un área gestiona su evento entero: la portada,
-	 * sus páginas, sus ponentes y sus actividades. Lo que cambia de uno a otro
-	 * es la capacidad primitiva, no la regla.
-	 *
-	 * @return array<string, string> Post type => primitive cap.
-	 */
+
+
+
+
+
+
+
+
+
 	public static function scoped_types(): array {
 		return array(
 			EventPostType::POST_TYPE    => 'edit_evt_events',
@@ -2298,12 +2298,12 @@ final class EventAccess {
 		);
 	}
 
-	/**
-	 * Whether the user administers the application itself.
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function is_manager( int $user_id = 0 ): bool {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -2311,12 +2311,12 @@ final class EventAccess {
 		return user_can( $user_id, self::CAP_MANAGE ) || user_can( $user_id, 'manage_options' );
 	}
 
-	/**
-	 * Whether the user works across every área (administración).
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function can_edit_all_areas( int $user_id = 0 ): bool {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -2324,12 +2324,12 @@ final class EventAccess {
 		return user_can( $user_id, self::CAP_ALL_AREAS ) || self::is_manager( $user_id );
 	}
 
-	/**
-	 * Áreas the user belongs to.
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return int[] Term IDs of evt_area; empty when the profile has none.
-	 */
+
+
+
+
+
+
 	public static function user_areas( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -2344,19 +2344,19 @@ final class EventAccess {
 		return self::clean_ids( $raw );
 	}
 
-	/**
-	 * Áreas a post belongs to.
-	 *
-	 * Las páginas satélite no llevan área propia: la del evento manda, que es
-	 * lo que evita que una hija se quede huérfana de permisos al moverla. Un
-	 * ponente y una actividad sí llevan la suya, y pueden llevar varias: son
-	 * reutilizables entre ediciones, así que compartir un ponente con otra área
-	 * es añadirle ese término, no duplicar la ficha. `root_id()` devuelve el
-	 * propio post cuando no cuelga de nadie, que es siempre su caso.
-	 *
-	 * @param int $post_id Post ID.
-	 * @return int[] Term IDs of evt_area.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function post_areas( int $post_id ): array {
 		$terms = get_the_terms( self::root_id( $post_id ), EventTaxonomies::AREA );
 		if ( ! is_array( $terms ) ) {
@@ -2365,12 +2365,12 @@ final class EventAccess {
 		return self::clean_ids( wp_list_pluck( $terms, 'term_id' ) );
 	}
 
-	/**
-	 * The event a page belongs to (itself when it is the event).
-	 *
-	 * @param int $post_id Post ID.
-	 * @return int
-	 */
+
+
+
+
+
+
 	public static function root_id( int $post_id ): int {
 		$guard = 0;
 		while ( $post_id > 0 && $guard < 10 ) {
@@ -2384,19 +2384,19 @@ final class EventAccess {
 		return $post_id;
 	}
 
-	/**
-	 * Whether this event is closed for good: the «histórico» mark.
-	 *
-	 * Se mira siempre en la raíz, así que el cierre alcanza a las páginas
-	 * satélite del evento sin que cada pantalla tenga que acordarse: quien
-	 * pregunte por una sección recibe la respuesta de su evento. Lo mismo
-	 * valdría para un ponente o una actividad colgados de un evento, si algún
-	 * día los cuelgan: hoy no lo están, se acotan por área y `root_id()`
-	 * devuelve el propio post.
-	 *
-	 * @param int $post_id Post ID; the event, or anything under it.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function is_archived( int $post_id ): bool {
 		if ( $post_id <= 0 ) {
 			return false;
@@ -2404,78 +2404,78 @@ final class EventAccess {
 		return (bool) get_post_meta( self::root_id( $post_id ), EventMetaKeys::ARCHIVED, true );
 	}
 
-	/**
-	 * Whether the user may MARK this event as «histórico».
-	 *
-	 * Lo marca el área que lo organiza, que es quien sabe cuándo está
-	 * terminado; no hace falta administrar el aplicativo para cerrar lo tuyo.
-	 *
-	 * La puerta es {@see can_open()} y no {@see can_edit()} a propósito, y no
-	 * es un descuido: `can_edit()` lleva el cierre encima, así que preguntar
-	 * por él aquí se mordería la cola —marcar exigiría poder editar, y lo
-	 * primero que hace la marca es quitar esa posibilidad—. Lo que hay que
-	 * comprobar es la regla del área, que es lo que `can_open()` responde.
-	 *
-	 * Que la marca ya esté puesta no lo comprueba esta función: eso es el
-	 * estado, no el permiso, y quien decide qué botón se pinta y qué POST se
-	 * acepta es la pantalla. Volver a marcar lo marcado no cambia nada.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Event ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_archive( int $user_id, int $post_id ): bool {
 		return self::can_open( $user_id, $post_id );
 	}
 
-	/**
-	 * Whether the user may UNMARK an event as «histórico».
-	 *
-	 * Solo administración, y la asimetría con {@see can_archive()} es
-	 * deliberada: cerrar lo tuyo es tuyo, reabrirlo necesita a otra persona.
-	 * Si el área pudiera desmarcarlo sola, el cierre sería una preferencia y
-	 * no un cierre.
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_unarchive( int $user_id = 0 ): bool {
 		return self::is_manager( $user_id );
 	}
 
-	/**
-	 * Whether the user may write the «histórico» mark as it stands today.
-	 *
-	 * La suma de las dos reglas de arriba, y la que contesta a la pregunta que
-	 * de verdad se hace desde fuera de la pantalla —el `auth_callback` de la
-	 * meta—, donde no se sabe qué valor se va a escribir: mientras el evento
-	 * está abierto, la marca la toca su área; en cuanto está cerrado, solo la
-	 * toca administración. Así el área no se desmarca el evento por la puerta
-	 * de al lado con un `update_post_meta()`.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Event ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_toggle_archived( int $user_id, int $post_id ): bool {
 		return self::is_archived( $post_id )
 			? self::can_unarchive( $user_id )
 			: self::can_archive( $user_id, $post_id );
 	}
 
-	/**
-	 * Whether the user may open this event, even if only to read it.
-	 *
-	 * Es la regla del área, sin el cierre por encima: un evento marcado como
-	 * histórico se sigue consultando y exportando desde su taller, y por eso
-	 * el listado y el taller preguntan por aquí y no por {@see can_edit()}.
-	 * Esconderlo sería peor: quien lo busque tiene que encontrarlo y entender
-	 * por qué no puede tocarlo.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_open( int $user_id, int $post_id ): bool {
 		if ( $user_id <= 0 || $post_id <= 0 ) {
 			return false;
@@ -2498,41 +2498,41 @@ final class EventAccess {
 
 		$theirs = self::post_areas( $post_id );
 		if ( array() === $theirs ) {
-			// Recién creado y todavía sin área: lo edita quien lo creó, que es
-			// quien tiene que ponérsela. Para los ponentes y las actividades es
-			// una ventana muy corta, porque `stamp_area()` se la pone al
-			// guardar; se queda abierta cuando quien lo crea no tiene área
-			// propia —la administración—, y entonces solo lo
-			// toca esa persona hasta que alguien le asigne un área.
+
+
+
+
+
+
 			return (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
 		}
 
 		return array() !== array_intersect( $mine, $theirs );
 	}
 
-	/**
-	 * Whether the user may edit this event, page, speaker or activity.
-	 *
-	 * La misma regla para los tres tipos, que es lo que hace que un área
-	 * gestione su evento entero: comparte alguna área con el contenido, o no
-	 * lo toca. Y por encima de esa regla, el cierre: con el evento marcado
-	 * como histórico no lo edita el área que lo organizó —tampoco sus
-	 * secciones—, y sí administración, porque alguien tiene que
-	 * poder corregir una errata o desmarcarlo.
-	 *
-	 * Las dos reglas conviven sin contradecirse porque responden a preguntas
-	 * distintas: la de ADR-0012 mira el calendario y cierra sola cuando el
-	 * evento termina; esta la pone una persona y no se abre con el tiempo.
-	 * Basta una para decir «no», y esta es la de arriba.
-	 *
-	 * Este es el único sitio donde se junta todo: `map_meta_cap()` manda aquí
-	 * `edit_post`, `delete_post` y `publish_post`, así que el cierre alcanza
-	 * también al escritorio, a la edición rápida y a la REST.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_edit( int $user_id, int $post_id ): bool {
 		if ( ! self::can_open( $user_id, $post_id ) ) {
 			return false;
@@ -2540,31 +2540,31 @@ final class EventAccess {
 		return ! self::is_archived( $post_id ) || self::is_manager( $user_id );
 	}
 
-	/**
-	 * The primitive cap that scopes this post, '' when it is not ours.
-	 *
-	 * @param int $post_id Post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function scoped_cap( int $post_id ): string {
 		$tipos = self::scoped_types();
 		$tipo  = (string) get_post_type( $post_id );
 		return isset( $tipos[ $tipo ] ) ? $tipos[ $tipo ] : '';
 	}
 
-	/**
-	 * Give a brand new speaker or activity the áreas of whoever created it.
-	 *
-	 * Sin esto un ponente nace sin área y solo lo toca quien lo tecleó, no sus
-	 * compañeras: el área es el ámbito de trabajo, no la autoría (ADR-0006).
-	 * Solo escribe cuando todavía no hay ninguna, así que compartir un ponente
-	 * con otra área —añadirle su término— no se deshace en el siguiente
-	 * guardado. Se mira el área de quien firma el post y no la de quien guarda,
-	 * para que la migración y WP-CLI den el mismo resultado.
-	 *
-	 * @param int $post_id Speaker or activity being saved.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function stamp_area( int $post_id ): void {
 		if ( array() !== self::post_areas( $post_id ) ) {
 			return;
@@ -2576,13 +2576,13 @@ final class EventAccess {
 		wp_set_object_terms( $post_id, $areas, EventTaxonomies::AREA );
 	}
 
-	/**
-	 * Whether the user may publish events, and this one in particular.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID (0 = just the capability).
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	public static function can_publish( int $user_id, int $post_id = 0 ): bool {
 		if ( $user_id <= 0 || ! user_can( $user_id, 'publish_evt_events' ) ) {
 			return false;
@@ -2593,32 +2593,32 @@ final class EventAccess {
 		return self::can_edit( $user_id, $post_id );
 	}
 
-	/**
-	 * Whether the user may write the custom CSS of this event or page.
-	 *
-	 * Las dos condiciones, siempre: la capacidad propia y poder editar ese
-	 * evento. Tener la capacidad no abre los eventos de otra área.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function can_edit_custom_css( int $user_id, int $post_id ): bool {
 		return self::can_edit_code( $user_id, $post_id, self::CAP_CUSTOM_CSS );
 	}
 
-	/**
-	 * Whether the user may write the custom JavaScript of this event or page.
-	 *
-	 * Lo mismo que el CSS y una condición más: en multisitio hace falta
-	 * `unfiltered_html`. WordPress se la quita a propósito a quien administra
-	 * un subsitio y se la reserva a la superadministración; esa decisión es de
-	 * la plataforma y aquí se respeta en vez de rodearla.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function can_edit_custom_js( int $user_id, int $post_id ): bool {
 		if ( ! self::can_edit_code( $user_id, $post_id, self::CAP_CUSTOM_JS ) ) {
 			return false;
@@ -2626,33 +2626,33 @@ final class EventAccess {
 
 		$suelto = ! is_multisite() || user_can( $user_id, 'unfiltered_html' );
 
-		/**
-		 * Filter the multisite rule for the custom JavaScript field.
-		 *
-		 * La válvula explícita para el caso legítimo en que haga falta abrirlo
-		 * en una red: un `add_filter` que se ve en el repositorio y se audita,
-		 * y no una concesión global y silenciosa de `unfiltered_html` como la
-		 * del sistema anterior.
-		 *
-		 * Solo puede relajar la regla de multisitio. La capacidad
-		 * `evt_edit_custom_js` y el acotado por área se comprueban antes y este
-		 * filtro no los toca: quien no puede editar el evento sigue sin poder.
-		 *
-		 * @param bool $suelto  Whether the multisite rule is satisfied.
-		 * @param int  $user_id User ID.
-		 * @param int  $post_id Post ID.
-		 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		return (bool) apply_filters( 'evt_allow_custom_js', $suelto, $user_id, $post_id );
 	}
 
-	/**
-	 * Shared rule of the two code fields: the capability and the event.
-	 *
-	 * @param int    $user_id User ID.
-	 * @param int    $post_id Post ID.
-	 * @param string $cap     Capability to require.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
 	private static function can_edit_code( int $user_id, int $post_id, string $cap ): bool {
 		if ( $user_id <= 0 || ! user_can( $user_id, $cap ) ) {
 			return false;
@@ -2660,21 +2660,21 @@ final class EventAccess {
 		return self::can_edit( $user_id, $post_id );
 	}
 
-	/**
-	 * Why the user cannot touch this event, in words.
-	 *
-	 * Vive aquí y no en cada pantalla para que todas lo cuenten igual.
-	 *
-	 * @param int $user_id User ID.
-	 * @param int $post_id Post ID.
-	 * @return string Empty when there is nothing to explain.
-	 */
+
+
+
+
+
+
+
+
+
 	public static function why_not_editable( int $user_id, int $post_id ): string {
 		if ( self::can_edit( $user_id, $post_id ) ) {
 			return '';
 		}
-		// El cierre va primero porque es la regla de arriba: si el área podría
-		// editarlo y no puede, es por esto y no por el área ni por el perfil.
+
+
 		if ( self::can_open( $user_id, $post_id ) ) {
 			return 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.';
 		}
@@ -2694,18 +2694,18 @@ final class EventAccess {
 		return $que . ' es de otra área. Solo lo edita el área que lo organiza o quien administra el aplicativo.';
 	}
 
-	/**
-	 * Turn the área policy into a denial for the core meta caps.
-	 *
-	 * Esta es la capa que de verdad protege: el acotado del listado solo
-	 * esconde, y deja abiertos el enlace directo, la edición rápida y la REST.
-	 *
-	 * @param string[] $caps    Primitive caps.
-	 * @param string   $cap     Meta cap.
-	 * @param int      $user_id User ID.
-	 * @param array    $args    Cap args (post ID in the first position).
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function map_meta_cap( array $caps, string $cap, int $user_id, array $args ): array {
 		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post' ), true ) ) {
 			return $caps;
@@ -2720,12 +2720,12 @@ final class EventAccess {
 		return $caps;
 	}
 
-	/**
-	 * Keep positive integers only, without repeats.
-	 *
-	 * @param array<int, mixed> $values Raw values.
-	 * @return int[]
-	 */
+
+
+
+
+
+
 	private static function clean_ids( array $values ): array {
 		$out = array();
 		foreach ( $values as $value ) {
@@ -2738,43 +2738,43 @@ final class EventAccess {
 	}
 }
 
-// ---- src/Evt/PostType/EventPostType.php ----
-/**
- * Register the evt_event custom post type.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PostType;
 
 use Evt\Access\EventAccess;
 
-/**
- * CPT registration for events.
- *
- * Es jerárquico porque un evento es a la vez su portada (raíz) y sus páginas
- * satélite (hijas): programa, ponentes, inscripción… Así sustituye 1:1 a las
- * `page` jerárquicas de hoy y se conserva la forma de las URL.
- */
+
+
+
+
+
+
+
 final class EventPostType {
 
 	public const POST_TYPE = 'evt_event';
 
-	/**
-	 * Core meta key holding the theme template of a page.
-	 */
+
+
+
 	public const TEMPLATE_META = '_wp_page_template';
 
-	/**
-	 * Value that means «la que el tema use para esto», que es no elegir ninguna.
-	 */
+
+
+
 	public const TEMPLATE_DEFAULT = 'default';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		register_post_type(
 			self::POST_TYPE,
@@ -2800,8 +2800,8 @@ final class EventPostType {
 				'menu_icon'       => 'dashicons-calendar-alt',
 				'supports'        => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'page-attributes' ),
 				'has_archive'     => false,
-				// Conservar las URL actuales (`/eventos/<slug>/`) pide reescritura
-				// en la raíz del subsitio y su propia ADR; la fase 1 no la toca.
+
+
 				'rewrite'         => array(
 					'slug'       => 'evento',
 					'with_front' => false,
@@ -2813,36 +2813,36 @@ final class EventPostType {
 			)
 		);
 
-		// Un evento se pinta como una página, así que usa las plantillas que el
-		// tema declara para `page`. Sin esto, `_wp_page_template` no se ofrece
-		// en ningún sitio y la portada del evento sale con la cabecera, el pie
-		// y el título del tema encima del nuestro.
+
+
+
+
 		add_filter( 'theme_' . self::POST_TYPE . '_templates', array( self::class, 'theme_templates' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( self::class, 'set_blank_template' ) );
 	}
 
-	/**
-	 * Offer events the page templates of the active theme.
-	 *
-	 * El tema del sitio puede declarar una plantilla —«Página en blanco», por
-	 * ejemplo— solo para `page`; con este filtro WordPress la ofrece también en el evento, la
-	 * enseña en «Atributos de página» y `get_single_template()` la honra —desde
-	 * WP 4.7 `_wp_page_template` vale para cualquier tipo de contenido—.
-	 *
-	 * @param mixed $templates Templates already declared for evt_event.
-	 * @return array<string, string> Fichero => rótulo.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function theme_templates( $templates ): array {
 		$propias = is_array( $templates ) ? $templates : array();
-		// Lo que el tema declare con `Template Post Type: evt_event` manda.
+
 		return array_merge( wp_get_theme()->get_page_templates( null, 'page' ), $propias );
 	}
 
-	/**
-	 * Every template an event may be given, ready for a select.
-	 *
-	 * @return array<string, string> valor => rótulo.
-	 */
+
+
+
+
+
 	public static function page_templates(): array {
 		return array_merge(
 			array( self::TEMPLATE_DEFAULT => 'La del tema' ),
@@ -2850,16 +2850,16 @@ final class EventPostType {
 		);
 	}
 
-	/**
-	 * The blank template of the active theme, when it offers one.
-	 *
-	 * No hay ningún nombre de fichero escrito a fuego: se busca en lo que el
-	 * tema declara. el tema la llama `page-template-blank.php` / «Página en
-	 * blanco»; un tema que no traiga ninguna —Twenty Twenty-Five— devuelve
-	 * cadena vacía y el evento se queda con la plantilla por defecto.
-	 *
-	 * @return string Template file, '' when the theme offers none.
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function blank_template(): string {
 		$plantillas = wp_get_theme()->get_page_templates( null, self::POST_TYPE );
 		$encontrada = '';
@@ -2871,29 +2871,29 @@ final class EventPostType {
 			}
 		}
 
-		/**
-		 * Filter which template a new event gets.
-		 *
-		 * El sitio que llame «Portada limpia» a la suya lo dice aquí, sin tocar
-		 * el aplicativo.
-		 *
-		 * @param string                $encontrada Template file, '' for none.
-		 * @param array<string, string> $plantillas Every template available to an event.
-		 */
+
+
+
+
+
+
+
+
+
 		return (string) apply_filters( 'evt_blank_page_template', $encontrada, $plantillas );
 	}
 
-	/**
-	 * Give a brand new event —or section— the blank template of the theme.
-	 *
-	 * Va en `save_post` y no en la pantalla de alta: un evento entra por el
-	 * taller, por el escritorio, por WP-CLI y por la migración, y así se
-	 * resuelve una vez para todos. Solo escribe cuando la página todavía no
-	 * tiene plantilla, así que quien elija otra después manda.
-	 *
-	 * @param int $post_id Event or section.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function set_blank_template( int $post_id ): void {
 		if ( metadata_exists( 'post', $post_id, self::TEMPLATE_META ) ) {
 			return;
@@ -2907,27 +2907,27 @@ final class EventPostType {
 		update_post_meta( $post_id, self::TEMPLATE_META, $plantilla );
 	}
 
-	/**
-	 * Custom capabilities for the CPT.
-	 *
-	 * No se declara `create_posts`: sin declararla, WordPress usa
-	 * `edit_evt_events` para «Añadir nuevo», que es justo lo que tiene el rol
-	 * de organización. Declarar una capacidad que nadie tiene es como se cierra
-	 * el botón de crear sin querer.
-	 *
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function capabilities(): array {
 		return self::cap_map( 'evt_event', 'evt_events' );
 	}
 
-	/**
-	 * Build the WordPress cap map for a singular/plural pair.
-	 *
-	 * @param string $one  Singular cap base.
-	 * @param string $many Plural cap base.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
+
 	public static function cap_map( string $one, string $many ): array {
 		return array(
 			'edit_post'              => 'edit_' . $one,
@@ -2946,14 +2946,14 @@ final class EventPostType {
 		);
 	}
 
-	/**
-	 * Grant the CPT caps of the three content types to the two roles.
-	 *
-	 * Idempotente y aditiva: crea lo que falta y nunca quita nada, para que lo
-	 * que se conceda a mano en WPFront siga ahí en la siguiente carga.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	public static function grant_caps_to_roles(): void {
 		$maps = array(
 			self::POST_TYPE                 => self::capabilities(),
@@ -2964,10 +2964,10 @@ final class EventPostType {
 
 		$every = array_keys( self::capabilities() );
 
-		// Del evento, la organización de un área publica y retira lo suyo y lo
-		// de sus compañeras, pero no lo privado ni lo de otra persona: esas tres
-		// se le reservan a la administración. Lo que la acota al área es
-		// EventAccess, no la capacidad.
+
+
+
+
 		$organiser_events = array(
 			'edit_post',
 			'read_post',
@@ -2981,14 +2981,14 @@ final class EventPostType {
 			'edit_published_posts',
 		);
 
-		// De los ponentes y de las actividades, en cambio, se lleva el juego
-		// entero: un área gestiona su evento entero, y eso incluye dar de alta
-		// a quien participa y montar el programa sin pedir permiso a nadie. El
-		// acotado por área lo pone igualmente EventAccess.
-		// De las inscripciones, el área lee y borra las de sus eventos —alguien
-		// se da de baja, o pide que se le borre— pero no las publica: no las
-		// escribe una persona, las escribe el aplicativo cuando alguien se
-		// inscribe (ADR-0032).
+
+
+
+
+
+
+
+
 		$organiser_registrations = array(
 			'edit_post',
 			'read_post',
@@ -3029,26 +3029,26 @@ final class EventPostType {
 		self::grant_code_caps();
 	}
 
-	/**
-	 * The two code capabilities: the CSS also to the área, the JavaScript never.
-	 *
-	 * Fuera del bucle de arriba a propósito: ese reparte las capacidades de los
-	 * tipos de contenido, y estas dos no son de ningún tipo de contenido.
-	 *
-	 * La raya está donde el riesgo cambia de naturaleza: el CSS cambia **cómo
-	 * se ve** una página, y quien organiza la jornada es quien sabe cómo tiene
-	 * que verse; el JavaScript **ejecuta código** en el navegador de cada
-	 * visitante, que es el poder que WordPress protege con `unfiltered_html` y
-	 * el que devolvía sin acotar, a quien ya la tuviera en su rol, un fragmento del
-	 * sistema anterior. Por eso son dos capacidades distintas y no
-	 * una, que fue el acierto de la ADR-0014.
-	 *
-	 * Tener el CSS no abre el evento de al lado: el acotado por área lo sigue
-	 * poniendo el guardián ({@see \Evt\Access\EventAccess::can_edit_custom_css()}),
-	 * que exige las dos cosas.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function grant_code_caps(): void {
 		$por_rol = array(
 			'evt_organiser' => array( EventAccess::CAP_CUSTOM_CSS ),
@@ -3068,55 +3068,55 @@ final class EventPostType {
 		}
 	}
 
-	/**
-	 * The capabilities that guard the custom CSS and JavaScript fields.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
 	public static function code_caps(): array {
 		return array( EventAccess::CAP_CUSTOM_CSS, EventAccess::CAP_CUSTOM_JS );
 	}
 
-	/**
-	 * The code capability that stays with administration, and only with it.
-	 *
-	 * Escrita aparte para que la comprueben las pantallas, los tests y el
-	 * diagnóstico sin repetir la cadena en cada sitio.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
 	public static function admin_only_code_caps(): array {
 		return array( EventAccess::CAP_CUSTOM_JS );
 	}
 }
 
-// ---- src/Evt/PostType/SpeakerPostType.php ----
-/**
- * Register the evt_speaker custom post type.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PostType;
 
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * CPT registration for speakers.
- *
- * Es un tipo propio y no una página hija del evento porque la misma persona
- * comunicadora vuelve en varias ediciones: hoy son 483 entradas del formulario
- * 7 repetidas evento a evento.
- */
+
+
+
+
+
+
+
 final class SpeakerPostType {
 
 	public const POST_TYPE = 'evt_speaker';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		register_post_type(
 			self::POST_TYPE,
@@ -3134,16 +3134,16 @@ final class SpeakerPostType {
 					'not_found_in_trash' => 'No hay ponentes en la papelera',
 					'menu_name'          => 'Ponentes',
 				),
-				// Sin URL propia: al público se le enseña dentro de la página de
-				// ponentes del evento, no en una ficha suelta.
+
+
 				'public'          => false,
 				'show_ui'         => true,
 				'show_in_menu'    => 'edit.php?post_type=' . EventPostType::POST_TYPE,
 				'supports'        => array( 'title', 'editor', 'thumbnail', 'author' ),
 				'has_archive'     => false,
-				// El área es el eje de permisos y aquí también: un ponente lleva
-				// su término (o varios, que es reutilizarlo) y de ahí sale
-				// quién puede tocarlo ({@see \Evt\Access\EventAccess}).
+
+
+
 				'taxonomies'      => array( EventTaxonomies::AREA ),
 				'rewrite'         => false,
 				'query_var'       => false,
@@ -3155,43 +3155,43 @@ final class SpeakerPostType {
 		);
 	}
 
-	/**
-	 * Custom capabilities for the CPT.
-	 *
-	 * @return array<string, string>
-	 */
+
+
+
+
+
 	public static function capabilities(): array {
 		return EventPostType::cap_map( 'evt_speaker', 'evt_speakers' );
 	}
 }
 
-// ---- src/Evt/PostType/ActivityPostType.php ----
-/**
- * Register the evt_activity custom post type.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PostType;
 
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * CPT registration for programme activities.
- *
- * Una actividad es lo que ocupa una franja del programa: ponencia, mesa
- * redonda, comunicación o taller. Hoy son entradas de un formulario del
- * sistema anterior.
- */
+
+
+
+
+
+
+
 final class ActivityPostType {
 
 	public const POST_TYPE = 'evt_activity';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		register_post_type(
 			self::POST_TYPE,
@@ -3209,15 +3209,15 @@ final class ActivityPostType {
 					'not_found_in_trash' => 'No hay actividades en la papelera',
 					'menu_name'          => 'Actividades',
 				),
-				// Sin URL propia: se ven en la parrilla del programa del evento.
+
 				'public'          => false,
 				'show_ui'         => true,
 				'show_in_menu'    => 'edit.php?post_type=' . EventPostType::POST_TYPE,
 				'supports'        => array( 'title', 'editor', 'author' ),
 				'has_archive'     => false,
-				// El área es el eje de permisos y aquí también: una actividad lleva
-				// su término (o varios, que es reutilizarla) y de ahí sale
-				// quién puede tocarla ({@see \Evt\Access\EventAccess}).
+
+
+
 				'taxonomies'      => array( EventTaxonomies::AREA ),
 				'rewrite'         => false,
 				'query_var'       => false,
@@ -3229,52 +3229,52 @@ final class ActivityPostType {
 		);
 	}
 
-	/**
-	 * Custom capabilities for the CPT.
-	 *
-	 * @return array<string, string>
-	 */
+
+
+
+
+
 	public static function capabilities(): array {
 		return EventPostType::cap_map( 'evt_activity', 'evt_activities' );
 	}
 }
 
-// ---- src/Evt/PostType/RegistrationPostType.php ----
-/**
- * Register the evt_registration custom post type.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PostType;
 
-/**
- * CPT registration for signups.
- *
- * Una inscripción cuelga de su evento por `post_parent`, como el ponente y la
- * actividad (ADR-0026): de ahí salen solos el área a la que pertenece, el
- * guardián que la acota y el cierre por histórico.
- *
- * **Se registra cerrado, y eso es la mitad de la decisión** (ADR-0032). Sin
- * escritorio, sin REST, sin búsqueda, sin URL y sin archivo. No es esconder:
- * esconder no protege, y la regla de la casa es que lo que protege es
- * `map_meta_cap`. Es **no abrir**: cada puerta que no se abre es una puerta que
- * no hay que guardar después, y aquí dentro hay datos personales de gente que
- * no trabaja aquí.
- *
- * El `post_title` es la **referencia** de la inscripción, no el nombre de la
- * persona. Es la diferencia entre un dato que sale en cualquier listado que
- * recorra `wp_posts` y uno al que hay que ir a buscar.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class RegistrationPostType {
 
 	public const POST_TYPE = 'evt_registration';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		register_post_type(
 			self::POST_TYPE,
@@ -3304,22 +3304,22 @@ final class RegistrationPostType {
 		);
 	}
 
-	/**
-	 * Custom capabilities for the CPT.
-	 *
-	 * @return array<string, string>
-	 */
+
+
+
+
+
 	public static function capabilities(): array {
 		return EventPostType::cap_map( 'evt_registration', 'evt_registrations' );
 	}
 }
 
-// ---- src/Evt/Meta/RegistrationMetaRegistration.php ----
-/**
- * Register the meta keys of a registration and of the signup settings.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Meta;
 
@@ -3327,34 +3327,34 @@ use Evt\Domain\SignupQuestions;
 use Evt\PostType\RegistrationPostType;
 use Evt\PostType\EventPostType;
 
-/**
- * Lo mismo que {@see EventMetaRegistration} y {@see ProgrammeMetaRegistration},
- * para la inscripción y para los ajustes de inscripción del evento.
- *
- * La diferencia está en el `auth_callback` de las metas de la inscripción, y no
- * es un detalle: **devuelve `false` siempre**. Ponente y actividad se editan a
- * mano desde el taller, así que su `auth_callback` pregunta por `edit_post`;
- * una inscripción, en cambio, **no la edita nadie a mano**: la escribe el
- * aplicativo cuando alguien se inscribe. No hay una sola vía por la que una
- * meta con el documento de identidad de una persona se pueda escribir desde
- * fuera (ADR-0032).
- */
+
+
+
+
+
+
+
+
+
+
+
+
 final class RegistrationMetaRegistration {
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'register_meta' ), 12 );
 	}
 
-	/**
-	 * Registration meta keys with their type and sanitiser.
-	 *
-	 * @return array<string, array{type:string, sanitize:callable}>
-	 */
+
+
+
+
+
 	public static function registration_schema(): array {
 		return array(
 			RegistrationMetaKeys::REG_TAX_ID          => array(
@@ -3404,11 +3404,11 @@ final class RegistrationMetaRegistration {
 		);
 	}
 
-	/**
-	 * Signup settings of an event, with their type and sanitiser.
-	 *
-	 * @return array<string, array{type:string, sanitize:callable}>
-	 */
+
+
+
+
+
 	public static function signup_schema(): array {
 		return array(
 			RegistrationMetaKeys::SIGNUP_OPEN      => array(
@@ -3446,11 +3446,11 @@ final class RegistrationMetaRegistration {
 		);
 	}
 
-	/**
-	 * Register every registration and signup meta key.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register_meta(): void {
 		$defaults = array(
 			'string'  => '',
@@ -3489,33 +3489,33 @@ final class RegistrationMetaRegistration {
 		}
 	}
 
-	/**
-	 * Keep a tax ID upper case and without separators.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_tax_id( $value ): string {
 		return \Evt\Domain\RegistrationInput::tax_id( is_scalar( $value ) ? (string) $value : '' );
 	}
 
-	/**
-	 * Keep a token to the shape we issue, or nothing.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_token( $value ): string {
 		$token = is_scalar( $value ) ? strtolower( trim( (string) $value ) ) : '';
 		return (bool) preg_match( '/^[a-f0-9]{40}$/', $token ) ? $token : '';
 	}
 
-	/**
-	 * Store answers as JSON, and nothing that is not answers.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_answers( $value ): string {
 		if ( is_string( $value ) ) {
 			$value = '' === trim( $value ) ? array() : json_decode( $value, true );
@@ -3542,12 +3542,12 @@ final class RegistrationMetaRegistration {
 		return (string) wp_json_encode( $out );
 	}
 
-	/**
-	 * Store the question list as JSON, normalised.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function sanitize_questions( $value ): string {
 		$preguntas = SignupQuestions::read( $value );
 		foreach ( $preguntas as $i => $pregunta ) {
@@ -3557,80 +3557,80 @@ final class RegistrationMetaRegistration {
 		return (string) wp_json_encode( $preguntas );
 	}
 
-	/**
-	 * A checkbox is a boolean.
-	 *
-	 * @param mixed $value Raw value.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function sanitize_bool( $value ): bool {
 		return (bool) $value;
 	}
 }
 
-// ---- src/Evt/Taxonomy/EventTaxonomies.php ----
-/**
- * Register the three event taxonomies.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Taxonomy;
 
 use Evt\Access\EventAccess;
 use Evt\PostType\EventPostType;
 
-/**
- * Las tres taxonomías que sustituyen a la única `convocatoria` de hoy.
- *
- * `convocatoria` mezcla cuatro ejes —área, tipología, curso y estado— en 50
- * términos, y lo único que los separa son cuatro listas de exclusión de IDs
- * mantenidas a mano en el sistema anterior. Aquí cada eje es su propia
- * taxonomía, y el estado ni siquiera es una: lo calcula `EventState`.
- *
- * Las capacidades son las que existen de verdad: `evt_manage_app`, que crea el
- * snippet de roles, y `edit_evt_events`, que sale del CPT. El código heredado
- * exige capacidades que no existen en el sitio, y por eso nadie puede
- * administrar los términos.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventTaxonomies {
 
-	/**
-	 * Área, servicio o dirección general que organiza. Es el eje de permisos.
-	 */
+
+
+
 	public const AREA = 'evt_area';
 
-	/**
-	 * Tipología: jornadas, encuentro, congreso, taller.
-	 */
+
+
+
 	public const TYPE = 'evt_type';
 
-	/**
-	 * Curso escolar (2025-2026…).
-	 */
+
+
+
 	public const COURSE = 'evt_course';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		register_taxonomy( self::AREA, EventPostType::POST_TYPE, self::args( 'Áreas organizadoras', 'Área organizadora' ) );
 		register_taxonomy( self::TYPE, EventPostType::POST_TYPE, self::args( 'Tipologías', 'Tipología' ) );
 		register_taxonomy( self::COURSE, EventPostType::POST_TYPE, self::args( 'Cursos escolares', 'Curso escolar' ) );
 	}
 
-	/**
-	 * Shared taxonomy arguments.
-	 *
-	 * Las tres son jerárquicas para que salgan como casillas y no como campo
-	 * libre: un vocabulario cerrado no se amplía por una errata al teclear.
-	 *
-	 * @param string $plural   Plural label.
-	 * @param string $singular Singular label.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function args( string $plural, string $singular ): array {
 		return array(
 			'labels'             => array(
@@ -3660,134 +3660,134 @@ final class EventTaxonomies {
 	}
 }
 
-// ---- src/Evt/PublicFront/Assets.php ----
-/**
- * Front-end asset registration for the events application.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
-/**
- * La hoja y el guion del aplicativo, en línea.
- *
- * El único artefacto de producción es el bundle de Code Snippets: no hay
- * repositorio en disco ni URL de plugin desde la que servir un fichero, así
- * que el CSS y el JS viajan dentro del propio bundle como contenido en línea.
- * En desarrollo y en tests se leen de `assets/`, que sí está ahí.
- */
+
+
+
+
+
+
+
+
 final class Assets {
 
-	/**
-	 * Asset contents inlined by the bundler, keyed by path relative to assets/.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
 	private static $inline = array();
 
-	/**
-	 * Receive the asset contents that `build/pack-snippet.php` inlined.
-	 *
-	 * @param array<string, string> $assets Map of path relative to assets/ => contents.
-	 * @return void
-	 */
+
+
+
+
+
+
 	public static function set_inline( array $assets ): void {
 		self::$inline = $assets;
 	}
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
-		// Pronto: un tema de bloques pinta el shortcode antes de `wp_enqueue_scripts`.
+
 		add_action( 'init', array( self::class, 'register_assets' ), 20 );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'register_assets' ), 5 );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_app' ), 100 );
 		add_filter( 'body_class', array( self::class, 'body_class' ) );
 	}
 
-	/**
-	 * Register (not always enqueue) our two assets. Idempotent.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register_assets(): void {
 		if ( wp_style_is( 'evt-app', 'registered' ) ) {
 			return;
 		}
 
-		// phpcs:disable WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Inline-only handles have no URL to version.
+
 		wp_register_style( 'evt-app', false, array(), null );
 		wp_add_inline_style( 'evt-app', self::contents( 'css/evt-app.css' ) );
 
 		wp_register_script( 'evt-app', false, array(), null, true );
 		wp_add_inline_script( 'evt-app', self::contents( 'js/evt-app.js' ) );
-		// phpcs:enable WordPress.WP.EnqueuedResourceParameters.MissingVersion
+
 	}
 
-	/**
-	 * Enqueue the stylesheet and the script on our own pages.
-	 *
-	 * El shortcode llega después del encabezado: esperar a él repinta la
-	 * página. Se encola en `wp_enqueue_scripts`, y {@see enqueue()} queda como
-	 * respaldo para quien llame al shortcode desde otro sitio.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
 	public static function enqueue_app(): void {
 		if ( Shell::is_app_page() ) {
 			self::enqueue();
 		}
 	}
 
-	/**
-	 * Enqueue the stylesheet and the script, registering them if needed.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function enqueue(): void {
 		self::register_assets();
 		wp_enqueue_style( 'evt-app' );
 		wp_enqueue_script( 'evt-app' );
 	}
 
-	/**
-	 * Whether Bootstrap 5 already styles the page.
-	 *
-	 * El subsitio de eventos carga **Bootstrap 4** en todas sus páginas desde
-	 * un snippet antiguo, con el handle `bootstrap-css`. Así que mirar la cola
-	 * de estilos era adivinar: un handle llamado «bootstrap» no dice de qué
-	 * versión es, y dar por buena la 4 pintaría el aplicativo suponiendo una
-	 * rejilla y unas utilidades que no están —bien en local, roto al
-	 * desplegar—.
-	 *
-	 * La verdad la pone quien la conoce: `snippets/bootstrap5.php` fija este
-	 * filtro cuando de verdad ha encolado Bootstrap 5 en esta página. Si no
-	 * está, nuestra hoja pinta botones y pastillas decentes por su cuenta.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function has_bootstrap(): bool {
-		/**
-		 * Filter whether Bootstrap 5 styles the page.
-		 *
-		 * @param bool $present Whether Bootstrap 5 was loaded for this page.
-		 */
+
+
+
+
+
 		return (bool) apply_filters( 'evt_has_bootstrap', false );
 	}
 
-	/**
-	 * Mark the page when Bootstrap is absent, so our own skin applies.
-	 *
-	 * Una clase en el `body` y no un truco de orden de carga: con las dos hojas
-	 * en juego, quién gana depende del orden de encolado, que no controlamos.
-	 *
-	 * @param string[] $classes Body classes.
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
 	public static function body_class( array $classes ): array {
 		if ( ! self::has_bootstrap() ) {
 			$classes[] = 'evt-sin-bootstrap';
@@ -3795,43 +3795,43 @@ final class Assets {
 		return $classes;
 	}
 
-	/**
-	 * Classes for a page-level notice.
-	 *
-	 * @param string $tono info|warning|success|danger.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function alert_class( string $tono = 'info' ): string {
 		$tonos = array( 'info', 'warning', 'success', 'danger' );
 		$tono  = in_array( $tono, $tonos, true ) ? $tono : 'info';
 		return sprintf( 'evt-aviso evt-aviso-%1$s alert alert-%1$s', $tono );
 	}
 
-	/**
-	 * Classes for a button or a button-styled link.
-	 *
-	 * Los dos vocabularios a la vez: `evt-btn` para nuestro CSS y las de
-	 * Bootstrap para que el botón sea el del resto del subsitio. Sin Bootstrap,
-	 * las clases sobrantes no hacen nada.
-	 *
-	 * @param bool $primary Whether this is the primary action.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function button_class( bool $primary = false ): string {
 		return $primary
 			? 'evt-btn evt-btn-primary btn btn-primary'
 			: 'evt-btn btn btn-light';
 	}
 
-	/**
-	 * Classes for the chip of a derived event state.
-	 *
-	 * Sin `text-bg-*` de Bootstrap: los tres estados son una línea de tiempo
-	 * —próximo, abierto, finalizado— y el color lo ponen nuestras variables.
-	 *
-	 * @param string $estado One of EventMetaKeys::states().
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function state_class( string $estado ): string {
 		return sprintf(
 			'evt-state evt-state-%s',
@@ -3839,17 +3839,17 @@ final class Assets {
 		);
 	}
 
-	/**
-	 * Contents of one asset: inlined by the bundler, or read from the repo.
-	 *
-	 * Pública porque la hoja de la página pública del evento
-	 * (`css/evt-evento.css`) no se encola: se escribe en la cabecera para que el
-	 * CSS a medida del evento pueda pisarla, y en producción el único artefacto
-	 * es el bundle, donde no hay repositorio en disco del que leerla.
-	 *
-	 * @param string $rel Path relative to assets/, e.g. `js/evt-app.js`.
-	 * @return string Empty when neither source is available.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function contents( string $rel ): string {
 		if ( isset( self::$inline[ $rel ] ) ) {
 			return self::$inline[ $rel ];
@@ -3860,51 +3860,51 @@ final class Assets {
 			return '';
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local asset, not a remote request.
+
 		return (string) file_get_contents( $path );
 	}
 }
 
-// ---- src/Evt/PublicFront/ExitSignal.php ----
-/**
- * Thrown instead of exit() under tests: says where the request was going.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
-/**
- * Lo que Shell::leave() lanza cuando el filtro `evt_exit_throws` está puesto
- * —solo en tests—. Lleva la URL de vuelta, o nada si lo que se acaba de servir
- * es un documento.
- */
+
+
+
+
+
 final class ExitSignal extends \RuntimeException {
 
-	/**
-	 * Where the request was being sent; empty after serving a document.
-	 *
-	 * @var string
-	 */
+
+
+
+
+
 	public $url = '';
 
-	/**
-	 * Constructor.
-	 *
-	 * @param string $url Return URL, or empty.
-	 */
+
+
+
+
+
 	public function __construct( string $url = '' ) {
 		parent::__construct( '' === $url ? 'Salida sin redirección' : 'Redirección a ' . $url );
 		$this->url = $url;
 	}
 }
 
-// ---- src/Evt/PublicFront/Shell.php ----
-/**
- * Chrome shared by every front-end page of the events application.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -3913,25 +3913,25 @@ use Evt\Admin\Settings;
 use Evt\PostType\EventPostType;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * La cabecera, las pestañas y el pie que comparten todas las pantallas.
- *
- * El aplicativo se pinta entero él mismo: cabecera con el escudo, una barra de
- * pestañas con lo que esa persona puede hacer y un pie de una línea. Sin barra
- * lateral —con dos secciones roba ancho y no agrupa nada— y sin depender del
- * tema: aquí el tema es el tema, y su cabecera, su pie y sus hojas no visten nada
- * nuestro, solo pesan.
- *
- * Una sola lista de secciones ({@see sections()}) la usan la portada, las
- * pestañas y los botones: si mañana hay una sección más, se añade en un sitio.
- */
+
+
+
+
+
+
+
+
+
+
+
+
 final class Shell {
 
-	/**
-	 * Slugs de las páginas, por sección. En castellano, como las URL de hoy.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
 	public const SLUGS = array(
 		'home'     => 'eventos-gestion',
 		'events'   => 'mis-eventos',
@@ -3940,16 +3940,16 @@ final class Shell {
 		'speakers' => 'ponentes-evento',
 	);
 
-	/**
-	 * Shortcode que pinta cada pantalla, por sección.
-	 *
-	 * Se mira el shortcode y no el slug para saber si estamos en una página del
-	 * aplicativo: las páginas las crea quien despliega y su dirección puede
-	 * cambiar; el shortcode no. Y son cadenas, no clases: así el armazón no
-	 * depende de que las pantallas estén cargadas.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
+
+
+
+
+
 	public const SHORTCODES = array(
 		'home'     => 'evt_home',
 		'events'   => 'evt_event_list',
@@ -3958,11 +3958,11 @@ final class Shell {
 		'speakers' => 'evt_speaker_list',
 	);
 
-	/**
-	 * Hojas de WordPress que ninguna pantalla del aplicativo usa.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
 	private const CORE_ASSETS = array(
 		'wp-block-library',
 		'wp-block-library-theme',
@@ -3971,72 +3971,72 @@ final class Shell {
 		'wp-emoji-styles',
 	);
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_filter( 'body_class', array( self::class, 'body_class' ) );
 		add_filter( 'show_admin_bar', array( self::class, 'show_admin_bar' ), 100 );
-		// Antes de pintar nada: en `template_redirect` aún se pueden mandar
-		// cabeceras, y dentro del shortcode ya no.
+
+
 		add_action( 'template_redirect', array( self::class, 'require_login' ) );
-		// Después de mandar al acceso a quien no ha entrado, y antes de que el
-		// tema empiece a pintar.
+
+
 		add_action( 'template_redirect', array( self::class, 'render_standalone' ), 20 );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'drop_theme_assets' ), 100 );
-		// Y una red por si algo se encola más tarde: el tema imprime una hoja
-		// «late» en el pie, y al escribir la etiqueta se descarta.
+
+
 		add_filter( 'style_loader_tag', array( self::class, 'drop_theme_tag' ), 10, 3 );
 		add_filter( 'script_loader_tag', array( self::class, 'drop_theme_tag' ), 10, 3 );
 	}
 
-	/**
-	 * Send anonymous visitors of any application page to the login form.
-	 *
-	 * Todas las pantallas son de alguien. Sin sesión, lo que se pintaba era la
-	 * página del tema con un «Debe iniciar sesión» dentro; ahora se va al
-	 * formulario de acceso y se vuelve aquí. El aviso se queda en el modelo de
-	 * cada pantalla: esa es la guarda de verdad, y sigue respondiendo a quien
-	 * llame al shortcode por su cuenta.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function require_login(): void {
 		if ( is_user_logged_in() || ! self::is_app_page() ) {
 			return;
 		}
-		// Solo el permalink: los filtros de la consulta no se arrastran hasta el
-		// formulario de acceso, y volver a la pantalla ya es lo que hace falta.
+
+
 		$destino = (string) get_permalink();
 		self::leave( wp_login_url( '' !== $destino ? $destino : home_url( '/' ) ) );
 	}
 
-	/**
-	 * Las pantallas del aplicativo se sirven solas, sin la plantilla del tema.
-	 *
-	 * El tema no pinta nada nuestro: la cabecera, las pestañas y el pie son del
-	 * aplicativo, y lo único que ponía el tema era su propia cabecera, su pie y
-	 * una columna de contenido que había que deshacer a golpe de CSS.
-	 *
-	 * Se imprime el documento entero —`wp_head()` y `wp_footer()` incluidos, que
-	 * son los que traen la barra de administración y lo que encolamos— y se sale
-	 * por {@see leave()}, que en tests lanza su excepción en vez de terminar.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function render_standalone(): void {
-		/**
-		 * Filter whether the application renders its own page, without the theme.
-		 *
-		 * @param bool $solo Whether to bypass the theme template.
-		 */
+
+
+
+
+
 		if ( ! apply_filters( 'evt_standalone_page', true ) || ! self::is_app_page() ) {
 			return;
 		}
 
-		// `is_app_page()` ya ha comprobado que hay una entrada singular.
+
 		$post = get_post();
 
 		status_header( 200 );
@@ -4051,8 +4051,8 @@ final class Shell {
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<?php
-		// El tema declara `title-tag` y `wp_head()` escribe el título; sin esa
-		// declaración —o sin tema que la haga— lo escribimos nosotros.
+
+
 		if ( ! current_theme_supports( 'title-tag' ) ) {
 			echo '<title>' . esc_html( wp_get_document_title() ) . '</title>';
 		}
@@ -4062,24 +4062,24 @@ final class Shell {
 <body <?php body_class(); ?>>
 		<?php
 		wp_body_open();
-		echo apply_filters( 'the_content', $post->post_content ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- el contenido de la página, filtrado como lo haría el tema.
+		echo apply_filters( 'the_content', $post->post_content ); 
 		wp_footer();
 		?>
 </body>
 </html>
 		<?php
-		echo ob_get_clean(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- documento montado arriba.
+		echo ob_get_clean(); 
 		self::leave();
 	}
 
-	/**
-	 * En nuestras páginas no se escribe ninguna etiqueta del tema.
-	 *
-	 * @param string $tag    The tag WordPress is about to print.
-	 * @param string $handle Its handle.
-	 * @param string $src    Its URL.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function drop_theme_tag( string $tag, string $handle, string $src ): string {
 		unset( $handle );
 		if ( ! apply_filters( 'evt_standalone_page', true ) || ! self::is_app_page() ) {
@@ -4088,11 +4088,11 @@ final class Shell {
 		return self::is_theme_asset( $src ) ? '' : $tag;
 	}
 
-	/**
-	 * Lo del tema, fuera de la cola.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function drop_theme_assets(): void {
 		if ( ! apply_filters( 'evt_standalone_page', true ) || ! self::is_app_page() ) {
 			return;
@@ -4107,51 +4107,51 @@ final class Shell {
 			}
 		}
 
-		// Y lo que trae WordPress para lo que aquí no hay: el contenido de la
-		// página es un shortcode, no hay bloques que vestir ni ajustes de tema
-		// global que aplicar.
+
+
+
 		foreach ( self::CORE_ASSETS as $handle ) {
 			wp_dequeue_style( $handle );
 		}
-		// El detector de emoji son trece kilobytes de guion en línea para
-		// sustituir caritas que no salen en ninguna pantalla.
+
+
 		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 		remove_action( 'wp_print_styles', 'print_emoji_styles' );
 	}
 
-	/**
-	 * Si un fichero viene del tema o de la caché de su constructor.
-	 *
-	 * Por la ruta y no por una lista de nombres, que cambiaría con cada versión
-	 * del tema (`/et-cache/` es la suya).
-	 *
-	 * @param string $src Its URL.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	private static function is_theme_asset( string $src ): bool {
 		return '' !== $src
 			&& ( false !== strpos( $src, '/themes/' ) || false !== strpos( $src, '/et-cache/' ) );
 	}
 
-	/**
-	 * Show the front-end toolbar only for administrators, including switched sessions.
-	 *
-	 * Cuando administración se cambia a otra persona con WPFront User Role
-	 * Editor para comprobar qué ve, la sesión pasa a ser la de esa persona y la
-	 * barra se iba con ella: sin barra no hay «Volver a mi cuenta», y había que
-	 * salir a mano borrando la cookie. WPFront no expone su pila de
-	 * suplantación, así que se lee su propia cookie, se descifra con su propia
-	 * utilidad y se comprueba lo mismo que comprueba él: que la pila es de este
-	 * sitio, que no ha pasado de sus 12 horas y quién empezó el cambio.
-	 *
-	 * Esto decide SOLO si se pinta la barra. No concede ninguna capacidad a la
-	 * persona suplantada: sigue pudiendo exactamente lo suyo, que es justo lo
-	 * que se está yendo a comprobar al suplantarla.
-	 *
-	 * Sin el plugin instalado su clase no existe: se responde que no y ya.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function show_admin_bar(): bool {
 		if ( current_user_can( 'manage_options' ) ) {
 			return true;
@@ -4165,8 +4165,8 @@ final class Shell {
 			return false;
 		}
 		$cookie = sanitize_text_field( wp_unslash( $_COOKIE[ $clave ] ) );
-		// Descifrada, la pila es «COOKIEHASH-momento-usuarios-remember»; si no
-		// tiene esa forma, no es nuestra y no se mira más.
+
+
 		$sesion = explode( '-', (string) \WPFront\URE\WPFront_User_Role_Editor_Utils::decrypt( $cookie ), 4 );
 		if ( count( $sesion ) < 3 || COOKIEHASH !== $sesion[0] || ! ctype_digit( $sesion[1] ) ) {
 			return false;
@@ -4175,17 +4175,17 @@ final class Shell {
 		if ( $edad < 0 || $edad > 12 * HOUR_IN_SECONDS ) {
 			return false;
 		}
-		// El primero de la pila es quien empezó el cambio: la barra es suya.
+
 		$usuarios = explode( ',', $sesion[2] );
 		return ctype_digit( $usuarios[0] ) && user_can( (int) $usuarios[0], 'manage_options' );
 	}
 
-	/**
-	 * Mark the pages of the application, so the theme chrome can step aside.
-	 *
-	 * @param string[] $classes Body classes.
-	 * @return string[]
-	 */
+
+
+
+
+
+
 	public static function body_class( array $classes ): array {
 		if ( self::is_app_page() ) {
 			$classes[] = 'evt-app';
@@ -4193,20 +4193,20 @@ final class Shell {
 		return $classes;
 	}
 
-	/**
-	 * Whether the post being viewed carries one of our shortcodes.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
 	public static function is_app_page(): bool {
 		return '' !== self::current_section();
 	}
 
-	/**
-	 * Which section is being viewed, by the shortcode the page carries.
-	 *
-	 * @return string Section key, or empty outside the application.
-	 */
+
+
+
+
+
 	public static function current_section(): string {
 		if ( is_admin() || ! is_singular() ) {
 			return '';
@@ -4223,29 +4223,29 @@ final class Shell {
 		return '';
 	}
 
-	/**
-	 * URL of one of our pages, or empty when it does not exist.
-	 *
-	 * @param string               $section Section key, one of SLUGS.
-	 * @param array<string, mixed> $args    Query arguments to append.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function url( string $section, array $args = array() ): string {
 		$slug = self::SLUGS[ $section ] ?? '';
 		if ( '' === $slug ) {
 			return '';
 		}
 
-		/**
-		 * Filter the page slug of one section.
-		 *
-		 * Quien despliega crea las páginas y les pone la dirección que quiera
-		 * —o las cuelga de una madre, con la ruta entera—; esto permite
-		 * reapuntarlas sin tocar el código.
-		 *
-		 * @param string $slug    Page path.
-		 * @param string $section Section key.
-		 */
+
+
+
+
+
+
+
+
+
+
 		$slug = (string) apply_filters( 'evt_page_slug', $slug, $section );
 
 		$page = get_page_by_path( $slug );
@@ -4256,28 +4256,28 @@ final class Shell {
 		return array() === $args ? $url : add_query_arg( $args, $url );
 	}
 
-	/**
-	 * Sections of whoever is looking, and where each one goes.
-	 *
-	 * Solo lo que se puede abrir sin contexto: el taller de un evento, el
-	 * formulario de una sección y los ponentes piden un `?evento=<id>` y son
-	 * destinos de un botón, no pestañas.
-	 *
-	 * El recuento (`badge`) va a `null` a propósito: la única cifra que
-	 * importa —cuántos eventos hay en borrador— es una de las fichas de
-	 * recuento de `EventList`, y ponerla también aquí es una consulta más en
-	 * cada pantalla para repetir un número que ya está en la que se abre.
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return array<string, array{label:string, url:string, badge:?int}>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function sections( int $user_id = 0 ): array {
-		// Ojo: **una sola sección, y a propósito**. «Ajustes» estuvo aquí y no
-		// era hermana de «Eventos»: es administración del aplicativo, vive en
-		// el escritorio de WordPress y solo la ve quien administra. Como
-		// pestaña dejaba a administración con una barra de dos —una de ellas
-		// saltando fuera— y a la portada con una barra sin nada activo, que es
-		// una barra que no elige nada. Ahora está en el menú de la cuenta.
+
+
+
+
+
+
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
@@ -4295,8 +4295,8 @@ final class Shell {
 			);
 		}
 
-		// Una sección cuya página no existe todavía no se ofrece: una pestaña
-		// que lleva a un 404 es peor que no tenerla.
+
+
 		foreach ( $out as $clave => $seccion ) {
 			if ( '' === $seccion['url'] ) {
 				unset( $out[ $clave ] );
@@ -4306,15 +4306,15 @@ final class Shell {
 		return $out;
 	}
 
-	/**
-	 * Whether this person organises events at all.
-	 *
-	 * Falla en cerrado, como `EventAccess`: sin área y sin
-	 * `evt_edit_all_areas`, no hay nada que enseñar.
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	public static function can_use( int $user_id = 0 ): bool {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -4328,16 +4328,16 @@ final class Shell {
 		return user_can( $user_id, 'edit_evt_events' ) && array() !== EventAccess::user_areas( $user_id );
 	}
 
-	/**
-	 * Who is looking: role and área, for the header.
-	 *
-	 * Dos líneas y no un rótulo: en un aplicativo acotado por área, saber con
-	 * qué área se está mirando es la mitad de la respuesta a «¿por qué no veo
-	 * este evento?».
-	 *
-	 * @param int $user_id User ID (0 = current).
-	 * @return array{cargo:string, area:string} Empty strings when there is no role.
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function profile( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -4367,12 +4367,12 @@ final class Shell {
 		);
 	}
 
-	/**
-	 * The áreas of a person, written out.
-	 *
-	 * @param int $user_id User ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function area_names( int $user_id ): string {
 		$nombres = array();
 		foreach ( EventAccess::user_areas( $user_id ) as $term_id ) {
@@ -4384,16 +4384,16 @@ final class Shell {
 		return array() === $nombres ? 'Sin área asignada' : implode( ' · ', $nombres );
 	}
 
-	/**
-	 * Up to two initials of a display name, for the avatar.
-	 *
-	 * Se parte por lo que no es letra ni número, no por espacios: los nombres
-	 * que se muestran traen el área entre paréntesis —«Organización (Innovación)»— y
-	 * partiendo por espacios la segunda inicial salía «(».
-	 *
-	 * @param string $nombre Display name.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function initials( string $nombre ): string {
 		$partes = preg_split( '/[^\p{L}\p{N}]+/u', trim( $nombre ), -1, PREG_SPLIT_NO_EMPTY );
 		$partes = is_array( $partes ) ? $partes : array();
@@ -4404,20 +4404,20 @@ final class Shell {
 		return $letras;
 	}
 
-	/**
-	 * The whole page: header, tabs, the sheet the screen goes in, and the footer.
-	 *
-	 * @param string $title    Page heading.
-	 * @param string $subtitle One line under the heading; empty for none.
-	 * @param string $body     The screen, already escaped.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function render( string $title, string $subtitle, string $body ): string {
-		/**
-		 * Filter whether the application paints its own header and footer.
-		 *
-		 * @param bool $pintar Whether to render the chrome.
-		 */
+
+
+
+
+
 		if ( ! apply_filters( 'evt_show_chrome', true ) ) {
 			return '<div class="evt-hoja">' . $body . '</div>';
 		}
@@ -4431,21 +4431,21 @@ final class Shell {
 			<?php if ( '' !== $subtitle ) : ?>
 				<p class="evt-sub"><?php echo esc_html( $subtitle ); ?></p>
 			<?php endif; ?>
-			<?php echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- la pantalla llega ya escapada. ?>
+			<?php echo $body; ?>
 		</div>
 		<?php
 		return self::top() . self::tabs() . (string) ob_get_clean() . self::bottom();
 	}
 
-	/**
-	 * The header: the badge, who owns it, «Eventos» and who is looking.
-	 *
-	 * El rótulo de la organización sale de la configuración del armazón
-	 * ({@see \Evt\PublicFront\View\EventChrome::chrome()}) y **está vacío por
-	 * defecto**: este aplicativo no lleva dentro la marca de nadie (ADR-0030).
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function top(): string {
 		$perfil  = self::profile();
 		$usuario = wp_get_current_user();
@@ -4491,11 +4491,11 @@ final class Shell {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The tab bar. With one single section there is nothing to choose from.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function tabs(): string {
 		$secciones = self::sections();
 		if ( count( $secciones ) < 2 ) {
@@ -4521,20 +4521,20 @@ final class Shell {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The one-line footer, always at the bottom.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function bottom(): string {
-		/**
-		 * Filter the links of the application footer.
-		 *
-		 * Son los del pie institucional del sitio, copiados aquí para que el pie
-		 * sea uno y esté siempre abajo. Si cambian, se cambian con esto.
-		 *
-		 * @param array<string, string> $enlaces Rótulo => URL.
-		 */
+
+
+
+
+
+
+
+
 		$chrome  = \Evt\PublicFront\View\EventChrome::chrome();
 		$enlaces = array();
 		foreach ( (array) $chrome['footer_links'] as $enlace ) {
@@ -4567,23 +4567,23 @@ final class Shell {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The application entry page, or the site root when it does not exist yet.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function home_url(): string {
 		$inicio = self::url( 'home' );
 		return '' !== $inicio ? $inicio : home_url( '/' );
 	}
 
-	/**
-	 * A one-line notice: what just happened, or why a screen is empty.
-	 *
-	 * @param string $type ok | aviso | error.
-	 * @param string $text What to say, plain text.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function notice( string $type, string $text ): string {
 		if ( '' === $text ) {
 			return '';
@@ -4597,30 +4597,30 @@ final class Shell {
 		return '<p class="' . esc_attr( Assets::alert_class( $tono ) ) . '">' . esc_html( $text ) . '</p>';
 	}
 
-	/**
-	 * Lo que se dice por defecto sobre por qué este recuadro solo lo ve una persona.
-	 */
+
+
+
 	public const ADMIN_BOX_WHY = 'Este recuadro solo lo ve quien administra el aplicativo. Ningún otro perfil lo ve ni puede cambiar lo que hay dentro.';
 
-	/**
-	 * The yellow box: what only the administration sees.
-	 *
-	 * Una convención del aplicativo, no un adorno de una pantalla: cualquier
-	 * cosa que solo vea quien administra va aquí dentro, y así se reconoce a la
-	 * primera sin leerla. Por eso vive en el armazón y se implementa una vez.
-	 *
-	 * El amarillo no es el único aviso —quien no distingue el color se
-	 * quedaría sin él—: la etiqueta «Solo administración» va escrita, y debajo
-	 * una línea que explica por qué.
-	 *
-	 * El cuerpo llega ya escapado, como en {@see render()}: quien lo pinta sabe
-	 * si son campos, una tabla o un párrafo.
-	 *
-	 * @param string $titulo      Heading of the box.
-	 * @param string $cuerpo      Its contents, already escaped.
-	 * @param string $explicacion Why only this person sees it; the default one when empty.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function admin_box( string $titulo, string $cuerpo, string $explicacion = '' ): string {
 		$porque = '' !== $explicacion ? $explicacion : self::ADMIN_BOX_WHY;
 
@@ -4636,24 +4636,24 @@ final class Shell {
 			<?php endif; ?>
 			<p class="evt-solo-admin-porque"><?php echo esc_html( $porque ); ?></p>
 			<div class="evt-solo-admin-cuerpo">
-				<?php echo $cuerpo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- lo pinta quien llama, ya escapado. ?>
+				<?php echo $cuerpo; ?>
 			</div>
 		</section>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Where to go back to after saving something.
-	 *
-	 * `wp_get_referer()` devuelve `false` justo cuando el referer coincide con
-	 * la propia URL, que es siempre en un formulario con `action=""`. Se usa el
-	 * referer crudo y, si no hay, una página del aplicativo: nunca la portada
-	 * del sitio.
-	 *
-	 * @param string $section Section to fall back to.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function back_url( string $section = 'events' ): string {
 		$destino = wp_validate_redirect( (string) wp_get_raw_referer(), '' );
 		if ( '' !== $destino ) {
@@ -4663,36 +4663,36 @@ final class Shell {
 		return '' !== $url ? $url : home_url( '/' );
 	}
 
-	/**
-	 * Send a response header, unless the response already started.
-	 *
-	 * En tests la salida ya empezó —PHPUnit escribe la suya— y `header()`
-	 * avisa; aquí se salta, que es lo que hace `nocache_headers()` de
-	 * WordPress. En producción se manda siempre.
-	 *
-	 * @param string $linea Header line, `Nombre: valor`.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function send_header( string $linea ): void {
 		if ( ! headers_sent() ) {
 			header( $linea );
 		}
 	}
 
-	/**
-	 * Leave the request: redirect if given a URL, then stop.
-	 *
-	 * El único `exit` del aplicativo. En tests, el filtro `evt_exit_throws` lo
-	 * convierte en una excepción {@see ExitSignal} con la URL, que el test
-	 * captura.
-	 *
-	 * @param string $url Where to go; empty when a document was just served.
-	 * @return void
-	 * @throws ExitSignal Under the tests filter, instead of leaving.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function leave( string $url = '' ): void {
 		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
-			throw new ExitSignal( $url ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- la URL viaja para que el test la lea; no se imprime.
+			throw new ExitSignal( $url ); 
 		}
 		if ( '' !== $url ) {
 			wp_safe_redirect( $url );
@@ -4700,32 +4700,32 @@ final class Shell {
 		exit;
 	}
 
-	/**
-	 * One of the app icons, inline.
-	 *
-	 * **En línea y no con la tipografía de iconos de Bootstrap** aunque esté
-	 * cargada: el aplicativo tiene que seguir entendiéndose sin Bootstrap
-	 * ({@see Assets::has_bootstrap()}), y un icono que no llega deja un botón
-	 * sin nada dentro. Con `currentColor` heredan el color del botón.
-	 *
-	 * Van siempre con `aria-hidden`: lo que dice qué hace el botón es su texto,
-	 * que va al lado en `.screen-reader-text` y en el `title`.
-	 *
-	 * @param string $nombre Icon name.
-	 * @return string Empty when there is no such icon.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function icon( string $nombre ): string {
 		$caminos = array(
-			// Lápiz: editar.
+
 			'lapiz'     => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
-			// Ojo: ver la página pública.
+
 			'ojo'       => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
-			// Papelera: enviar a la papelera.
+
 			'papelera'  => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
-			// Flechas: subir y bajar una posición.
+
 			'subir'     => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
 			'bajar'     => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
-			// Flecha que vuelve: restaurar de la papelera.
+
 			'restaurar' => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
@@ -4735,11 +4735,11 @@ final class Shell {
 			. $caminos[ $nombre ] . '</svg>';
 	}
 
-	/**
-	 * Plus sign, inline.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	public static function icon_plus(): string {
 		return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">'
 			. '<path fill="currentColor" d="M12 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1Z"/>'
@@ -4747,84 +4747,84 @@ final class Shell {
 	}
 }
 
-// ---- src/Evt/PublicFront/EditLock.php ----
-/**
- * Native WordPress edit locks, shared by the application and wp-admin.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 
-/**
- * Que dos personas no se pisen editando el mismo evento.
- *
- * No se inventa ningún bloqueo: se usa **el nativo de WordPress** —la meta
- * `_edit_lock`, `wp_check_post_lock()` y `wp_set_post_lock()`—, que es
- * exactamente el mismo que usa el escritorio. La ventaja es la razón de haberlo
- * elegido: si alguien abre el evento en el editor de WordPress y otra persona
- * en el taller del aplicativo, **se ven**. Un bloqueo propio no lo haría, y
- * habría dos verdades sobre quién está editando.
- *
- * El bloqueo es **del evento raíz**, no de la página que se tenga abierta: dos
- * personas tocando dos secciones distintas del mismo evento se pisan igual,
- * porque comparten la navegación, el orden y la apariencia. Por eso todo pasa
- * por {@see EventAccess::root_id()} y quien pregunta no tiene que acordarse.
- *
- * Las cuatro piezas:
- *
- * | {@see owner()}             | quién lo tiene, sin caducar               |
- * | {@see require_available()} | antes de escribir nada: si hay dueño, 409 |
- * | {@see claim()}             | tomarlo al abrir, o decir quién lo tiene  |
- * | {@see release()}           | soltar **solo el propio**                 |
- *
- * Y el aviso ({@see render()}), que dice el nombre de quien lo tiene —no
- * «alguien»— y ofrece dos salidas: consultarlo, o tomar posesión por POST con
- * su nonce.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EditLock {
 
-	/**
-	 * Hidden field naming the operation, so nothing else picks the POST up.
-	 */
+
+
+
 	public const FIELD_DO = 'evt_lock_do';
 
-	/**
-	 * Hidden field with the post the takeover is about.
-	 */
+
+
+
 	public const FIELD_POST = 'evt_lock_post';
 
-	/**
-	 * Nonce field of the takeover form.
-	 */
+
+
+
 	public const NONCE_FIELD = 'evt_lock_nonce';
 
-	/**
-	 * The only operation this class accepts.
-	 */
+
+
+
 	public const OP_TAKEOVER = 'takeover';
 
-	/**
-	 * Nonce action of the takeover of one event.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function nonce_action( int $event_id ): string {
 		return 'evt_lock_takeover_' . $event_id;
 	}
 
-	/**
-	 * Who else holds an unexpired lock on the event this post belongs to.
-	 *
-	 * `wp_check_post_lock()` contesta «otra persona», así que a quien tiene el
-	 * bloqueo le dice que no hay ninguno: es justo lo que hace falta aquí.
-	 *
-	 * @param int $post_id Event, or any of its satellite pages.
-	 * @return int User ID, 0 when the event is free.
-	 */
+
+
+
+
+
+
+
+
+
 	public static function owner( int $post_id ): int {
 		$event_id = EventAccess::root_id( $post_id );
 		if ( $event_id <= 0 ) {
@@ -4834,16 +4834,16 @@ final class EditLock {
 		return (int) wp_check_post_lock( $event_id );
 	}
 
-	/**
-	 * Reject the write before a single field, term or status can change.
-	 *
-	 * Va **antes** de escribir y no después, que es lo único que sirve: quien
-	 * perdió el bloqueo tiene la pantalla vieja delante y su envío traería
-	 * catorce campos con lo de hace media hora.
-	 *
-	 * @param int $post_id Event, or any of its satellite pages.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function require_available( int $post_id ): void {
 		$owner = self::owner( $post_id );
 		if ( $owner <= 0 ) {
@@ -4864,22 +4864,22 @@ final class EditLock {
 		);
 	}
 
-	/**
-	 * How the event stands right now: libre, o de quién es. No escribe nada.
-	 *
-	 * Esto es lo que llama el `model()` de cada pantalla, y por eso no toma el
-	 * bloqueo: el modelo decide qué se pinta y no muta.
-	 * Tomarlo es de {@see claim()}, que va en el `render()`, cuando la pantalla
-	 * se le está enseñando a alguien de verdad.
-	 *
-	 * A quien solo puede consultar —un evento marcado como histórico, por
-	 * ejemplo— no se le cuenta ningún bloqueo: no va a escribir, así que ni le
-	 * estorba ni tiene por qué quitárselo a quien sí puede.
-	 *
-	 * @param int  $post_id  Event, or any of its satellite pages.
-	 * @param bool $can_edit Whether this person may write here at all.
-	 * @return array{event_id:int, owner:int, name:string, lock:string}
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function status( int $post_id, bool $can_edit ): array {
 		$event_id = EventAccess::root_id( $post_id );
 		if ( $event_id <= 0 || ! $can_edit ) {
@@ -4891,21 +4891,21 @@ final class EditLock {
 			'event_id' => $event_id,
 			'owner'    => $owner,
 			'name'     => $owner > 0 ? self::name( $owner ) : '',
-			// Lo que el Heartbeat renueva; lo rellena claim() y solo para quien
-			// tenga el bloqueo, porque renovar uno ajeno no tendría sentido.
+
+
 			'lock'     => '',
 		);
 	}
 
-	/**
-	 * Take the lock of a free event, so the next person sees it taken.
-	 *
-	 * Es lo mismo que hace el escritorio al abrir el editor, y es el mismo
-	 * bloqueo: por eso las dos pantallas se ven.
-	 *
-	 * @param array{event_id:int, owner:int, name:string, lock:string} $lock What status() returned.
-	 * @return array{event_id:int, owner:int, name:string, lock:string}
-	 */
+
+
+
+
+
+
+
+
+
 	public static function claim( array $lock ): array {
 		if ( (int) $lock['event_id'] <= 0 || (int) $lock['owner'] > 0 ) {
 			return $lock;
@@ -4917,11 +4917,11 @@ final class EditLock {
 		return $lock;
 	}
 
-	/**
-	 * No lock to talk about: nothing to paint and nothing to renew.
-	 *
-	 * @return array{event_id:int, owner:int, name:string, lock:string}
-	 */
+
+
+
+
+
 	public static function none(): array {
 		return array(
 			'event_id' => 0,
@@ -4931,17 +4931,17 @@ final class EditLock {
 		);
 	}
 
-	/**
-	 * Release the lock, and only when it still is this person's own.
-	 *
-	 * Se compara el usuario que trae la meta antes de borrarla: si mientras
-	 * tanto otra persona tomó posesión, el bloqueo es suyo y no se le quita.
-	 * Se le pasa el valor exacto a `delete_post_meta()` por lo mismo, que es lo
-	 * que hace la comprobación atómica en la base de datos.
-	 *
-	 * @param int $post_id Event, or any of its satellite pages.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function release( int $post_id ): void {
 		$event_id = EventAccess::root_id( $post_id );
 		if ( $event_id <= 0 ) {
@@ -4954,28 +4954,28 @@ final class EditLock {
 		}
 	}
 
-	/**
-	 * Apply a «Tomar posesión» POST.
-	 *
-	 * Por POST y con su nonce, como toda mutación del aplicativo: tomarle el
-	 * evento a otra persona por un enlace pegado en un correo no pasa. Y con
-	 * `EventAccess::can_edit()` comprobado: el nonce dice que el envío salió de
-	 * nuestra pantalla, no que quien lo manda pueda editar este evento.
-	 *
-	 * Lo engancha {@see EventWorkspace::register()}, que es de donde cuelga el
-	 * resto de las mutaciones del taller.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function handle(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- se comprueba abajo, en cuanto se sabe de qué evento es.
+
 		$op = sanitize_key( wp_unslash( (string) ( $_POST[ self::FIELD_DO ] ?? '' ) ) );
 		if ( self::OP_TAKEOVER !== $op ) {
 			return;
 		}
 		$post_id = absint( wp_unslash( $_POST[ self::FIELD_POST ] ?? 0 ) );
 		$nonce   = sanitize_text_field( wp_unslash( (string) ( $_POST[ self::NONCE_FIELD ] ?? '' ) ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
 
 		$event_id = EventAccess::root_id( $post_id );
 		if ( $event_id <= 0 || false === wp_verify_nonce( $nonce, self::nonce_action( $event_id ) ) ) {
@@ -4996,27 +4996,27 @@ final class EditLock {
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 		wp_set_post_lock( $event_id );
 
-		// A la misma pantalla desde la que se pidió: el aviso sale tanto en el
-		// taller como en el formulario de una sección, y desde los dos se
-		// vuelve a lo que se estaba haciendo.
+
+
+
 		Shell::leave( Shell::back_url( 'events' ) );
 	}
 
-	/**
-	 * The takeover notice: who has the event, and the two ways out.
-	 *
-	 * Un `<dialog>` nativo y no SweetAlert2, y la diferencia importa: esto no
-	 * es una confirmación —lo de SweetAlert2 en este aplicativo—, es el estado
-	 * de la pantalla, y tiene que verse **también sin JavaScript**. Un
-	 * `<dialog open>` lo pinta el navegador solo; SweetAlert2 no existe hasta
-	 * que carga su guion, y su degradación es el `confirm()` del navegador, que
-	 * aquí sería un modal bloqueante sin salida. El mismo `<dialog>` es el que
-	 * el Heartbeat abre con `showModal()` cuando el bloqueo se pierde sin
-	 * recargar.
-	 *
-	 * @param array{event_id:int, owner:int, name:string, lock:string} $lock What claim() returned.
-	 * @return string Empty when there is no event to lock.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function render( array $lock ): string {
 		$event_id = (int) $lock['event_id'];
 		if ( $event_id <= 0 ) {
@@ -5024,8 +5024,8 @@ final class EditLock {
 		}
 		$owner = (int) $lock['owner'];
 
-		// El guion del bloqueo vive en `assets/js/evt-app.js` y necesita el
-		// Heartbeat del núcleo, que no se encola en la web pública.
+
+
 		wp_enqueue_script( 'heartbeat' );
 
 		ob_start();
@@ -5063,22 +5063,22 @@ final class EditLock {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Where «dejarlo» goes: the event list, or the site root as a last resort.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function events_url(): string {
 		$url = Shell::url( 'events' );
 		return '' !== $url ? $url : home_url( '/' );
 	}
 
-	/**
-	 * The name of whoever holds the lock. Nunca «alguien».
-	 *
-	 * @param int $user_id User ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function name( int $user_id ): string {
 		$user = get_userdata( $user_id );
 		if ( false === $user || '' === (string) $user->display_name ) {
@@ -5088,85 +5088,85 @@ final class EditLock {
 	}
 }
 
-// ---- src/Evt/PublicFront/CodeEditor.php ----
-/**
- * The WordPress code editor (CodeMirror), wrapped for our own screens.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
-/**
- * Un campo de código con el editor que ya trae WordPress.
- *
- * `wp_enqueue_code_editor()` y `wp.codeEditor.initialize()`, no CodeJar ni
- * ninguna otra biblioteca: ya está en el núcleo —cero bytes que empaquetar en
- * el bundle de Code Snippets—, trae CSSLint y JSHint, y es el mismo editor que
- * la persona conoce del «CSS adicional» del personalizador.
- *
- * Degrada, y esto no es opcional: `wp_enqueue_code_editor()` devuelve `false`
- * cuando quien mira ha desactivado el resaltado de sintaxis en su perfil. En
- * ese caso {@see field()} pinta un `<textarea>` normal y todo sigue
- * funcionando; lo único que se pierde es el coloreado y el avisador de
- * errores.
- *
- * Esta clase solo encola y pinta: quién puede escribir código lo decide
- * {@see \Evt\Access\EventAccess::can_edit_custom_css()} y su hermana, y qué se
- * guarda, {@see \Evt\Meta\EventMetaRegistration}.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class CodeEditor {
 
-	/**
-	 * Modo de hoja de estilos.
-	 */
+
+
+
 	public const MODE_CSS = 'css';
 
-	/**
-	 * Modo de guion. Se llama como el `type` de CodeMirror, no `js`.
-	 */
+
+
+
 	public const MODE_JS = 'javascript';
 
-	/**
-	 * MIME type each mode asks WordPress for.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
 	private const MIMES = array(
 		self::MODE_CSS => 'text/css',
 		self::MODE_JS  => 'text/javascript',
 	);
 
-	/**
-	 * Load CodeMirror for one mode, and hand back whether it will be there.
-	 *
-	 * Idempotente: encolar dos veces el mismo guion no lo imprime dos veces, y
-	 * ajustar los ajustes cuesta lo que cuesta leer un array.
-	 *
-	 * @param string $modo self::MODE_CSS or self::MODE_JS.
-	 * @return bool False cuando WordPress no puede —modo desconocido, o el
-	 *              resaltado desactivado en el perfil—, y toca el textarea pelado.
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function enqueue( string $modo ): bool {
 		return array() !== self::settings( $modo );
 	}
 
-	/**
-	 * One code field: its label, its help, and the textarea CodeMirror grows on.
-	 *
-	 * Argumentos, todos opcionales salvo `name`:
-	 *
-	 *   mode   string  self::MODE_CSS (por defecto) o self::MODE_JS.
-	 *   name   string  Nombre del campo; es la clave de meta (`evt_custom_css`).
-	 *   id     string  Identificador; se deriva del nombre si no se da.
-	 *   label  string  Rótulo.
-	 *   help   string  La ayuda, en castellano llano, debajo del campo.
-	 *   value  string  Lo que hay guardado, en crudo.
-	 *   rows   int     Altura del textarea sin CodeMirror. 12 por defecto.
-	 *
-	 * @param array<string, mixed> $args Lo de arriba.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function field( array $args ): string {
 		$modo   = isset( self::MIMES[ (string) ( $args['mode'] ?? '' ) ] ) ? (string) $args['mode'] : self::MODE_CSS;
 		$nombre = (string) ( $args['name'] ?? '' );
@@ -5181,8 +5181,8 @@ final class CodeEditor {
 		$valor  = (string) ( $args['value'] ?? '' );
 		$filas  = max( 4, (int) ( $args['rows'] ?? 12 ) );
 
-		// Se encola aquí y no solo fuera: quien pinta un campo no tiene que
-		// acordarse de dos llamadas, y la respuesta de esta decide el aspecto.
+
+
 		$ajustes  = self::settings( $modo );
 		$ayuda_id = $id . '-ayuda';
 
@@ -5222,12 +5222,12 @@ final class CodeEditor {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Ask WordPress for CodeMirror and its settings for one mode.
-	 *
-	 * @param string $modo self::MODE_CSS or self::MODE_JS.
-	 * @return array<string, mixed> Empty array when there will be no CodeMirror.
-	 */
+
+
+
+
+
+
 	private static function settings( string $modo ): array {
 		if ( ! isset( self::MIMES[ $modo ] ) ) {
 			return array();
@@ -5237,12 +5237,12 @@ final class CodeEditor {
 	}
 }
 
-// ---- src/Evt/PublicFront/CustomCode.php ----
-/**
- * Custom CSS and JavaScript printed on the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -5251,101 +5251,101 @@ use Evt\Meta\EventMetaKeys;
 use Evt\Meta\EventMetaRegistration;
 use Evt\PostType\EventPostType;
 
-/**
- * Saca a la página pública el CSS y el JavaScript a medida del evento.
- *
- * Dos claves de meta que viven tanto en el evento raíz como en cada página
- * satélite ({@see EventMetaKeys::CUSTOM_CSS} y {@see EventMetaKeys::CUSTOM_JS}).
- * Lo del evento raíz viste todas sus páginas; lo de una página, solo esa, y va
- * **después** para poder afinarlo. Nada de esto sale fuera de las páginas de su
- * evento: ni en el resto del sitio, ni en el escritorio, ni en las pantallas del
- * aplicativo, que son entradas de tipo `page` con un shortcode y no `evt_event`
- * ({@see Shell::SHORTCODES}).
- *
- * Dónde se enganchan y por qué esas prioridades:
- *
- * - **El CSS, en `wp_head` con prioridad 999.** Tiene que poder pisar al tema, y
- *   quien gana entre reglas de la misma especificidad es la última que se lee.
- *   En la cabecera WordPress imprime las hojas encoladas en `wp_print_styles`
- *   (prioridad 8) y el «CSS adicional» del personalizador en `wp_custom_css_cb`
- *   (prioridad 101); 999 va detrás de los dos y sigue estando en el `<head>`,
- *   que es lo que evita el parpadeo de pintar primero sin estilos.
- * - **El JavaScript, en `wp_footer` con prioridad 999.** Al pie, y el último:
- *   cuando el navegador llega ahí el documento ya está montado —no hace falta
- *   envolver el código en ningún `DOMContentLoaded`, que además le cambiaría el
- *   ámbito a quien lo escribió— y las bibliotecas encoladas para el pie
- *   (`wp_print_footer_scripts`, prioridad 20) ya se han cargado.
- *
- * El saneado no se duplica: es el mismo de
- * {@see EventMetaRegistration::sanitize_custom_css()} y
- * {@see EventMetaRegistration::sanitize_custom_js()}, que corren al guardar y se
- * repiten aquí al imprimir porque son idempotentes y porque una meta escrita
- * antes de que existiera el registro —o a pelo contra la base de datos— no ha
- * pasado por ellos. El CSS sale sin etiquetas y sin poder cerrar su `</style`;
- * el JavaScript **no se escapa**, que es código y escaparlo lo rompe, pero se le
- * desactiva la fuga por `</script`.
- *
- * Quién puede escribir estas dos metas lo decide
- * {@see EventAccess::can_edit_custom_css()} y su hermana, y el `auth_callback`
- * de cada una lo hace cumplir venga el dato por donde venga. Aquí solo se
- * imprime lo que ya está guardado.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class CustomCode {
 
-	/**
-	 * Prioridad en `wp_head`: detrás de las hojas del tema y del personalizador.
-	 */
+
+
+
 	public const CSS_PRIORITY = 999;
 
-	/**
-	 * Prioridad en `wp_footer`: el último, con el documento ya montado.
-	 */
+
+
+
 	public const JS_PRIORITY = 999;
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'wp_head', array( self::class, 'print_css' ), self::CSS_PRIORITY );
 		add_action( 'wp_footer', array( self::class, 'print_js' ), self::JS_PRIORITY );
 	}
 
-	/**
-	 * The custom stylesheet of the event page being viewed.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function print_css(): void {
 		$css = self::css( self::current_page_id() );
 		if ( '' === $css ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es CSS, no texto: escaparlo lo rompería. Sale de sanitize_custom_css(), sin etiquetas y sin poder cerrar la suya.
+
 		printf( "<style id=\"evt-custom-css\">\n%s\n</style>\n", $css );
 	}
 
-	/**
-	 * The custom script of the event page being viewed.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function print_js(): void {
 		$js = self::js( self::current_page_id() );
 		if ( '' === $js ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es código: sale de sanitize_custom_js(), que solo le desactiva la fuga por `</script`.
+
 		printf( "<script id=\"evt-custom-js\">\n%s\n</script>\n", $js );
 	}
 
-	/**
-	 * The custom CSS that applies to one page: the event's, then the page's.
-	 *
-	 * @param int $page_id Event root or satellite page (0 = nothing to print).
-	 * @return string Empty when there is none: no se imprime ni la etiqueta.
-	 */
+
+
+
+
+
+
 	public static function css( int $page_id ): string {
 		return self::code(
 			$page_id,
@@ -5354,12 +5354,12 @@ final class CustomCode {
 		);
 	}
 
-	/**
-	 * The custom JavaScript that applies to one page, in the same order.
-	 *
-	 * @param int $page_id Event root or satellite page (0 = nothing to print).
-	 * @return string Empty when there is none.
-	 */
+
+
+
+
+
+
 	public static function js( int $page_id ): string {
 		return self::code(
 			$page_id,
@@ -5368,14 +5368,14 @@ final class CustomCode {
 		);
 	}
 
-	/**
-	 * One meta key gathered from the event root and then from the page.
-	 *
-	 * @param int      $page_id Page being viewed.
-	 * @param string   $key     Meta key.
-	 * @param callable $limpia  Its sanitiser, the same one that runs on save.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function code( int $page_id, string $key, callable $limpia ): string {
 		$trozos = array();
 		foreach ( self::chain( $page_id ) as $post_id ) {
@@ -5387,16 +5387,16 @@ final class CustomCode {
 		return implode( "\n", $trozos );
 	}
 
-	/**
-	 * Whose code applies here: the event root first, the page itself after.
-	 *
-	 * Ese orden es el que deja que una sección afine lo que el evento puso para
-	 * todas sus páginas. En la portada del evento los dos son el mismo post y la
-	 * lista tiene un solo elemento: el código no se imprime dos veces.
-	 *
-	 * @param int $page_id Page being viewed.
-	 * @return int[]
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function chain( int $page_id ): array {
 		if ( $page_id <= 0 ) {
 			return array();
@@ -5405,16 +5405,16 @@ final class CustomCode {
 		return $event_id === $page_id ? array( $page_id ) : array( $event_id, $page_id );
 	}
 
-	/**
-	 * The event page being viewed, and only that.
-	 *
-	 * `is_singular()` pregunta por la consulta principal, así que una consulta
-	 * secundaria de otro complemento no cuela su propio evento; y las pantallas
-	 * del aplicativo son entradas de tipo `page`, de modo que su `wp_head()` y su
-	 * `wp_footer()` —los imprime {@see Shell::render_standalone()}— salen limpios.
-	 *
-	 * @return int 0 outside the public page of an event.
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function current_page_id(): int {
 		if ( is_admin() || ! is_singular( EventPostType::POST_TYPE ) ) {
 			return 0;
@@ -5423,12 +5423,12 @@ final class CustomCode {
 	}
 }
 
-// ---- src/Evt/PublicFront/EventList.php ----
-/**
- * The list of events someone may manage, with its filters and counts.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -5439,171 +5439,171 @@ use Evt\PostType\EventPostType;
 use Evt\PublicFront\View\EventListView;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Shortcode [evt_event_list]: la pantalla «Eventos».
- *
- * Es la pantalla en la que se empieza el día: qué eventos hay, en qué estado
- * están, cuántas secciones tiene cada uno y por dónde se entra a arreglarlos.
- * Hoy eso no existe —`/borradores/` es una rejilla sin acciones— y el estado
- * lo marca alguien a mano en una taxonomía que nadie vuelve a tocar.
- *
- * Aquí casi no se muta nada: se lee. Por eso todos sus parámetros van en la
- * URL. La única excepción es restaurar un evento de la papelera, que va por
- * POST con su nonce por fila y nunca por GET —un enlace pegado en un correo no
- * puede resucitar nada—. El guardián sigue siendo {@see EventAccess}: lo que no
- * se pueda editar no se enumera ni se restaura, y quien no tiene área no ve
- * nada (falla en cerrado).
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventList {
 
 	public const SHORTCODE = 'evt_event_list';
 
-	/**
-	 * Filas por página.
-	 */
+
+
+
 	public const PAGE_SIZE = 20;
 
-	/**
-	 * Filtro de los eventos que todavía no se han publicado.
-	 *
-	 * Va en la misma lista que los estados derivados porque para quien mira es
-	 * lo mismo: una manera de acotar. Que uno salga de las fechas y el otro del
-	 * estado de la entrada es cosa nuestra.
-	 */
+
+
+
+
+
+
+
 	public const FILTER_DRAFT = 'draft';
 
-	/**
-	 * Filtro de los eventos que están en la papelera.
-	 *
-	 * Va en la misma lista que los demás filtros porque para quien mira es una
-	 * manera más de acotar, pero sale de otra consulta: los estados normales no
-	 * incluyen `trash`, así que el listado de siempre nunca enseña lo enviado a
-	 * la papelera.
-	 */
+
+
+
+
+
+
+
+
 	public const FILTER_TRASH = 'trash';
 
-	/**
-	 * Filtro de los eventos cerrados a edición: el estado «histórico».
-	 *
-	 * No sale de las fechas como los demás, sino de la meta `evt_archived`, y
-	 * es transversal a ellos: un evento histórico es además, casi siempre, uno
-	 * finalizado. Se lista como un estado más porque para quien mira eso es lo
-	 * que es: una manera de acotar.
-	 */
+
+
+
+
+
+
+
+
 	public const FILTER_ARCHIVED = 'archived';
 
-	/**
-	 * Query var of the área filter.
-	 *
-	 * Ninguna se llama como una taxonomía: `evt_area`, `evt_type` y
-	 * `evt_course` son variables de consulta públicas —las registra
-	 * `register_taxonomy`— y usarlas aquí convertiría la página del listado en
-	 * el archivo de un término, que ya no es una página singular ni lleva
-	 * nuestro shortcode.
-	 */
+
+
+
+
+
+
+
+
+
 	public const VAR_AREA = 'evt_filter_area';
 
-	/**
-	 * Query var of the tipología filter.
-	 */
+
+
+
 	public const VAR_TYPE = 'evt_filter_type';
 
-	/**
-	 * Query var of the curso escolar filter.
-	 */
+
+
+
 	public const VAR_COURSE = 'evt_filter_course';
 
-	/**
-	 * Query var of the state filter.
-	 */
+
+
+
 	public const VAR_STATE = 'evt_filter_state';
 
-	/**
-	 * Query var of the title search.
-	 */
+
+
+
 	public const VAR_SEARCH = 'evt_search';
 
-	/**
-	 * Query var of the page number.
-	 */
+
+
+
 	public const VAR_PAGE = 'evt_page';
 
-	/**
-	 * Query var other screens use to say what just happened.
-	 */
+
+
+
 	public const VAR_NOTICE = 'evt_notice';
 
-	/**
-	 * Post statuses an event can be in. La papelera no es uno.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
 	private const STATUSES = array( 'publish', 'future', 'draft', 'pending', 'private' );
 
-	/**
-	 * Hidden field naming the operation a POST asks for.
-	 */
+
+
+
 	public const FIELD_DO = 'evt_list_do';
 
-	/**
-	 * Hidden field with the event a POST is about.
-	 */
+
+
+
 	public const FIELD_EVENT = 'evt_list_event';
 
-	/**
-	 * Nonce action of the restore button.
-	 */
+
+
+
 	public const NONCE_ACTION = 'evt_list_restore';
 
-	/**
-	 * Register the shortcode and the restore handler.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
-		// Después de que el CPT y sus capacidades estén registrados (init 10 y
-		// 11), y antes de que se pinte nada: aquí todavía se puede redirigir.
+
+
 		add_action( 'init', array( self::class, 'handle' ), 20 );
 	}
 
-	/**
-	 * Name of the nonce field of the restore button of one row.
-	 *
-	 * Uno por fila: así el identificador que escribe `wp_nonce_field()` no se
-	 * repite en la página y cada botón lleva el suyo.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function nonce_name( int $event_id ): string {
 		return 'evt_list_nonce_' . $event_id;
 	}
 
-	/**
-	 * Bring one event back from the trash.
-	 *
-	 * Vuelve en borrador, y eso es a propósito: es lo que hace
-	 * `wp_untrash_post()` desde WordPress 5.6 y es lo que aquí se quiere. Un
-	 * evento que se borró por error no tiene por qué reaparecer publicado en la
-	 * web sin que nadie lo mire.
-	 *
-	 * Ojo con lo que WordPress NO hace: enviar un evento a la papelera **no**
-	 * manda a la papelera sus secciones satélite —comprobado en WordPress 7.1—,
-	 * así que siguen donde estaban y restaurar el evento las deja tal cual.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function handle(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- se comprueba abajo, en cuanto se sabe de qué evento se habla.
+
 		$op = sanitize_key( wp_unslash( (string) ( $_POST[ self::FIELD_DO ] ?? '' ) ) );
 		if ( ! in_array( $op, array( 'restore', 'publish', 'unpublish' ), true ) ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- lo mismo: el nonce depende de esta fila.
+
 		$event_id = absint( wp_unslash( $_POST[ self::FIELD_EVENT ] ?? 0 ) );
 		$campo    = self::nonce_name( $event_id );
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- esto es la comprobación del nonce.
+
 		$nonce = sanitize_text_field( wp_unslash( (string) ( $_POST[ $campo ] ?? '' ) ) );
 		if ( false === wp_verify_nonce( $nonce, self::nonce_action( $op ) ) ) {
 			return;
@@ -5623,17 +5623,17 @@ final class EventList {
 		Shell::leave( self::back_to( 'all', 'restaurado' ) );
 	}
 
-	/**
-	 * Publish an event, or send it back to draft.
-	 *
-	 * Es el interruptor del listado. Publicar **no toca las páginas satélite**:
-	 * cada una tiene su estado y se publica desde el taller, que es lo que deja
-	 * enseñar la portada de un evento con una sección todavía sin terminar.
-	 *
-	 * @param string $op       publish | unpublish.
-	 * @param int    $event_id Event post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function switch_status( string $op, int $event_id ): void {
 		$user_id  = get_current_user_id();
 		$publicar = 'publish' === $op;
@@ -5656,29 +5656,29 @@ final class EventList {
 		Shell::leave( self::back_to( 'all', $publicar ? 'publicado' : 'despublicado' ) );
 	}
 
-	/**
-	 * Nonce action of one list operation.
-	 *
-	 * Una por acción: el nonce de restaurar no vale para publicar.
-	 *
-	 * @param string $op Operation.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function nonce_action( string $op = 'restore' ): string {
 		return 'restore' === $op ? self::NONCE_ACTION : 'evt_list_' . $op;
 	}
 
-	/**
-	 * Whether this person may bring that event back.
-	 *
-	 * Lo mismo que para editarlo, ni más ni menos: nadie restaura lo que no
-	 * podría tocar. Y tiene que estar de verdad en la papelera y ser un evento
-	 * raíz —una sección se restaura desde el taller de su evento—.
-	 *
-	 * @param int $user_id Who is asking.
-	 * @param int $post_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function may_restore( int $user_id, int $post_id ): bool {
 		return 'trash' === get_post_status( $post_id )
 			&& EventPostType::POST_TYPE === get_post_type( $post_id )
@@ -5686,13 +5686,13 @@ final class EventList {
 			&& EventAccess::can_edit( $user_id, $post_id );
 	}
 
-	/**
-	 * Back to the list, on one filter and with one notice.
-	 *
-	 * @param string $state  State filter to land on.
-	 * @param string $notice Key of flash().
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function back_to( string $state, string $notice ): string {
 		$url = self::url( self::no_filters(), array( 'state' => $state ) );
 		if ( '' === $url ) {
@@ -5701,11 +5701,11 @@ final class EventList {
 		return add_query_arg( self::VAR_NOTICE, $notice, $url );
 	}
 
-	/**
-	 * The state filter: predicates over what is already stored.
-	 *
-	 * @return array<string, string> clave => etiqueta.
-	 */
+
+
+
+
+
 	public static function state_filters(): array {
 		return array(
 			'all'                         => 'Todos',
@@ -5718,11 +5718,11 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * Human label of a post status.
-	 *
-	 * @return array<string, string> estado => etiqueta.
-	 */
+
+
+
+
+
 	public static function status_labels(): array {
 		return array(
 			'publish' => 'Publicado',
@@ -5734,26 +5734,26 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * Read one navigation parameter.
-	 *
-	 * @param string $key      Query var.
-	 * @param string $fallback What to return when it is not there.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function input( string $key, string $fallback = '' ): string {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- filtros de lectura: esta pantalla no muta nada.
+
 		return isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] )
 			? sanitize_text_field( wp_unslash( $_GET[ $key ] ) )
 			: $fallback;
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
 	}
 
-	/**
-	 * What the URL is asking for.
-	 *
-	 * @return array{area:int, type:int, course:int, state:string, search:string, page:int}
-	 */
+
+
+
+
+
 	public static function selection(): array {
 		$estado = self::input( self::VAR_STATE, 'all' );
 
@@ -5767,16 +5767,16 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * The list URL, keeping what is selected.
-	 *
-	 * @param array<string, mixed> $selection What selection() returned.
-	 * @param array<string, mixed> $changes   What to change in it.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function url( array $selection, array $changes = array() ): string {
-		// Cambiar un filtro devuelve a la primera página: la número siete de la
-		// selección anterior casi nunca existe en la nueva.
+
+
 		$s = array_merge( $selection, array( 'page' => 1 ), $changes );
 
 		$args = array(
@@ -5799,11 +5799,11 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * Everything the screen decides before painting.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	public static function model(): array {
 		$m           = self::blank();
 		$m['reason'] = self::why_nothing();
@@ -5824,8 +5824,8 @@ final class EventList {
 		$papelera = self::by_state( $rows, self::FILTER_TRASH );
 		$vivos    = self::by_state( $rows, 'vivos' );
 
-		// Las cifras de los estados se cuentan solo sobre lo vivo: un evento en
-		// la papelera no es un evento «próximo» ni uno «en borrador».
+
+
 		$m['counts']                       = self::count_states( $vivos );
 		$m['counts'][ self::FILTER_TRASH ] = count( $papelera );
 
@@ -5855,11 +5855,11 @@ final class EventList {
 		return $m;
 	}
 
-	/**
-	 * The model of a screen with nothing on it yet.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	private static function blank(): array {
 		return array(
 			'can_use'     => false,
@@ -5890,11 +5890,11 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * Why this person gets no list at all.
-	 *
-	 * @return string Empty when there is a list to show.
-	 */
+
+
+
+
+
 	private static function why_nothing(): string {
 		if ( ! is_user_logged_in() ) {
 			return 'Debe iniciar sesión con su usuario para gestionar eventos.';
@@ -5905,20 +5905,20 @@ final class EventList {
 			return '';
 		}
 
-		// Falta el permiso, o falta el área: no es lo mismo y no se arregla en
-		// el mismo sitio.
+
+
 		return user_can( $user_id, 'edit_evt_events' ) || EventAccess::is_manager( $user_id )
 			? 'No tiene ningún área asignada en su perfil, así que todavía no puede gestionar eventos. El área la pone quien administra el aplicativo.'
 			: 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.';
 	}
 
-	/**
-	 * What the screen says around the table: aviso, ámbito y botón de crear.
-	 *
-	 * @param int  $user_id   User ID.
-	 * @param bool $all_areas Whether this person works across every área.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
 	private static function chrome( int $user_id, bool $all_areas ): array {
 		$crear = user_can( $user_id, 'edit_evt_events' ) ? Shell::url( 'event' ) : '';
 
@@ -5927,7 +5927,7 @@ final class EventList {
 			'notice'      => self::flash(),
 			'page_id'     => self::hidden_page_id(),
 			'scoped'      => ! $all_areas,
-			// Con una sola área el desplegable no elige nada: siempre la misma.
+
 			'area_filter' => $all_areas || count( EventAccess::user_areas( $user_id ) ) > 1,
 			'subtitle'    => $all_areas
 				? 'Todos los eventos, de todas las áreas.'
@@ -5937,20 +5937,20 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * The rows this person may manage, before any filter.
-	 *
-	 * @param int $user_id User ID.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
 	private static function collect( int $user_id ): array {
 		$rows = array();
 		foreach ( self::scope( $user_id ) as $post ) {
-			// El acotado de la consulta solo esconde; quien decide es siempre
-			// EventAccess. Aquí se pregunta por `can_open()` y no por
-			// `can_edit()` porque un evento marcado como histórico se sigue
-			// consultando: esconderlo del listado sería perderlo de vista, y
-			// lo que hace falta es encontrarlo y ver por qué está cerrado.
+
+
+
+
+
 			if ( EventAccess::can_open( $user_id, (int) $post->ID ) ) {
 				$rows[] = self::row( $post );
 			}
@@ -5958,16 +5958,16 @@ final class EventList {
 		return $rows;
 	}
 
-	/**
-	 * Drop the filters that are no longer among the options.
-	 *
-	 * Un área que ya no tiene eventos aquí no acota nada, y dejarla puesta deja
-	 * la pantalla vacía sin decir por qué.
-	 *
-	 * @param array<string, mixed>              $s       Selection.
-	 * @param array<string, array<int, string>> $options Options of each dropdown.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function sanitise( array $s, array $options ): array {
 		foreach ( array_keys( $options ) as $eje ) {
 			if ( $s[ $eje ] > 0 && ! isset( $options[ $eje ][ $s[ $eje ] ] ) ) {
@@ -5977,13 +5977,13 @@ final class EventList {
 		return $s;
 	}
 
-	/**
-	 * Apply the dropdowns and the text search.
-	 *
-	 * @param array<int, array<string, mixed>> $rows Rows.
-	 * @param array<string, mixed>             $s    Selection.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
 	private static function narrow( array $rows, array $s ): array {
 		return array_values(
 			array_filter(
@@ -5995,15 +5995,15 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * How many rows each state filter would leave.
-	 *
-	 * Del mismo conjunto que la lista: lo que queda tras área, tipo, curso y
-	 * búsqueda, antes de acotar por estado.
-	 *
-	 * @param array<int, array<string, mixed>> $rows Rows already narrowed.
-	 * @return array<string, int>
-	 */
+
+
+
+
+
+
+
+
+
 	private static function count_states( array $rows ): array {
 		$counts = array_fill_keys( array_keys( self::state_filters() ), 0 );
 
@@ -6018,13 +6018,13 @@ final class EventList {
 		return $counts;
 	}
 
-	/**
-	 * Apply the state filter.
-	 *
-	 * @param array<int, array<string, mixed>> $rows  Rows.
-	 * @param string                           $state Filter key.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
 	private static function by_state( array $rows, string $state ): array {
 		if ( 'all' === $state ) {
 			return $rows;
@@ -6040,15 +6040,15 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * How many pages each of the rows being painted has.
-	 *
-	 * Solo las de la página: una consulta para las veinte filas, y no una por
-	 * evento.
-	 *
-	 * @param array<int, array<string, mixed>> $rows Rows of this page.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
+
+
 	private static function with_sections( array $rows ): array {
 		$secciones = self::section_counts( array_map( 'intval', array_column( $rows, 'id' ) ) );
 
@@ -6059,47 +6059,47 @@ final class EventList {
 		return $rows;
 	}
 
-	/**
-	 * The screen, from its model.
-	 *
-	 * @param array<string, mixed> $model What model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $model ): string {
 		return EventListView::html( $model );
 	}
 
-	/**
-	 * Render the shortcode.
-	 *
-	 * @param array<string, string>|string $atts Attributes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
 		return self::html( self::model() );
 	}
 
-	/**
-	 * The events this person may manage, before any filter.
-	 *
-	 * @param int $user_id User ID.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
 	private static function scope( int $user_id ): array {
 		$base = array(
 			'post_type'           => EventPostType::POST_TYPE,
-			// Solo las raíces: las hijas son secciones y se cuentan aparte.
+
 			'post_parent'         => 0,
-			// La papelera viene en la misma consulta y se separa después: así
-			// la cifra de «Papelera (N)» no cuesta una consulta más, y el
-			// listado normal la deja fuera igual que antes.
+
+
+
 			'post_status'         => array_merge( self::STATUSES, array( self::FILTER_TRASH ) ),
-			// ponytail: el ámbito entero en memoria —hoy son unas decenas de
-			// eventos, y el estado derivado no se puede pedir a la base de
-			// datos—; si crece, guardar el estado en meta y paginar la consulta.
-			'posts_per_page'      => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- el listado filtra y pagina sobre el ámbito completo.
+
+
+
+			'posts_per_page'      => 200, 
 			'orderby'             => 'date',
 			'order'               => 'DESC',
 			'no_found_rows'       => true,
@@ -6119,7 +6119,7 @@ final class EventList {
 			array_merge(
 				$base,
 				array(
-					'tax_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- acotar por área es el requisito, no una mejora opcional.
+					'tax_query' => array( 
 						array(
 							'taxonomy' => EventTaxonomies::AREA,
 							'field'    => 'term_id',
@@ -6130,9 +6130,9 @@ final class EventList {
 			)
 		);
 
-		// Un evento recién creado todavía no tiene área, y quien lo creó es
-		// justo quien tiene que ponérsela: sin esta segunda consulta se pierde
-		// de vista en cuanto se guarda.
+
+
+
 		$mios = get_posts( array_merge( $base, array( 'author' => $user_id ) ) );
 
 		$unicos = array();
@@ -6143,12 +6143,12 @@ final class EventList {
 		return array_values( $unicos );
 	}
 
-	/**
-	 * One row of the table.
-	 *
-	 * @param \WP_Post $post Event.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
 	private static function row( \WP_Post $post ): array {
 		$id     = (int) $post->ID;
 		$titulo = trim( (string) $post->post_title );
@@ -6168,13 +6168,13 @@ final class EventList {
 			'archived' => EventAccess::is_archived( $id ),
 			'status'   => (string) $post->post_status,
 			'sections' => 0,
-			// Lo que está en la papelera no se abre para editarlo: primero se
-			// restaura. Sin enlace, la vista lo pinta como texto.
+
+
 			'url'      => self::FILTER_TRASH === $post->post_status ? '' : Shell::url( 'event', array( 'evento' => $id ) ),
-			// Para la botonera: dónde se mira el evento y si quien mira puede
-			// publicarlo. **Un borrador también se mira**: estando dentro y con
-			// permiso, WordPress lo sirve en previsualización. Lo de la papelera
-			// no: primero se restaura.
+
+
+
+
 			'view_url' => self::FILTER_TRASH === $post->post_status
 				? ''
 				: ( 'publish' === $post->post_status ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) ),
@@ -6183,13 +6183,13 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * Terms of one taxonomy on one post.
-	 *
-	 * @param int    $post_id  Post ID.
-	 * @param string $taxonomy Taxonomy.
-	 * @return array<int, string> term_id => nombre.
-	 */
+
+
+
+
+
+
+
 	private static function terms( int $post_id, string $taxonomy ): array {
 		$terms = get_the_terms( $post_id, $taxonomy );
 		if ( ! is_array( $terms ) ) {
@@ -6205,15 +6205,15 @@ final class EventList {
 		return $out;
 	}
 
-	/**
-	 * The options of each dropdown, taken from the rows themselves.
-	 *
-	 * Así no se ofrece nunca un filtro que dejaría la pantalla vacía, ni se
-	 * enseña el nombre de un área en la que esta persona no tiene nada.
-	 *
-	 * @param array<int, array<string, mixed>> $rows Rows in scope.
-	 * @return array<string, array<int, string>>
-	 */
+
+
+
+
+
+
+
+
+
 	private static function options( array $rows ): array {
 		$out  = array(
 			'area'   => array(),
@@ -6242,13 +6242,13 @@ final class EventList {
 		return $out;
 	}
 
-	/**
-	 * Dropdowns and text search: everything but the state filter.
-	 *
-	 * @param array<string, mixed> $row Row.
-	 * @param array<string, mixed> $s   Selection.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	private static function in_scope( array $row, array $s ): bool {
 		$ejes = array(
 			'area'   => 'areas',
@@ -6266,16 +6266,16 @@ final class EventList {
 			|| false !== strpos( $row['search'], self::normalize( $s['search'] ) );
 	}
 
-	/**
-	 * The state filter, a predicate over one row.
-	 *
-	 * `vivos` no es un filtro de la pantalla: es el complementario de la
-	 * papelera, y lo usa {@see model()} para partir el ámbito en dos.
-	 *
-	 * @param array<string, mixed> $row    Row.
-	 * @param string               $filter Filter key.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function matches( array $row, string $filter ): bool {
 		if ( 'all' === $filter ) {
 			return true;
@@ -6295,13 +6295,13 @@ final class EventList {
 		return $filter === $row['state'];
 	}
 
-	/**
-	 * Newest first; what has no dates yet is what was just created.
-	 *
-	 * @param array<string, mixed> $a One row.
-	 * @param array<string, mixed> $b Another.
-	 * @return int
-	 */
+
+
+
+
+
+
+
 	private static function compare( array $a, array $b ): int {
 		$ka = '' !== $a['start'] ? $a['start'] : '9999-12-31';
 		$kb = '' !== $b['start'] ? $b['start'] : '9999-12-31';
@@ -6309,12 +6309,12 @@ final class EventList {
 		return $ka === $kb ? strnatcasecmp( $a['title'], $b['title'] ) : strcmp( $kb, $ka );
 	}
 
-	/**
-	 * How many pages each of these events has.
-	 *
-	 * @param int[] $ids Event IDs.
-	 * @return array<int, int> post ID => secciones.
-	 */
+
+
+
+
+
+
 	private static function section_counts( array $ids ): array {
 		if ( array() === $ids ) {
 			return array();
@@ -6326,7 +6326,7 @@ final class EventList {
 				'post_type'           => EventPostType::POST_TYPE,
 				'post_parent__in'     => $ids,
 				'post_status'         => self::STATUSES,
-				'posts_per_page'      => 500, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- las secciones de una página del listado, contadas de una vez.
+				'posts_per_page'      => 500, 
 				'fields'              => 'id=>parent',
 				'no_found_rows'       => true,
 				'ignore_sticky_posts' => true,
@@ -6334,7 +6334,7 @@ final class EventList {
 		);
 
 		foreach ( $hijas as $hija ) {
-			// Según la versión, `id=>parent` devuelve el padre o el objeto.
+
 			$padre = is_object( $hija ) ? (int) $hija->post_parent : (int) $hija;
 			if ( isset( $out[ $padre ] ) ) {
 				++$out[ $padre ];
@@ -6344,22 +6344,22 @@ final class EventList {
 		return $out;
 	}
 
-	/**
-	 * Whether anything is narrowing the list right now.
-	 *
-	 * @param array<string, mixed> $s Selection.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
 			|| 'all' !== $s['state'] || '' !== $s['search'];
 	}
 
-	/**
-	 * A selection with nothing narrowing it.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	private static function no_filters(): array {
 		return array(
 			'area'   => 0,
@@ -6371,13 +6371,13 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * What to say when the table has no rows.
-	 *
-	 * @param bool $filtered   Whether filters are narrowing the list.
-	 * @param bool $all_areas  Whether this person works across every área.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function empty_text( bool $filtered, bool $all_areas ): string {
 		if ( $filtered ) {
 			return 'Ningún evento coincide con lo que ha pedido. Pruebe a quitar algún filtro o a buscar otra cosa.';
@@ -6387,11 +6387,11 @@ final class EventList {
 			: 'Todavía no hay ningún evento de su área. Aquí solo salen los eventos del área que los organiza; cree el primero con «Crear evento».';
 	}
 
-	/**
-	 * What another screen left said on the way here.
-	 *
-	 * @return array{type:string, text:string}
-	 */
+
+
+
+
+
 	private static function flash(): array {
 		$avisos = array(
 			'creado'       => array( 'ok', 'Evento creado. Ya puede añadirle secciones.' ),
@@ -6411,36 +6411,36 @@ final class EventList {
 		);
 	}
 
-	/**
-	 * The page ID the filter form has to carry, or zero.
-	 *
-	 * Con enlaces permanentes sencillos la dirección de la página es
-	 * `?page_id=12`, y un formulario `GET` sustituye la cadena de consulta
-	 * entera: sin este campo oculto, filtrar llevaría a la portada del sitio.
-	 *
-	 * @return int
-	 */
+
+
+
+
+
+
+
+
+
 	private static function hidden_page_id(): int {
 		return '' === (string) get_option( 'permalink_structure' ) ? (int) get_queried_object_id() : 0;
 	}
 
-	/**
-	 * Normalise text so accents and capitals do not decide a search.
-	 *
-	 * @param string $text Text.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function normalize( string $text ): string {
 		return mb_strtolower( remove_accents( $text ), 'UTF-8' );
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventListView.php ----
-/**
- * «Eventos», painted from what EventList::model() decided.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -6450,17 +6450,17 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventList;
 use Evt\PublicFront\Shell;
 
-/**
- * Solo pinta: no lee la petición, no consulta y no decide.
- */
+
+
+
 final class EventListView {
 
-	/**
-	 * The screen, from its model.
-	 *
-	 * @param array<string, mixed> $m What EventList::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		if ( empty( $m['can_use'] ) ) {
 			return Shell::render( 'Eventos', '', Shell::notice( 'aviso', (string) $m['reason'] ) );
@@ -6468,11 +6468,11 @@ final class EventListView {
 
 		ob_start();
 		?>
-		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shell::notice escapa su texto. ?>
+		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); ?>
 		<?php if ( ! empty( $m['can_create'] ) ) : ?>
 			<p class="evt-acciones">
 				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
-					<?php echo Shell::icon_plus(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG literal. ?>
+					<?php echo Shell::icon_plus(); ?>
 					Crear evento
 				</a>
 			</p>
@@ -6486,12 +6486,12 @@ final class EventListView {
 		return Shell::render( 'Eventos', (string) $m['subtitle'], (string) ob_get_clean() );
 	}
 
-	/**
-	 * The four figures that say how the área is doing.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
+
+
+
+
+
+
 	private static function counts( array $m ): void {
 		$fichas = array(
 			'all'                         => 'Eventos',
@@ -6511,16 +6511,16 @@ final class EventListView {
 		<?php
 	}
 
-	/**
-	 * «Papelera (N)»: el filtro de lo enviado a ella, y la vuelta.
-	 *
-	 * Cuando no hay nada en la papelera no se pinta: un enlace a una pantalla
-	 * vacía no ayuda a nadie. El borrado definitivo no está aquí a propósito
-	 * —lo hace quien pueda desde el escritorio de WordPress—, y se dice.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function trash_bar( array $m ): void {
 		$cuantos = (int) ( $m['counts'][ EventList::FILTER_TRASH ] ?? 0 );
 		$dentro  = EventList::FILTER_TRASH === (string) $m['selection']['state'];
@@ -6541,12 +6541,12 @@ final class EventListView {
 		<?php
 	}
 
-	/**
-	 * The filter bar: text, área, tipología, curso and state.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
+
+
+
+
+
+
 	private static function filters( array $m ): void {
 		$s      = $m['selection'];
 		$listas = array(
@@ -6618,12 +6618,12 @@ final class EventListView {
 		<?php
 	}
 
-	/**
-	 * The table itself, or why it is empty.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
+
+
+
+
+
+
 	private static function table( array $m ): void {
 		$estados = EventMetaKeys::states();
 		$publica = EventList::status_labels();
@@ -6676,21 +6676,21 @@ final class EventListView {
 											<?php echo esc_html( $publica[ $row['status'] ] ?? (string) $row['status'] ); ?>
 										</span>
 									<?php else : ?>
-										<?php echo self::publish_switch( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+										<?php echo self::publish_switch( (array) $row ); ?>
 									<?php endif; ?>
 								</td>
 								<td class="evt-num" data-rotulo="Secciones"><?php echo esc_html( (string) $row['sections'] ); ?></td>
 								<td data-rotulo="Acciones">
 									<?php if ( $dentro ) : ?>
-										<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+										<?php echo self::restore_form( (int) $row['id'] ); ?>
 									<?php else : ?>
 										<span class="evt-acciones">
 											<?php
-											echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+											echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' ); 
 											$mirar = 'publish' === (string) $row['status']
 												? 'Ver la página del evento'
 												: 'Previsualizar el evento, que está en borrador';
-											echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+											echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); 
 											?>
 										</span>
 									<?php endif; ?>
@@ -6704,20 +6704,20 @@ final class EventListView {
 		<?php
 	}
 
-	/**
-	 * The publish state as a switch.
-	 *
-	 * Un interruptor y no un enlace: lo que se quiere saber de un vistazo es si
-	 * el evento se ve fuera, y lo que se quiere hacer es cambiarlo. Con
-	 * JavaScript se envía solo al soltarlo; sin JavaScript queda el botón de al
-	 * lado, que hace exactamente lo mismo.
-	 *
-	 * Publicar el evento **no publica sus páginas**: cada una tiene su estado y
-	 * se publica desde el taller.
-	 *
-	 * @param array<string, mixed> $row One row of the model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function publish_switch( array $row ): string {
 		$id        = (int) $row['id'];
 		$publicado = 'publish' === (string) $row['status'];
@@ -6743,12 +6743,12 @@ final class EventListView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Server-side pagination, with the filters kept.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
+
+
+
+
+
+
 	private static function pagination( array $m ): void {
 		if ( (int) $m['pages'] < 2 ) {
 			return;
@@ -6783,16 +6783,16 @@ final class EventListView {
 		<?php
 	}
 
-	/**
-	 * «Restaurar»: su propio formulario POST, con su propio nonce.
-	 *
-	 * Por POST y no por enlace: un `GET` que resucita un evento se dispara
-	 * desde cualquier sitio que pinte la dirección, incluido el prefetch del
-	 * navegador.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function restore_form( int $event_id ): string {
 		ob_start();
 		?>
@@ -6806,35 +6806,35 @@ final class EventListView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Term names of one cell.
-	 *
-	 * @param array<int, string> $terms term_id => nombre.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function names( array $terms ): string {
 		return array() === $terms ? '—' : implode( ' · ', $terms );
 	}
 
-	/**
-	 * The dates of an event, written the way they are announced.
-	 *
-	 * @param string $start First day, Y-m-d.
-	 * @param string $end   Last day, Y-m-d; empty when there is none yet.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function dates( string $start, string $end ): string {
 		$texto = DateRange::of( $start, $end );
 		return '' !== $texto ? $texto : 'Sin fechas';
 	}
 }
 
-// ---- src/Evt/PublicFront/Programme.php ----
-/**
- * Speakers and programme activities of one event: read and write.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -6843,45 +6843,45 @@ use Evt\Meta\ProgrammeMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\SpeakerPostType;
 
-/**
- * Lo que cuelga de un evento y no es una página: quién habla y qué pasa.
- *
- * **Cuelgan por `post_parent`, no por una meta**, y eso es la decisión de esta
- * clase. El propio guardián lo tenía anotado como el camino: «lo mismo valdría
- * para un ponente o una actividad colgados de un evento, si algún día los
- * cuelgan». Colgándolos, el acotado por área
- * ({@see EventAccess::post_areas()}) y el cierre por histórico
- * ({@see EventAccess::is_archived()}) los alcanzan sin una línea más, porque
- * los dos preguntan por `root_id()`.
- *
- * Aquí no se pinta nada y no se lee la petición: eso es de los paneles.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class Programme {
 
-	/**
-	 * Speakers of an event, in the order the área chose.
-	 *
-	 * @param int  $event_id Event post ID.
-	 * @param bool $papelera Whether to list the trash instead.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
+
 	public static function speakers( int $event_id, bool $papelera = false ): array {
 		return self::children( $event_id, SpeakerPostType::POST_TYPE, $papelera );
 	}
 
-	/**
-	 * Activities of an event, sorted the way the parrilla reads them.
-	 *
-	 * El orden sale de tres datos que son metas —día, hora de inicio y hora de
-	 * fin—, así que se ordena en PHP y no con un `meta_query`: un evento tiene
-	 * decenas de actividades, no miles, y tres `meta_key` distintos en el
-	 * `orderby` cuestan tres `JOIN` para ahorrar un `usort` sobre un puñado de
-	 * filas. Lo que no tiene día se va al final, junto.
-	 *
-	 * @param int  $event_id Event post ID.
-	 * @param bool $papelera Whether to list the trash instead.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function activities( int $event_id, bool $papelera = false ): array {
 		$filas = self::children( $event_id, ActivityPostType::POST_TYPE, $papelera );
 
@@ -6904,12 +6904,12 @@ final class Programme {
 		return $filas;
 	}
 
-	/**
-	 * The activities that take enrolment: the workshops.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
 	public static function workshops( int $event_id ): array {
 		$out = array();
 		foreach ( self::activities( $event_id ) as $actividad ) {
@@ -6920,17 +6920,17 @@ final class Programme {
 		return $out;
 	}
 
-	/**
-	 * The parrilla: activities grouped by day and, inside a day, by sede.
-	 *
-	 * Es la forma que decidió ADR-0024: la sede es un dato de cada actividad y
-	 * **un mismo día puede tener dos**. Un día con una sola sede devuelve un
-	 * solo bloque, y el panel no le pone rótulo de sede porque no aporta nada;
-	 * uno con dos devuelve dos, en el orden en que aparecen.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return array<int, array{date:string, venues:array<int, array{venue:string, rows:array<int, array<string, mixed>>}>}>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function grid( int $event_id ): array {
 		$dias = array();
 		foreach ( self::activities( $event_id ) as $actividad ) {
@@ -6954,8 +6954,8 @@ final class Programme {
 			$dias[ $clave ]['venues'][ $sede ]['rows'][] = $fila;
 		}
 
-		// Se pierden las claves a propósito: fuera de aquí la parrilla es una
-		// lista ordenada de días y cada día una lista ordenada de sedes.
+
+
 		$out = array();
 		foreach ( $dias as $dia ) {
 			$dia['venues'] = array_values( $dia['venues'] );
@@ -6964,16 +6964,16 @@ final class Programme {
 		return $out;
 	}
 
-	/**
-	 * The distinct sedes of an event, taken from its activities.
-	 *
-	 * No hay ninguna pantalla donde «gestionar las sedes»: la lista es
-	 * derivada, y añadir una sede es escribirla en una actividad (ADR-0024).
-	 * Sirve para proponer las ya usadas al teclear la siguiente.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function venues( int $event_id ): array {
 		$out = array();
 		foreach ( self::activities( $event_id ) as $actividad ) {
@@ -6986,14 +6986,14 @@ final class Programme {
 		return $out;
 	}
 
-	/**
-	 * Create or update a speaker of this event.
-	 *
-	 * @param int                  $event_id   Event post ID.
-	 * @param int                  $speaker_id 0 to create.
-	 * @param array<string, mixed> $data       Validated payload.
-	 * @return int The speaker post ID, 0 when it could not be written.
-	 */
+
+
+
+
+
+
+
+
 	public static function save_speaker( int $event_id, int $speaker_id, array $data ): int {
 		$campos = array(
 			'post_type'    => SpeakerPostType::POST_TYPE,
@@ -7015,14 +7015,14 @@ final class Programme {
 		return $id;
 	}
 
-	/**
-	 * Create or update an activity of this event.
-	 *
-	 * @param int                  $event_id    Event post ID.
-	 * @param int                  $activity_id 0 to create.
-	 * @param array<string, mixed> $data        Validated payload.
-	 * @return int The activity post ID, 0 when it could not be written.
-	 */
+
+
+
+
+
+
+
+
 	public static function save_activity( int $event_id, int $activity_id, array $data ): int {
 		$campos = array(
 			'post_type'    => ActivityPostType::POST_TYPE,
@@ -7044,8 +7044,8 @@ final class Programme {
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VENUE, (string) $data['venue'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_ROOM, (string) $data['room'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, (int) $data['seats'] );
-		// Solo los ponentes que son de este evento: una ficha de otro evento no
-		// se enlaza aquí, que es lo que sostiene ADR-0021.
+
+
 		update_post_meta(
 			$id,
 			ProgrammeMetaKeys::ACTIVITY_SPEAKERS,
@@ -7056,13 +7056,13 @@ final class Programme {
 		return $id;
 	}
 
-	/**
-	 * Send a speaker or an activity of this event to the trash.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @param int $post_id  What to trash.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	public static function trash( int $event_id, int $post_id ): bool {
 		if ( ! self::belongs( $event_id, $post_id ) ) {
 			return false;
@@ -7070,13 +7070,13 @@ final class Programme {
 		return (bool) wp_trash_post( $post_id );
 	}
 
-	/**
-	 * Bring one back from the trash.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @param int $post_id  What to restore.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	public static function restore( int $event_id, int $post_id ): bool {
 		if ( ! self::belongs( $event_id, $post_id, true ) ) {
 			return false;
@@ -7084,18 +7084,18 @@ final class Programme {
 		return (bool) wp_untrash_post( $post_id );
 	}
 
-	/**
-	 * Move a speaker one place up or down.
-	 *
-	 * Se renumera la lista entera por el mismo motivo que en las secciones:
-	 * intercambiar dos `menu_order` no mueve nada cuando varias fichas
-	 * comparten número, que es lo que pasa en cuanto se crean seguidas.
-	 *
-	 * @param int $event_id   Event post ID.
-	 * @param int $speaker_id Speaker to move.
-	 * @param int $delta      -1 up, 1 down.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function reorder_speaker( int $event_id, int $speaker_id, int $delta ): bool {
 		$ids   = wp_list_pluck( self::speakers( $event_id ), 'ID' );
 		$ids   = array_map( 'intval', $ids );
@@ -7123,18 +7123,18 @@ final class Programme {
 		return true;
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * Los modelos de fila que consumen los paneles
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * One speaker, as the panel reads it.
-	 *
-	 * @param \WP_Post $ponente Speaker post.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function speaker_row( \WP_Post $ponente ): array {
 		$id = (int) $ponente->ID;
 		return array(
@@ -7148,12 +7148,12 @@ final class Programme {
 		);
 	}
 
-	/**
-	 * One activity, as the parrilla and the workshops panel read it.
-	 *
-	 * @param \WP_Post $actividad Activity post.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
 	public static function activity_row( \WP_Post $actividad ): array {
 		$id       = (int) $actividad->ID;
 		$ponentes = array();
@@ -7181,12 +7181,12 @@ final class Programme {
 		);
 	}
 
-	/**
-	 * The speakers linked to one activity.
-	 *
-	 * @param int $activity_id Activity post ID.
-	 * @return int[]
-	 */
+
+
+
+
+
+
 	public static function speaker_ids( int $activity_id ): array {
 		$bruto = (string) get_post_meta( $activity_id, ProgrammeMetaKeys::ACTIVITY_SPEAKERS, true );
 		if ( '' === $bruto ) {
@@ -7202,20 +7202,20 @@ final class Programme {
 		return $ids;
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * Lo de dentro
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * The posts of one type that hang from this event.
-	 *
-	 * @param int    $event_id  Event post ID.
-	 * @param string $post_type Post type.
-	 * @param bool   $papelera  Whether to list the trash instead.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function children( int $event_id, string $post_type, bool $papelera ): array {
 		if ( $event_id <= 0 ) {
 			return array();
@@ -7236,15 +7236,15 @@ final class Programme {
 		return is_array( $posts ) ? $posts : array();
 	}
 
-	/**
-	 * Insert or update, never touching a post of another event.
-	 *
-	 * @param int                  $post_id   0 to create.
-	 * @param array<string, mixed> $campos    Post fields.
-	 * @param string               $post_type Expected post type.
-	 * @param int                  $event_id  Event the post has to hang from.
-	 * @return int
-	 */
+
+
+
+
+
+
+
+
+
 	private static function write( int $post_id, array $campos, string $post_type, int $event_id ): int {
 		if ( $post_id > 0 ) {
 			if ( ! self::belongs( $event_id, $post_id ) || get_post_type( $post_id ) !== $post_type ) {
@@ -7259,18 +7259,18 @@ final class Programme {
 		return is_wp_error( $hecho ) ? 0 : (int) $hecho;
 	}
 
-	/**
-	 * Whether this post really hangs from this event.
-	 *
-	 * Es la comprobación que impide que un identificador cambiado a mano en el
-	 * envío toque el ponente de otro evento: el acotado por área diría que sí
-	 * cuando las dos áreas coinciden.
-	 *
-	 * @param int  $event_id Event post ID.
-	 * @param int  $post_id  Post ID.
-	 * @param bool $papelera Whether the post is expected to be in the trash.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function belongs( int $event_id, int $post_id, bool $papelera = false ): bool {
 		if ( $event_id <= 0 || $post_id <= 0 ) {
 			return false;
@@ -7288,13 +7288,13 @@ final class Programme {
 		return (int) $post->post_parent === $event_id;
 	}
 
-	/**
-	 * Keep only the speaker IDs that belong to this event.
-	 *
-	 * @param int   $event_id Event post ID.
-	 * @param int[] $ids      Submitted speaker IDs.
-	 * @return int[]
-	 */
+
+
+
+
+
+
+
 	private static function own_speakers( int $event_id, array $ids ): array {
 		$suyos = array_map( 'intval', wp_list_pluck( self::speakers( $event_id ), 'ID' ) );
 		$out   = array();
@@ -7308,49 +7308,49 @@ final class Programme {
 	}
 }
 
-// ---- src/Evt/PublicFront/Participants.php ----
-/**
- * The people signed up to one event: read, filter and export.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
-/**
- * Quién se ha inscrito a un evento, para verlo, filtrarlo y exportarlo.
- *
- * **Los participantes son de este aplicativo.** Se gestionarán aquí, con
- * formulario de inscripción propio; el sistema anterior no se lee y no se le
- * construye ningún puente (ADR-0027).
- *
- * Esta clase declara la **forma de una fila** y pregunta por ellas con el
- * filtro `evt_participants`. Quien contesta de serie es el propio aplicativo
- * con sus `evt_registration` ({@see Registrations::participants()}, ADR-0032);
- * la costura se queda puesta porque es lo que permite a un despliegue traer sus
- * participantes de otro sitio desde un snippet, y lo que deja probar el filtro
- * y el CSV sin ningún almacén detrás. Sin nadie que conteste, la lista está
- * vacía y el panel dice dónde se abre la inscripción, en vez de fingir que
- * nadie se ha apuntado.
- *
- * Lo que sí es de aquí, y es lo que se pidió: **el filtro y la exportación a
- * CSV**, puros y probados sin WordPress.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class Participants {
 
-	/**
-	 * Filter every source answers to fill the list of one event.
-	 */
+
+
+
 	public const HOOK = 'evt_participants';
 
-	/**
-	 * The columns of the table, in order, with their heading.
-	 *
-	 * Es el contrato con quien conteste al filtro: una fila es este array.
-	 * Lo que traiga de más se ignora; lo que falte sale vacío.
-	 *
-	 * @return array<string, string> clave => rótulo.
-	 */
+
+
+
+
+
+
+
+
 	public static function columns(): array {
 		return array(
 			'name'     => 'Nombre',
@@ -7362,37 +7362,37 @@ final class Participants {
 		);
 	}
 
-	/**
-	 * The participants of one event, as whoever answers the filter has them.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return array<int, array<string, string>>
-	 */
+
+
+
+
+
+
 	public static function rows( int $event_id ): array {
 		if ( $event_id <= 0 ) {
 			return array();
 		}
 
-		/**
-		 * Filter the participants of one event.
-		 *
-		 * @param array<int, array<string, string>> $rows     Rows so far.
-		 * @param int                               $event_id Event post ID.
-		 */
+
+
+
+
+
+
 		$filas = apply_filters( self::HOOK, array(), $event_id );
 
 		return self::clean( is_array( $filas ) ? $filas : array() );
 	}
 
-	/**
-	 * Keep only the declared columns, as strings.
-	 *
-	 * Lo que llega del filtro es de fuera: se normaliza antes de que lo vea
-	 * nadie, para que el panel y el CSV trabajen siempre con la misma forma.
-	 *
-	 * @param array<int, mixed> $filas Raw rows.
-	 * @return array<int, array<string, string>>
-	 */
+
+
+
+
+
+
+
+
+
 	public static function clean( array $filas ): array {
 		$columnas = array_keys( self::columns() );
 		$out      = array();
@@ -7410,18 +7410,18 @@ final class Participants {
 		return $out;
 	}
 
-	/**
-	 * The rows that match what was typed in the filter box.
-	 *
-	 * Pura y sin WordPress. Busca en todas las columnas a la vez porque es lo
-	 * que se hace de verdad con una lista de inscripciones: se teclea un
-	 * apellido, o un centro, o un taller, y se espera que salga.
-	 *
-	 * @param array<int, array<string, string>> $filas  Rows.
-	 * @param string                            $texto  What was typed.
-	 * @param string                            $taller Workshop to narrow to, '' for all.
-	 * @return array<int, array<string, string>>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function filter( array $filas, string $texto = '', string $taller = '' ): array {
 		$texto  = trim( $texto );
 		$taller = trim( $taller );
@@ -7443,12 +7443,12 @@ final class Participants {
 		return $out;
 	}
 
-	/**
-	 * The distinct workshops the rows mention, to fill the narrowing select.
-	 *
-	 * @param array<int, array<string, string>> $filas Rows.
-	 * @return string[]
-	 */
+
+
+
+
+
+
 	public static function workshops( array $filas ): array {
 		$out = array();
 		foreach ( $filas as $fila ) {
@@ -7461,22 +7461,22 @@ final class Participants {
 		return $out;
 	}
 
-	/**
-	 * The rows as a CSV file, headings included.
-	 *
-	 * Separador **punto y coma** y BOM de UTF-8 al principio, que es lo que
-	 * abre bien en el Excel en español sin pasar por el asistente de
-	 * importación: con coma y sin BOM, un nombre con tilde sale roto y todo
-	 * cae en la primera columna. Cada campo va entrecomillado y las comillas
-	 * de dentro se duplican, que es lo que dice RFC 4180.
-	 *
-	 * Lo que empiece por `=`, `+`, `-` o `@` se escapa con una comilla simple
-	 * delante: sin eso, una hoja de cálculo trata ese texto como fórmula y un
-	 * campo copiado de un formulario se convierte en ejecución.
-	 *
-	 * @param array<int, array<string, string>> $filas Rows.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function csv( array $filas ): string {
 		$columnas = self::columns();
 		$lineas   = array( self::csv_line( array_values( $columnas ) ) );
@@ -7489,17 +7489,17 @@ final class Participants {
 			$lineas[] = self::csv_line( $campos );
 		}
 
-		// CRLF y BOM: los dos son para que el fichero se abra donde se va a
-		// abrir, que es una hoja de cálculo de escritorio y no un editor.
+
+
 		return "\xEF\xBB\xBF" . implode( "\r\n", $lineas ) . "\r\n";
 	}
 
-	/**
-	 * The file name an export gets.
-	 *
-	 * @param string $titulo Event title.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function filename( string $titulo ): string {
 		$base = sanitize_title( $titulo );
 		if ( '' === $base ) {
@@ -7508,12 +7508,12 @@ final class Participants {
 		return 'participantes-' . $base . '-' . gmdate( 'Y-m-d' ) . '.csv';
 	}
 
-	/**
-	 * One CSV line, quoted and escaped.
-	 *
-	 * @param string[] $campos Fields.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function csv_line( array $campos ): string {
 		$fuera = array();
 		foreach ( $campos as $campo ) {
@@ -7522,12 +7522,12 @@ final class Participants {
 		return implode( ';', $fuera );
 	}
 
-	/**
-	 * Stop a spreadsheet from reading a field as a formula.
-	 *
-	 * @param string $campo Field.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function defuse( string $campo ): string {
 		if ( '' === $campo ) {
 			return '';
@@ -7535,12 +7535,12 @@ final class Participants {
 		return false === strpos( "=+-@\t\r", $campo[0] ) ? $campo : "'" . $campo;
 	}
 
-	/**
-	 * Lowercase and unaccented, so «Martín» matches «martin».
-	 *
-	 * @param string $texto Text.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function fold( string $texto ): string {
 		$texto = strtr(
 			$texto,
@@ -7565,12 +7565,12 @@ final class Participants {
 	}
 }
 
-// ---- src/Evt/PublicFront/Registrations.php ----
-/**
- * Signups of one event: store, read, and take a workshop seat.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -7580,58 +7580,58 @@ use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\RegistrationPostType;
 
-/**
- * Las inscripciones de un evento: guardarlas, leerlas y coger plaza.
- *
- * Una inscripción cuelga de su evento (ADR-0032). Aquí no se pinta nada y no
- * se lee la petición: eso es de las pantallas.
- *
- * **Lo único de todo el aplicativo donde dos personas hacen a la vez algo sobre
- * el mismo dato** es coger la última plaza de un taller. Por eso vive aquí
- * {@see seat()}, y por eso tiene un candado de verdad y no una comprobación
- * optimista (ADR-0033).
- */
+
+
+
+
+
+
+
+
+
+
+
 final class Registrations {
 
-	/**
-	 * How long a held lock stays valid, in seconds.
-	 *
-	 * Corta a propósito: una petición que muera a mitad no puede dejar el
-	 * evento bloqueado para siempre. Diez segundos son mucho más de lo que
-	 * tarda contar unas plazas y escribir una meta, y poco para esperar.
-	 */
+
+
+
+
+
+
+
 	public const LOCK_TTL = 10;
 
-	/**
-	 * How long we keep trying to take the lock, in microseconds.
-	 */
+
+
+
 	private const LOCK_WAIT = 2000000;
 
-	/**
-	 * Prefix of the option that holds the lock of one event.
-	 */
+
+
+
 	private const LOCK_PREFIX = 'evt_seat_lock_';
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
-		// El aplicativo contesta a su propio filtro (ADR-0032): quien traiga
-		// los participantes de otro sitio sigue pudiendo sustituirlos desde un
-		// snippet, con más prioridad o quitando este.
+
+
+
 		add_filter( Participants::HOOK, array( self::class, 'participants' ), 10, 2 );
 	}
 
-	// ─── leer ──────────────────────────────────────────────────────────────
 
-	/**
-	 * The registrations of one event.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
+
 	public static function all( int $event_id ): array {
 		if ( $event_id <= 0 ) {
 			return array();
@@ -7650,17 +7650,17 @@ final class Registrations {
 		return is_array( $posts ) ? $posts : array();
 	}
 
-	/**
-	 * Answer the participants filter with our own registrations.
-	 *
-	 * Llena la forma de fila que declara {@see Participants::columns()}, que es
-	 * el contrato de la ADR-0027, y añade una columna por pregunta del evento
-	 * con su rótulo por cabecera (ADR-0031).
-	 *
-	 * @param array<int, array<string, string>> $filas    Rows so far.
-	 * @param int                               $event_id Event post ID.
-	 * @return array<int, array<string, string>>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function participants( array $filas, int $event_id ): array {
 		$preguntas = self::questions( $event_id );
 		$talleres  = array();
@@ -7681,9 +7681,9 @@ final class Registrations {
 				'consent'  => self::consent_text( $meta ),
 			);
 
-			// Una columna por pregunta, con el rótulo por cabecera. La clave es
-			// el identificador, así que reescribir el rótulo mueve la cabecera
-			// y no descoloca ni un dato (ADR-0032).
+
+
+
 			$respuestas = self::answers( $inscripcion->ID );
 			foreach ( $preguntas as $pregunta ) {
 				$fila[ $pregunta['label'] ] = SignupQuestions::as_text(
@@ -7698,34 +7698,34 @@ final class Registrations {
 		return $filas;
 	}
 
-	/**
-	 * The questions of one event, normalised.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
 	public static function questions( int $event_id ): array {
 		return SignupQuestions::read( get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_QUESTIONS, true ) );
 	}
 
-	/**
-	 * The stored answers of one registration.
-	 *
-	 * @param int $registration_id Registration post ID.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
 	public static function answers( int $registration_id ): array {
 		$crudo = get_post_meta( $registration_id, RegistrationMetaKeys::REG_ANSWERS, true );
 		$datos = is_string( $crudo ) && '' !== $crudo ? json_decode( $crudo, true ) : $crudo;
 		return is_array( $datos ) ? $datos : array();
 	}
 
-	/**
-	 * Every core meta of one registration, as strings.
-	 *
-	 * @param int $registration_id Registration post ID.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
 	public static function meta( int $registration_id ): array {
 		$out = array();
 		foreach ( RegistrationMetaKeys::registration_keys() as $clave ) {
@@ -7735,12 +7735,12 @@ final class Registrations {
 		return $out;
 	}
 
-	/**
-	 * How the consent shows in the list.
-	 *
-	 * @param array<string, string> $meta Registration metas.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function consent_text( array $meta ): string {
 		$cuando = $meta[ RegistrationMetaKeys::REG_CONSENT_AT ];
 		if ( '' === $cuando ) {
@@ -7749,30 +7749,30 @@ final class Registrations {
 		return 'Sí (v' . $meta[ RegistrationMetaKeys::REG_CONSENT_VERSION ] . ', ' . $cuando . ')';
 	}
 
-	/**
-	 * Whether anybody is signed up to this event yet.
-	 *
-	 * Es lo que cierra la edición de las preguntas ya contestadas
-	 * ({@see SignupQuestions::refuse()}).
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
 	public static function has_any( int $event_id ): bool {
 		return array() !== self::all( $event_id );
 	}
 
-	/**
-	 * The registration a signup token opens, 0 for none.
-	 *
-	 * El testigo es largo y aleatorio, y abre **esta** inscripción y nada más
-	 * del sitio: no es una sesión (ADR-0033). Se compara en tiempo constante
-	 * para no filtrar por dónde se parece.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $token    Token from the link.
-	 * @return int
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function by_token( int $event_id, string $token ): int {
 		$token = trim( $token );
 		if ( ! self::is_token( $token ) ) {
@@ -7787,29 +7787,29 @@ final class Registrations {
 		return 0;
 	}
 
-	/**
-	 * Whether a string has the shape of a token we issue.
-	 *
-	 * @param string $token Raw token.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function is_token( string $token ): bool {
 		return (bool) preg_match( '/^[a-f0-9]{40}$/', $token );
 	}
 
-	// ─── escribir ──────────────────────────────────────────────────────────
 
-	/**
-	 * Store one signup.
-	 *
-	 * El título es la **referencia**, no el nombre: quien mire `wp_posts` a
-	 * pelo ve referencias y no personas (ADR-0032).
-	 *
-	 * @param int                  $event_id Event post ID.
-	 * @param array<string, mixed> $core     Validated core fields.
-	 * @param array<string, mixed> $answers  Validated answers, keyed by question ID.
-	 * @return int Registration post ID, 0 on failure.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function create( int $event_id, array $core, array $answers ): int {
 		if ( $event_id <= 0 ) {
 			return 0;
@@ -7838,9 +7838,9 @@ final class Registrations {
 			RegistrationMetaKeys::REG_CENTRE          => $core['centre'] ?? '',
 			RegistrationMetaKeys::REG_CONSENT_VERSION => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
 			RegistrationMetaKeys::REG_CONSENT_AT      => current_time( 'mysql' ),
-			// `wp_slash()` y no el JSON a pelo: `update_post_meta()` desescapa lo
-			// que le llega, y sin esto una respuesta con una tilde o una comilla
-			// llegaría rota a la base de datos.
+
+
+
 			RegistrationMetaKeys::REG_ANSWERS         => wp_slash( (string) wp_json_encode( $answers ) ),
 			RegistrationMetaKeys::REG_TOKEN           => self::new_token(),
 		);
@@ -7851,43 +7851,43 @@ final class Registrations {
 		return $id;
 	}
 
-	/**
-	 * A fresh token.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	public static function new_token(): string {
 		return bin2hex( random_bytes( 20 ) );
 	}
 
-	/**
-	 * The reference a new registration gets as its title.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function reference( int $event_id ): string {
 		return sprintf( 'INS-%d-%s', $event_id, strtoupper( substr( bin2hex( random_bytes( 4 ) ), 0, 8 ) ) );
 	}
 
-	// ─── el aforo, que es lo único con carrera dentro ──────────────────────
 
-	/**
-	 * Take a workshop seat, releasing the previous one, or say why not.
-	 *
-	 * Los tres pasos —contar, soltar y tomar— van **dentro del mismo candado**,
-	 * y eso es lo que impide que alguien se quede sin ninguno de los dos
-	 * talleres: o el cambio entero o nada (ADR-0033).
-	 *
-	 * Lo que **no** se hace, y se escribe para que no vuelva por parecer lo
-	 * natural: contar en PHP, comparar y escribir sin candado. Dos peticiones
-	 * leen 19 de 20 y las dos escriben.
-	 *
-	 * @param int $event_id        Event post ID.
-	 * @param int $registration_id Registration post ID.
-	 * @param int $activity_id     Workshop to take, 0 to just release.
-	 * @return array{ok:bool, error:string}
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function seat( int $event_id, int $registration_id, int $activity_id ): array {
 		if ( $event_id <= 0 || (int) get_post_field( 'post_parent', $registration_id ) !== $event_id ) {
 			return array(
@@ -7925,8 +7925,8 @@ final class Registrations {
 				);
 			}
 
-			// Soltar y tomar, en el mismo turno: no existe el instante en el
-			// que esta persona se ha quedado sin ninguno de los dos.
+
+
 			update_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, $activity_id );
 
 			return array(
@@ -7938,17 +7938,17 @@ final class Registrations {
 		}
 	}
 
-	/**
-	 * Whether one more person fits in a workshop.
-	 *
-	 * Un aforo de cero significa «sin límite», que es lo que ya hacía la
-	 * pantalla de talleres y no hay razón para cambiarlo.
-	 *
-	 * @param int $event_id        Event post ID.
-	 * @param int $activity_id     Workshop.
-	 * @param int $registration_id Who is asking, so they do not count twice.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function fits( int $event_id, int $activity_id, int $registration_id = 0 ): bool {
 		$aforo = (int) get_post_meta( $activity_id, ProgrammeMetaKeys::ACTIVITY_SEATS, true );
 		if ( $aforo <= 0 ) {
@@ -7957,14 +7957,14 @@ final class Registrations {
 		return self::taken( $event_id, $activity_id, $registration_id ) < $aforo;
 	}
 
-	/**
-	 * How many seats of a workshop are taken.
-	 *
-	 * @param int $event_id   Event post ID.
-	 * @param int $activity_id Workshop.
-	 * @param int $except      Registration not to count.
-	 * @return int
-	 */
+
+
+
+
+
+
+
+
 	public static function taken( int $event_id, int $activity_id, int $except = 0 ): int {
 		$n = 0;
 		foreach ( self::all( $event_id ) as $inscripcion ) {
@@ -7978,18 +7978,18 @@ final class Registrations {
 		return $n;
 	}
 
-	/**
-	 * The workshops somebody may still choose from.
-	 *
-	 * Un taller lleno **no sale**. Que no salga no es el control: la pantalla
-	 * se pudo pintar hace cinco minutos, y la comprobación que manda es la del
-	 * candado, al guardar (ADR-0033). Quien lo tuviera ya elegido lo conserva:
-	 * llenarse no echa a nadie.
-	 *
-	 * @param int $event_id        Event post ID.
-	 * @param int $registration_id Who is choosing, 0 for a new signup.
-	 * @return array<int, array{id:int, title:string, seats:int, taken:int, mine:bool}>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function choices( int $event_id, int $registration_id = 0 ): array {
 		$mio = $registration_id > 0
 			? (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true )
@@ -8017,13 +8017,13 @@ final class Registrations {
 		return $out;
 	}
 
-	/**
-	 * Whether an activity is a workshop of this event.
-	 *
-	 * @param int $event_id    Event post ID.
-	 * @param int $activity_id Activity.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	private static function is_workshop_of( int $event_id, int $activity_id ): bool {
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			if ( (int) $taller->ID === $activity_id ) {
@@ -8033,23 +8033,23 @@ final class Registrations {
 		return false;
 	}
 
-	// ─── el candado ────────────────────────────────────────────────────────
 
-	/**
-	 * Take the lock of one event, waiting a little for it.
-	 *
-	 * **Uno por evento y no uno por taller**: un cambio toca dos talleres, y
-	 * dos candados tomados en distinto orden por dos peticiones son un abrazo
-	 * mortal que no falla hasta el día que falla (ADR-0033).
-	 *
-	 * Se toma con `add_option()`, que **falla si el nombre ya existe** porque
-	 * la columna es única en la base de datos: eso es lo que lo convierte en un
-	 * candado de verdad sin escribir SQL propio. `autoload` a `no` para no
-	 * meterlo en la carga de opciones de cada petición.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function lock( int $event_id ): bool {
 		$nombre  = self::LOCK_PREFIX . $event_id;
 		$esperar = 0;
@@ -8062,9 +8062,9 @@ final class Registrations {
 				return true;
 			}
 
-			// Un candado caducado es de una petición que murió a mitad: se
-			// retira y se vuelve a intentar. Se borra antes de reclamarlo para
-			// que quien lo consiga sea quien gane el `add_option()`.
+
+
+
 			$puesto = (int) get_option( $nombre, 0 );
 			if ( $puesto > 0 && ( time() - $puesto ) > self::LOCK_TTL ) {
 				delete_option( $nombre );
@@ -8078,24 +8078,24 @@ final class Registrations {
 		return false;
 	}
 
-	/**
-	 * Release the lock of one event.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
 	public static function unlock( int $event_id ): void {
 		delete_option( self::LOCK_PREFIX . $event_id );
 	}
 
-	/**
-	 * Validate a signup payload against the event, without writing anything.
-	 *
-	 * @param int                  $event_id Event post ID.
-	 * @param array<string, mixed> $raw      Raw submitted fields.
-	 * @param array<string, mixed> $answers  Raw submitted answers.
-	 * @return array{ok:bool, errors:string[], core:array<string, mixed>, answers:array<string, mixed>}
-	 */
+
+
+
+
+
+
+
+
 	public static function validate( int $event_id, array $raw, array $answers ): array {
 		$nucleo     = RegistrationInput::core( $raw, self::centres() );
 		$preguntas  = self::questions( $event_id );
@@ -8109,61 +8109,61 @@ final class Registrations {
 		);
 	}
 
-	/**
-	 * The catalogue of centres a person may pick from.
-	 *
-	 * El centro **nunca se teclea** (ADR-0031). El catálogo maestro no es de
-	 * este aplicativo: se pregunta por un filtro, como los participantes, y
-	 * quien lo tenga lo contesta. Sin nadie que conteste no hay catálogo y la
-	 * pantalla lo dice, en vez de dejar teclear y fabricar variantes.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function centres(): array {
-		/**
-		 * Filter the catalogue of centres.
-		 *
-		 * @param string[] $centres Centre names.
-		 */
+
+
+
+
+
 		$centros = apply_filters( 'evt_centres', array() );
 		return is_array( $centros ) ? array_values( array_filter( array_map( 'strval', $centros ) ) ) : array();
 	}
 }
 
-// ---- src/Evt/PublicFront/SignupForm.php ----
-/**
- * The public signup form of an event, and what it does when submitted.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
 
-/**
- * El formulario de inscripción: quién lo puede ver, y qué pasa al enviarlo.
- *
- * Lee la petición y decide; **no pinta nada**, que es de
- * {@see \Evt\PublicFront\Block\SignupBlock}.
- *
- * Quien se inscribe **no tiene cuenta en el sitio y no la va a tener**
- * (ADR-0032). Así que:
- *
- * - Para volver a su inscripción —a cambiar de taller— entra con un **testigo**
- *   aleatorio que viaja en el enlace, no con su correo tecleado. Un dato que
- *   cualquiera puede escribir no es una credencial.
- * - El nonce sigue puesto contra el envío cruzado, pero **no puede ser lo único**:
- *   a una persona anónima WordPress le da el mismo nonce que a cualquier otra.
- *   Lo que protege de verdad es que un envío solo puede crear su propia
- *   inscripción, y que tocar una existente exige el testigo.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class SignupForm {
 
-	/**
-	 * The field that says this POST is ours, and what it wants.
-	 */
+
+
+
 	public const FIELD_OP = 'evt_signup_op';
 
 	public const OP_SIGNUP   = 'inscribir';
@@ -8176,49 +8176,49 @@ final class SignupForm {
 	public const NONCE_ACTION = 'evt_signup';
 	public const NONCE_FIELD  = '_evt_signup_nonce';
 
-	/**
-	 * Query argument that carries the token back in a link.
-	 */
+
+
+
 	public const ARG_TOKEN = 'inscripcion';
 
-	/**
-	 * What the last submit left to say, for the block to paint.
-	 *
-	 * @var array{level:string, message:string}|null
-	 */
+
+
+
+
+
 	private static $notice = null;
 
-	/**
-	 * Hook registration.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'maybe_handle_submit' ), 20 );
 	}
 
-	/**
-	 * What the last submit left to say.
-	 *
-	 * @return array{level:string, message:string}|null
-	 */
+
+
+
+
+
 	public static function notice(): ?array {
 		return self::$notice;
 	}
 
-	/**
-	 * Take a submit, when it is ours.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function maybe_handle_submit(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- se comprueba justo debajo.
+
 		$op = isset( $_POST[ self::FIELD_OP ] ) ? sanitize_key( wp_unslash( $_POST[ self::FIELD_OP ] ) ) : '';
 		if ( self::OP_SIGNUP !== $op && self::OP_WORKSHOP !== $op ) {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- es la comprobación.
+
 		$nonce = isset( $_POST[ self::NONCE_FIELD ] ) ? sanitize_text_field( wp_unslash( $_POST[ self::NONCE_FIELD ] ) ) : '';
 		if ( '' === $nonce || false === wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) {
 			self::$notice = array(
@@ -8228,7 +8228,7 @@ final class SignupForm {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- comprobado arriba.
+
 		$raw      = (array) wp_unslash( $_POST );
 		$event_id = isset( $raw[ self::FIELD_EVENT ] ) ? (int) $raw[ self::FIELD_EVENT ] : 0;
 
@@ -8239,13 +8239,13 @@ final class SignupForm {
 		self::workshop( $event_id, $raw );
 	}
 
-	/**
-	 * A new signup.
-	 *
-	 * @param int                  $event_id Event post ID.
-	 * @param array<string, mixed> $raw      Submitted fields.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	private static function signup( int $event_id, array $raw ): void {
 		if ( ! self::is_open( $event_id ) ) {
 			self::$notice = array(
@@ -8277,8 +8277,8 @@ final class SignupForm {
 			return;
 		}
 
-		// El taller, si se pidió uno y su plazo está abierto, va por el mismo
-		// camino que un cambio: el candado y el aforo mandan igual (ADR-0033).
+
+
 		$taller = isset( $raw['evt_workshop'] ) ? (int) $raw['evt_workshop'] : 0;
 		if ( $taller > 0 && self::workshops_open( $event_id ) ) {
 			Registrations::seat( $event_id, $id, $taller );
@@ -8287,13 +8287,13 @@ final class SignupForm {
 		Shell::leave( self::link( $event_id, (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true ) ) );
 	}
 
-	/**
-	 * A workshop chosen or changed from an existing registration.
-	 *
-	 * @param int                  $event_id Event post ID.
-	 * @param array<string, mixed> $raw      Submitted fields.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	private static function workshop( int $event_id, array $raw ): void {
 		$token = isset( $raw[ self::FIELD_TOKEN ] ) ? (string) $raw[ self::FIELD_TOKEN ] : '';
 		$id    = Registrations::by_token( $event_id, $token );
@@ -8325,12 +8325,12 @@ final class SignupForm {
 		Shell::leave( self::link( $event_id, $token ) );
 	}
 
-	/**
-	 * Why a seat was refused, in Spanish.
-	 *
-	 * @param string $error Error code.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function why_no_seat( string $error ): string {
 		$textos = array(
 			'sin_plazas' => 'Ese taller se ha llenado mientras rellenaba la página. Elija otro de la lista, que está al día.',
@@ -8339,25 +8339,25 @@ final class SignupForm {
 		return $textos[ $error ] ?? 'No se ha podido guardar la elección.';
 	}
 
-	/**
-	 * The link that opens one registration again.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $token    Its token.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function link( int $event_id, string $token ): string {
 		$pagina = self::page( $event_id );
 		$url    = $pagina > 0 ? (string) get_permalink( $pagina ) : (string) get_permalink( $event_id );
 		return '' === $token ? $url : add_query_arg( self::ARG_TOKEN, rawurlencode( $token ), $url );
 	}
 
-	/**
-	 * The signup section of an event, 0 when it has none.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return int
-	 */
+
+
+
+
+
+
 	public static function page( int $event_id ): int {
 		$hijas = get_posts(
 			array(
@@ -8365,46 +8365,46 @@ final class SignupForm {
 				'post_parent'      => $event_id,
 				'post_status'      => 'publish',
 				'numberposts'      => -1,
-				'meta_key'         => \Evt\Meta\EventMetaKeys::SECTION_TYPE, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'       => 'inscripcion', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_key'         => \Evt\Meta\EventMetaKeys::SECTION_TYPE, 
+				'meta_value'       => 'inscripcion', 
 				'suppress_filters' => false,
 			)
 		);
 		return is_array( $hijas ) && array() !== $hijas ? (int) $hijas[0]->ID : 0;
 	}
 
-	/**
-	 * The registration the current request is looking at, 0 for none.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return int
-	 */
+
+
+
+
+
+
 	public static function current( int $event_id ): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- un testigo de lectura, no una escritura.
+
 		$token = isset( $_GET[ self::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_TOKEN ] ) ) : '';
 		return '' === $token ? 0 : Registrations::by_token( $event_id, $token );
 	}
 
-	/**
-	 * Whether the signup form of an event is open.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	public static function is_open( int $event_id ): bool {
 		return (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true );
 	}
 
-	/**
-	 * Whether workshops can be chosen right now.
-	 *
-	 * Tiene plazo propio, con sus fechas, porque se abre cuando quien organiza
-	 * ha cerrado el programa y eso casi nunca coincide con abrir la inscripción
-	 * (ADR-0033). Las fechas son opcionales: sin ellas manda el interruptor.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function workshops_open( int $event_id ): bool {
 		if ( ! get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ) ) {
 			return false;
@@ -8418,12 +8418,12 @@ final class SignupForm {
 	}
 }
 
-// ---- src/Evt/PublicFront/EventWorkspace.php ----
-/**
- * The workshop of one event: its sections, its data and its appearance.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -8441,201 +8441,201 @@ use Evt\PostType\SpeakerPostType;
 use Evt\PublicFront\View\EventWorkspaceView;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Shortcode [evt_event_workspace]: el taller de un evento.
- *
- * Es la pantalla del encargo. Hoy, editar una página de un evento son 139
- * campos en un solo formulario de 5.671 píxeles de alto, el mismo para la
- * portada y para cada satélite, y no hay ninguna pantalla que liste las
- * secciones de un evento ni que permita ordenarlas. Aquí eso son tres
- * pestañas internas (`?panel=secciones|datos|apariencia`) y cada una enseña
- * lo suyo y nada más.
- *
- * Todo lo que muta va por POST con su nonce propio y con
- * {@see EventAccess::can_edit()} comprobado, y vuelve a la misma pestaña con
- * el aviso: nunca se muta en GET, que es lo que hace que un enlace pegado en
- * un correo borre una sección.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventWorkspace {
 
 	public const SHORTCODE = 'evt_event_workspace';
 
-	/**
-	 * Query arg carrying the event this workshop is about.
-	 */
+
+
+
 	public const ARG_EVENT = 'evento';
 
-	/**
-	 * Query arg carrying the inner tab.
-	 */
+
+
+
 	public const ARG_PANEL = 'panel';
 
-	/**
-	 * Query arg carrying a satellite page, for the section form.
-	 */
+
+
+
 	public const ARG_SECTION = 'seccion';
 
-	/**
-	 * Query arg carrying the type of a new satellite page.
-	 */
+
+
+
 	public const ARG_TYPE = 'tipo';
 
-	/**
-	 * Query arg that asks for the trash of the sections table.
-	 */
+
+
+
 	public const ARG_TRASH = 'papelera';
 
-	/**
-	 * Tab listing the satellite pages of the event.
-	 */
+
+
+
 	public const PANEL_SECTIONS = 'secciones';
 
-	/**
-	 * Tab with what the event is: identity, dates, classification, sign-up.
-	 */
+
+
+
 	public const PANEL_SETTINGS = 'ajustes';
 
-	/**
-	 * Tab with how the event looks: colours, typefaces, images.
-	 */
+
+
+
 	public const PANEL_LOOK = 'apariencia';
 
-	/**
-	 * Tab with the speakers of the event.
-	 */
+
+
+
 	public const PANEL_SPEAKERS = 'ponentes';
 
-	/**
-	 * Tab with the programme: the parrilla of activities.
-	 */
+
+
+
 	public const PANEL_PROGRAMME = 'programa';
 
-	/**
-	 * Tab with the activities that take enrolment.
-	 */
+
+
+
 	public const PANEL_WORKSHOPS = 'talleres';
 
-	/**
-	 * Tab with who signed up.
-	 */
+
+
+
 	public const PANEL_PEOPLE = 'participantes';
 
-	/**
-	 * Tab where the signup form of the event is set up (ADR-0031, ADR-0032).
-	 */
+
+
+
 	public const PANEL_SIGNUP = 'inscripcion';
 
-	/**
-	 * Query arg carrying the speaker or activity being edited.
-	 */
+
+
+
 	public const ARG_ROW = 'ficha';
 
-	/**
-	 * Query arg carrying what was typed in the participants filter.
-	 */
+
+
+
 	public const ARG_Q = 'busca';
 
-	/**
-	 * Query arg narrowing the participants to one workshop.
-	 */
+
+
+
 	public const ARG_WORKSHOP = 'taller';
 
-	/**
-	 * Tab with the custom CSS and JavaScript of the event.
-	 *
-	 * La ve también el área, que es quien escribe el CSS de su evento; lo que
-	 * cambia es qué hay dentro. No sale para todo el mundo: {@see panels()}
-	 * solo la pone a quien tiene alguna de las dos capacidades de código.
-	 */
+
+
+
+
+
+
+
 	public const PANEL_CODE = 'codigo';
 
-	/**
-	 * Hidden field with the speaker or activity a POST is about.
-	 */
+
+
+
 	public const FIELD_ROW = 'evt_row';
 
-	/**
-	 * Hidden field naming the operation a POST asks for.
-	 */
+
+
+
 	public const FIELD_DO = 'evt_do';
 
-	/**
-	 * Hidden field with the event a POST is about.
-	 */
+
+
+
 	public const FIELD_EVENT = 'evt_event';
 
-	/**
-	 * Hidden field with the satellite page a row action is about.
-	 */
+
+
+
 	public const FIELD_SECTION = 'evt_section';
 
-	/**
-	 * Field carrying the event title in the data panel.
-	 */
+
+
+
 	public const FIELD_TITLE = 'evt_title';
 
-	/**
-	 * Field carrying the área term in the data panel.
-	 */
+
+
+
 	public const FIELD_AREA = 'evt_area_term';
 
-	/**
-	 * Field carrying the tipología term in the data panel.
-	 */
+
+
+
 	public const FIELD_TYPE = 'evt_type_term';
 
-	/**
-	 * Field carrying the curso escolar term in the data panel.
-	 */
+
+
+
 	public const FIELD_COURSE = 'evt_course_term';
 
-	/**
-	 * Operation that closes an event for good: the «histórico» mark.
-	 */
+
+
+
 	public const OP_ARCHIVE = 'archive';
 
-	/**
-	 * Operation that opens it again.
-	 */
+
+
+
 	public const OP_UNARCHIVE = 'unarchive';
 
-	/**
-	 * Operations that act on one row of the sections table.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
 	private const ROW_OPS = array( 'up', 'down', 'publish', 'unpublish', 'delete', 'restore' );
 
-	/**
-	 * Operation that saves one speaker.
-	 */
+
+
+
 	public const OP_SPEAKER = 'speaker';
 
-	/**
-	 * Operation that saves one activity.
-	 */
+
+
+
 	public const OP_ACTIVITY = 'activity';
 
-	/**
-	 * Operation that exports the participants as CSV.
-	 */
+
+
+
 	public const OP_EXPORT = 'export';
 
-	/**
-	 * Operations that act on one speaker or activity.
-	 *
-	 * Van aparte de `ROW_OPS` porque no son de la tabla de secciones y porque
-	 * la fila que mueven viene en otro campo: `FIELD_ROW`, no `FIELD_SECTION`.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
+
+
+
 	private const PROGRAMME_OPS = array( 'sp_up', 'sp_down', 'row_delete', 'row_restore' );
 
-	/**
-	 * Every operation this screen accepts by POST.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
 	private const OPS = array(
 		self::PANEL_SETTINGS,
 		self::PANEL_SIGNUP,
@@ -8658,11 +8658,11 @@ final class EventWorkspace {
 		'row_restore',
 	);
 
-	/**
-	 * What each row action says when it worked.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
 	private const ROW_DONE = array(
 		'up'        => 'Cambiado el orden de las secciones.',
 		'down'      => 'Cambiado el orden de las secciones.',
@@ -8672,11 +8672,11 @@ final class EventWorkspace {
 		'unpublish' => 'Sección despublicada: vuelve a borrador y desaparece del menú.',
 	);
 
-	/**
-	 * Image types the appearance panel accepts.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
 	private const IMAGE_MIMES = array(
 		'jpg|jpeg|jpe' => 'image/jpeg',
 		'png'          => 'image/png',
@@ -8684,39 +8684,39 @@ final class EventWorkspace {
 		'gif'          => 'image/gif',
 	);
 
-	/**
-	 * Register the shortcode and the POST handler.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
-		// Después de que el CPT y sus capacidades estén registrados (init 10 y
-		// 11), y antes de que se pinte nada: aquí todavía se puede redirigir.
+
+
 		add_action( 'init', array( self::class, 'handle' ), 20 );
-		// «Tomar posesión» sale de las dos pantallas que se bloquean —el taller
-		// y el formulario de una sección—, así que se engancha una sola vez y
-		// aquí, donde ya cuelga el resto de las mutaciones del evento.
+
+
+
 		add_action( 'init', array( EditLock::class, 'handle' ), 20 );
-		// El editor de código se pide aquí y no al pintar: el shortcode corre
-		// dentro de `the_content`, cuando `wp_head()` ya se escribió, y la hoja
-		// de CodeMirror encolada entonces no llegaría a imprimirse.
+
+
+
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_code_editor' ), 20 );
 	}
 
-	/**
-	 * Load CodeMirror when this request really is the «Código» tab.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function enqueue_code_editor(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- lectura de la pestaña; mutar lleva su nonce.
+
 		if ( 'event' !== Shell::current_section()
 			|| self::PANEL_CODE !== sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_PANEL ] ?? '' ) ) ) ) {
 			return;
 		}
 		$event_id = absint( wp_unslash( $_GET[ self::ARG_EVENT ] ?? 0 ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
 
 		$user_id = get_current_user_id();
 		if ( EventAccess::can_edit_custom_css( $user_id, $event_id ) ) {
@@ -8727,20 +8727,20 @@ final class EventWorkspace {
 		}
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * Direcciones
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * URL of the workshop of one event, on one of its tabs.
-	 *
-	 * @param int                  $event_id Event post ID.
-	 * @param string               $panel    Tab slug; empty for the default one.
-	 * @param array<string, mixed> $args     Extra query arguments.
-	 * @return string Empty when there is no event or no page for the screen.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function url( int $event_id, string $panel = '', array $args = array() ): string {
 		if ( $event_id <= 0 ) {
 			return '';
@@ -8752,18 +8752,18 @@ final class EventWorkspace {
 		return Shell::url( 'event', $args );
 	}
 
-	/**
-	 * The three inner tabs, with where each one goes.
-	 *
-	 * La de «Código» no está para todo el mundo: quien no puede escribir ni el
-	 * CSS ni el JavaScript no la ve, y como {@see fill()} decide la pestaña
-	 * activa mirando esta lista, tampoco la abre escribiendo la dirección a
-	 * mano —cae en «Secciones»—.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @param int $user_id  Who is looking; 0 leaves out anything conditional.
-	 * @return array<string, array{label:string, url:string}>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function panels( int $event_id, int $user_id = 0 ): array {
 		$rotulos = array(
 			self::PANEL_SECTIONS  => 'Páginas',
@@ -8779,10 +8779,10 @@ final class EventWorkspace {
 			$rotulos[ self::PANEL_CODE ] = 'Código';
 		}
 
-		// El recuento va en la pestaña porque es lo que contesta de un vistazo
-		// «¿le falta algo a este evento?», que es la pregunta con la que se
-		// abre esta pantalla. Cero se pinta igual que cualquier otro número:
-		// esconderlo dejaría la pestaña indistinguible de una sin datos.
+
+
+
+
 		$cuentas = self::counts( $event_id );
 
 		$out = array();
@@ -8796,12 +8796,12 @@ final class EventWorkspace {
 		return $out;
 	}
 
-	/**
-	 * How many things each tab has, for the little number beside its name.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return array<string, int>
-	 */
+
+
+
+
+
+
 	private static function counts( int $event_id ): array {
 		if ( $event_id <= 0 ) {
 			return array();
@@ -8816,47 +8816,47 @@ final class EventWorkspace {
 		);
 	}
 
-	/**
-	 * Name of the nonce field of one operation.
-	 *
-	 * Un nonce por acción y, en las acciones de fila, por fila: así el
-	 * identificador que escribe `wp_nonce_field()` no se repite en la página
-	 * y cada botón lleva el suyo.
-	 *
-	 * @param string $op         Operation.
-	 * @param int    $section_id Satellite page, 0 outside the row actions.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function nonce_name( string $op, int $section_id = 0 ): string {
 		return 'evt_nonce_' . $op . '_' . $section_id;
 	}
 
-	/**
-	 * Nonce action of one operation.
-	 *
-	 * @param string $op Operation.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function nonce_action( string $op ): string {
 		return 'evt_ws_' . $op;
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * Las mutaciones
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * Apply what a POST asked for, then go back to the same tab.
-	 *
-	 * Se mira `$_POST` y nada más: un `GET` no lo rellena, así que no hay
-	 * forma de disparar esto desde un enlace pegado en un correo.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function handle(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- se comprueba en verify(), en cuanto se sabe qué acción es.
+
 		$op = sanitize_key( wp_unslash( (string) ( $_POST[ self::FIELD_DO ] ?? '' ) ) );
 		if ( ! in_array( $op, self::OPS, true ) ) {
 			return;
@@ -8864,12 +8864,12 @@ final class EventWorkspace {
 		$event_id   = absint( wp_unslash( $_POST[ self::FIELD_EVENT ] ?? 0 ) );
 		$section_id = absint( wp_unslash( $_POST[ self::FIELD_SECTION ] ?? 0 ) );
 		$row_id     = absint( wp_unslash( $_POST[ self::FIELD_ROW ] ?? 0 ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
 
 		$fila     = in_array( $op, self::ROW_OPS, true );
 		$programa = in_array( $op, self::PROGRAMME_OPS, true );
-		// El nonce de una acción de fila lleva dentro la fila, para que dos
-		// botones de la misma pantalla no compartan identificador.
+
+
 		$nonce_row = 0;
 		if ( $fila ) {
 			$nonce_row = $section_id;
@@ -8882,10 +8882,10 @@ final class EventWorkspace {
 
 		$user_id = get_current_user_id();
 
-		// Crear un evento va lo primero, antes de todo lo que da por hecho que
-		// el evento existe: sin esto, el botón «Crear evento» del listado lleva
-		// a una pantalla que dice «elija un evento en la lista», que es la
-		// pescadilla mordiéndose la cola.
+
+
+
+
 		if ( self::PANEL_SETTINGS === $op && $event_id <= 0 ) {
 			self::create_event( $user_id );
 			return;
@@ -8896,18 +8896,18 @@ final class EventWorkspace {
 			$destino = Shell::back_url();
 		}
 
-		// Lo primero de todo, antes de escribir una sola meta, un término o un
-		// estado: si otra persona tiene abierto el evento, este envío trae la
-		// pantalla de antes y pisaría lo que esté escribiendo. Responde 409 y
-		// no vuelve. Vale también para la marca de histórico, que es una
-		// escritura más.
+
+
+
+
+
 		EditLock::require_available( $event_id );
 
-		// Antes de la comprobación de edición y no después, y esto es lo que
-		// evita que la comprobación se muerda la cola: marcar como histórico
-		// es lo último que hace un área con su evento, y en cuanto la marca
-		// está puesta `can_edit()` dice que no. Si esto fuera detrás, marcar
-		// sería imposible y desmarcar también.
+
+
+
+
+
 		if ( self::OP_ARCHIVE === $op || self::OP_UNARCHIVE === $op ) {
 			self::save_archived( $op, $event_id, $user_id, $destino );
 			return;
@@ -8954,12 +8954,12 @@ final class EventWorkspace {
 		self::save_look( $event_id, $destino );
 	}
 
-	/**
-	 * Which tab an operation goes back to.
-	 *
-	 * @param string $op Operation.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function panel_of( string $op ): string {
 		if ( in_array( $op, self::ROW_OPS, true ) ) {
 			return self::PANEL_SECTIONS;
@@ -8976,39 +8976,39 @@ final class EventWorkspace {
 		if ( self::OP_EXPORT === $op ) {
 			return self::PANEL_PEOPLE;
 		}
-		// Borrar y restaurar una ficha vuelven a donde se pulsó, que puede ser
-		// Ponentes o Programa: el panel viaja en el propio envío.
+
+
 		if ( 'row_delete' === $op || 'row_restore' === $op ) {
 			return self::asked_panel();
 		}
 		return $op;
 	}
 
-	/**
-	 * The tab a row action was pressed on.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function asked_panel(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- se comprueba en verify(); esto solo elige a dónde volver.
+
 		$panel = sanitize_key( wp_unslash( (string) ( $_POST[ self::ARG_PANEL ] ?? '' ) ) );
 		return in_array( $panel, array( self::PANEL_SPEAKERS, self::PANEL_PROGRAMME, self::PANEL_WORKSHOPS ), true )
 			? $panel
 			: self::PANEL_SPEAKERS;
 	}
 
-	/**
-	 * Mark or unmark the event as «histórico».
-	 *
-	 * Las dos mitades no piden lo mismo, y esa es la regla: marcar lo hace el
-	 * área que organiza el evento; desmarcar, solo administración.
-	 *
-	 * @param string $op       archive | unarchive.
-	 * @param int    $event_id Event post ID.
-	 * @param int    $user_id  Who is asking.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function save_archived( string $op, int $event_id, int $user_id, string $destino ): void {
 		$marcar = self::OP_ARCHIVE === $op;
 		$puede  = $marcar
@@ -9033,9 +9033,9 @@ final class EventWorkspace {
 
 		update_post_meta( $event_id, EventMetaKeys::ARCHIVED, $marcar );
 
-		// Cerrado el evento, aquí ya no queda nada que editar: se suelta el
-		// bloqueo —solo el propio— para que administración pueda entrar a
-		// corregir una errata sin esperar a que caduque.
+
+
+
 		if ( $marcar ) {
 			EditLock::release( $event_id );
 		}
@@ -9049,30 +9049,30 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Whether the POST carries the nonce of this very operation.
-	 *
-	 * @param string $op         Operation.
-	 * @param int    $section_id Satellite page, for row actions.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
 	private static function verify( string $op, int $section_id ): bool {
 		$campo = self::nonce_name( $op, $section_id );
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- esto es la comprobación del nonce.
+
 		$valor = sanitize_text_field( wp_unslash( (string) ( $_POST[ $campo ] ?? '' ) ) );
 		return false !== wp_verify_nonce( $valor, self::nonce_action( $op ) );
 	}
 
-	/**
-	 * One of the row actions of the sections table.
-	 *
-	 * @param string $op         up | down | publish | unpublish | delete | restore.
-	 * @param int    $event_id   Event post ID.
-	 * @param int    $section_id Satellite page post ID.
-	 * @param int    $user_id    Who is asking.
-	 * @param string $destino    Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function run_row( string $op, int $event_id, int $section_id, int $user_id, string $destino ): void {
 		if ( EventPostType::POST_TYPE !== get_post_type( $section_id )
 			|| (int) get_post_field( 'post_parent', $section_id ) !== $event_id ) {
@@ -9082,16 +9082,16 @@ final class EventWorkspace {
 		}
 
 		if ( 'delete' === $op ) {
-			// A la papelera y no borrada del todo: una sección con contenido
-			// escrito se restaura desde «Papelera» si el clic fue un error. El
-			// borrado definitivo no lo hace el aplicativo: es del escritorio.
+
+
+
 			wp_trash_post( $section_id );
 		} elseif ( 'restore' === $op ) {
-			// Vuelve en borrador, y eso es a propósito: es lo que hace
-			// `wp_untrash_post()` desde WordPress 5.6 y es lo que aquí se
-			// quiere. Una sección que se borró por error no tiene por qué
-			// reaparecer publicada en el menú del evento sin que nadie la mire;
-			// publicarla es un clic más, en su botón de siempre.
+
+
+
+
+
 			wp_untrash_post( $section_id );
 		} elseif ( 'up' === $op || 'down' === $op ) {
 			self::reorder( $event_id, $section_id, 'up' === $op ? -1 : 1 );
@@ -9112,19 +9112,19 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Move one satellite page one place up or down.
-	 *
-	 * Se renumera la lista entera en vez de intercambiar dos `menu_order`: las
-	 * páginas heredadas del sistema anterior traen muchas el mismo número —o
-	 * ninguno—, así que un intercambio dejaría el orden igual que estaba. Son
-	 * un puñado de filas por evento.
-	 *
-	 * @param int $event_id   Event post ID.
-	 * @param int $section_id Satellite page post ID.
-	 * @param int $delta      -1 to move up, 1 to move down.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function reorder( int $event_id, int $section_id, int $delta ): void {
 		$ids   = array_map( 'intval', wp_list_pluck( self::children( $event_id ), 'ID' ) );
 		$desde = array_search( $section_id, $ids, true );
@@ -9150,15 +9150,15 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * One of the row actions of the speakers table or the parrilla.
-	 *
-	 * @param string $op       sp_up | sp_down | row_delete | row_restore.
-	 * @param int    $event_id Event post ID.
-	 * @param int    $row_id   Speaker or activity post ID.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
 	private static function run_programme_row( string $op, int $event_id, int $row_id, string $destino ): void {
 		$hecho = false;
 		if ( 'sp_up' === $op || 'sp_down' === $op ) {
@@ -9185,14 +9185,14 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Save one speaker of this event.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param int    $row_id   Speaker post ID; 0 to create.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	private static function save_speaker( int $event_id, int $row_id, string $destino ): void {
 		$check = ActivityInput::speaker(
 			array(
@@ -9220,16 +9220,16 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Save one activity of this event.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param int    $row_id   Activity post ID; 0 to create.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	private static function save_activity( int $event_id, int $row_id, string $destino ): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce se comprobó en handle() y cada elemento pasa por absint() en la línea siguiente.
+
 		$ponentes = isset( $_POST['evt_ac_speakers'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['evt_ac_speakers'] ) ) : array();
 
 		$check = ActivityInput::activity(
@@ -9263,15 +9263,15 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Attach, replace or remove the photo of a speaker.
-	 *
-	 * Se reutiliza el mismo camino que la portada del evento: un identificador
-	 * de la biblioteca, comprobado que es una imagen.
-	 *
-	 * @param int $speaker_id Speaker post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
 	private static function save_photo( int $speaker_id ): void {
 		$pedido = self::field( 'evt_sp_photo' );
 		if ( '' === $pedido ) {
@@ -9287,16 +9287,16 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * Send the participants of this event down as a CSV file.
-	 *
-	 * Va por POST y con nonce como cualquier otra acción, aunque no escriba
-	 * nada: un enlace en GET que descarga la lista entera de personas
-	 * inscritas es justo lo que no se quiere que se pueda pegar en un correo.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function export_participants( int $event_id ): void {
 		$filas = Participants::filter(
 			Participants::rows( $event_id ),
@@ -9307,34 +9307,34 @@ final class EventWorkspace {
 		$cuerpo = Participants::csv( $filas );
 		$nombre = Participants::filename( (string) get_post_field( 'post_title', $event_id ) );
 
-		// `Shell::leave()` no vale aquí: esto no redirige, escribe el fichero.
+
 		if ( ! headers_sent() ) {
 			header( 'Content-Type: text/csv; charset=utf-8' );
 			header( 'Content-Disposition: attachment; filename="' . $nombre . '"' );
 			header( 'Content-Length: ' . strlen( $cuerpo ) );
 			header( 'Cache-Control: no-store, no-cache, must-revalidate' );
 		}
-		echo $cuerpo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es un CSV, no HTML; Participants::csv() lo entrecomilla y desactiva las fórmulas.
-		// Sin URL: esto no redirige, ya ha escrito el fichero.
+		echo $cuerpo; 
+
 		Shell::leave();
 	}
 
-	/**
-	 * Create a brand new event from the «Datos» form, then open its workshop.
-	 *
-	 * La capacidad que se pide es la misma con la que el listado decide pintar
-	 * el botón: `edit_evt_events`. No se pregunta por `can_edit()` porque
-	 * todavía no hay nada que editar, y el acotado por área llega en cuanto el
-	 * evento existe — {@see EventAccess::stamp_area()} le pone el área de quien
-	 * lo crea si no eligió ninguna.
-	 *
-	 * Nace en **borrador**: un evento recién creado no tiene programa ni
-	 * ponentes, y publicarlo por el mero hecho de crearlo es publicar una
-	 * página vacía.
-	 *
-	 * @param int $user_id Who is asking.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function create_event( int $user_id ): void {
 		$volver = Shell::url( 'events' );
 
@@ -9354,9 +9354,9 @@ final class EventWorkspace {
 
 		$revisado = EventInput::validate( $crudo );
 		if ( ! $revisado['ok'] ) {
-			// Lo tecleado vuelve con el aviso, igual que al editar: perder el
-			// formulario entero por una fecha mal escrita es la forma más
-			// rápida de que no se vuelva a intentar.
+
+
+
 			self::set_flash( 'error', self::why( $revisado['errors'] ), self::submitted_values( $crudo ) );
 			Shell::leave( self::url( 0, self::PANEL_SETTINGS ) );
 			return;
@@ -9387,17 +9387,17 @@ final class EventWorkspace {
 		Shell::leave( self::url( $id, self::PANEL_SECTIONS ) );
 	}
 
-	/**
-	 * Everything the «Datos» form sent, in the shape the flash and save use.
-	 *
-	 * @param array<string, mixed> $crudo What EventInput was given.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
 	private static function submitted_values( array $crudo ): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
+
 		$intro = wp_kses_post( wp_unslash( (string) ( $_POST[ EventMetaKeys::INTRO ] ?? '' ) ) );
 		$show  = empty( $_POST[ EventMetaKeys::SIGNUP_SHOW ] ) ? '' : '1';
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
 
 		return array(
 			self::FIELD_TITLE             => (string) $crudo['title'],
@@ -9417,14 +9417,14 @@ final class EventWorkspace {
 		);
 	}
 
-	/**
-	 * Save the «Datos» panel.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param int    $user_id  Who is asking.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	private static function save_data( int $event_id, int $user_id, string $destino ): void {
 		$crudo = array(
 			'title'      => self::field( self::FIELD_TITLE ),
@@ -9437,9 +9437,9 @@ final class EventWorkspace {
 		$valores  = self::submitted_values( $crudo );
 		$revisado = EventInput::validate( $crudo );
 		if ( ! $revisado['ok'] ) {
-			// Se devuelve lo tecleado junto al aviso: perder catorce campos
-			// por una fecha mal escrita es la forma más rápida de que no se
-			// vuelva a intentar.
+
+
+
 			self::set_flash( 'error', self::why( $revisado['errors'] ), $valores );
 			Shell::leave( $destino );
 			return;
@@ -9458,17 +9458,17 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Write the meta of the data panel.
-	 *
-	 * Los sanitize de `register_post_meta()` corren dentro de cada
-	 * `update_post_meta()`: aquí no se vuelve a limpiar nada.
-	 *
-	 * @param int                   $event_id Event post ID.
-	 * @param array<string, string> $valores  What the form submitted.
-	 * @param array<string, mixed>  $limpio   What EventInput normalised.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function save_meta( int $event_id, array $valores, array $limpio ): void {
 		$meta = array(
 			EventMetaKeys::TAGLINE        => $valores[ EventMetaKeys::TAGLINE ],
@@ -9487,14 +9487,14 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * File the event under its área, its tipología and its curso escolar.
-	 *
-	 * @param int                   $event_id Event post ID.
-	 * @param int                   $user_id  Who is asking.
-	 * @param array<string, string> $valores  What the form submitted.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	private static function save_terms( int $event_id, int $user_id, array $valores ): void {
 		$area_id = (int) $valores[ self::FIELD_AREA ];
 		$mapa    = array(
@@ -9509,60 +9509,60 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * Whether this person may file the event under that área.
-	 *
-	 * Quien no coordina solo puede ponerle un área de las suyas: si no, el
-	 * desplegable es la forma de regalarle el evento a otra área —y de
-	 * perderlo de vista para siempre— con dos clics.
-	 *
-	 * @param int $user_id Who is asking.
-	 * @param int $area_id Term ID of evt_area.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function may_set_area( int $user_id, int $area_id ): bool {
 		return EventAccess::can_edit_all_areas( $user_id )
 			|| ( $area_id > 0 && in_array( $area_id, EventAccess::user_areas( $user_id ), true ) );
 	}
 
-	/**
-	 * Whether this person may write any of the two code fields of the event.
-	 *
-	 * Es la condición de que exista la pestaña «Código». Con «alguna» basta, y
-	 * es el caso corriente y no el raro: el área escribe el CSS de su evento y
-	 * nunca el JavaScript, así que esconder la pestaña entera por eso la
-	 * dejaría sin hoja de estilos. Cada campo se vuelve a comprobar por su
-	 * cuenta, al pintarlo y al guardarlo.
-	 *
-	 * @param int $user_id  Who is asking.
-	 * @param int $event_id Event post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function may_edit_code( int $user_id, int $event_id ): bool {
 		return EventAccess::can_edit_custom_css( $user_id, $event_id )
 			|| EventAccess::can_edit_custom_js( $user_id, $event_id );
 	}
 
-	/**
-	 * Save the «Código» panel: one field, one capability, one check.
-	 *
-	 * No se mira si la pestaña se pintó: se comprueba aquí otra vez y campo a
-	 * campo, que es lo único que vale contra un POST escrito a mano. Quien
-	 * puede el CSS y no el JavaScript guarda el CSS, y el JavaScript que
-	 * viniera en el envío se ignora y se dice —no se guarda a medias en
-	 * silencio—.
-	 *
-	 * Los dos valores van en crudo: el `sanitize_callback` que
-	 * {@see \Evt\Meta\EventMetaRegistration} registró corre dentro de
-	 * `update_post_meta()` y es el que quita la etiqueta del CSS y desactiva la
-	 * fuga por `</script` del JavaScript. Limpiarlos aquí con
-	 * `sanitize_text_field()` los rompería: convertiría cada `>` en `&gt;`.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param int    $user_id  Who is asking.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function save_code( int $event_id, int $user_id, string $destino ): void {
 		$permitido = array(
 			EventMetaKeys::CUSTOM_CSS => EventAccess::can_edit_custom_css( $user_id, $event_id ),
@@ -9581,9 +9581,9 @@ final class EventWorkspace {
 
 		$ignorados = array();
 		foreach ( $permitido as $clave => $puede ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
+
 			if ( ! isset( $_POST[ $clave ] ) ) {
-				// El campo no vino: la ausencia no es una orden de vaciar.
+
 				continue;
 			}
 			if ( ! $puede ) {
@@ -9607,25 +9607,25 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * One submitted field, untouched: code is code.
-	 *
-	 * @param string $nombre Field name.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function raw( string $nombre ): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(), y de limpiar se encarga el sanitize_callback de la meta.
+
 		$valor = wp_unslash( $_POST[ $nombre ] ?? '' );
 		return is_string( $valor ) ? $valor : '';
 	}
 
-	/**
-	 * Save the «Apariencia» panel.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	private static function save_look( int $event_id, string $destino ): void {
 		$listas = array(
 			EventMetaKeys::TITLE_FONT  => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
@@ -9640,8 +9640,8 @@ final class EventWorkspace {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
 
-		// La imagen destacada no es una meta nuestra sino el `thumbnail` de
-		// WordPress: eso dice la clave vacía.
+
+
 		$subidas = array(
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
@@ -9657,25 +9657,25 @@ final class EventWorkspace {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Replace or clear one of the images of the event.
-	 *
-	 * Tres caminos, en este orden: un fichero recién subido gana; si no, la
-	 * casilla de quitar del respaldo sin guion; y si no, el identificador de
-	 * adjunto que trae el campo oculto que rellena el selector de medios. De
-	 * ese identificador no se fía nadie —lo escribe el navegador—: si no es
-	 * un adjunto de imagen legible, no se toca lo que ya había y se avisa.
-	 * Cuando el campo ni siquiera viene, tampoco se toca nada: la ausencia no
-	 * es una orden de borrar.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $campo    Field prefix, e.g. `evt_logo`.
-	 * @param string $meta_key Where the attachment ID lives; empty = thumbnail.
-	 * @return bool False when what was sent could not be stored.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function save_image( int $event_id, string $campo, string $meta_key ): bool {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
-		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- del fichero se encarga media_handle_upload(); del identificador, absint().
+
+
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
 			$subido = self::upload( $campo . '_file', $event_id );
 			if ( $subido <= 0 ) {
@@ -9694,7 +9694,7 @@ final class EventWorkspace {
 			return true;
 		}
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
 
 		if ( $elegido > 0 && ! self::is_image_attachment( $elegido ) ) {
 			return false;
@@ -9704,18 +9704,18 @@ final class EventWorkspace {
 		return true;
 	}
 
-	/**
-	 * Point one image of the event at an attachment, or at nothing.
-	 *
-	 * Se quita siempre y se vuelve a poner si hay algo, que deja quitar y
-	 * cambiar en el mismo camino. Con 0, `set_post_thumbnail()` no hace nada:
-	 * es justo lo que se quiere después de haber quitado la destacada.
-	 *
-	 * @param int    $event_id      Event post ID.
-	 * @param string $meta_key      Where the attachment ID lives; empty = thumbnail.
-	 * @param int    $attachment_id Attachment ID; 0 to clear it.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function put_image( int $event_id, string $meta_key, int $attachment_id ): void {
 		if ( '' === $meta_key ) {
 			delete_post_thumbnail( $event_id );
@@ -9729,30 +9729,30 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * Whether that ID really is an image in the media library, readable here.
-	 *
-	 * El campo oculto lo escribe el navegador, así que lo escribe cualquiera:
-	 * sin esta comprobación, un número tecleado a mano pondría de cartel del
-	 * evento un PDF, un borrador de otra persona o una página cualquiera. Que
-	 * quien lo manda pueda editar ESTE evento ya lo comprobó {@see handle()}.
-	 *
-	 * @param int $attachment_id What the hidden field carried.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function is_image_attachment( int $attachment_id ): bool {
 		return 'attachment' === get_post_type( $attachment_id )
 			&& wp_attachment_is_image( $attachment_id )
 			&& current_user_can( 'read_post', $attachment_id );
 	}
 
-	/**
-	 * Put an uploaded image in the media library, attached to the event.
-	 *
-	 * @param string $campo    Field name.
-	 * @param int    $event_id Event post ID.
-	 * @return int Attachment ID, or 0 when it could not be stored.
-	 */
+
+
+
+
+
+
+
 	private static function upload( string $campo, int $event_id ): int {
 		if ( ! current_user_can( 'upload_files' ) ) {
 			return 0;
@@ -9766,8 +9766,8 @@ final class EventWorkspace {
 			$event_id,
 			array(),
 			array(
-				// El formulario ya trae comprobado su nonce; la comprobación
-				// propia de `wp_handle_upload` es la del escritorio.
+
+
 				'test_form' => false,
 				'mimes'     => self::IMAGE_MIMES,
 			)
@@ -9775,12 +9775,12 @@ final class EventWorkspace {
 		return is_wp_error( $id ) ? 0 : (int) $id;
 	}
 
-	/**
-	 * Why the data panel could not be saved, in words.
-	 *
-	 * @param string[] $errores What EventInput::validate() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function why( array $errores ): string {
 		$textos = array(
 			'title'      => 'El evento necesita un título.',
@@ -9796,24 +9796,24 @@ final class EventWorkspace {
 		return 'Revise los datos del evento: hay algo que no se puede guardar.';
 	}
 
-	/**
-	 * One submitted text field, trimmed and sanitised.
-	 *
-	 * @param string $nombre Field name.
-	 * @return string
-	 */
-	/**
-	 * What the signup tab shows: the questions and the two windows.
-	 *
-	 * @param array<string, mixed> $m        Model so far.
-	 * @param int                  $event_id Event post ID.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function fill_signup( array $m, int $event_id ): array {
 		$m['questions'] = Registrations::questions( $event_id );
-		// Con gente ya inscrita, a una pregunta se le puede cambiar el rótulo y
-		// añadir opciones, pero no el tipo ni quitar una opción (ADR-0032). La
-		// pantalla lo dice antes de que alguien lo intente.
+
+
+
 		$m['q_locked'] = Registrations::has_any( $event_id );
 		$m['signup']   = array(
 			'open'            => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ),
@@ -9828,13 +9828,13 @@ final class EventWorkspace {
 		return $m;
 	}
 
-	/**
-	 * Save the signup settings and the question list of the event.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $destino  Where to go back to.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	private static function save_signup( int $event_id, string $destino ): void {
 		$abierta  = self::field( 'evt_signup_open' );
 		$talleres = self::field( 'evt_workshop_open' );
@@ -9866,28 +9866,28 @@ final class EventWorkspace {
 			return;
 		}
 
-		// `wp_slash()`: `update_post_meta()` desescapa, y un rótulo con tilde o
-		// con comillas llegaría roto al JSON guardado.
+
+
 		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_QUESTIONS, wp_slash( (string) wp_json_encode( $ahora ) ) );
 		self::set_flash( 'ok', 'Inscripción del evento guardada.' );
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * Store the two consent texts, bumping the version when they change.
-	 *
-	 * Cambiarlos crea una versión nueva y **no reescribe** la que ya aceptó
-	 * nadie (ADR-0020): por eso la versión sube aquí y la inscripción guarda la
-	 * suya al crearse.
-	 *
-	 * @param int $event_id Event post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function save_consent( int $event_id ): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
+
 		$privacidad = wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_privacy'] ?? '' ) ) );
 		$imagen     = wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_image'] ?? '' ) ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
 
 		$antes_privacidad = (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_PRIVACY, true );
 		$antes_imagen     = (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_IMAGE, true );
@@ -9905,24 +9905,24 @@ final class EventWorkspace {
 		}
 	}
 
-	/**
-	 * The question rows as they come from the form.
-	 *
-	 * Campos paralelos, sin JavaScript: una fila por índice. La que llegue sin
-	 * rótulo se cae sola en {@see SignupQuestions::read()}, y es lo que hace
-	 * que la fila en blanco del final sirva para añadir una pregunta y también
-	 * para no añadir ninguna.
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function submitted_questions(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); son listas y cada elemento se sanea en el bucle de abajo.
+
 		$ids       = (array) wp_unslash( $_POST['evt_q_id'] ?? array() );
 		$rotulos   = (array) wp_unslash( $_POST['evt_q_label'] ?? array() );
 		$tipos     = (array) wp_unslash( $_POST['evt_q_type'] ?? array() );
 		$opciones  = (array) wp_unslash( $_POST['evt_q_options'] ?? array() );
 		$obligadas = (array) wp_unslash( $_POST['evt_q_required'] ?? array() );
-		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
 
 		$out = array();
 		foreach ( $rotulos as $i => $rotulo ) {
@@ -9937,40 +9937,40 @@ final class EventWorkspace {
 		return $out;
 	}
 
-	/**
-	 * One submitted field, trimmed and sanitised.
-	 *
-	 * @param string $nombre Field name.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function field( string $nombre ): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle() antes de llamar aquí.
+
 		return trim( sanitize_text_field( wp_unslash( (string) ( $_POST[ $nombre ] ?? '' ) ) ) );
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * El aviso que sobrevive a la redirección
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * Where the notice of the last action waits, per person.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function flash_key(): string {
 		return 'evt_ws_flash_' . get_current_user_id();
 	}
 
-	/**
-	 * Leave a notice —and what was typed— for the screen we go back to.
-	 *
-	 * @param string                $tipo    ok | aviso | error.
-	 * @param string                $texto   What to say.
-	 * @param array<string, string> $valores What was submitted, to repaint it.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	private static function set_flash( string $tipo, string $texto, array $valores = array() ): void {
 		set_transient(
 			self::flash_key(),
@@ -9983,11 +9983,11 @@ final class EventWorkspace {
 		);
 	}
 
-	/**
-	 * Read the notice of the last action, and forget it.
-	 *
-	 * @return array{tipo:string, texto:string, values:array<string, string>}
-	 */
+
+
+
+
+
 	private static function take_flash(): array {
 		$vacio = array(
 			'tipo'   => '',
@@ -9999,23 +9999,23 @@ final class EventWorkspace {
 		return is_array( $flash ) ? array_merge( $vacio, array_intersect_key( $flash, $vacio ) ) : $vacio;
 	}
 
-	/*
-	 * -----------------------------------------------------------------------
-	 * El modelo
-	 * -----------------------------------------------------------------------
-	 */
 
-	/**
-	 * The satellite pages of an event, in the order they are shown.
-	 *
-	 * La papelera se pide aparte y nunca se mezcla: el listado normal no enseña
-	 * lo que se envió a ella, que es justo lo que hace que enviar algo a la
-	 * papelera se note.
-	 *
-	 * @param int  $event_id Event post ID.
-	 * @param bool $papelera True for what was sent to the trash instead.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function children( int $event_id, bool $papelera = false ): array {
 		if ( $event_id <= 0 ) {
 			return array();
@@ -10029,18 +10029,18 @@ final class EventWorkspace {
 					'menu_order' => 'ASC',
 					'title'      => 'ASC',
 				),
-				// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_numberposts -- un evento con más de 200 páginas satélite no existe, y la tabla no se pagina a propósito.
+
 				'numberposts'      => 200,
 				'suppress_filters' => false,
 			)
 		);
 	}
 
-	/**
-	 * Everything the workshop decides before painting anything.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	public static function model(): array {
 		$m = self::blank();
 
@@ -10049,17 +10049,17 @@ final class EventWorkspace {
 			return $m;
 		}
 
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- lectura del evento y de la pestaña; mutar lleva su nonce.
+
 		$event_id = absint( wp_unslash( $_GET[ self::ARG_EVENT ] ?? 0 ) );
 		$pedido   = sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_PANEL ] ?? '' ) ) );
-		// La papelera es una vista de la pestaña de secciones, no una pestaña
-		// más: se pide con `?papelera=1` y se lee aquí, con el resto de la URL.
-		$m['trash'] = '' !== sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_TRASH ] ?? '' ) ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		// Sin evento en la dirección, esto es el alta: es a donde lleva «Crear
-		// evento» del listado. La capacidad es la misma con la que ese botón se
-		// pinta, así que quien llegue aquí a mano y no pueda crear lee por qué.
+
+		$m['trash'] = '' !== sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_TRASH ] ?? '' ) ) );
+
+
+
+
+
 		if ( $event_id <= 0 ) {
 			return self::blank_event( $m );
 		}
@@ -10073,9 +10073,9 @@ final class EventWorkspace {
 		}
 
 		$user_id = get_current_user_id();
-		// `can_open()` y no `can_edit()`: un evento marcado como histórico se
-		// sigue abriendo, en solo lectura. Lo que no se puede es guardar, y de
-		// eso se ocupa `handle()`, que sí pregunta por `can_edit()`.
+
+
+
 		if ( ! EventAccess::can_open( $user_id, $event_id ) ) {
 			$m['aviso']      = EventAccess::why_not_editable( $user_id, $event_id );
 			$m['aviso_tipo'] = 'error';
@@ -10085,17 +10085,17 @@ final class EventWorkspace {
 		return self::fill( $m, $evento, $user_id, $pedido );
 	}
 
-	/**
-	 * The model of the «create an event» screen.
-	 *
-	 * Es el taller con una sola pestaña y sin nada que colgar de un evento que
-	 * todavía no existe: lo único que hay que rellenar para que exista son el
-	 * título y la fecha de inicio ({@see EventInput}), y lo demás se añade
-	 * después, con el evento ya abierto.
-	 *
-	 * @param array<string, mixed> $m What blank() returned.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function blank_event( array $m ): array {
 		$user_id = get_current_user_id();
 		if ( ! user_can( $user_id, 'edit_evt_events' ) ) {
@@ -10121,11 +10121,11 @@ final class EventWorkspace {
 		return $m;
 	}
 
-	/**
-	 * The model of a workshop that cannot be opened.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	private static function blank(): array {
 		return array(
 			'aviso'         => '',
@@ -10192,15 +10192,15 @@ final class EventWorkspace {
 		);
 	}
 
-	/**
-	 * Everything the workshop shows once the event is known and allowed.
-	 *
-	 * @param array<string, mixed> $m       What blank() returned.
-	 * @param \WP_Post             $evento  The event.
-	 * @param int                  $user_id Who is looking.
-	 * @param string               $pedido  Tab asked for in the URL.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
 	private static function fill( array $m, \WP_Post $evento, int $user_id, string $pedido ): array {
 		$event_id = (int) $evento->ID;
 		$paneles  = self::panels( $event_id, $user_id );
@@ -10214,20 +10214,20 @@ final class EventWorkspace {
 		$m['flash']    = self::take_flash();
 		$m['can_edit'] = EventAccess::can_edit( $user_id, $event_id );
 		$m['archived'] = EventAccess::is_archived( $event_id );
-		// Abrir el taller toma el bloqueo del evento, igual que abrir el editor
-		// del escritorio: es el mismo bloqueo. Y si ya lo tiene otra persona,
-		// el taller pasa a solo lectura sin que ningún panel se entere —la
-		// vista ya apaga sus controles cuando `can_edit` dice que no—.
+
+
+
+
 		$m['lock'] = EditLock::status( $event_id, (bool) $m['can_edit'] );
 		if ( (int) $m['lock']['owner'] > 0 ) {
 			$m['can_edit'] = false;
 		}
-		// Los dos son «puede hacerlo ahora», no «tiene el permiso»: el estado
-		// va dentro para que la vista no tenga que combinarlos otra vez y para
-		// que no se pinten los dos botones a la vez. El bloqueo entra en la
-		// cuenta porque el interruptor de histórico vive FUERA del panel que la
-		// vista apaga, y cerrar un evento es la escritura menos reversible que
-		// hay aquí.
+
+
+
+
+
+
 		$libre              = 0 === (int) $m['lock']['owner'];
 		$m['can_archive']   = $libre && ! $m['archived'] && EventAccess::can_archive( $user_id, $event_id );
 		$m['can_unarchive'] = $libre && $m['archived'] && EventAccess::can_unarchive( $user_id );
@@ -10236,8 +10236,8 @@ final class EventWorkspace {
 		$m['can_upload']    = current_user_can( 'upload_files' );
 		$m['can_edit_css']  = $css_ok;
 		$m['can_edit_js']   = $js_ok;
-		// Lo guardado solo se devuelve a quien puede escribirlo: el modelo no
-		// es un sitio donde el código se asome a quien no le corresponde.
+
+
 		$m['code']         = array(
 			'css' => $css_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_CSS ) : '',
 			'js'  => $js_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_JS ) : '',
@@ -10264,24 +10264,24 @@ final class EventWorkspace {
 		return self::fill_signup( self::fill_programme( $m, $event_id ), $event_id );
 	}
 
-	/**
-	 * What the four tabs of the programme need, once the event is known.
-	 *
-	 * Se llena siempre y no solo en la pestaña abierta: los recuentos de las
-	 * pestañas los pide `panels()` de todas formas, y partir el modelo en dos
-	 * caminos por pestaña es la clase de ahorro que se paga en el primer fallo
-	 * que solo aparece en una de ellas.
-	 *
-	 * @param array<string, mixed> $m        Model so far.
-	 * @param int                  $event_id Event post ID.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function fill_programme( array $m, int $event_id ): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- lectura: qué ficha se edita y qué se busca. Mutar lleva su nonce.
+
 		$m['edit_row']      = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
 		$m['people_q']      = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
 		$m['people_filter'] = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
 
 		foreach ( Programme::speakers( $event_id ) as $indice => $ponente ) {
 			$fila            = Programme::speaker_row( $ponente );
@@ -10300,11 +10300,11 @@ final class EventWorkspace {
 		$inscritos = Participants::rows( $event_id );
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$fila = Programme::activity_row( $taller );
-			// Las plazas ocupadas se cuentan por el título del taller, que es lo
-			// que trae la inscripción mientras la inscripción no sea de este
-			// aplicativo: no hay identificador compartido (ADR-0027). Si el
-			// título cambia, deja de cuadrar, y por eso la pantalla dice de
-			// dónde sale el número.
+
+
+
+
+
 			$fila['taken']    = self::seats_taken( $inscritos, (string) $fila['title'] );
 			$fila['free']     = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
 			$m['workshops'][] = $fila;
@@ -10313,9 +10313,9 @@ final class EventWorkspace {
 		$m['grid']   = Programme::grid( $event_id );
 		$m['venues'] = Programme::venues( $event_id );
 
-		// La papelera de fichas es una sola: ponentes y actividades juntos,
-		// porque lo que se busca ahí es «lo que borré sin querer» y no de qué
-		// tipo era.
+
+
+
 		foreach ( array_merge( Programme::speakers( $event_id, true ), Programme::activities( $event_id, true ) ) as $ficha ) {
 			$m['row_trash'][] = array(
 				'id'    => (int) $ficha->ID,
@@ -10335,13 +10335,13 @@ final class EventWorkspace {
 		return $m;
 	}
 
-	/**
-	 * How many of the people signed up chose this workshop.
-	 *
-	 * @param array<int, array<string, string>> $inscritos Participant rows.
-	 * @param string                            $titulo    Workshop title.
-	 * @return int
-	 */
+
+
+
+
+
+
+
 	private static function seats_taken( array $inscritos, string $titulo ): int {
 		if ( '' === trim( $titulo ) ) {
 			return 0;
@@ -10355,19 +10355,19 @@ final class EventWorkspace {
 		return $cuenta;
 	}
 
-	/**
-	 * The speaker or activity the edit form has to open with.
-	 *
-	 * Vacío cuando se está creando, y vacío también cuando el identificador
-	 * pedido no es de este evento: la pantalla enseña el formulario de alta en
-	 * vez de un error, que es lo que pasa de verdad cuando alguien vuelve con
-	 * el botón de atrás a una ficha ya borrada.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param int    $row_id   Requested row.
-	 * @param string $panel    Tab being painted.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function row_values( int $event_id, int $row_id, string $panel ): array {
 		if ( $row_id <= 0 ) {
 			return array();
@@ -10385,40 +10385,40 @@ final class EventWorkspace {
 		return array();
 	}
 
-	/**
-	 * The human name of a post status.
-	 *
-	 * @param string $status Post status.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function status_label( string $status ): string {
 		$objeto = get_post_status_object( $status );
 		return null !== $objeto ? (string) $objeto->label : $status;
 	}
 
-	/**
-	 * One meta value of the event, as a string.
-	 *
-	 * @param int    $post_id Post ID.
-	 * @param string $clave   Meta key.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function meta( int $post_id, string $clave ): string {
 		return (string) get_post_meta( $post_id, $clave, true );
 	}
 
-	/**
-	 * What every form field shows: what was typed, or what is stored.
-	 *
-	 * @param int                   $event_id Event post ID.
-	 * @param array<string, string> $tecleado What the failed submit carried.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
+
 	private static function values( int $event_id, array $tecleado ): array {
 		$guardado = array(
-			// Con 0, `get_the_title()` cae en el post global —que en esta
-			// pantalla es la página «Evento» del aplicativo— y el alta abriría
-			// con el título ya escrito. Al crear, el título está vacío.
+
+
+
 			self::FIELD_TITLE             => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
 			self::FIELD_AREA              => (string) self::first_term( $event_id, EventTaxonomies::AREA ),
 			self::FIELD_TYPE              => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
@@ -10441,30 +10441,30 @@ final class EventWorkspace {
 			EventMetaKeys::SEPARATOR      => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
 		);
 
-		// Lo tecleado manda sobre lo guardado, pero solo en los campos que
-		// existen: del POST no entra ninguna clave nueva.
+
+
 		return array_merge( $guardado, array_intersect_key( $tecleado, $guardado ) );
 	}
 
-	/**
-	 * The first term of one taxonomy on the event.
-	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $taxonomy Taxonomy name.
-	 * @return int Term ID, or 0.
-	 */
+
+
+
+
+
+
+
 	private static function first_term( int $event_id, string $taxonomy ): int {
 		$ids = wp_get_post_terms( $event_id, $taxonomy, array( 'fields' => 'ids' ) );
 		return is_array( $ids ) ? (int) ( $ids[0] ?? 0 ) : 0;
 	}
 
-	/**
-	 * The three dropdowns of the classification card.
-	 *
-	 * @param int $user_id  Who is looking.
-	 * @param int $area_now Área the event has now, so it never disappears.
-	 * @return array<string, array<int, string>>
-	 */
+
+
+
+
+
+
+
 	private static function term_lists( int $user_id, int $area_now ): array {
 		$solo = EventAccess::can_edit_all_areas( $user_id )
 			? array()
@@ -10477,13 +10477,13 @@ final class EventWorkspace {
 		);
 	}
 
-	/**
-	 * Terms of one taxonomy, optionally narrowed to a handful.
-	 *
-	 * @param string $taxonomy Taxonomy name.
-	 * @param int[]  $solo     Term IDs to keep; empty for all of them.
-	 * @return array<int, string> term_id => nombre.
-	 */
+
+
+
+
+
+
+
 	private static function term_options( string $taxonomy, array $solo = array() ): array {
 		$terms = get_terms(
 			array(
@@ -10498,13 +10498,13 @@ final class EventWorkspace {
 		return array() === $solo ? $terms : array_intersect_key( $terms, array_flip( $solo ) );
 	}
 
-	/**
-	 * The rows of the sections table.
-	 *
-	 * @param int  $event_id Event post ID.
-	 * @param bool $papelera True for the rows of the trash.
-	 * @return array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
 	private static function section_rows( int $event_id, bool $papelera = false ): array {
 		$hijas = array_values( self::children( $event_id, $papelera ) );
 		$total = count( $hijas );
@@ -10531,9 +10531,9 @@ final class EventWorkspace {
 						self::ARG_SECTION => (int) $hija->ID,
 					)
 				),
-				// Una página en borrador **también se mira**: estando dentro, con
-				// permiso para editarla, WordPress la sirve en previsualización.
-				// Lo que cambia es la dirección, no que se pueda ver.
+
+
+
 				'view_url'     => 'publish' === (string) $hija->post_status
 					? (string) get_permalink( $hija )
 					: (string) get_preview_post_link( $hija ),
@@ -10544,38 +10544,38 @@ final class EventWorkspace {
 		return $filas;
 	}
 
-	/**
-	 * Render the shortcode.
-	 *
-	 * @param array<string, string>|string $atts Attributes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
 		$m = self::model();
 
-		// El selector de medios solo en la pestaña que tiene imágenes: son
-		// unos cuantos guiones de WordPress y en las demás pantallas no hay
-		// nada que elegir. Quien no puede subir tampoco puede consultar la
-		// biblioteca por AJAX, así que a esa persona solo se le enseña
-		// «Quitar» y no se carga nada.
+
+
+
+
+
 		if ( self::PANEL_LOOK === (string) $m['panel'] && true === $m['can_upload'] ) {
 			wp_enqueue_media( array( 'post' => (int) $m['event_id'] ) );
 		}
 
-		// El aviso va delante de la pantalla y no dentro: cuando hay dueño se
-		// pinta como `<dialog open>` y es lo primero que se lee al entrar.
+
+
 		return EditLock::render( EditLock::claim( (array) $m['lock'] ) ) . EventWorkspaceView::html( $m );
 	}
 }
 
-// ---- src/Evt/PublicFront/View/PanelParts.php ----
-/**
- * Pieces the programme panels share: row actions and the ficha trash.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -10583,26 +10583,26 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 
-/**
- * Lo que repiten «Ponentes», «Programa» y «Talleres».
- *
- * Está aparte para que el botón de borrar de los tres sea **el mismo botón**:
- * mismo nonce por fila, misma confirmación y misma vuelta a la pestaña desde
- * la que se pulsó. Tres copias se separan a la tercera corrección.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
 final class PanelParts {
 
-	/**
-	 * What `wp_kses()` lets through for an inline icon.
-	 *
-	 * Los iconos los escribe {@see Shell::icon()} y no vienen de fuera, pero
-	 * pasan por `wp_kses()` igual: es una lista corta y deja la regla de «toda
-	 * la salida escapada» sin excepciones que alguien tenga que recordar.
-	 *
-	 * @var array<string, array<string, bool>>
-	 */
+
+
+
+
+
+
+
+
+
 	private const SVG = array(
 		'svg'  => array(
 			'viewbox'     => true,
@@ -10617,26 +10617,26 @@ final class PanelParts {
 		),
 	);
 
-	/**
-	 * One row action: its own little POST form, with its own nonce.
-	 *
-	 * @param array<string, mixed> $m         Model.
-	 * @param int                  $id        Speaker or activity post ID.
-	 * @param string               $op        Operation.
-	 * @param string               $icono     Icon name for {@see Shell::icon()}.
-	 * @param string               $titulo    What the button does, in Spanish.
-	 * @param string               $clases    Button classes.
-	 * @param string               $panel     Tab to come back to.
-	 * @param bool                 $apagado   Whether the button is disabled.
-	 * @param string               $confirmar Question to ask before submitting.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '' ): string {
 		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
 
 		ob_start();
 		?>
-		<form class="evt-accion" method="post" action=""<?php echo $pregunta; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapado arriba. ?>>
+		<form class="evt-accion" method="post" action=""<?php echo $pregunta; ?>>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
@@ -10653,15 +10653,15 @@ final class PanelParts {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * An icon link, with the same globe as the icon buttons.
-	 *
-	 * @param string $url    Where it goes.
-	 * @param string $icono  Icon name for {@see Shell::icon()}.
-	 * @param string $titulo What it does, in Spanish.
-	 * @param string $clases Extra classes.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function icon_link( string $url, string $icono, string $titulo, string $clases = '' ): string {
 		if ( '' === $url ) {
 			return '';
@@ -10674,16 +10674,16 @@ final class PanelParts {
 			. '<span class="screen-reader-text">' . esc_html( $titulo ) . '</span></a>';
 	}
 
-	/**
-	 * «Papelera (N)» with what was sent to it, when there is something.
-	 *
-	 * Ponentes y actividades comparten papelera porque lo que se busca ahí es
-	 * «lo que borré sin querer», no de qué tipo era.
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param string               $panel Tab to come back to.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function trash_link( array $m, string $panel ): string {
 		$filas = (array) $m['row_trash'];
 		if ( array() === $filas ) {
@@ -10713,7 +10713,7 @@ final class PanelParts {
 								<td data-rotulo="Acciones">
 									<?php
 									$boton = self::action( $m, (int) $fila['id'], 'row_restore', 'restaurar', 'Restaurar esta ficha', $mini, $panel );
-									echo $boton; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+									echo $boton; 
 									?>
 								</td>
 							</tr>
@@ -10726,12 +10726,12 @@ final class PanelParts {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * A day written the way it is read out loud.
-	 *
-	 * @param string $fecha Date in Y-m-d, or empty.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function day( string $fecha ): string {
 		if ( '' === $fecha ) {
 			return 'Sin día asignado';
@@ -10743,13 +10743,13 @@ final class PanelParts {
 		return (string) wp_date( 'l j \d\e F \d\e Y', $marca );
 	}
 
-	/**
-	 * The time slot of an activity: «09:30 – 11:00», or just the start.
-	 *
-	 * @param string $start Start time.
-	 * @param string $end   End time.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function slot( string $start, string $end ): string {
 		if ( '' === $start ) {
 			return '—';
@@ -10758,12 +10758,12 @@ final class PanelParts {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventSpeakersPanel.php ----
-/**
- * The «Ponentes» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -10771,23 +10771,23 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 
-/**
- * Los ponentes de este evento: su ficha, su orden y su foto.
- *
- * Son fichas **de este evento** y no de un catálogo compartido: la repetición
- * real entre eventos está entre el 5 % y el 12 %, y en un evento terminado no
- * se quiere que la foto y la biografía cambien solas (ADR-0021).
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
 final class EventSpeakersPanel {
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$filas = (array) $m['speakers'];
 
@@ -10799,8 +10799,8 @@ final class EventSpeakersPanel {
 			no toca la de ninguna otra edición.
 		</p>
 
-		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); ?>
+		<?php echo self::form( $m ); ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -10821,7 +10821,7 @@ final class EventSpeakersPanel {
 					</thead>
 					<tbody>
 						<?php foreach ( $filas as $indice => $fila ) : ?>
-							<?php echo self::row( $m, (array) $fila, (int) $indice + 1 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+							<?php echo self::row( $m, (array) $fila, (int) $indice + 1 ); ?>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
@@ -10831,12 +10831,12 @@ final class EventSpeakersPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The form that adds a speaker, or edits the one asked for.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function form( array $m ): string {
 		$valores = (array) $m['edit_values'];
 		$id      = isset( $valores['id'] ) ? (int) $valores['id'] : 0;
@@ -10878,7 +10878,7 @@ final class EventSpeakersPanel {
 				<small>Unas líneas. Sale debajo del nombre en la página de ponentes.</small>
 			</div>
 
-			<?php echo self::photo( $m, $valores ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::photo( $m, $valores ); ?>
 
 			<div class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
@@ -10895,16 +10895,16 @@ final class EventSpeakersPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The photo field: what there is, and how to change it.
-	 *
-	 * Sin selector de medios cuando quien mira no puede subir: se le enseña lo
-	 * que hay y nada más, porque la biblioteca tampoco se le abriría.
-	 *
-	 * @param array<string, mixed> $m       Model.
-	 * @param array<string, mixed> $valores Speaker being edited.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function photo( array $m, array $valores ): string {
 		$url = (string) ( $valores['photo'] ?? '' );
 		$id  = (int) ( $valores['photo_id'] ?? 0 );
@@ -10934,14 +10934,14 @@ final class EventSpeakersPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One speaker row, with its actions.
-	 *
-	 * @param array<string, mixed> $m       Model.
-	 * @param array<string, mixed> $fila    Speaker row.
-	 * @param int                  $posicion 1-based position.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function row( array $m, array $fila, int $posicion ): string {
 		$id     = (int) $fila['id'];
 		$nombre = '' !== trim( (string) $fila['name'] ) ? (string) $fila['name'] : '(sin nombre)';
@@ -10983,11 +10983,11 @@ final class EventSpeakersPanel {
 						'lapiz',
 						'Editar este ponente'
 					);
-					echo $editar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+					echo $editar; 
 					?>
-					<?php echo $subir; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-					<?php echo $bajar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-					<?php echo $borrar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $subir; ?>
+					<?php echo $bajar; ?>
+					<?php echo $borrar; ?>
 				</span>
 			</td>
 		</tr>
@@ -10996,12 +10996,12 @@ final class EventSpeakersPanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventProgrammePanel.php ----
-/**
- * The «Programa» panel of the event workshop: the parrilla.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -11009,26 +11009,26 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 
-/**
- * La parrilla del evento: **por día y, dentro del día, por sede**.
- *
- * Esa forma es la decisión de ADR-0024: la sede es un dato de cada actividad y
- * un mismo día puede tener dos —la mañana en una sede y la tarde en un centro
- * educativo—. Un día con una sola sede se pinta como un bloque **y sin rótulo
- * de sede**, que no aportaría nada; uno con dos, como dos bloques con su
- * rótulo. Y no hay ninguna pantalla donde «dar de alta una sede»: la lista
- * sale de las actividades, y añadir una es escribirla.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventProgrammePanel {
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$dias = (array) $m['grid'];
 
@@ -11041,8 +11041,8 @@ final class EventProgrammePanel {
 			que darla de alta en ninguna parte.
 		</p>
 
-		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); ?>
+		<?php echo self::form( $m ); ?>
 
 		<?php if ( array() === $dias ) : ?>
 			<div class="evt-tabla-caja">
@@ -11050,24 +11050,24 @@ final class EventProgrammePanel {
 			</div>
 		<?php else : ?>
 			<?php foreach ( $dias as $dia ) : ?>
-				<?php echo self::day( $m, (array) $dia ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo self::day( $m, (array) $dia ); ?>
 			<?php endforeach; ?>
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One day of the parrilla, with its one or more sedes.
-	 *
-	 * @param array<string, mixed> $m   Model.
-	 * @param array<string, mixed> $dia One day of $m['grid'].
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function day( array $m, array $dia ): string {
 		$sedes = (array) $dia['venues'];
-		// Con una sola sede el rótulo sobra: repetir el mismo sitio encima de
-		// cada bloque es ruido, y ADR-0024 lo dice con esas palabras.
+
+
 		$rotular = count( $sedes ) > 1;
 
 		ob_start();
@@ -11094,7 +11094,7 @@ final class EventProgrammePanel {
 						</thead>
 						<tbody>
 							<?php foreach ( (array) $sede['rows'] as $fila ) : ?>
-								<?php echo self::row( $m, (array) $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+								<?php echo self::row( $m, (array) $fila ); ?>
 							<?php endforeach; ?>
 						</tbody>
 					</table>
@@ -11105,13 +11105,13 @@ final class EventProgrammePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One activity row.
-	 *
-	 * @param array<string, mixed> $m    Model.
-	 * @param array<string, mixed> $fila Activity row.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function row( array $m, array $fila ): string {
 		$id     = (int) $fila['id'];
 		$titulo = '' !== trim( (string) $fila['title'] ) ? (string) $fila['title'] : '(sin título)';
@@ -11146,9 +11146,9 @@ final class EventProgrammePanel {
 						'lapiz',
 						'Editar esta actividad'
 					);
-					echo $editar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+					echo $editar; 
 					?>
-					<?php echo $borrar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $borrar; ?>
 				</span>
 			</td>
 		</tr>
@@ -11156,12 +11156,12 @@ final class EventProgrammePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The form that adds an activity, or edits the one asked for.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function form( array $m ): string {
 		$valores = (array) $m['edit_values'];
 		$id      = isset( $valores['id'] ) ? (int) $valores['id'] : 0;
@@ -11243,7 +11243,7 @@ final class EventProgrammePanel {
 				</div>
 			</div>
 
-			<?php echo self::speakers( $m, $suyos ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::speakers( $m, $suyos ); ?>
 
 			<div class="evt-form-campo">
 				<label for="evt-ac-summary">Descripción</label>
@@ -11265,17 +11265,17 @@ final class EventProgrammePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Which speakers of this event take part in this activity.
-	 *
-	 * Casillas y no un desplegable múltiple: se marcan varias sin saber que
-	 * hay que dejar pulsada una tecla, que es el fallo de siempre del
-	 * `<select multiple>`.
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param int[]                $suyos Speaker IDs already linked.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function speakers( array $m, array $suyos ): string {
 		$ponentes = (array) $m['speakers'];
 
@@ -11305,36 +11305,36 @@ final class EventProgrammePanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventWorkshopsPanel.php ----
-/**
- * The «Talleres» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 
-/**
- * Los talleres del evento y **cuántas plazas quedan**.
- *
- * Un taller no es otro tipo de contenido: es una actividad del programa cuyo
- * tipo es «taller», y por eso se crea y se edita en «Programa». Aquí se ven
- * juntos, con su aforo, porque esa es la pregunta que se hace el día antes:
- * «¿cuál se ha llenado?».
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
 final class EventWorkshopsPanel {
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$filas = (array) $m['workshops'];
 
@@ -11355,7 +11355,7 @@ final class EventWorkshopsPanel {
 				</p>
 			</div>
 		<?php else : ?>
-			<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::counters( $m, $filas ); ?>
 			<div class="evt-tabla-caja">
 				<table class="evt-tabla">
 					<thead>
@@ -11371,7 +11371,7 @@ final class EventWorkshopsPanel {
 					</thead>
 					<tbody>
 						<?php foreach ( $filas as $fila ) : ?>
-							<?php echo self::row( $m, (array) $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+							<?php echo self::row( $m, (array) $fila ); ?>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
@@ -11389,13 +11389,13 @@ final class EventWorkshopsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The three numbers that answer «¿cómo va esto?».
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param array<int, mixed>    $filas Workshop rows.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function counters( array $m, array $filas ): string {
 		unset( $m );
 		$plazas   = 0;
@@ -11421,13 +11421,13 @@ final class EventWorkshopsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One workshop row.
-	 *
-	 * @param array<string, mixed> $m    Model.
-	 * @param array<string, mixed> $fila Workshop row.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function row( array $m, array $fila ): string {
 		$id    = (int) $fila['id'];
 		$mini  = Assets::button_class() . ' evt-mini';
@@ -11445,7 +11445,7 @@ final class EventWorkshopsPanel {
 			<td class="evt-num" data-rotulo="Aforo">
 				<?php echo esc_html( (int) $fila['seats'] > 0 ? (string) (int) $fila['seats'] : 'Sin límite' ); ?>
 			</td>
-			<td data-rotulo="Plazas"><?php echo self::seats( $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></td>
+			<td data-rotulo="Plazas"><?php echo self::seats( $fila ); ?></td>
 			<td data-rotulo="Acciones">
 				<span class="evt-acciones">
 					<?php
@@ -11454,7 +11454,7 @@ final class EventWorkshopsPanel {
 						'lapiz',
 						'Editar este taller en el programa'
 					);
-					echo $editar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+					echo $editar; 
 					?>
 				</span>
 			</td>
@@ -11463,12 +11463,12 @@ final class EventWorkshopsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * How full one workshop is, written so it reads without the table head.
-	 *
-	 * @param array<string, mixed> $fila Workshop row.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function seats( array $fila ): string {
 		$ocupadas = (int) $fila['taken'];
 		if ( null === $fila['free'] ) {
@@ -11483,12 +11483,12 @@ final class EventWorkshopsPanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventParticipantsPanel.php ----
-/**
- * The «Participantes» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -11496,26 +11496,26 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
 
-/**
- * Quién se ha inscrito: filtro y exportación a CSV.
- *
- * **De dónde salen las filas no lo decide esta pantalla.** Los participantes
- * son de este aplicativo y se gestionarán aquí, con formulario de inscripción
- * propio; mientras ese formulario no exista, las filas entran por el filtro
- * `evt_participants` (ADR-0027). Cuando nadie contesta, aquí no se finge una
- * lista vacía: se dice dónde se abre la inscripción, en vez de dejar una tabla
- * sin filas que parece un fallo.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventParticipantsPanel {
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		if ( 0 === (int) $m['people_total'] ) {
 			return self::empty_state( $m );
@@ -11531,8 +11531,8 @@ final class EventParticipantsPanel {
 			filtrado, no la lista entera.
 		</p>
 
-		<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		<?php echo self::counters( $m, $filas ); ?>
+		<?php echo self::filter( $m ); ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -11566,13 +11566,13 @@ final class EventParticipantsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * How many there are, and how many the filter left.
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param array<int, mixed>    $filas Filtered rows.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function counters( array $m, array $filas ): string {
 		$total    = (int) $m['people_total'];
 		$filtrado = count( $filas );
@@ -11590,23 +11590,23 @@ final class EventParticipantsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The filter box and the export button.
-	 *
-	 * El filtro va por GET —es una consulta, y así la dirección filtrada se
-	 * puede guardar y compartir— y la exportación por POST con su nonce,
-	 * porque un enlace que descarga la lista entera de personas inscritas no
-	 * debe poder pegarse en un correo.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function filter( array $m ): string {
 		$op   = EventWorkspace::OP_EXPORT;
 		$base = EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE );
 
-		// El formulario de filtro es un GET a esta misma pantalla: lo que ya
-		// viaja en la dirección se vuelve a poner como campos ocultos.
+
+
 		$accion  = (string) strtok( $base, '?' );
 		$ocultos = array();
 		parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $ocultos );
@@ -11661,15 +11661,15 @@ final class EventParticipantsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * What to say when no source answered.
-	 *
-	 * No es una tabla vacía: una tabla vacía se lee como «no se ha inscrito
-	 * nadie», y lo que pasa es que las inscripciones están en otro sitio.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function empty_state( array $m ): string {
 		$viejo = (int) $m['form_id'];
 
@@ -11704,41 +11704,41 @@ final class EventParticipantsPanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventSignupPanel.php ----
-/**
- * The «Inscripción» tab of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\EventWorkspace;
 
-/**
- * Dónde quien organiza abre la inscripción y redacta sus preguntas.
- *
- * Solo pinta: no lee la petición, no consulta y no decide.
- *
- * La pantalla es corta a propósito, y eso es la decisión: **no es un
- * constructor de formularios**. El núcleo del formulario —documento, nombre,
- * apellidos, correo, teléfono, centro y consentimiento— no sale aquí porque no
- * se edita: está en código, medido, y es el mismo en todos los eventos
- * (ADR-0031). Lo único que se redacta son las tres o cuatro preguntas propias
- * del evento, y una pregunta tiene cuatro cosas: rótulo, tipo, opciones y si es
- * obligatoria. Ni condiciones, ni reglas.
- *
- * Sin JavaScript: las filas son campos paralelos y la última va en blanco. Se
- * escribe encima y se guarda; se borra el rótulo y la pregunta se va.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventSignupPanel {
 
-	/**
-	 * The tab.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$event_id  = (int) $m['event_id'];
 		$ajustes   = (array) $m['signup'];
@@ -11765,19 +11765,19 @@ final class EventSignupPanel {
 		return $html;
 	}
 
-	/**
-	 * The two windows: the signup one and the workshop one.
-	 *
-	 * @param array<string, mixed> $a Signup settings.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function windows( array $a ): string {
 		$html  = '<fieldset class="evt-campos"><legend>Plazos</legend>';
 		$html .= self::toggle( 'evt_signup_open', 'La inscripción está abierta', (bool) $a['open'] );
 		$html .= '<p class="evt-ayuda">Mientras esté cerrada, la página de inscripción lo dice y no acepta a nadie.</p>';
 
-		// El plazo del taller es propio porque se abre cuando el programa está
-		// cerrado, y eso casi nunca coincide con abrir la inscripción (ADR-0033).
+
+
 		$html .= self::toggle( 'evt_workshop_open', 'Se puede elegir taller', (bool) $a['workshop_open'] );
 		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ws-desde">Desde</label>'
 			. '<input type="date" id="evt-ws-desde" name="evt_workshop_start" value="' . esc_attr( (string) $a['workshop_start'] ) . '"></p>';
@@ -11790,12 +11790,12 @@ final class EventSignupPanel {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * The two consent texts.
-	 *
-	 * @param array<string, mixed> $a Signup settings.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function consent( array $a ): string {
 		$html  = '<fieldset class="evt-campos"><legend>Protección de datos</legend>';
 		$html .= '<p class="evt-campo"><label for="evt-consent-privacidad">Información sobre el tratamiento de sus datos</label>'
@@ -11805,8 +11805,8 @@ final class EventSignupPanel {
 			. '<textarea id="evt-consent-imagen" name="evt_consent_image" rows="6">'
 			. esc_textarea( (string) $a['consent_image'] ) . '</textarea></p>';
 
-		// Cambiar un texto sube la versión y **no reescribe** la que ya aceptó
-		// nadie: por eso el número está a la vista (ADR-0020).
+
+
 		$html .= '<p class="evt-ayuda">Versión actual: <strong>v' . (int) $a['consent_version'] . '</strong>. '
 			. 'Cambiar cualquiera de los dos textos crea una versión nueva; lo que ya aceptó alguien no se reescribe, '
 			. 'y en la lista de participantes se ve qué versión aceptó cada persona.</p>';
@@ -11814,14 +11814,14 @@ final class EventSignupPanel {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * The question list, plus one blank row to add another.
-	 *
-	 * @param array<int, array<string, mixed>> $preguntas Questions.
-	 * @param array<string, string>            $tipos     Question types.
-	 * @param bool                             $locked    Whether anybody signed up already.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function questions( array $preguntas, array $tipos, bool $locked ): string {
 		$html = '<fieldset class="evt-campos evt-preguntas"><legend>Preguntas de este evento</legend>';
 
@@ -11836,9 +11836,9 @@ final class EventSignupPanel {
 		}
 
 		$filas = $preguntas;
-		// La fila en blanco del final es cómo se añade una pregunta sin
-		// JavaScript: se escribe su rótulo y se guarda. Si se deja vacía, no
-		// añade nada, porque una pregunta sin rótulo se cae al normalizar.
+
+
+
 		$filas[] = array(
 			'id'       => '',
 			'label'    => '',
@@ -11857,14 +11857,14 @@ final class EventSignupPanel {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * One question row.
-	 *
-	 * @param int                   $i         Row index.
-	 * @param array<string, mixed>  $p         Question.
-	 * @param array<string, string> $tipos     Question types.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function row( int $i, array $p, array $tipos ): string {
 		$nueva  = '' === (string) $p['id'];
 		$rotulo = $nueva ? 'Pregunta nueva' : 'Pregunta ' . ( $i + 1 );
@@ -11910,14 +11910,14 @@ final class EventSignupPanel {
 		return $html . '</div>';
 	}
 
-	/**
-	 * One switch.
-	 *
-	 * @param string $nombre Field name.
-	 * @param string $rotulo Label.
-	 * @param bool   $puesto Whether it is on.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function toggle( string $nombre, string $rotulo, bool $puesto ): string {
 		return sprintf(
 			'<p class="evt-campo evt-campo--casilla"><label for="%1$s"><input type="checkbox" id="%1$s" name="%1$s" value="1"%2$s> %3$s</label></p>',
@@ -11928,12 +11928,12 @@ final class EventSignupPanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventSectionsPanel.php ----
-/**
- * The «Secciones» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -11941,24 +11941,24 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 
-/**
- * La pantalla que hoy no existe: las páginas satélite de un evento, en una
- * tabla, con su orden y sus acciones.
- *
- * Hoy, para saber qué páginas tiene un evento hay que abrir el menú del
- * propio evento en la web pública y contarlas, y para cambiar el orden hay
- * que reabrir el formulario enorme de cada una y teclear a mano su número de
- * orden. Aquí el orden es `menu_order` y se cambia con dos flechas.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
 final class EventSectionsPanel {
 
-	/**
-	 * What `wp_kses()` lets through for an inline icon.
-	 *
-	 * @var array<string, array<string, bool>>
-	 */
+
+
+
+
+
 	private const SVG = array(
 		'svg'  => array(
 			'viewbox'     => true,
@@ -11973,17 +11973,17 @@ final class EventSectionsPanel {
 		),
 	);
 
-	/**
-	 * The publish state of one section, as a switch.
-	 *
-	 * El mismo interruptor que el listado de eventos, y por el mismo motivo:
-	 * de un vistazo se ve si la página está en el menú del evento, y se cambia
-	 * tocándolo. Sin JavaScript queda el botón de al lado.
-	 *
-	 * @param array<string, mixed> $m    Model.
-	 * @param array<string, mixed> $fila One row.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function publish_switch( array $m, array $fila ): string {
 		$id        = (int) $fila['id'];
 		$publicada = (bool) $fila['published'];
@@ -12009,22 +12009,22 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Paint the panel: the sections of the event, or its trash.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		return true === $m['trash'] ? self::trash( $m ) : self::live( $m );
 	}
 
-	/**
-	 * The sections of the event: what is not in the trash.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function live( array $m ): string {
 		$filas = (array) $m['sections'];
 
@@ -12036,8 +12036,8 @@ final class EventSectionsPanel {
 			del menú, pero no se pierde nada de lo escrito.
 		</p>
 
-		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::add_form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		<?php echo self::trash_link( $m ); ?>
+		<?php echo self::add_form( $m ); ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -12058,7 +12058,7 @@ final class EventSectionsPanel {
 					</thead>
 					<tbody>
 						<?php foreach ( $filas as $fila ) : ?>
-							<?php echo self::row( $m, (array) $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+							<?php echo self::row( $m, (array) $fila ); ?>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
@@ -12068,12 +12068,12 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * «Papelera (N)»: el enlace a lo que se envió a ella, si hay algo.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function trash_link( array $m ): string {
 		$cuantas = count( (array) $m['trashed'] );
 		if ( 0 === $cuantas ) {
@@ -12085,15 +12085,15 @@ final class EventSectionsPanel {
 			. '">' . esc_html( sprintf( 'Papelera (%d)', $cuantas ) ) . '</a></p>';
 	}
 
-	/**
-	 * The trash of the event: what was sent to it, and how to bring it back.
-	 *
-	 * El borrado definitivo no está aquí a propósito: lo hace quien pueda desde
-	 * el escritorio de WordPress. Desde el aplicativo nada se destruye.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function trash( array $m ): string {
 		$filas  = (array) $m['trashed'];
 		$volver = EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SECTIONS );
@@ -12139,7 +12139,7 @@ final class EventSectionsPanel {
 									<span class="evt-acciones">
 										<?php
 										$boton = self::action_form( $m, (int) $fila['id'], 'restore', 'Restaurar', 'Restaurar la sección, en borrador', $clases );
-										echo $boton; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+										echo $boton; 
 										?>
 									</span>
 								</td>
@@ -12153,15 +12153,15 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * «Añadir sección»: se elige el tipo y se abre el formulario de la sección.
-	 *
-	 * Va por GET porque no muta nada: la sección se crea al guardar, en su
-	 * propia pantalla y con su propio nonce.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function add_form( array $m ): string {
 		$base = (string) $m['section_url'];
 		if ( '' === $base ) {
@@ -12170,9 +12170,9 @@ final class EventSectionsPanel {
 				. '</p>';
 		}
 
-		// Sin enlaces bonitos el permalink es un `?page_id=<n>`, y un
-		// `<form method="get">` tira lo que ya lleva la dirección: se vuelve a
-		// poner como campos ocultos.
+
+
+
 		$accion  = (string) strtok( $base, '?' );
 		$ocultos = array();
 		parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $ocultos );
@@ -12207,19 +12207,19 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One row of the table, with its actions.
-	 *
-	 * @param array<string, mixed> $m    Model.
-	 * @param array<string, mixed> $fila One row of $m['sections'].
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function row( array $m, array $fila ): string {
 		$id     = (int) $fila['id'];
 		$titulo = self::title_of( $fila );
 		$mini   = Assets::button_class() . ' evt-mini';
 
-		// Los botones se arman antes de la plantilla, cada uno con su nonce.
+
 		$subir  = self::action_form( $m, $id, 'up', 'subir', 'Subir una posición', $mini, (bool) $fila['first'] );
 		$bajar  = self::action_form( $m, $id, 'down', 'bajar', 'Bajar una posición', $mini, (bool) $fila['last'] );
 		$borrar = self::action_form(
@@ -12252,7 +12252,7 @@ final class EventSectionsPanel {
 			<td class="evt-slug" data-rotulo="Dirección"><?php echo esc_html( '' !== (string) $fila['slug'] ? (string) $fila['slug'] : '—' ); ?></td>
 			<td data-rotulo="Estado">
 				<?php if ( '' !== $estado ) : ?>
-					<?php echo $estado; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $estado; ?>
 				<?php else : ?>
 					<span class="<?php echo esc_attr( $fila['published'] ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ); ?>">
 						<?php echo esc_html( (string) $fila['status_label'] ); ?>
@@ -12268,11 +12268,11 @@ final class EventSectionsPanel {
 							'ojo',
 							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador'
 						);
-					echo $acciones; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+					echo $acciones; 
 					?>
-					<?php echo $subir; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-					<?php echo $bajar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-					<?php echo $borrar; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $subir; ?>
+					<?php echo $bajar; ?>
+					<?php echo $borrar; ?>
 				</span>
 			</td>
 		</tr>
@@ -12280,25 +12280,25 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One row action: its own little POST form, with its own nonce.
-	 *
-	 * @param array<string, mixed> $m         Model.
-	 * @param int                  $id        Satellite page ID.
-	 * @param string               $op        Operation.
-	 * @param string               $icono     Icon name for {@see Shell::icon()}.
-	 * @param string               $titulo    What it does, in Spanish.
-	 * @param string               $clases    Button classes.
-	 * @param bool                 $apagado   Whether the button is disabled.
-	 * @param string               $confirmar Question to ask before submitting.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function action_form( array $m, int $id, string $op, string $icono, string $titulo, string $clases, bool $apagado = false, string $confirmar = '' ): string {
 		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
 
 		ob_start();
 		?>
-		<form class="evt-accion" method="post" action=""<?php echo $pregunta; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapado arriba. ?>>
+		<form class="evt-accion" method="post" action=""<?php echo $pregunta; ?>>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
@@ -12314,24 +12314,24 @@ final class EventSectionsPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The title of a section, or a stand-in when it has none.
-	 *
-	 * @param array<string, mixed> $fila One row.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function title_of( array $fila ): string {
 		$titulo = trim( (string) $fila['title'] );
 		return '' !== $titulo ? $titulo : '(sin título)';
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventDataPanel.php ----
-/**
- * The «Datos» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -12339,32 +12339,32 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 
-/**
- * Qué es el evento: identidad, cuándo y dónde, clasificación e inscripción.
- *
- * Hoy son cinco secciones sueltas dentro de un formulario de 139 campos que
- * sirve además para cada página satélite. Aquí son cuatro tarjetas, con lo
- * que va junto junto, y bajo cada campo una línea en castellano llano que
- * dice para qué sirve: sin ella, «Lema» y «Hashtag» se rellenan a ojo y luego
- * salen en la cabecera del evento.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
 final class EventDataPanel {
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$v      = (array) $m['values'];
 		$listas = (array) $m['terms'];
 
-		// Los desplegables se arman antes de la plantilla: dentro de cada
-		// ayudante la salida ya va escapada, y así cada `echo` de la plantilla
-		// es de una sola línea.
+
+
+
 		$sel_area    = self::term_select(
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
@@ -12465,13 +12465,13 @@ final class EventDataPanel {
 				<p>Con qué se ordena y se busca el evento. El área es además quién lo edita: solo su área y quien administra el aplicativo.</p>
 
 				<div class="evt-form-fila">
-					<div><?php echo $sel_area; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
-					<div><?php echo $sel_tipo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
-					<div><?php echo $sel_curso; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+					<div><?php echo $sel_area; ?></div>
+					<div><?php echo $sel_tipo; ?></div>
+					<div><?php echo $sel_curso; ?></div>
 				</div>
 			</fieldset>
 
-			<?php echo $inscripcion; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo $inscripcion; ?>
 
 			<p class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
@@ -12483,12 +12483,12 @@ final class EventDataPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The «Inscripción» card.
-	 *
-	 * @param array<string, string> $v Field values.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function signup_card( array $v ): string {
 		ob_start();
 		?>
@@ -12531,17 +12531,17 @@ final class EventDataPanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One taxonomy dropdown, with its help line.
-	 *
-	 * @param string             $id      Field id.
-	 * @param string             $nombre  Field name.
-	 * @param string             $rotulo  Label.
-	 * @param array<int, string> $terminos term_id => nombre.
-	 * @param int                $elegido Selected term ID.
-	 * @param string             $ayuda   Help text.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function term_select( string $id, string $nombre, string $rotulo, array $terminos, int $elegido, string $ayuda ): string {
 		ob_start();
 		?>
@@ -12560,12 +12560,12 @@ final class EventDataPanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventAppearancePanel.php ----
-/**
- * The «Apariencia» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -12573,49 +12573,49 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 
-/**
- * Cómo se ve el evento: los dos colores, las dos tipografías y las imágenes.
- *
- * Hoy esto son sesenta muestras de color en una parrilla, un desplegable con
- * las 1.461 familias de Google Fonts y veinticinco siluetas de separador, y
- * para ver el resultado hay que guardar y abrir la página en otra pestaña.
- * Aquí son un selector de color nativo con su hexadecimal al lado, seis
- * tipografías, seis separadores y una vista previa de la cabecera que se mueve
- * mientras se elige —la pinta el guion de la espina leyendo los `name` de
- * estos mismos controles—.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventAppearancePanel {
 
-	/**
-	 * A stand-in portrait, so the shape of the photographs can be previewed.
-	 *
-	 * Va como `data:` y no como fichero porque en producción no hay
-	 * repositorio en disco desde el que servir una imagen: el único artefacto
-	 * es el bundle de Code Snippets.
-	 */
+
+
+
+
+
+
+
 	private const SHAPE_SAMPLE = 'data:image/svg+xml;charset=utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2272%22%20height%3D%2272%22%3E%3Crect%20width%3D%2272%22%20height%3D%2272%22%20fill%3D%22%23c3cad2%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2226%22%20r%3D%2213%22%20fill%3D%22%238a97a6%22%2F%3E%3Cpath%20d%3D%22M8%2072c0-16%2012-26%2028-26s28%2010%2028%2026z%22%20fill%3D%22%238a97a6%22%2F%3E%3C%2Fsvg%3E';
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$v      = (array) $m['values'];
 		$subir  = (bool) $m['can_upload'];
 		$medios = (array) $m['media'];
 
-		// Sin color guardado, el selector nativo caería a negro y pintaría una
-		// cabecera que nadie eligió: se arranca del azul del sitio.
+
+
 		$v[ EventMetaKeys::HEADER_BG ]   = self::color( (string) $v[ EventMetaKeys::HEADER_BG ], '#1b4f8a' );
 		$v[ EventMetaKeys::HEADER_TEXT ] = self::color( (string) $v[ EventMetaKeys::HEADER_TEXT ], '#ffffff' );
 
-		// Los trozos se arman antes de la plantilla y se escapan dentro de cada
-		// ayudante: así la plantilla es HTML de leer y cada `echo` es de una
-		// sola línea, que es lo que el linter sabe comprobar.
+
+
+
 		$vista         = self::preview( $m, $v );
 		$color_bg      = self::color_field(
 			'evt-header-bg',
@@ -12692,15 +12692,15 @@ final class EventAppearancePanel {
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
-			<?php echo $vista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo $vista; ?>
 
 			<fieldset class="evt-tarjeta">
 				<legend>Colores de la cabecera</legend>
 				<p>Los dos colores de la banda de arriba de todas las páginas del evento. Elíjalos con contraste: el texto tiene que leerse sobre el fondo.</p>
 
 				<div class="evt-form-fila">
-					<div><?php echo $color_bg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
-					<div><?php echo $color_txt; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+					<div><?php echo $color_bg; ?></div>
+					<div><?php echo $color_txt; ?></div>
 				</div>
 			</fieldset>
 
@@ -12709,8 +12709,8 @@ final class EventAppearancePanel {
 				<p>Dos y no más: una para los títulos y otra para el texto. «La del tema» no carga ninguna fuente y es la opción más rápida de cargar.</p>
 
 				<div class="evt-form-fila">
-					<div><?php echo $sel_titulo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
-					<div><?php echo $sel_cuerpo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+					<div><?php echo $sel_titulo; ?></div>
+					<div><?php echo $sel_cuerpo; ?></div>
 				</div>
 			</fieldset>
 
@@ -12719,8 +12719,8 @@ final class EventAppearancePanel {
 				<p>Detalles que se aplican a todas las páginas del evento.</p>
 
 				<div class="evt-form-fila">
-					<div><?php echo $sel_forma; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
-					<div><?php echo $sel_sep; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+					<div><?php echo $sel_forma; ?></div>
+					<div><?php echo $sel_sep; ?></div>
 				</div>
 			</fieldset>
 
@@ -12738,9 +12738,9 @@ final class EventAppearancePanel {
 					</p>
 				<?php endif; ?>
 
-				<?php echo $img_logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-				<?php echo $img_cartel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-				<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo $img_logo; ?>
+				<?php echo $img_cartel; ?>
+				<?php echo $img_destacada; ?>
 			</fieldset>
 
 			<p class="evt-acciones">
@@ -12751,17 +12751,17 @@ final class EventAppearancePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The live preview of the event header.
-	 *
-	 * El guion de la espina la repinta al vuelo: busca `[data-evt-preview]`
-	 * dentro de este mismo formulario y lee los controles por su `name`.
-	 * Sin guion se sigue viendo, con lo último guardado.
-	 *
-	 * @param array<string, mixed>  $m Model.
-	 * @param array<string, string> $v Field values, with the display defaults.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function preview( array $m, array $v ): string {
 		$logo   = self::image_of( (int) ( $m['media']['logo'] ?? 0 ) );
 		$sep    = (string) $v[ EventMetaKeys::SEPARATOR ];
@@ -12796,7 +12796,7 @@ final class EventAppearancePanel {
 			</div>
 			<div class="evt-preview-cuerpo<?php echo esc_attr( '' !== $cuerpo ? ' evt-font-' . $cuerpo : '' ); ?>" data-evt-preview-body>
 				<span class="<?php echo esc_attr( 'evt-shape-' . ( EventMetaKeys::SHAPE_CIRCLE === $forma ? 'circle' : 'square' ) ); ?>" data-evt-preview-shape>
-					<?php // La muestra es una silueta fija dentro de la propia hoja: escapada con esc_attr porque es una constante de esta clase, no una URL de nadie. ?>
+					<?php ?>
 					<img src="<?php echo esc_attr( self::SHAPE_SAMPLE ); ?>" width="72" height="72" alt="Ejemplo de la forma de las fotografías" />
 				</span>
 				Así se verá la cabecera del evento y así se recortarán las fotos de las personas. Es una muestra: no se guarda nada hasta que pulse «Guardar la apariencia».
@@ -12806,28 +12806,28 @@ final class EventAppearancePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * A stored colour, or the fallback when there is none.
-	 *
-	 * @param string $valor    Stored value.
-	 * @param string $fallback Colour to use instead.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function color( string $valor, string $fallback ): string {
 		$limpio = sanitize_hex_color( $valor );
 		return is_string( $limpio ) && '' !== $limpio ? $limpio : $fallback;
 	}
 
-	/**
-	 * What is known about one image of the event.
-	 *
-	 * El nombre es el del fichero y no el título del adjunto: en una
-	 * biblioteca de 4.597 adjuntos, «Captura de pantalla 2025-11-04» no
-	 * distingue nada y `cartel-jornadas-2026.jpg` sí.
-	 *
-	 * @param int $attachment_id Attachment ID.
-	 * @return array{id:int, url:string, name:string, width:int, height:int}
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function image_of( int $attachment_id ): array {
 		$nada = array(
 			'id'     => 0,
@@ -12842,8 +12842,8 @@ final class EventAppearancePanel {
 
 		$url = (string) wp_get_attachment_image_url( $attachment_id, 'medium' );
 		if ( '' === $url ) {
-			// El identificador guardado apunta a un adjunto que ya no está:
-			// se enseña el hueco, no una imagen rota.
+
+
 			return $nada;
 		}
 
@@ -12859,19 +12859,19 @@ final class EventAppearancePanel {
 		);
 	}
 
-	/**
-	 * A colour: the native picker and its hexadecimal, writing the same value.
-	 *
-	 * El que se envía es el campo de texto: quien tenga el guion bloqueado, o
-	 * un navegador sin selector de color, sigue pudiendo teclear el código.
-	 *
-	 * @param string $id     Field id of the hexadecimal input.
-	 * @param string $nombre Field name (the meta key).
-	 * @param string $rotulo Label.
-	 * @param string $valor  Current colour.
-	 * @param string $ayuda  Help text.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function color_field( string $id, string $nombre, string $rotulo, string $valor, string $ayuda ): string {
 		ob_start();
 		?>
@@ -12889,17 +12889,17 @@ final class EventAppearancePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One dropdown out of a closed vocabulary.
-	 *
-	 * @param string                $id      Field id.
-	 * @param string                $nombre  Field name.
-	 * @param string                $rotulo  Label.
-	 * @param array<string, string> $lista   slug => etiqueta.
-	 * @param string                $elegido Current value.
-	 * @param string                $ayuda   Help text.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function select( string $id, string $nombre, string $rotulo, array $lista, string $elegido, string $ayuda ): string {
 		ob_start();
 		?>
@@ -12916,23 +12916,23 @@ final class EventAppearancePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * One image: what there is now, how to reuse one, and how to remove it.
-	 *
-	 * Lo que viaja en el POST es el `hidden` con el identificador del adjunto
-	 * (`evt_logo_id`, `evt_poster_id`, `evt_featured_id`), que rellena el
-	 * selector de medios de WordPress. Los botones nacen ocultos y los enseña
-	 * el guion: sin guion no hay ninguno que no haga nada, y el respaldo del
-	 * `<noscript>` —subir un fichero, o marcar la casilla de quitar— sigue
-	 * siendo la forma de cambiar la imagen.
-	 *
-	 * @param string               $campo    Field prefix, e.g. `evt_logo`.
-	 * @param string               $rotulo   Label.
-	 * @param array<string, mixed> $imagen   What model() knows about it.
-	 * @param string               $ayuda    Help text.
-	 * @param bool                 $can_load Whether this person may upload files.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load ): string {
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
@@ -12945,7 +12945,7 @@ final class EventAppearancePanel {
 		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
-			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
+			<?php ?>
 			<input type="hidden" name="<?php echo esc_attr( $campo . '_id' ); ?>"
 				value="<?php echo esc_attr( (string) (int) ( $imagen['id'] ?? 0 ) ); ?>" data-evt-media-value />
 
@@ -12994,12 +12994,12 @@ final class EventAppearancePanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventCodePanel.php ----
-/**
- * The «Código» panel of the event workshop.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -13009,34 +13009,34 @@ use Evt\PublicFront\CodeEditor;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 
-/**
- * El CSS y el JavaScript del evento: los del raíz, los de todas sus páginas.
- *
- * Los dos campos no se pintan igual porque no son la misma cosa. El CSS es un
- * campo corriente de la pestaña, como el color de la cabecera de «Apariencia»:
- * lo escribe también el área, acotada a la suya. El JavaScript va en el
- * recuadro amarillo —la convención del aplicativo para lo que solo ve quien
- * administra, {@see Shell::admin_box()}—, porque se ejecuta en el navegador de
- * cada visitante y esa es la única raya que el área no cruza.
- *
- * Quien no ve un campo no se queda con la duda de si falta algo: en su sitio se
- * dice en una línea por qué no está. Un hueco callado se lee como una avería.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventCodePanel {
 
-	/**
-	 * Why the yellow box is there, for the JavaScript field.
-	 */
+
+
+
 	private const WHY_JS = 'Este recuadro solo lo ve quien administra el aplicativo. El CSS de arriba lo escribe también quien organiza el evento; esto no, porque no cambia cómo se ve una página: ejecuta un programa en el navegador de quien la visite.';
 
-	/**
-	 * Paint the panel.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$css_ok = (bool) $m['can_edit_css'];
 		$js_ok  = (bool) $m['can_edit_js'];
@@ -13059,8 +13059,8 @@ final class EventCodePanel {
 				para afinarlo.
 			</p>
 
-			<?php echo $bloque_css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-			<?php echo $bloque_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo $bloque_css; ?>
+			<?php echo $bloque_js; ?>
 
 			<?php if ( $css_ok || $js_ok ) : ?>
 				<p class="evt-acciones">
@@ -13072,12 +13072,12 @@ final class EventCodePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The CSS field, as a plain card of the tab.
-	 *
-	 * @param string $valor What is stored, raw.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function css_card( string $valor ): string {
 		$campo = CodeEditor::field(
 			array(
@@ -13101,18 +13101,18 @@ final class EventCodePanel {
 				detalle. Y si el editor no la acepta, mire su margen izquierdo: el comprobador señala ahí
 				los errores de sintaxis.
 			</p>
-			<?php echo $campo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo $campo; ?>
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The JavaScript field, in its yellow box, with the warning it deserves.
-	 *
-	 * @param string $valor What is stored, raw.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function js_box( string $valor ): string {
 		$campo = CodeEditor::field(
 			array(
@@ -13139,14 +13139,14 @@ final class EventCodePanel {
 		return Shell::admin_box( 'JavaScript a medida', $aviso . $campo, self::WHY_JS );
 	}
 
-	/**
-	 * What is said instead of the CSS field when it is not allowed.
-	 *
-	 * Es el caso raro —el CSS lo escriben el área y la administración—, así que
-	 * basta con decirlo y no repetir por qué.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	private static function missing_css(): string {
 		ob_start();
 		?>
@@ -13161,16 +13161,16 @@ final class EventCodePanel {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The one line that replaces the JavaScript field for whoever may not write it.
-	 *
-	 * Una línea y no un recuadro amarillo: el amarillo es para lo que se ve, y
-	 * aquí justamente no hay nada que ver. Lo que hace falta es que quien
-	 * organiza el evento sepa que la pestaña está completa y que el campo que
-	 * no está no le falta a nadie.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function missing_js(): string {
 		ob_start();
 		?>
@@ -13185,12 +13185,12 @@ final class EventCodePanel {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventWorkspaceView.php ----
-/**
- * The event workshop, painted from what EventWorkspace::model() decided.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -13199,21 +13199,21 @@ use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Solo pinta: no lee la petición, no consulta, no decide.
- *
- * Esta clase es el marco del taller —la cabecera del evento, las pestañas
- * internas y el aviso de lo último que se hizo— y le pasa el turno al panel
- * que toque.
- */
+
+
+
+
+
+
+
 final class EventWorkspaceView {
 
-	/**
-	 * Paint the workshop.
-	 *
-	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		if ( '' !== (string) $m['aviso'] ) {
 			return Shell::render(
@@ -13226,60 +13226,60 @@ final class EventWorkspaceView {
 		$flash = (array) $m['flash'];
 		$panel = (string) $m['panel'];
 
-		// El alta es el taller con una sola pestaña: no hay páginas, ni
-		// ponentes, ni programa que enseñar de un evento que todavía no
-		// existe, y una fila de pestañas apagadas solo invita a pulsarlas.
+
+
+
 		if ( true === $m['nuevo'] ) {
 			return self::new_event( $m );
 		}
 
 		ob_start();
-		echo self::head( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-		echo self::tabs( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo self::head( $m ); 
+		echo self::tabs( $m ); 
 
 		if ( '' !== (string) $flash['texto'] ) {
-			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); 
 		}
 
-		echo self::archived_notice( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo self::archived_notice( $m ); 
 
-		// El interruptor va fuera de lo que se apaga, y antes: si estuviera
-		// dentro del panel bloqueado, marcar un evento sería un viaje sin
-		// vuelta ni siquiera para quien administra.
+
+
+
 		if ( EventWorkspace::PANEL_SETTINGS === $panel ) {
-			echo self::archive_switch( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo self::archive_switch( $m ); 
 		}
 
-		// Solo lectura: un `fieldset` desactivado apaga de una vez todos los
-		// controles que tenga dentro —también los de los formularios que hay
-		// en él—, así que ningún panel tiene que enterarse de nada. Lo que se
-		// puede seguir haciendo son enlaces, y esos no se tocan: entrar,
-		// consultar y exportar sigue funcionando.
+
+
+
+
+
 		$cerrado = true !== $m['can_edit'];
 		if ( $cerrado ) {
 			echo '<fieldset class="evt-solo-lectura" disabled><legend class="screen-reader-text">Evento en solo lectura</legend>';
 		}
 
 		if ( EventWorkspace::PANEL_SPEAKERS === $panel ) {
-			echo EventSpeakersPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventSpeakersPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_PROGRAMME === $panel ) {
-			echo EventProgrammePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventProgrammePanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_WORKSHOPS === $panel ) {
-			echo EventWorkshopsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventWorkshopsPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_SIGNUP === $panel ) {
-			echo EventSignupPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventSignupPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
-			echo EventParticipantsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventParticipantsPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_SETTINGS === $panel ) {
-			echo EventDataPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventDataPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_LOOK === $panel ) {
-			echo EventAppearancePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventAppearancePanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_CODE === $panel ) {
-			// Aquí no hace falta volver a comprobar la capacidad: sin ella la
-			// pestaña no está en `panels()` y `model()` ya cayó en «Secciones».
-			echo EventCodePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+
+
+			echo EventCodePanel::html( $m ); 
 		} else {
-			echo EventSectionsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo EventSectionsPanel::html( $m ); 
 		}
 
 		if ( $cerrado ) {
@@ -13289,12 +13289,12 @@ final class EventWorkspaceView {
 		return Shell::render( '', '', (string) ob_get_clean() );
 	}
 
-	/**
-	 * The «create an event» screen.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function new_event( array $m ): string {
 		$flash = (array) $m['flash'];
 
@@ -13311,22 +13311,22 @@ final class EventWorkspaceView {
 		</p>
 		<?php
 		if ( '' !== (string) $flash['texto'] ) {
-			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); 
 		}
-		echo EventDataPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo EventDataPanel::html( $m ); 
 
 		return Shell::render( '', '', (string) ob_get_clean() );
 	}
 
-	/**
-	 * Why this workshop opens without a single «Guardar».
-	 *
-	 * Sale arriba y para todo el mundo, también para quien administra: si el
-	 * evento está cerrado, lo primero que hay que leer al entrar es eso.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function archived_notice( array $m ): string {
 		if ( true !== $m['archived'] ) {
 			return '';
@@ -13338,19 +13338,19 @@ final class EventWorkspaceView {
 		return Shell::notice( 'aviso', $texto );
 	}
 
-	/**
-	 * The switch that closes the event for good, or opens it again.
-	 *
-	 * Las dos mitades no se pintan igual porque no son de la misma persona.
-	 * Cerrar el evento es una acción normal del área que lo organiza —una cosa
-	 * más de este evento, al lado de sus fechas—, así que va en una tarjeta
-	 * corriente. Reabrirlo sí es de administración y solo lo ve ella, así que
-	 * va en el recuadro amarillo, que es la convención del aplicativo para
-	 * justamente eso y para nada más.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function archive_switch( array $m ): string {
 		if ( true === $m['can_unarchive'] ) {
 			return Shell::admin_box(
@@ -13368,23 +13368,23 @@ final class EventWorkspaceView {
 		<section class="evt-tarjeta">
 			<h2>Dar el evento por terminado</h2>
 			<p>Cuando ya no quede nada que tocar —los vídeos subidos, las presentaciones colgadas, las erratas corregidas—, márquelo como histórico y quedará cerrado tal y como está. Seguirá entrando a consultarlo y a exportarlo, y la página pública se verá igual que siempre; lo que ya no podrá es cambiar nada, ni de él ni de sus secciones. <strong>Para volver a abrirlo tendrá que pedírselo a quien administre el aplicativo.</strong></p>
-			<?php echo self::archive_form( $m, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::archive_form( $m, true ); ?>
 		</section>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The form of one half of the switch.
-	 *
-	 * El aviso de que no hay vuelta atrás va en el diálogo y no solo en el
-	 * texto de al lado: es lo último que se lee antes de cerrar el evento, y
-	 * el diálogo abre con «Cancelar» enfocado.
-	 *
-	 * @param array<string, mixed> $m      Model.
-	 * @param bool                 $marcar Whether this is the marking half.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function archive_form( array $m, bool $marcar ): string {
 		$op       = $marcar ? EventWorkspace::OP_ARCHIVE : EventWorkspace::OP_UNARCHIVE;
 		$rotulo   = $marcar ? 'Marcar como histórico' : 'Volver a abrir el evento';
@@ -13409,12 +13409,12 @@ final class EventWorkspaceView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The name of the event, what state it is in, its área, and where to see it.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function head( array $m ): string {
 		ob_start();
 		?>
@@ -13434,12 +13434,12 @@ final class EventWorkspaceView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The inner tabs of the workshop, each with its count.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function tabs( array $m ): string {
 		$activa = (string) $m['panel'];
 
@@ -13452,8 +13452,8 @@ final class EventWorkspaceView {
 						<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>
 						href="<?php echo esc_url( (string) $panel['url'] ); ?>"><?php echo esc_html( (string) $panel['label'] ); ?>
 						<?php
-						// El recuento solo donde hay algo que contar: en «Ajustes»,
-						// «Apariencia» y «Código» no significaría nada.
+
+
 						if ( null !== ( $panel['count'] ?? null ) ) :
 							?>
 							<span class="evt-tab-n"><?php echo esc_html( (string) (int) $panel['count'] ); ?></span>
@@ -13465,12 +13465,12 @@ final class EventWorkspaceView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The áreas of the event, written out.
-	 *
-	 * @param int[] $ids Term IDs of evt_area.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function area_names( array $ids ): string {
 		$nombres = array();
 		foreach ( $ids as $term_id ) {
@@ -13482,12 +13482,12 @@ final class EventWorkspaceView {
 		return array() === $nombres ? 'Sin área' : implode( ' · ', $nombres );
 	}
 
-	/**
-	 * Way out when there is no event to work on.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function back_link( array $m ): string {
 		$url = (string) $m['events_url'];
 		if ( '' === $url ) {
@@ -13497,12 +13497,12 @@ final class EventWorkspaceView {
 	}
 }
 
-// ---- src/Evt/PublicFront/PageForm.php ----
-/**
- * Front-end editor of one satellite page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -13512,54 +13512,54 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
 use Evt\PublicFront\View\PageFormView;
 
-/**
- * Shortcode [evt_page_form]: alta y edición de una sección del evento.
- *
- * Hoy esto es el formulario del sistema anterior entero —un solo formulario de
- * más de cinco mil píxeles de scroll, está medido y el material está en
- * `.local/`— y el mismo para la portada del evento y para cada sección
- * satélite. Aquí son cinco campos y un plegado: qué sección es, cómo se llama,
- * dónde vive, en qué orden sale y qué cuenta. Lo que se lee de la petición:
- *
- * - `?evento=<id>` — alta de una sección que cuelga de ese evento.
- * - `?seccion=<id>` — edición de esa sección; el evento sale de su `post_parent`
- *   y no de la petición, para que nadie cuelgue una sección ajena de su área.
- *
- * El plegado «Apariencia de esta sección» son los siete campos de diseño que
- * el formulario anterior repite para la hija: fondo de cabecera, texto de
- * cabecera, separador, logo acompañante, forma de las imágenes y las dos
- * tipografías. Lo que se deja en blanco no se guarda: así se distingue «no
- * elegido» —se hereda del evento— de «elegido vacío».
- *
- * La sección nace en borrador. Publicarla es una acción del panel de secciones
- * del evento, no un desplegable perdido en un formulario largo.
- *
- * Al final, el CSS y el JavaScript de ESTA página, que se aplican solo a ella y
- * después de los del evento: el CSS como un bloque más —lo escribe también
- * quien organiza el evento, acotado a su área— y el JavaScript en el recuadro
- * amarillo de «Solo administración». Sin la capacidad no se pinta —y si los
- * campos llegan igual en el envío, se ignoran sin tocar lo que hubiera
- * guardado.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class PageForm {
 
 	public const SHORTCODE = 'evt_page_form';
 
-	/**
-	 * Nonce action of the form.
-	 */
+
+
+
 	public const NONCE_ACTION = 'evt_page_save';
 
-	/**
-	 * Nonce field name.
-	 */
+
+
+
 	public const NONCE_FIELD = 'evt_page_nonce';
 
-	/**
-	 * The seven appearance settings a satellite page carries of its own.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
 	public const LOOK_KEYS = array(
 		EventMetaKeys::HEADER_BG,
 		EventMetaKeys::HEADER_TEXT,
@@ -13570,37 +13570,37 @@ final class PageForm {
 		EventMetaKeys::BODY_FONT,
 	);
 
-	/**
-	 * Why the last submit did not go through, and which fields to mark.
-	 *
-	 * Un envío rechazado no redirige: la misma petición vuelve a pintar el
-	 * formulario, así que el motivo no tiene que sobrevivir a nada y no hace
-	 * falta guardarlo fuera.
-	 *
-	 * @var array{message:string, errors:string[]}
-	 */
+
+
+
+
+
+
+
+
+
 	private static $rejected = array(
 		'message' => '',
 		'errors'  => array(),
 	);
 
-	/**
-	 * Register the shortcode and the POST handler.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
-		// Antes de pintar: si el envío entra, se sale por `Shell::leave()` sin
-		// llegar a montar la pantalla.
+
+
 		add_action( 'init', array( self::class, 'maybe_handle_submit' ), 20 );
 	}
 
-	/**
-	 * Take the form submit: nonce, permission over the parent event, and save.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function maybe_handle_submit(): void {
 		if ( ! self::is_our_submit() || ! is_user_logged_in() ) {
 			return;
@@ -13610,7 +13610,7 @@ final class PageForm {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- comprobado en la línea de arriba.
+
 		$raw      = wp_unslash( $_POST );
 		$user_id  = get_current_user_id();
 		$page_id  = self::int_of( $raw, 'evt_page_id' );
@@ -13620,21 +13620,21 @@ final class PageForm {
 			self::$rejected['message'] = 'No se sabe de qué evento cuelga esta sección. Ábrala desde su evento.';
 			return;
 		}
-		// El guardián, sobre el evento padre: sin permiso sobre él no se crea ni
-		// se toca nada, aunque el identificador venga escrito a mano en el envío.
+
+
 		if ( ! EventAccess::can_edit( $user_id, $event_id ) ) {
 			self::$rejected['message'] = EventAccess::why_not_editable( $user_id, $event_id );
 			return;
 		}
-		// Antes de escribir nada, y con el evento padre y no con la sección: el
-		// bloqueo es del evento entero. Si lo tiene otra persona, esto responde
-		// 409 y no vuelve.
+
+
+
 		EditLock::require_available( $event_id );
 
 		$fields = self::submitted_fields( $raw );
-		// Al editar, el tipo es el que ya tiene la sección y no el que venga en
-		// el envío: se eligió al crearla y no se cambia (ADR-0019). Se valida
-		// igual, porque un valor guardado también puede haberse corrompido.
+
+
+
 		$tipo  = $page_id > 0
 			? (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true )
 			: $fields['section_type'];
@@ -13662,13 +13662,13 @@ final class PageForm {
 		self::leave_saved( $page_id, (int) $saved );
 	}
 
-	/**
-	 * Back to the same screen, with the notice of what just happened.
-	 *
-	 * @param int $page_id Page that was being edited, 0 when it was created now.
-	 * @param int $saved   Page ID after saving.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	private static function leave_saved( int $page_id, int $saved ): void {
 		$destino = Shell::url(
 			'section',
@@ -13680,51 +13680,51 @@ final class PageForm {
 		Shell::leave( '' !== $destino ? $destino : Shell::back_url( 'events' ) );
 	}
 
-	/**
-	 * The event this submit is about.
-	 *
-	 * Al editar, el evento sale del `post_parent` de la sección y no de la
-	 * petición: si viniera del envío, cambiarlo a mano movería una sección de
-	 * un evento a otro —de un área a otra— con solo tener permiso sobre el
-	 * evento de destino.
-	 *
-	 * @param array<string, mixed> $raw     Unslashed $_POST.
-	 * @param int                  $page_id Page being edited, 0 when new.
-	 * @return int
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function target_event( array $raw, int $page_id ): int {
 		return $page_id > 0 ? self::parent_of( $page_id ) : self::int_of( $raw, 'evt_page_event' );
 	}
 
-	/**
-	 * A positive integer from a submitted field.
-	 *
-	 * @param array<string, mixed> $raw Unslashed $_POST.
-	 * @param string               $key Field name.
-	 * @return int
-	 */
+
+
+
+
+
+
+
 	private static function int_of( array $raw, string $key ): int {
 		return isset( $raw[ $key ] ) ? max( 0, (int) $raw[ $key ] ) : 0;
 	}
 
-	/**
-	 * Write the page and its meta.
-	 *
-	 * @param int                  $user_id  Who is saving.
-	 * @param int                  $event_id Parent event.
-	 * @param int                  $page_id  Page being edited, 0 when new.
-	 * @param array<string, mixed> $data     What EventInput normalised.
-	 * @param array<string, mixed> $fields   What the form carried.
-	 * @return int|\WP_Error Page ID.
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function save( int $user_id, int $event_id, int $page_id, array $data, array $fields ) {
 		$title   = (string) $data['title'];
 		$postarr = array(
 			'post_type'    => EventPostType::POST_TYPE,
 			'post_parent'  => $event_id,
 			'post_title'   => $title,
-			// Sin slug tecleado, el del título: una sección sin dirección no se
-			// enlaza, y el aplicativo vive de sus direcciones.
+
+
 			'post_name'    => sanitize_title( '' !== $fields['slug'] ? $fields['slug'] : $title ),
 			'post_content' => $fields['content'],
 			'menu_order'   => $fields['menu_order'],
@@ -13734,8 +13734,8 @@ final class PageForm {
 			$postarr['ID'] = $page_id;
 			$result        = wp_update_post( wp_slash( $postarr ), true );
 		} else {
-			// Nace en borrador, y el estado no vuelve a tocarse aquí: publicar y
-			// retirar son acciones del panel de secciones del evento.
+
+
 			$postarr['post_status'] = 'draft';
 			$postarr['post_author'] = $user_id;
 			$result                 = wp_insert_post( wp_slash( $postarr ), true );
@@ -13747,16 +13747,16 @@ final class PageForm {
 
 		$id = (int) $result;
 
-		// El tipo se escribe UNA vez, al crear. Cambiarlo después dejaría la
-		// sección con los elementos de otro tipo: una página de programa y una
-		// de contacto no llevan lo mismo dentro (ADR-0019). Aunque alguien
-		// mande el campo a mano en el POST de una edición, aquí no se toca.
-		//
-		// Esto es redundante a propósito con el `$tipo` de `maybe_handle_submit()`,
-		// que ya sustituye lo enviado por lo guardado: comprobado que cada una
-		// de las dos basta por separado y que el test solo cae si se quitan las
-		// dos. La de arriba protege la validación y esta la escritura; quien
-		// mañana toque una, no se lleva la otra por delante.
+
+
+
+
+
+
+
+
+
+
 		if ( 0 === $page_id ) {
 			update_post_meta( $id, EventMetaKeys::SECTION_TYPE, (string) $data['section_type'] );
 		}
@@ -13764,7 +13764,7 @@ final class PageForm {
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$valor = (string) ( $fields['look'][ $clave ] ?? '' );
 			if ( '' === $valor || '0' === $valor ) {
-				// Sin elegir: se hereda del evento, y eso se guarda no guardando.
+
 				delete_post_meta( $id, $clave );
 				continue;
 			}
@@ -13776,46 +13776,46 @@ final class PageForm {
 		return $id;
 	}
 
-	/**
-	 * Write the custom CSS and JavaScript of this page, field by field.
-	 *
-	 * Se comprueba por campo y no una vez: las dos capacidades son distintas a
-	 * propósito —una hoja de estilos afea una página, un guion ejecuta código
-	 * en el navegador de cada visitante— y quien tiene una puede no tener la
-	 * otra. El campo que no se puede escribir no se toca: si llega en el envío
-	 * es que alguien lo escribió a mano, y lo guardado se queda como estaba.
-	 *
-	 * @param int                  $user_id  Who is saving.
-	 * @param int                  $event_id Parent event.
-	 * @param int                  $page_id  Page just written.
-	 * @param array<string, mixed> $fields   What the form carried.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function save_code( int $user_id, int $event_id, int $page_id, array $fields ): void {
 		foreach ( self::code_allowed( $user_id, $event_id ) as $clave => $puede ) {
 			if ( ! $puede ) {
 				continue;
 			}
-			// En crudo: es código, y limpiarlo lo rompería. De desactivar la
-			// fuga de etiqueta se encargan los sanitize de
-			// `register_post_meta()`, que corren dentro de esta llamada.
-			// `wp_slash()` porque `update_post_meta()` desescapa antes de
-			// guardar, y sin eso un `\2014` del CSS o un `\d` del JavaScript
-			// perderían la barra.
+
+
+
+
+
+
 			update_post_meta( $page_id, $clave, wp_slash( (string) ( $fields['code'][ $clave ] ?? '' ) ) );
 		}
 	}
 
-	/**
-	 * Which of the two code fields this person may write here.
-	 *
-	 * Se pregunta por el evento padre y no por la página: es donde vive el
-	 * área, y al crear una sección todavía no hay página por la que preguntar.
-	 *
-	 * @param int $user_id  Who is asking.
-	 * @param int $event_id Parent event.
-	 * @return array<string, bool> Meta key => whether it may be written.
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function code_allowed( int $user_id, int $event_id ): array {
 		return array(
 			EventMetaKeys::CUSTOM_CSS => EventAccess::can_edit_custom_css( $user_id, $event_id ),
@@ -13823,11 +13823,11 @@ final class PageForm {
 		);
 	}
 
-	/**
-	 * Everything the screen decides before painting.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	public static function model(): array {
 		$m = array(
 			'aviso'     => '',
@@ -13880,9 +13880,9 @@ final class PageForm {
 		$m['page_id']   = $page_id;
 		$m['hecho']     = self::done_notice();
 		$m['code']      = self::code_allowed( $user_id, $event_id );
-		// Abrir la sección toma el bloqueo DEL EVENTO: dos personas en dos
-		// secciones distintas del mismo evento se pisan igual, porque comparten
-		// la navegación, el orden y la apariencia.
+
+
+
 		$m['lock'] = EditLock::status( $event_id, true );
 
 		if ( $page_id > 0 ) {
@@ -13890,8 +13890,8 @@ final class PageForm {
 			$m['values'] = self::stored_values( $page_id );
 		}
 
-		// Lo que se acaba de teclear manda sobre lo guardado: al corregir, la
-		// sección todavía tiene lo viejo y repintarlo borraría la corrección.
+
+
 		$enviado = self::submitted_values();
 		if ( null !== $enviado ) {
 			$m['values'] = $enviado;
@@ -13902,17 +13902,17 @@ final class PageForm {
 		return $m;
 	}
 
-	/**
-	 * Blank out the code this person may not write.
-	 *
-	 * El campo que no se puede escribir tampoco se repinta, venga del envío o
-	 * de lo guardado: su formulario no lo lleva, y el modelo no le pasa a la
-	 * vista nada que la vista no deba pintar.
-	 *
-	 * @param array<string, bool>   $puede   Meta key => whether it may be written.
-	 * @param array<string, string> $valores Meta key => value.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function readable_code( array $puede, array $valores ): array {
 		foreach ( $puede as $clave => $ok ) {
 			if ( ! $ok ) {
@@ -13922,12 +13922,12 @@ final class PageForm {
 		return $valores;
 	}
 
-	/**
-	 * Render the shortcode.
-	 *
-	 * @param array<string, string>|string $atts Attributes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
@@ -13935,9 +13935,9 @@ final class PageForm {
 		$lock = (array) $m['lock'];
 		$html = PageFormView::html( $m );
 
-		// Un `fieldset` desactivado apaga de una vez todos los controles que
-		// tenga dentro, así que la vista no tiene que enterarse de nada. Es la
-		// misma pieza con la que el taller pinta un evento en solo lectura.
+
+
+
 		if ( (int) $lock['owner'] > 0 ) {
 			$html = '<fieldset class="evt-solo-lectura" disabled>'
 				. '<legend class="screen-reader-text">Sección en solo lectura: otra persona tiene abierto este evento</legend>'
@@ -13947,11 +13947,11 @@ final class PageForm {
 		return EditLock::render( EditLock::claim( $lock ) ) . $html;
 	}
 
-	/**
-	 * Empty form values.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	private static function defaults(): array {
 		$look = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
@@ -13968,12 +13968,12 @@ final class PageForm {
 		);
 	}
 
-	/**
-	 * Form values of a page already saved.
-	 *
-	 * @param int $page_id Page ID.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
 	private static function stored_values( int $page_id ): array {
 		$look = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
@@ -13994,16 +13994,16 @@ final class PageForm {
 		);
 	}
 
-	/**
-	 * The fields a submit carries, in the shape the form and the saver share.
-	 *
-	 * Una sola lectura de la petición para los dos que la miran: el que guarda
-	 * y el que repinta. Con dos, acabarían interpretando distinto el mismo
-	 * campo.
-	 *
-	 * @param array<string, mixed> $raw Unslashed $_POST.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function submitted_fields( array $raw ): array {
 		$look = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
@@ -14011,8 +14011,8 @@ final class PageForm {
 		}
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
-			// Tal cual llega: es código. Quien decide si se guarda es
-			// {@see save_code()}, y quien lo limpia, su sanitize de meta.
+
+
 			$code[ $clave ] = isset( $raw[ $clave ] ) ? (string) $raw[ $clave ] : '';
 		}
 
@@ -14021,43 +14021,43 @@ final class PageForm {
 			'slug'         => isset( $raw['evt_slug'] ) ? sanitize_title( (string) $raw['evt_slug'] ) : '',
 			'section_type' => isset( $raw[ EventMetaKeys::SECTION_TYPE ] ) ? sanitize_key( (string) $raw[ EventMetaKeys::SECTION_TYPE ] ) : '',
 			'menu_order'   => isset( $raw['evt_order'] ) ? (int) $raw['evt_order'] : 0,
-			// Nadie escribe HTML sin filtrar, tampoco quien organiza.
+
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
 			'code'         => $code,
 		);
 	}
 
-	/**
-	 * Form values from the last submit, or null when the request is not one.
-	 *
-	 * @return array<string, mixed>|null
-	 */
+
+
+
+
+
 	private static function submitted_values(): ?array {
 		if ( ! self::is_our_submit() || ! self::nonce_ok() ) {
 			return null;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- comprobado en la línea de arriba.
+
 		return self::submitted_fields( wp_unslash( $_POST ) );
 	}
 
-	/**
-	 * Whether this request is this form being submitted.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
 	private static function is_our_submit(): bool {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_SERVER['REQUEST_METHOD'] ) ) ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- solo mira si el envío es nuestro; el nonce se comprueba aparte.
+
 		return 'POST' === $method && ! empty( $_POST['evt_page_form'] );
 	}
 
-	/**
-	 * Whether the submit carries our valid nonce.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
 	private static function nonce_ok(): bool {
 		$nonce = isset( $_POST[ self::NONCE_FIELD ] )
 			? sanitize_text_field( wp_unslash( (string) $_POST[ self::NONCE_FIELD ] ) )
@@ -14065,25 +14065,25 @@ final class PageForm {
 		return '' !== $nonce && false !== wp_verify_nonce( $nonce, self::NONCE_ACTION );
 	}
 
-	/**
-	 * A positive ID from the query string.
-	 *
-	 * @param string $name Query argument.
-	 * @return int
-	 */
+
+
+
+
+
+
 	private static function query_id( string $name ): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige qué se pinta; el envío revalida nonce y permisos.
+
 		$value = isset( $_GET[ $name ] ) ? (int) $_GET[ $name ] : 0;
 		return max( 0, $value );
 	}
 
-	/**
-	 * The one-line notice of what just got saved.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function done_notice(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige un rótulo de una lista cerrada.
+
 		$que    = isset( $_GET['evt_hecho'] ) ? sanitize_key( wp_unslash( (string) $_GET['evt_hecho'] ) ) : '';
 		$textos = array(
 			'creada'   => 'Sección creada, en borrador: todavía no la ve nadie. Escriba el contenido y publíquela desde el evento cuando esté lista.',
@@ -14092,12 +14092,12 @@ final class PageForm {
 		return (string) ( $textos[ $que ] ?? '' );
 	}
 
-	/**
-	 * Why the submit was rejected, in words.
-	 *
-	 * @param string[] $codes Error codes from EventInput.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function error_message( array $codes ): string {
 		$textos = array(
 			'title'        => 'Escriba el título de la sección.',
@@ -14112,12 +14112,12 @@ final class PageForm {
 		return array() === $dichos ? 'Revise los campos marcados.' : implode( ' ', $dichos );
 	}
 
-	/**
-	 * The event a page hangs from, 0 when it is not one of our pages.
-	 *
-	 * @param int $page_id Page ID.
-	 * @return int
-	 */
+
+
+
+
+
+
 	private static function parent_of( int $page_id ): int {
 		if ( $page_id <= 0 || EventPostType::POST_TYPE !== get_post_type( $page_id ) ) {
 			return 0;
@@ -14125,12 +14125,12 @@ final class PageForm {
 		return (int) get_post_field( 'post_parent', $page_id );
 	}
 
-	/**
-	 * Whether this post is an event itself, and not one of its pages.
-	 *
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_event_root( int $post_id ): bool {
 		if ( $post_id <= 0 || EventPostType::POST_TYPE !== get_post_type( $post_id ) ) {
 			return false;
@@ -14139,12 +14139,12 @@ final class PageForm {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/PageFormView.php ----
-/**
- * The satellite page form, painted from what PageForm::model() decided.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
@@ -14154,17 +14154,17 @@ use Evt\PublicFront\CodeEditor;
 use Evt\PublicFront\PageForm;
 use Evt\PublicFront\Shell;
 
-/**
- * Solo pinta: no lee la petición, no consulta, no decide.
- */
+
+
+
 final class PageFormView {
 
-	/**
-	 * The whole screen.
-	 *
-	 * @param array<string, mixed> $m What PageForm::model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		if ( '' !== (string) $m['aviso'] ) {
 			return Shell::render(
@@ -14183,13 +14183,13 @@ final class PageFormView {
 		);
 	}
 
-	/**
-	 * One line under the heading: of which event, and how it stands.
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param bool                 $nueva Whether the page is being created.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function subtitle( array $m, bool $nueva ): string {
 		if ( $nueva ) {
 			return sprintf( 'Del evento «%s». Nace en borrador: no la ve nadie hasta que la publique.', (string) $m['event'] );
@@ -14198,20 +14198,20 @@ final class PageFormView {
 		return sprintf( 'Del evento «%s» · %s', (string) $m['event'], $estado );
 	}
 
-	/**
-	 * The form itself.
-	 *
-	 * @param array<string, mixed> $m     Model.
-	 * @param bool                 $nueva Whether the page is being created.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function form( array $m, bool $nueva ): string {
 		$valores = (array) $m['values'];
 		$errores = (array) $m['errors'];
 
 		ob_start();
-		echo Shell::notice( 'ok', (string) $m['hecho'] );    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- llega escapado.
-		echo Shell::notice( 'error', (string) $m['error'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- llega escapado.
+		echo Shell::notice( 'ok', (string) $m['hecho'] );    
+		echo Shell::notice( 'error', (string) $m['error'] ); 
 		?>
 		<form class="evt-form" method="post" action="">
 			<input type="hidden" name="evt_page_form" value="1" />
@@ -14286,8 +14286,8 @@ final class PageFormView {
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
 				<?php
-				// El editor de WordPress, el mismo que en el escritorio. El HTML se
-				// filtra al guardar, aquí no hay `unfiltered_html`.
+
+
 				wp_editor(
 					(string) $valores['content'],
 					'evt_page_content',
@@ -14300,9 +14300,9 @@ final class PageFormView {
 				?>
 			</fieldset>
 
-			<?php echo self::look( (array) $valores['look'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::look( (array) $valores['look'] ); ?>
 
-			<?php echo self::code( (array) $m['code'], (array) $valores['code'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::code( (array) $m['code'], (array) $valores['code'] ); ?>
 
 			<p class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
@@ -14319,15 +14319,15 @@ final class PageFormView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The folded «Apariencia de esta sección» block.
-	 *
-	 * Plegado porque casi nunca se toca: lo normal es que la sección se vea
-	 * como su evento, y lo que se deja en blanco es justamente eso.
-	 *
-	 * @param array<string, string> $look Current appearance values, by meta key.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function look( array $look ): string {
 		ob_start();
 		?>
@@ -14337,48 +14337,48 @@ final class PageFormView {
 
 			<div class="evt-form-fila">
 				<?php
-				echo self::color_field( EventMetaKeys::HEADER_BG, 'Color de fondo de la cabecera', (string) ( $look[ EventMetaKeys::HEADER_BG ] ?? '' ) );    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-				echo self::color_field( EventMetaKeys::HEADER_TEXT, 'Color del texto de la cabecera', (string) ( $look[ EventMetaKeys::HEADER_TEXT ] ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+				echo self::color_field( EventMetaKeys::HEADER_BG, 'Color de fondo de la cabecera', (string) ( $look[ EventMetaKeys::HEADER_BG ] ?? '' ) );    
+				echo self::color_field( EventMetaKeys::HEADER_TEXT, 'Color del texto de la cabecera', (string) ( $look[ EventMetaKeys::HEADER_TEXT ] ?? '' ) ); 
 				?>
 			</div>
 
 			<div class="evt-form-fila">
 				<?php
-				echo self::select_field( EventMetaKeys::TITLE_FONT, 'Tipografía de los títulos', EventMetaKeys::fonts(), (string) ( $look[ EventMetaKeys::TITLE_FONT ] ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-				echo self::select_field( EventMetaKeys::BODY_FONT, 'Tipografía del cuerpo', EventMetaKeys::fonts(), (string) ( $look[ EventMetaKeys::BODY_FONT ] ?? '' ) );      // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+				echo self::select_field( EventMetaKeys::TITLE_FONT, 'Tipografía de los títulos', EventMetaKeys::fonts(), (string) ( $look[ EventMetaKeys::TITLE_FONT ] ?? '' ) ); 
+				echo self::select_field( EventMetaKeys::BODY_FONT, 'Tipografía del cuerpo', EventMetaKeys::fonts(), (string) ( $look[ EventMetaKeys::BODY_FONT ] ?? '' ) );      
 				?>
 			</div>
 
 			<div class="evt-form-fila">
 				<?php
-				echo self::select_field( EventMetaKeys::IMAGE_SHAPE, 'Forma de las imágenes de personas', EventMetaKeys::image_shapes(), (string) ( $look[ EventMetaKeys::IMAGE_SHAPE ] ?? '' ), 'Sin elegir' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-				echo self::select_field( EventMetaKeys::SEPARATOR, 'Separador al pie de la cabecera', EventMetaKeys::separators(), (string) ( $look[ EventMetaKeys::SEPARATOR ] ?? '' ) );                       // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+				echo self::select_field( EventMetaKeys::IMAGE_SHAPE, 'Forma de las imágenes de personas', EventMetaKeys::image_shapes(), (string) ( $look[ EventMetaKeys::IMAGE_SHAPE ] ?? '' ), 'Sin elegir' ); 
+				echo self::select_field( EventMetaKeys::SEPARATOR, 'Separador al pie de la cabecera', EventMetaKeys::separators(), (string) ( $look[ EventMetaKeys::SEPARATOR ] ?? '' ) );                       
 				?>
 			</div>
 
-			<?php echo self::logo_field( (int) ( $look[ EventMetaKeys::LOGO_ID ] ?? 0 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::logo_field( (int) ( $look[ EventMetaKeys::LOGO_ID ] ?? 0 ) ); ?>
 		</details>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The code of this page: the CSS as a plain block, the JavaScript in yellow.
-	 *
-	 * Cada campo por separado y cada uno con su forma, porque son dos permisos
-	 * distintos y dos riesgos distintos. El CSS es un bloque corriente de la
-	 * sección —lo escribe también quien organiza el evento, acotado a su área—;
-	 * el JavaScript va en el recuadro amarillo de «Solo administración» porque
-	 * se ejecuta en el navegador de quien visite la página.
-	 *
-	 * El campo que no se puede escribir no se pinta: esconder el contenido y
-	 * dejar el campo no es esconder nada. Pero a quien sí escribe el CSS se le
-	 * dice en una línea por qué no está el otro, para que no lo busque.
-	 *
-	 * @param array<string, bool>   $puede   Meta key => whether this person may write it.
-	 * @param array<string, string> $valores Meta key => what is stored, raw.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function code( array $puede, array $valores ): string {
 		$css_ok = ! empty( $puede[ EventMetaKeys::CUSTOM_CSS ] );
 		$js_ok  = ! empty( $puede[ EventMetaKeys::CUSTOM_JS ] );
@@ -14400,7 +14400,7 @@ final class PageFormView {
 			<fieldset class="evt-tarjeta">
 				<legend>CSS a medida de esta sección</legend>
 				<p>Para los retoques que «Apariencia de esta sección» no cubre. Déjelo vacío si no hace falta ninguno.</p>
-				<?php echo $campo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo $campo; ?>
 				<?php if ( ! $js_ok ) : ?>
 					<p>
 						El JavaScript a medida de esta sección no aparece aquí porque solo lo escribe quien
@@ -14432,18 +14432,18 @@ final class PageFormView {
 		return $html;
 	}
 
-	/**
-	 * A colour: the native picker next to the hexadecimal it writes.
-	 *
-	 * El que viaja es el campo de texto; el selector no lleva `name` a
-	 * propósito, para que el dato sea uno solo y quien tenga el guion
-	 * bloqueado siga pudiendo teclear el hexadecimal.
-	 *
-	 * @param string $key   Meta key, which is also the field name.
-	 * @param string $label What it says.
-	 * @param string $value Current value.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function color_field( string $key, string $label, string $value ): string {
 		ob_start();
 		?>
@@ -14463,16 +14463,16 @@ final class PageFormView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * A closed list.
-	 *
-	 * @param string                $key     Meta key, which is also the field name.
-	 * @param string                $label   What it says.
-	 * @param array<string, string> $options slug => rótulo.
-	 * @param string                $value   Current value.
-	 * @param string                $blank   Label of the empty option; '' when the list already has one.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function select_field( string $key, string $label, array $options, string $value, string $blank = '' ): string {
 		ob_start();
 		?>
@@ -14493,12 +14493,12 @@ final class PageFormView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The accompanying logo of this page, by attachment ID.
-	 *
-	 * @param int $logo_id Attachment ID, 0 when there is none.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function logo_field( int $logo_id ): string {
 		$miniatura = $logo_id > 0 ? (string) wp_get_attachment_image_url( $logo_id, 'thumbnail' ) : '';
 
@@ -14521,14 +14521,14 @@ final class PageFormView {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Inline error next to a field the last submit flagged.
-	 *
-	 * @param string[] $errors Error codes.
-	 * @param string[] $codes  Codes attached to this field.
-	 * @param string   $text   What to say.
-	 * @return void Echoes the escaped message.
-	 */
+
+
+
+
+
+
+
+
 	private static function field_error( array $errors, array $codes, string $text ): void {
 		if ( array() === array_intersect( $codes, $errors ) ) {
 			return;
@@ -14536,11 +14536,11 @@ final class PageFormView {
 		echo '<span class="evt-error" role="alert">' . esc_html( $text ) . '</span>';
 	}
 
-	/**
-	 * A way out when there is no form to paint.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function back_to_events(): string {
 		$url = Shell::url( 'events' );
 		if ( '' === $url ) {
@@ -14551,97 +14551,97 @@ final class PageFormView {
 	}
 }
 
-// ---- src/Evt/PublicFront/Block/ContentBlock.php ----
-/**
- * The `contenido` block of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\Block;
 
-/**
- * El texto de la página, tal y como lo escribió quien la redactó.
- *
- * Solo pinta: no lee la petición, no consulta, no decide. El
- * contenido llega en el modelo ya pasado por `the_content`, así que aquí no se
- * vuelve a filtrar: se sanea la salida y se devuelve.
- *
- * Es el bloque que sustituye al `<div class="evt-ev-cuerpo">` de la vista
- * vieja. El envoltorio —`<section class="evt-ev__bloque evt-ev__bloque--contenido">`—
- * lo pone {@see \Evt\PublicFront\EventLayout::body()}, y por eso aquí no hay
- * ningún `<div>` de más: una sección de evento tenía diez niveles de
- * anidamiento antes de llegar al texto y ese era justo el problema.
- *
- * Una página sin texto no deja hueco, y eso no se comprueba aquí:
- * {@see \Evt\PublicFront\EventLayout::body()} se salta todo bloque cuyo HTML
- * llegue vacío, y esa guarda vale para los tres y para los que vengan. Cada
- * bloque repitiéndola sería la misma condición escrita cuatro veces.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class ContentBlock {
 
-	/**
-	 * Name of the block; also the CSS modifier of its section.
-	 */
+
+
+
 	public const NAME = 'contenido';
 
-	/**
-	 * Dónde pinta: lo primero del cuerpo.
-	 */
+
+
+
 	public const PRIORITY = 10;
 
-	/**
-	 * Paint the block.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string HTML already escaped; empty when there is nothing to say.
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		return wp_kses_post( (string) $m['content'] );
 	}
 }
 
-// ---- src/Evt/PublicFront/Block/PosterBlock.php ----
-/**
- * The `cartel` block of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\Block;
 
-/**
- * El cartel del evento, en su portada y solo ahí.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- *
- * Se enseña reducido y enlaza al original: es la pieza que la gente se descarga
- * y comparte, y la miniatura no sirve para imprimir. En cada sección sería el
- * mismo cartel repetido cinco veces, así que se queda en la portada; y el
- * evento que no tiene cartel no deja hueco.
- *
- * El alt: si nadie escribió uno en la biblioteca de medios, «Cartel de <el
- * evento>», que es lo que diría una persona. Vacío nunca: la imagen es
- * información, no adorno.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class PosterBlock {
 
-	/**
-	 * Name of the block; also the CSS modifier of its section.
-	 */
+
+
+
 	public const NAME = 'cartel';
 
-	/**
-	 * Dónde pinta: detrás del texto y delante de las secciones.
-	 */
+
+
+
 	public const PRIORITY = 20;
 
-	/**
-	 * Paint the block.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string HTML already escaped; empty when there is no poster.
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$look = (array) $m['appearance'];
 		if ( empty( $m['is_root'] ) || '' === (string) $look['poster'] ) {
@@ -14650,7 +14650,7 @@ final class PosterBlock {
 
 		$alt = (string) $look['poster_alt'];
 		if ( '' === $alt ) {
-			/* translators: %s: nombre del evento. */
+
 			$alt = sprintf( __( 'Cartel de %s', 'wp-eventos' ), (string) $m['event_title'] );
 		}
 
@@ -14668,50 +14668,50 @@ final class PosterBlock {
 	}
 }
 
-// ---- src/Evt/PublicFront/Block/SectionsBlock.php ----
-/**
- * The `secciones` block of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\Block;
 
-/**
- * La rejilla de tarjetas de sección de la portada.
- *
- * Solo pinta: no lee la petición, no consulta, no decide. Las
- * tarjetas llegan hechas en `$m['cards']`, con su título, su enlace, su imagen
- * y su texto —el propio de la sección o el que le toca por tipo, que decide
- * {@see \Evt\PublicFront\EventView::cards()}—.
- *
- * La rejilla es un `grid` de `auto-fit`, que mide el CONTENEDOR y no la
- * ventana. Con las `col-lg-3 col-md-4 col-sm-6` de Bootstrap que hay hoy en
- * producción salían cuatro tarjetas de una letra de ancho dentro de un
- * contenedor estrecho, porque las media queries miden el viewport. No se vuelve
- * atrás: el aspecto es el mismo y el comportamiento es el correcto.
- *
- * El evento sin secciones publicadas no pinta una rejilla vacía: devuelve la
- * cadena vacía y el armazón se salta el bloque.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class SectionsBlock {
 
-	/**
-	 * Name of the block; also the CSS modifier of its section.
-	 */
+
+
+
 	public const NAME = 'secciones';
 
-	/**
-	 * Dónde pinta: lo último del cuerpo de la portada.
-	 */
+
+
+
 	public const PRIORITY = 30;
 
-	/**
-	 * Paint the block.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string HTML already escaped; empty when there are no sections.
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		$cards = (array) $m['cards'];
 		if ( array() === $cards ) {
@@ -14741,12 +14741,12 @@ final class SectionsBlock {
 	}
 }
 
-// ---- src/Evt/PublicFront/Block/SignupBlock.php ----
-/**
- * The `inscripcion` block of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\Block;
 
@@ -14754,38 +14754,38 @@ use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\SignupForm;
 
-/**
- * El formulario de inscripción, en la sección de tipo `inscripcion`.
- *
- * Solo pinta: no lee la petición para decidir nada, no escribe y no valida. De
- * eso va {@see \Evt\PublicFront\SignupForm}, y de guardar
- * {@see \Evt\PublicFront\Registrations}.
- *
- * Son los siete campos del núcleo más las preguntas del evento (ADR-0031), y
- * nada más: aquí no hay lógica condicional que esconda ni enseñe nada, porque
- * no la hay en el modelo. **Quien no se queda a comer ve igualmente la pregunta
- * de las intolerancias**, y eso está aceptado a sabiendas: la alternativa era
- * el constructor de formularios del que se sale.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class SignupBlock {
 
-	/**
-	 * Name of the block; also the CSS modifier of its section.
-	 */
+
+
+
 	public const NAME = 'inscripcion';
 
-	/**
-	 * Dónde pinta: detrás del texto y del cartel, que son la explicación, y
-	 * delante de las tarjetas de las demás páginas.
-	 */
+
+
+
+
 	public const PRIORITY = 25;
 
-	/**
-	 * The block, or nothing when this is not a signup section.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $m ): string {
 		if ( self::NAME !== ( $m['section_type'] ?? '' ) ) {
 			return '';
@@ -14799,7 +14799,7 @@ final class SignupBlock {
 		$aviso = self::notice();
 		$mia   = SignupForm::current( $evento );
 
-		// Ya inscrita: lo que queda es su taller, si hay plazo.
+
 		if ( $mia > 0 ) {
 			return $aviso . self::mine( $evento, $mia );
 		}
@@ -14811,11 +14811,11 @@ final class SignupBlock {
 		return $aviso . self::form( $evento );
 	}
 
-	/**
-	 * What the last submit left to say.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
 	private static function notice(): string {
 		$aviso = SignupForm::notice();
 		if ( null === $aviso ) {
@@ -14828,12 +14828,12 @@ final class SignupBlock {
 		);
 	}
 
-	/**
-	 * The signup form itself.
-	 *
-	 * @param int $evento Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function form( int $evento ): string {
 		$html  = '<form class="evt-ins" method="post">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
@@ -14855,13 +14855,13 @@ final class SignupBlock {
 		return $html;
 	}
 
-	/**
-	 * What somebody already signed up sees.
-	 *
-	 * @param int $evento Event post ID.
-	 * @param int $mia    Their registration.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function mine( int $evento, int $mia ): string {
 		$meta   = Registrations::meta( $mia );
 		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
@@ -14874,7 +14874,7 @@ final class SignupBlock {
 			return $html . '</div>';
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo para devolverlo en el formulario; la escritura lleva su nonce.
+
 		$token = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
 
 		$html .= '<form class="evt-ins__taller" method="post">';
@@ -14887,13 +14887,13 @@ final class SignupBlock {
 		return $html;
 	}
 
-	/**
-	 * The hidden fields every submit carries.
-	 *
-	 * @param int    $evento Event post ID.
-	 * @param string $op     Operation.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function hidden( int $evento, string $op ): string {
 		return sprintf(
 			'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d">%5$s',
@@ -14905,11 +14905,11 @@ final class SignupBlock {
 		);
 	}
 
-	/**
-	 * The six typed fields of the core, with their label and input type.
-	 *
-	 * @return array<string, array{label:string, type:string, required:bool, autocomplete:string}>
-	 */
+
+
+
+
+
 	private static function core_fields(): array {
 		return array(
 			'tax_id'  => array(
@@ -14945,13 +14945,13 @@ final class SignupBlock {
 		);
 	}
 
-	/**
-	 * One field of the core.
-	 *
-	 * @param string                                                               $nombre Field name.
-	 * @param array{label:string, type:string, required:bool, autocomplete:string} $campo  Its shape.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function field( string $nombre, array $campo ): string {
 		$id = 'evt-ins-' . $nombre;
 		return sprintf(
@@ -14967,15 +14967,15 @@ final class SignupBlock {
 		);
 	}
 
-	/**
-	 * The centre, from the catalogue and never typed.
-	 *
-	 * Sin catálogo no se deja teclear: un centro tecleado es el mismo centro
-	 * escrito de cinco maneras, y a partir de ahí no hay recuento ni cruce que
-	 * valga (ADR-0031). Se dice, en vez de fabricar variantes en silencio.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	private static function centre(): string {
 		$centros = Registrations::centres();
 		if ( array() === $centros ) {
@@ -14991,12 +14991,12 @@ final class SignupBlock {
 		return $html . '</select></p>';
 	}
 
-	/**
-	 * The questions of this event, if it has any.
-	 *
-	 * @param int $evento Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function questions( int $evento ): string {
 		$preguntas = Registrations::questions( $evento );
 		if ( array() === $preguntas ) {
@@ -15010,12 +15010,12 @@ final class SignupBlock {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * One question, by its type.
-	 *
-	 * @param array<string, mixed> $p Normalised question.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function question( array $p ): string {
 		$id     = 'evt-q-' . $p['id'];
 		$name   = SignupForm::FIELD_ANSWERS . '[' . $p['id'] . ']';
@@ -15055,17 +15055,17 @@ final class SignupBlock {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * The workshops still choosable, when the window is open.
-	 *
-	 * Un taller lleno no sale. Que no salga **no es el control**: la página se
-	 * pudo pintar hace cinco minutos y la comprobación que manda es la del
-	 * candado al guardar (ADR-0033).
-	 *
-	 * @param int $evento Event post ID.
-	 * @param int $mia    Registration choosing, 0 for a new signup.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function workshops( int $evento, int $mia ): string {
 		if ( ! SignupForm::workshops_open( $evento ) ) {
 			return '';
@@ -15093,12 +15093,12 @@ final class SignupBlock {
 		return $html . '</fieldset>';
 	}
 
-	/**
-	 * The consent: the two texts and one checkbox (ADR-0020).
-	 *
-	 * @param int $evento Event post ID.
-	 * @return string
-	 */
+
+
+
+
+
+
 	private static function consent( int $evento ): string {
 		$privacidad = (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, true );
 		$imagen     = (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_IMAGE, true );
@@ -15125,12 +15125,12 @@ final class SignupBlock {
 	}
 }
 
-// ---- src/Evt/PublicFront/EventLayout.php ----
-/**
- * The whole HTML document of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -15141,75 +15141,75 @@ use Evt\PublicFront\Block\SectionsBlock;
 use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\View\EventChrome;
 
-/**
- * Monta el documento entero de una página de evento: `<!doctype>` incluido.
- *
- * Antes esto era un envoltorio dentro de `the_content` y el resto lo ponía el
- * tema. Ya no: la página se pinta entera aquí, como hace
- * {@see Shell::render_standalone()} con las pantallas del aplicativo. Lo que el
- * tema daba gratis pasa a ser nuestro y está escrito en la ADR: idioma,
- * `<title>`, descripción, Open Graph, el pie institucional y —lo que no es
- * opcional en un sitio público— el aviso de cookies y la analítica, que salen
- * de {@see EventChrome::consent()} y {@see EventChrome::analytics()}.
- *
- * ## El cuerpo son BLOQUES CON NOMBRE
- *
- * El armazón no sabe qué hay dentro de la página: recorre los bloques
- * registrados y les pide su HTML. Añadir uno nuevo —programa, ponentes,
- * talleres, inscripción— **no obliga a tocar este fichero**:
- *
- * ```php
- * \Evt\PublicFront\EventLayout::add_block(
- *     'programa',                                   // nombre único del bloque
- *     array( ProgramBlock::class, 'html' ),         // callable( array $m ): string
- *     40                                            // orden; menor pinta antes
- * );
- * ```
- *
- * El callable recibe {@see EventView::model()} y devuelve HTML **ya escapado**,
- * o cadena vacía para no pintar nada. Lo que necesite en el modelo lo añade con
- * el filtro `evt_event_model`, que corre al final de `model()`. El armazón
- * envuelve cada bloque en `<section class="evt-ev__bloque evt-ev__bloque--NOMBRE">`
- * y no toca nada más. Los bloques empiezan en `<h2>`: el único `<h1>` de la
- * página es el título de la portada.
- *
- * Cada bloque vive en su propio fichero bajo `PublicFront/Block/`, con el
- * mismo trato que las vistas: solo pinta, y su CSS está en
- * `assets/css/evt-evento.css` escrito con los tokens del armazón.
- *
- * ## El aspecto son TOKENS
- *
- * Todo lo que se ve sale de propiedades personalizadas escritas en un solo
- * sitio ({@see tokens()}) a partir de las metas del evento. El CSS a medida
- * cambia un token y no pelea con la especificidad de nadie. Por eso los colores
- * NO van en atributos `style`: un `style` en línea solo se pisa con
- * `!important`, y eso es justo lo contrario de «fácilmente modificable».
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventLayout {
 
-	/**
-	 * Blocks that make up the body, by name.
-	 *
-	 * @var array<string, array{render:callable, priority:int, order:int}>
-	 */
+
+
+
+
+
 	private static $blocks = array();
 
-	/**
-	 * How many blocks were registered, to keep ties in registration order.
-	 *
-	 * @var int
-	 */
+
+
+
+
+
 	private static $seq = 0;
 
-	/**
-	 * Register the blocks the skeleton itself ships. Idempotent.
-	 *
-	 * Tres, y los tres son los de hoy: el contenido de la página, el cartel del
-	 * evento y la rejilla de tarjetas de sección. Los demás los registran las
-	 * pantallas que los traigan.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
 	public static function register(): void {
 		self::add_block( ContentBlock::NAME, array( ContentBlock::class, 'html' ), ContentBlock::PRIORITY );
 		self::add_block( PosterBlock::NAME, array( PosterBlock::class, 'html' ), PosterBlock::PRIORITY );
@@ -15217,14 +15217,14 @@ final class EventLayout {
 		self::add_block( SignupBlock::NAME, array( SignupBlock::class, 'html' ), SignupBlock::PRIORITY );
 	}
 
-	/**
-	 * Register one named block of the body.
-	 *
-	 * @param string   $name     Unique name; also the CSS modifier of its section.
-	 * @param callable $render   `function( array $model ): string`, HTML already escaped.
-	 * @param int      $priority Lower paints first; ties keep registration order.
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	public static function add_block( string $name, callable $render, int $priority = 50 ): void {
 		$name = sanitize_key( $name );
 		if ( '' === $name ) {
@@ -15237,21 +15237,21 @@ final class EventLayout {
 		);
 	}
 
-	/**
-	 * Forget one block.
-	 *
-	 * @param string $name Block name.
-	 * @return void
-	 */
+
+
+
+
+
+
 	public static function remove_block( string $name ): void {
 		unset( self::$blocks[ sanitize_key( $name ) ] );
 	}
 
-	/**
-	 * The blocks of the body, in the order they are painted.
-	 *
-	 * @return array<string, array{render:callable, priority:int, order:int}>
-	 */
+
+
+
+
+
 	public static function blocks(): array {
 		$bloques = self::$blocks;
 		uasort(
@@ -15263,23 +15263,23 @@ final class EventLayout {
 			}
 		);
 
-		/**
-		 * Filter the blocks of the body, already sorted.
-		 *
-		 * Para quitar uno, reordenarlos o quedarse con unos pocos sin tener que
-		 * desregistrar nada.
-		 *
-		 * @param array<string, array{render:callable, priority:int, order:int}> $bloques Blocks.
-		 */
+
+
+
+
+
+
+
+
 		return (array) apply_filters( 'evt_event_blocks', $bloques );
 	}
 
-	/**
-	 * The body: every block that has something to say.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function body( array $m ): string {
 		$html = '';
 		foreach ( self::blocks() as $name => $bloque ) {
@@ -15296,12 +15296,12 @@ final class EventLayout {
 		return $html;
 	}
 
-	/**
-	 * The whole document, from the doctype to the closing tag.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function render( array $m ): string {
 		$clases = array( 'evt-ev' );
 		if ( '' !== (string) $m['section_type'] ) {
@@ -15316,35 +15316,35 @@ final class EventLayout {
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<?php
-		// `wp_head()` escribe el `<title>` cuando el tema declara `title-tag`;
-		// sin tema que lo declare —o sin tema— lo escribimos nosotros. La
-		// canónica, el icono del sitio y las hojas encoladas también salen de
-		// ahí, y por eso `wp_head()` sigue estando aunque el documento sea
-		// nuestro.
+
+
+
+
+
 		if ( ! current_theme_supports( 'title-tag' ) ) {
 			echo '<title>' . esc_html( wp_get_document_title() ) . "</title>\n";
 		}
-		echo self::meta( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo self::meta( $m ); 
 		wp_head();
-		// El aviso de cookies va al final de la cabecera, que es donde lo ponía
-		// el tema, y detrás de `wp_head()` a propósito: es de terceros y no
-		// tiene que competir con nuestras hojas.
-		echo EventChrome::consent(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- URL escapadas dentro.
+
+
+
+		echo EventChrome::consent(); 
 		?>
 </head>
 <body <?php body_class( $clases ); ?>>
 		<?php
 		wp_body_open();
 		echo '<a class="evt-ev__saltar visually-hidden-focusable" href="#contenido">Saltar al contenido</a>';
-		echo EventChrome::header( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo EventChrome::header( $m ); 
 		?>
 	<main id="contenido" class="evt-ev__main evt-ev__ancho" tabindex="-1">
-		<?php echo self::body( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- cada bloque llega escapado. ?>
+		<?php echo self::body( $m ); ?>
 	</main>
 		<?php
-		echo EventChrome::footer(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo EventChrome::footer(); 
 		wp_footer();
-		echo EventChrome::analytics(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido en analytics().
+		echo EventChrome::analytics(); 
 		?>
 </body>
 </html>
@@ -15352,16 +15352,16 @@ final class EventLayout {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * Description and Open Graph: what a link to this page looks like elsewhere.
-	 *
-	 * Esto lo ponía el tema y ahora es nuestro. Sin `og:image` no hay tarjeta en
-	 * ninguna red, y el cartel del evento es exactamente la imagen que hay que
-	 * enseñar.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function meta( array $m ): string {
 		$etiquetas = array(
 			array( 'name', 'description', (string) $m['description'] ),
@@ -15390,19 +15390,19 @@ final class EventLayout {
 		return $html;
 	}
 
-	/**
-	 * The appearance of the event, as CSS custom properties, in ONE place.
-	 *
-	 * Solo se escriben los tokens que el evento cambia: los demás se quedan con
-	 * el valor por defecto de `assets/css/evt-evento.css`, que es donde vive la
-	 * lista entera y documentada.
-	 *
-	 * El color del texto pasa por {@see EventChrome::readable_ink()}: el
-	 * contraste se comprueba, no se supone.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return string A `<style>` element, empty when there is nothing to say.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function tokens( array $m ): string {
 		$look = (array) $m['appearance'];
 
@@ -15415,22 +15415,22 @@ final class EventLayout {
 			'--evt-forma'       => EventMetaKeys::SHAPE_CIRCLE === (string) $look['shape'] ? '50%' : '',
 		);
 
-		/**
-		 * Filter the CSS custom properties of one event.
-		 *
-		 * El sitio que quiera fijar el ancho, el gutter o el radio por evento lo
-		 * hace aquí, y sigue siendo un token y no una regla nueva.
-		 *
-		 * @param array<string, string> $tokens Custom property => value; empty values are dropped.
-		 * @param array<string, mixed>  $m      The model.
-		 */
+
+
+
+
+
+
+
+
+
 		$tokens = (array) apply_filters( 'evt_event_tokens', $tokens, $m );
 
 		$reglas = '';
 		foreach ( $tokens as $propiedad => $valor ) {
 			$valor = trim( (string) $valor );
-			// Ni llaves ni punto y coma ni cierre de etiqueta: un token es un
-			// valor, no un trozo de hoja de estilos.
+
+
 			if ( '' === $valor || preg_match( '/[{};<>]/', $valor ) ) {
 				continue;
 			}
@@ -15444,12 +15444,12 @@ final class EventLayout {
 	}
 }
 
-// ---- src/Evt/PublicFront/EventView.php ----
-/**
- * Public view of an event and of each of its satellite pages.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
@@ -15459,115 +15459,115 @@ use Evt\Domain\EventState;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
 
-/**
- * Lo que ve quien visita un evento.
- *
- * No es una pantalla del aplicativo: no lleva la cabecera ni las pestañas del
- * {@see Shell}, y mantiene el aspecto reconocible de las páginas de evento de
- * hoy. Reproduce en PHP lo que en el sistema anterior hacen tres vistas
- * interpoladas: la cabecera del evento con el cuerpo de cada tipo de página, la
- * navegación entre secciones y la rejilla de tarjetas de la portada.
- *
- * ## Se pinta el documento entero, en `template_redirect`
- *
- * Esto **sustituye** la decisión anterior, y está escrito en la ADR-0022
- * (`docs/adr/ADR-0022-la-pagina-de-evento-se-pinta-entera.md`), que es donde
- * viven las cifras y las consecuencias. Antes se enganchaba en `the_content`
- * y el docblock lo argumentaba así: «la página pública del evento sí es del
- * sitio —cabecera institucional, menú y pie del tema— y lo único nuestro es lo
- * que va dentro del artículo». Medida la página real, eso no era cierto:
- *
- * - El pie institucional **no es del tema**: es un `<div class="pie">` escrito
- *   a mano dentro de un módulo de código del maquetador del tema. Al quitar el tema no se pierde,
- *   porque nunca fue suyo; se transcribe en {@see View\EventChrome::footer()}.
- *   La navegación y las tarjetas tampoco: ya eran Bootstrap escrito a mano.
- * - Lo único que aportaba el tema eran **diez niveles de anidamiento** y una hoja
- *   de 4.000 líneas para llegar a `.et_pb_text_inner`, más Content Views,
- *   table-sorter y la hoja del formulario de inscripción, que esa página no
- *   usa.
- *
- * Así que la página se pinta entera aquí, en `template_redirect` con prioridad
- * {@see PRIORITY}, exactamente como {@see Shell::render_standalone()} hace con
- * las pantallas del aplicativo, y se descarta lo que no hace falta
- * ({@see drop_page_assets()}). El documento lo monta {@see EventLayout}.
- *
- * A cambio nos hacemos responsables de lo que el tema daba gratis: el idioma,
- * el `<title>`, la descripción, Open Graph, la canónica y el icono del sitio
- * —los tres últimos siguen saliendo de `wp_head()`—. El consentimiento de
- * cookies y la analítica dependen de dónde los enganche el sitio: si es en
- * `wp_head` o `wp_footer`, siguen; si estaban en el `footer.php` del tema, hay
- * que reponerlos.
- *
- * ## Los eventos legacy siguen como hoy
- *
- * Un contenido migrado lleva la meta `evt_legacy` (ADR-0008) y **es el tema
- * congelado**: sus párrafos son `[et_pb_section]…` y su aspecto lo pinta la
- * hoja del tema. Pintarlo con el esqueleto nuevo, sin el maquetador, lo dejaría roto.
- * Por eso {@see takes_over()} responde que no y esa página sigue el camino de
- * siempre: la plantilla del tema, con sus assets y sin que toquemos nada. Es
- * una comprobación de una meta, no dos aplicativos: el día que no quede ni un
- * `evt_legacy`, se borra la comprobación y no queda rastro.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventView {
 
-	/**
-	 * Prioridad en `template_redirect`: la misma que usa el Shell.
-	 *
-	 * Después de que WordPress haya resuelto la consulta y antes de que el
-	 * tema empiece a pintar. En `template_redirect` todavía se pueden mandar
-	 * cabeceras, que es lo que pide servir un documento propio.
-	 */
+
+
+
+
+
+
+
 	public const PRIORITY = 20;
 
-	/**
-	 * Prioridad en `wp_head` de la hoja del evento y de sus tokens.
-	 *
-	 * Detrás de `wp_print_styles` (8), que es quien escribe Bootstrap 5, para
-	 * que nuestra hoja pueda con él; y muy por delante del CSS a medida del
-	 * evento ({@see CustomCode::CSS_PRIORITY}, 999), que tiene que ser el
-	 * último de la cabecera. Entre reglas de la misma especificidad gana la
-	 * última que se lee, y la última tiene que ser la de la persona.
-	 */
+
+
+
+
+
+
+
+
+
 	public const HEAD_PRIORITY = 9;
 
-	/**
-	 * Prioridad al descartar assets: después de que todo el mundo haya encolado.
-	 */
+
+
+
 	public const DROP_PRIORITY = 100;
 
-	/**
-	 * Query arg con el que el taller del evento recibe el evento.
-	 */
+
+
+
 	public const MANAGE_ARG = 'evento';
 
-	/**
-	 * Meta que marca un contenido migrado del sistema viejo (ADR-0008).
-	 *
-	 * Vive aquí y no en {@see EventMetaKeys} porque el guion de migración —que
-	 * es quien la pone— todavía no está escrito y nadie más la lee. Cuando se
-	 * escriba, su sitio es `EventMetaKeys`, junto a `ARCHIVED`, que es la otra
-	 * marca y significa otra cosa.
-	 */
+
+
+
+
+
+
+
+
 	public const LEGACY_META = 'evt_legacy';
 
-	/**
-	 * Rótulo del botón de inscripción cuando el evento no pone otro.
-	 */
+
+
+
 	public const SIGNUP_LABEL = 'Inscríbete';
 
-	/**
-	 * Cuántos caracteres como mucho en la descripción y en Open Graph.
-	 */
+
+
+
 	private const DESCRIPTION_CHARS = 155;
 
-	/**
-	 * Assets that no event page needs, by the path they are served from.
-	 *
-	 * Por la ruta y no por el nombre del handle, que cambia con cada versión.
-	 * `/et-cache/` es la caché del constructor del tema.
-	 *
-	 * @var string[]
-	 */
+
+
+
+
+
+
+
+
 	private const DROP_PATHS = array(
 		'/themes/',
 		'/et-cache/',
@@ -15576,13 +15576,13 @@ final class EventView {
 		'/plugins/table-sorter/',
 	);
 
-	/**
-	 * Texto de la tarjeta cuando la sección no trae introducción.
-	 *
-	 * Calcados de los que trae hoy la portada del sistema anterior.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
+
+
 	private const DEFAULT_INTRO = array(
 		'ponentes'    => 'Conoce los detalles de las personas comunicadoras.',
 		'programa'    => 'Consulta el programa oficial.',
@@ -15590,46 +15590,46 @@ final class EventView {
 		'contacto'    => 'Información de contacto con la organización del evento.',
 	);
 
-	/**
-	 * Published satellite pages, by event, for this request.
-	 *
-	 * La navegación y las tarjetas piden la misma lista; sin esto son dos
-	 * consultas iguales en cada portada.
-	 *
-	 * @var array<int, \WP_Post[]>
-	 */
+
+
+
+
+
+
+
+
 	private static $sections = array();
 
-	/**
-	 * The model of the page being served, computed once per request.
-	 *
-	 * Lo piden `wp_head` —para los tokens— y el propio documento.
-	 *
-	 * @var array<int, array<string, mixed>>
-	 */
+
+
+
+
+
+
+
 	private static $models = array();
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		EventLayout::register();
 		add_action( 'template_redirect', array( self::class, 'render' ), self::PRIORITY );
 		add_action( 'wp_head', array( self::class, 'print_stylesheet' ), self::HEAD_PRIORITY );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'drop_page_assets' ), self::DROP_PRIORITY );
-		// Y una red por si algo se encola más tarde: el tema imprime una hoja
-		// «late» en el pie, y al escribir la etiqueta se descarta.
+
+
 		add_filter( 'style_loader_tag', array( self::class, 'drop_page_tag' ), 10, 3 );
 		add_filter( 'script_loader_tag', array( self::class, 'drop_page_tag' ), 10, 3 );
 	}
 
-	/**
-	 * Whether we paint this request ourselves instead of the theme.
-	 *
-	 * @return bool
-	 */
+
+
+
+
+
 	public static function takes_over(): bool {
 		if ( is_admin() || ! is_singular( EventPostType::POST_TYPE ) ) {
 			return false;
@@ -15639,26 +15639,26 @@ final class EventView {
 			return false;
 		}
 
-		/**
-		 * Filter whether the event page is painted by us, without the theme.
-		 *
-		 * @param bool $solo    Whether to bypass the theme template.
-		 * @param int  $post_id Page being viewed.
-		 */
+
+
+
+
+
+
 		return (bool) apply_filters( 'evt_event_standalone', true, $post_id );
 	}
 
-	/**
-	 * Whether this page is frozen el tema migrated from the old system (ADR-0008).
-	 *
-	 * Se mira la página y también su evento: la marca la pone el guion en cada
-	 * contenido migrado, y si a alguna hija se le escapó, lo que manda es que
-	 * el evento sea legacy. Ante la duda se queda en el tema, que es lo que
-	 * hoy funciona.
-	 *
-	 * @param int $post_id Page being viewed.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function is_legacy( int $post_id ): bool {
 		if ( $post_id <= 0 ) {
 			return false;
@@ -15670,14 +15670,14 @@ final class EventView {
 		return (bool) get_post_meta( EventAccess::root_id( $post_id ), self::LEGACY_META, true );
 	}
 
-	/**
-	 * Serve the whole document of an event page.
-	 *
-	 * Se sale por {@see Shell::leave()}, que en tests lanza su excepción en vez
-	 * de terminar el proceso.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
 	public static function render(): void {
 		if ( ! self::takes_over() ) {
 			return;
@@ -15686,64 +15686,64 @@ final class EventView {
 		status_header( 200 );
 		Shell::send_header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
 
-		echo EventLayout::render( self::current_model() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- documento montado escapado.
+		echo EventLayout::render( self::current_model() ); 
 		Shell::leave();
 	}
 
-	/**
-	 * The stylesheet of the event page and its tokens, in the head.
-	 *
-	 * Los dos van juntos y en este orden: primero la hoja, que trae los valores
-	 * por defecto de todos los tokens, y detrás los del evento, que solo pisan
-	 * los que ha cambiado. El CSS a medida va después de los dos.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
 	public static function print_stylesheet(): void {
-		// La misma guarda que el documento: un evento legacy se queda con el
-		// tema y no se le mete una hoja que no espera.
+
+
 		if ( ! self::takes_over() ) {
 			return;
 		}
 
 		$hoja = self::stylesheet();
 		if ( '' !== $hoja ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es CSS, no texto: escaparlo lo rompería.
+
 			echo '<style id="evt-evento-css">' . $hoja . "</style>\n";
 		}
-		echo EventLayout::tokens( self::current_model() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido en tokens(), que filtra los valores.
+		echo EventLayout::tokens( self::current_model() ); 
 	}
 
-	/**
-	 * The contents of `assets/css/evt-evento.css`.
-	 *
-	 * No se encola: se escribe en la cabecera, entre las hojas encoladas y el
-	 * CSS a medida del evento, que tiene que ser el último. Y se pide a
-	 * {@see Assets::contents()} y no al disco: en producción el único artefacto
-	 * es el bundle de Code Snippets y ahí no hay repositorio que leer, solo el
-	 * mapa que el empaquetador inlinea.
-	 *
-	 * @return string Empty when neither source is available.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function stylesheet(): string {
-		/**
-		 * Filter the stylesheet of the public event page.
-		 *
-		 * @param string $css The stylesheet.
-		 */
+
+
+
+
+
 		return (string) apply_filters( 'evt_event_stylesheet', Assets::contents( 'css/evt-evento.css' ) );
 	}
 
-	/**
-	 * Drop from the queue what no event page needs.
-	 *
-	 * El mismo patrón que {@see Shell::drop_theme_assets()}, con dos añadidos
-	 * que en las pantallas del aplicativo no hacían falta: los complementos que
-	 * esta página no usa —Content Views y table-sorter— y la hoja del
-	 * formulario de inscripción cuando no hay ningún formulario que vestir.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function drop_page_assets(): void {
 		if ( ! self::takes_over() ) {
 			return;
@@ -15758,23 +15758,23 @@ final class EventView {
 			}
 		}
 
-		// Trece kilobytes de guion en línea para sustituir caritas que no salen
-		// en ninguna página de evento. `wp-block-library` y `global-styles` sí
-		// se quedan: el contenido de la página lo escribe el editor y puede
-		// llevar bloques.
+
+
+
+
 		wp_dequeue_style( 'wp-emoji-styles' );
 		remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 		remove_action( 'wp_print_styles', 'print_emoji_styles' );
 	}
 
-	/**
-	 * En nuestras páginas no se escribe ninguna de esas etiquetas.
-	 *
-	 * @param string $tag    The tag WordPress is about to print.
-	 * @param string $handle Its handle.
-	 * @param string $src    Its URL.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function drop_page_tag( string $tag, string $handle, string $src ): string {
 		unset( $handle );
 		if ( ! self::takes_over() ) {
@@ -15783,12 +15783,12 @@ final class EventView {
 		return self::is_droppable( $src ) ? '' : $tag;
 	}
 
-	/**
-	 * Whether one asset URL is one of the ones we discard.
-	 *
-	 * @param string $src Its URL.
-	 * @return bool
-	 */
+
+
+
+
+
+
 	private static function is_droppable( string $src ): bool {
 		if ( '' === $src ) {
 			return false;
@@ -15809,39 +15809,39 @@ final class EventView {
 		return false;
 	}
 
-	/**
-	 * Asset paths that belong to the sign-up form, dropped when there is no form.
-	 *
-	 * Vacía a propósito. Qué complemento sirve el formulario de inscripción del
-	 * sistema anterior, y desde qué ruta, es cosa de cada despliegue y no se
-	 * escribe aquí: quien arrastre uno lo declara con el filtro, y quien no
-	 * arrastre ninguno no tiene nada que descartar.
-	 *
-	 * @return string[]
-	 */
+
+
+
+
+
+
+
+
+
+
 	private static function form_asset_paths(): array {
-		/**
-		 * Filter the asset paths of the legacy sign-up form.
-		 *
-		 * @param string[] $paths URL fragments, empty by default.
-		 */
+
+
+
+
+
 		$rutas = (array) apply_filters( 'evt_form_asset_paths', array() );
 		return array_map( 'strval', $rutas );
 	}
 
-	/**
-	 * Whether this page shows a sign-up form at all.
-	 *
-	 * Las inscripciones de los eventos que vienen del sistema anterior siguen
-	 * en su formulario (ADR-0007), así que la página que lleve uno necesita su
-	 * hoja; la que no, no. El identificador guardado basta para los eventos que
-	 * lo traen. Si en algún despliegue el formulario va pegado en el contenido
-	 * en vez de guardado, lo dice el filtro: cómo se reconoce depende de qué
-	 * complemento sea, y eso no se codifica aquí.
-	 *
-	 * @param int $post_id Page being viewed.
-	 * @return bool
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
 	private static function has_form( int $post_id ): bool {
 		if ( $post_id <= 0 ) {
 			return false;
@@ -15851,20 +15851,20 @@ final class EventView {
 			return true;
 		}
 
-		/**
-		 * Filter whether this page shows a legacy sign-up form.
-		 *
-		 * @param bool $has     Whether it does.
-		 * @param int  $post_id Page being viewed.
-		 */
+
+
+
+
+
+
 		return (bool) apply_filters( 'evt_page_has_form', false, $post_id );
 	}
 
-	/**
-	 * The model of the page being served, computed once per request.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
 	public static function current_model(): array {
 		$post_id = (int) get_queried_object_id();
 		if ( ! isset( self::$models[ $post_id ] ) ) {
@@ -15877,13 +15877,13 @@ final class EventView {
 		return self::$models[ $post_id ];
 	}
 
-	/**
-	 * Everything the public view decides before painting.
-	 *
-	 * @param int    $post_id Page being viewed (0 = the one in the loop).
-	 * @param string $content Its content, already filtered.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
 	public static function model( int $post_id = 0, string $content = '' ): array {
 		$post_id = $post_id > 0 ? $post_id : (int) get_the_ID();
 		if ( $post_id <= 0 || EventPostType::POST_TYPE !== get_post_type( $post_id ) ) {
@@ -15903,9 +15903,9 @@ final class EventView {
 			'is_root'      => $is_root,
 			'is_legacy'    => self::is_legacy( $post_id ),
 			'title'        => (string) get_the_title( $post_id ),
-			// El documento es nuestro: nadie más escribe el título, así que la
-			// cabecera lo escribe siempre. Antes dependía de que la página
-			// llevara la plantilla en blanco del tema; ese apaño sobra.
+
+
+
 			'show_title'   => true,
 			'section_type' => $is_root ? '' : EventMetaKeys::in_list(
 				get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ),
@@ -15930,25 +15930,25 @@ final class EventView {
 			'manage_url'   => self::manage_url( $event_id ),
 		);
 
-		/**
-		 * Filter the model of the public event page.
-		 *
-		 * La costura por la que un bloque nuevo —programa, ponentes, talleres,
-		 * inscripción— mete lo suyo en el modelo sin tocar el armazón. Añade
-		 * claves; no cambies las que ya están.
-		 *
-		 * @param array<string, mixed> $m       The model.
-		 * @param int                  $post_id Page being viewed.
-		 */
+
+
+
+
+
+
+
+
+
+
 		return (array) apply_filters( 'evt_event_model', $m, $post_id );
 	}
 
-	/**
-	 * The model of a page that is not an event: paint the content and nothing else.
-	 *
-	 * @param string $content Its content.
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
 	private static function empty_model( string $content ): array {
 		return array(
 			'page_id'      => 0,
@@ -15978,13 +15978,13 @@ final class EventView {
 		);
 	}
 
-	/**
-	 * One line describing the page, for the meta description and Open Graph.
-	 *
-	 * @param int $post_id  Page being viewed.
-	 * @param int $event_id Its event.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	private static function description( int $post_id, int $event_id ): string {
 		$candidatos = array(
 			(string) get_post_field( 'post_excerpt', $post_id ),
@@ -16000,12 +16000,12 @@ final class EventView {
 		return '';
 	}
 
-	/**
-	 * The sign-up button of the event, when there is one to show.
-	 *
-	 * @param int $event_id Event (0 = none).
-	 * @return array{show:bool, label:string, url:string}
-	 */
+
+
+
+
+
+
 	private static function signup( int $event_id ): array {
 		$vacio = array(
 			'show'  => false,
@@ -16029,17 +16029,17 @@ final class EventView {
 		);
 	}
 
-	/**
-	 * Link to the workshop of this event, for whoever may open it.
-	 *
-	 * `can_open()` y no `can_edit()`: un evento marcado como histórico se sigue
-	 * consultando y exportando desde su taller (ADR-0017), y esconderle el
-	 * botón a quien lo organizó es dejarlo sin la puerta. El taller ya se abre
-	 * en solo lectura él solo.
-	 *
-	 * @param int $event_id Event.
-	 * @return string Empty when this person cannot open it, or the page is not created yet.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function manage_url( int $event_id ): string {
 		if ( $event_id <= 0 || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
 			return '';
@@ -16047,12 +16047,12 @@ final class EventView {
 		return Shell::url( 'event', array( self::MANAGE_ARG => $event_id ) );
 	}
 
-	/**
-	 * The appearance of the event, ready to become CSS custom properties.
-	 *
-	 * @param int $event_id Event (0 = none, everything by default).
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
 	private static function appearance( int $event_id ): array {
 		$vacia = array(
 			'bg'          => '',
@@ -16083,8 +16083,8 @@ final class EventView {
 			'body_font'   => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
 			'logo'        => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
 			'logo_alt'    => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
-			// El cartel se enseña reducido y enlaza al original: es la pieza que
-			// la gente se descarga y comparte, y para eso hace falta el tamaño real.
+
+
 			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
 			'poster_full' => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
 			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
@@ -16100,12 +16100,12 @@ final class EventView {
 		);
 	}
 
-	/**
-	 * A CSS font stack from one of the six typefaces of the closed list.
-	 *
-	 * @param string $slug Stored value.
-	 * @return string Empty for «la del tema», which loads nothing.
-	 */
+
+
+
+
+
+
 	private static function font_stack( string $slug ): string {
 		$fuentes = EventMetaKeys::fonts();
 		$slug    = EventMetaKeys::in_list( $slug, $fuentes, EventMetaKeys::FONT_DEFAULT );
@@ -16115,17 +16115,17 @@ final class EventView {
 		return sprintf( "'%s', 'Open Sans', Arial, sans-serif", $fuentes[ $slug ] );
 	}
 
-	/**
-	 * The navigation of the event: its front page and every published section.
-	 *
-	 * Lo que hoy hace una vista aparte del sistema anterior. El rótulo es el
-	 * título de la página y no el tipo de sección: el título lo escribe quien la
-	 * crea, el tipo es un slug.
-	 *
-	 * @param int $event_id   Event.
-	 * @param int $current_id Page being viewed.
-	 * @return array<int, array{label:string, url:string, current:bool}>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function nav( int $event_id, int $current_id ): array {
 		$menu = array(
 			array(
@@ -16144,15 +16144,15 @@ final class EventView {
 		return $menu;
 	}
 
-	/**
-	 * The section cards of the front page.
-	 *
-	 * Lo que hoy hace la portada del sistema anterior, con sus textos por
-	 * defecto por tipo.
-	 *
-	 * @param int $event_id Event.
-	 * @return array<int, array{id:int, title:string, url:string, image:string, text:string}>
-	 */
+
+
+
+
+
+
+
+
+
 	private static function cards( int $event_id ): array {
 		$tarjetas = array();
 		foreach ( self::sections( $event_id ) as $seccion ) {
@@ -16177,39 +16177,39 @@ final class EventView {
 		return $tarjetas;
 	}
 
-	/**
-	 * The image of one card: the featured image of the section.
-	 *
-	 * Hoy, cuando no hay imagen, se apunta a un fichero por tipo subido a la
-	 * biblioteca (`<tipo>-default.png`). Esa ruta es de un sitio concreto y no
-	 * se codifica aquí: quien despliegue la pone con el filtro.
-	 *
-	 * @param int    $post_id Section.
-	 * @param string $type    Section type.
-	 * @return string Empty when there is none: la tarjeta sale sin imagen.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	private static function card_image( int $post_id, string $type ): string {
 		$url = (string) get_the_post_thumbnail_url( $post_id, 'medium' );
 		if ( '' !== $url ) {
 			return $url;
 		}
 
-		/**
-		 * Filter the fallback card image of a section without featured image.
-		 *
-		 * @param string $url     Image URL, empty for none.
-		 * @param string $type    Section type slug.
-		 * @param int    $post_id Section post ID.
-		 */
+
+
+
+
+
+
+
 		return (string) apply_filters( 'evt_section_default_image', '', $type, $post_id );
 	}
 
-	/**
-	 * Published satellite pages of an event, in the order they were given.
-	 *
-	 * @param int $event_id Event.
-	 * @return \WP_Post[]
-	 */
+
+
+
+
+
+
 	private static function sections( int $event_id ): array {
 		if ( isset( self::$sections[ $event_id ] ) ) {
 			return self::$sections[ $event_id ];
@@ -16232,114 +16232,114 @@ final class EventView {
 	}
 }
 
-// ---- src/Evt/PublicFront/View/EventChrome.php ----
-/**
- * Header, navigation, separator and footer of the public page of an event.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront\View;
 
-/**
- * El marco de la página de un evento: lo que rodea a los bloques.
- *
- * Solo pinta: no lee la petición, no consulta, no decide.
- * Todo lo que sale de aquí llega ya escapado y lo monta
- * {@see \Evt\PublicFront\EventLayout}.
- *
- * Cuatro piezas: la navegación entre secciones, la portada de color con el
- * logo, el título y las fechas, la silueta que las separa del cuerpo, y el pie
- * con quien sea dueño del sitio.
- *
- * Y dos que no se ven pero que un tema serviría y el esqueleto tuvo que
- * reponer: el aviso de cookies ({@see consent()}) y la analítica
- * ({@see analytics()}).
- *
- * **Ninguna de las tres últimas trae nada dentro.** El pie, las cookies y la
- * analítica son de quien despliega y se configuran con el filtro
- * {@see chrome()}; sin configurar, no se pintan (ADR-0030).
- *
- * El `<h1>` de la página es el título de la portada, y es el único: los
- * bloques del cuerpo empiezan en `<h2>`.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 final class EventChrome {
 
-	/**
-	 * Filter that supplies the chrome of the public page.
-	 *
-	 * **Este repositorio no trae ni una dirección institucional.** El pie, el
-	 * aviso de cookies y la analítica son de quien despliega, no del
-	 * aplicativo: se rellenan desde fuera con este filtro y, sin nadie que
-	 * conteste, **no se pinta ninguno de los tres**. Un aplicativo libre no
-	 * puede llevar dentro el portal, el dominio ni el identificador de
-	 * analítica de una organización concreta (ADR-0030).
-	 */
+
+
+
+
+
+
+
+
+
+
 	public const HOOK = 'evt_chrome';
 
-	/**
-	 * The cookie the notice writes, when there is a notice.
-	 *
-	 * Es el único valor con defecto porque no identifica a nadie: es el nombre
-	 * que usa la biblioteca de avisos de cookies más extendida, y quien ponga
-	 * otra lo cambia con el filtro.
-	 */
+
+
+
+
+
+
+
 	public const CONSENT_COOKIE = 'cookieconsent_status';
 
-	/**
-	 * Everything the page needs from whoever deploys it.
-	 *
-	 * Todo vacío por defecto, y eso es la decisión: lo que no se configura no
-	 * se pinta. Así el aplicativo se publica sin llevar dentro nada de nadie y
-	 * una instalación nueva no envía datos a ningún sitio sin decirlo.
-	 *
-	 * @return array<string, mixed>
-	 */
+
+
+
+
+
+
+
+
+
 	public static function chrome(): array {
 		$defecto = array(
-			// Pie y cabecera: de quién es el sitio y quién lo hizo.
+
 			'owner'          => '',
 			'owner_url'      => '',
 			'org'            => '',
 			'credit'         => '',
 			'footer_links'   => array(),
-			// Aviso de cookies: las tres piezas que lo pintan.
+
 			'consent_css'    => '',
 			'consent_js'     => '',
 			'consent_init'   => '',
 			'consent_cookie' => self::CONSENT_COOKIE,
-			// Analítica: sin esto no se carga nada y no se envía ni una visita.
+
 			'matomo_api'     => '',
 			'matomo_js'      => '',
 			'matomo_site'    => 0,
 		);
 
-		/**
-		 * Filter the chrome of the public event page.
-		 *
-		 * @param array<string, mixed> $chrome Empty defaults.
-		 */
+
+
+
+
+
 		$puesto = apply_filters( self::HOOK, $defecto );
 
 		return is_array( $puesto ) ? array_merge( $defecto, $puesto ) : $defecto;
 	}
 
-	/**
-	 * Minimum contrast ratio for normal text (WCAG 2.1 AA).
-	 */
+
+
+
 	public const MIN_CONTRAST = 4.5;
 
-	/**
-	 * Outlines of the cover separators, on a 1200×60 canvas.
-	 *
-	 * Pública porque la vista previa del panel de apariencia pinta estas mismas
-	 * siluetas: si tuviera las suyas, enseñaría una cabecera que no es la que
-	 * se va a publicar. Vivían en `EventViewHtml`, que era la vista vieja de la
-	 * página pública; al portarla al esqueleto de bloques se retiró aquel
-	 * fichero y las siluetas se quedaron donde se dibujan.
-	 *
-	 * @var array<string, string>
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public const SEPARATORS = array(
 		'slant'    => 'M0,60 L1200,0 L1200,60 Z',
 		'ramp'     => 'M0,60 L1200,24 L1200,60 Z',
@@ -16348,12 +16348,12 @@ final class EventChrome {
 		'triangle' => 'M0,60 L600,0 L1200,60 Z',
 	);
 
-	/**
-	 * The whole header: navigation, cover and separator.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function header( array $m ): string {
 		return '<header class="evt-ev__cabecera">'
 			. self::nav( (array) $m['nav'] )
@@ -16361,15 +16361,15 @@ final class EventChrome {
 			. '</header>';
 	}
 
-	/**
-	 * The navigation between the sections of the event.
-	 *
-	 * Con una sola entrada no hay entre qué navegar y no se pinta: un menú de
-	 * un elemento es ruido.
-	 *
-	 * @param array<int, array{label:string, url:string, current:bool}> $items Menu entries.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
 	public static function nav( array $items ): string {
 		if ( count( $items ) < 2 ) {
 			return '';
@@ -16391,18 +16391,18 @@ final class EventChrome {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The cover: logo, title, tagline, dates, venue, state and sign-up.
-	 *
-	 * Los colores no van en un atributo `style`: son los tokens `--evt-fondo` y
-	 * `--evt-texto`, que escribe {@see \Evt\PublicFront\EventLayout::tokens()}
-	 * en un solo sitio. Así el CSS a medida de un evento cambia el token y no
-	 * tiene que ganarle a un `style` en línea, que no hay forma de pisar sin
-	 * `!important`.
-	 *
-	 * @param array<string, mixed> $m What EventView::model() decided.
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function cover( array $m ): string {
 		$look   = (array) $m['appearance'];
 		$signup = (array) $m['signup'];
@@ -16456,22 +16456,22 @@ final class EventChrome {
 					<?php endif; ?>
 				</p>
 			</div>
-			<?php echo self::separator( (string) $look['separator'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- silueta de la lista cerrada, escapada dentro. ?>
+			<?php echo self::separator( (string) $look['separator'] ); ?>
 		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The outline at the foot of the cover.
-	 *
-	 * Las siluetas son las de {@see self::SEPARATORS}: son las mismas que
-	 * enseña la vista previa del panel de apariencia, y tener dos juegos sería
-	 * enseñar una cabecera distinta de la que se publica.
-	 *
-	 * @param string $shape One of EventMetaKeys::separators().
-	 * @return string Empty for «sin separador».
-	 */
+
+
+
+
+
+
+
+
+
+
 	public static function separator( string $shape ): string {
 		$trazo = self::SEPARATORS[ $shape ] ?? '';
 		if ( '' === $trazo ) {
@@ -16481,14 +16481,14 @@ final class EventChrome {
 			. '<path d="' . esc_attr( $trazo ) . '" fill="var(--evt-papel)"/></svg>';
 	}
 
-	/**
-	 * The footer: who owns the site, and its legal notices.
-	 *
-	 * **Vacío salvo que alguien lo configure** ({@see chrome()}). El pie es de
-	 * quien despliega, no del aplicativo.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
 	public static function footer(): string {
 		$chrome  = self::chrome();
 		$enlaces = (array) $chrome['footer_links'];
@@ -16519,29 +16519,29 @@ final class EventChrome {
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * The cookie notice, for the head of the document.
-	 *
-	 * Al pintar el documento entero, lo que el tema metía antes de `</head>`
-	 * deja de ponerse solo. En un sitio público de una administración el aviso
-	 * de cookies no es opcional, así que hay dónde reponerlo — pero **las URL
-	 * son de quien despliega** ({@see chrome()}) y aquí no hay ninguna.
-	 *
-	 * El orden importa: la hoja, la biblioteca y, detrás, el guion que la
-	 * inicializa.
-	 *
-	 * **Si esas URL no responden, la página no se rompe.** Los dos guiones van
-	 * con `defer`: no bloquean el análisis del documento y, si uno no llega, el
-	 * fallo se queda dentro de él. Y si la hoja no llega, el aviso se pinta sin
-	 * estilo pero se puede cerrar.
-	 *
-	 * @return string
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function consent(): string {
 		$chrome = self::chrome();
 		$html   = '';
 
-		// phpcs:disable WordPress.WP.EnqueuedResources -- el documento de la página de evento lo escribimos nosotros entero: el aviso legal no puede depender de que nadie lo saque de la cola.
+
 		if ( '' !== (string) $chrome['consent_css'] ) {
 			$html .= '<link rel="stylesheet" href="' . esc_url( (string) $chrome['consent_css'] ) . '" />' . "\n";
 		}
@@ -16551,48 +16551,48 @@ final class EventChrome {
 		if ( '' !== (string) $chrome['consent_init'] ) {
 			$html .= '<script src="' . esc_url( (string) $chrome['consent_init'] ) . '" defer></script>' . "\n";
 		}
-		// phpcs:enable WordPress.WP.EnqueuedResources
+
 
 		return $html;
 	}
 
-	/**
-	 * Matomo, for the end of the body, and only when it counts for real.
-	 *
-	 * **No se emite nada salvo que se configure** ({@see chrome()}): un
-	 * aplicativo libre no lleva dentro a qué servidor de analítica envía las
-	 * visitas de nadie.
-	 *
-	 * **Y respeta el consentimiento**, que hoy no lo hace: con
-	 * `requireCookieConsent` Matomo cuenta la visita sin escribir ni una
-	 * cookie, y solo las escribe cuando el aviso institucional dice que sí. La
-	 * única fuente de verdad es la cookie del propio aviso, así que no hay dos
-	 * sitios donde mirar ni un segundo registro de consentimiento que mantener.
-	 *
-	 * Fuera de producción tampoco se emite: en desarrollo mandaría visitas de
-	 * `localhost` a la estadística de verdad.
-	 *
-	 * @return string Empty when there is no site to count for.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function analytics(): string {
 		$chrome = self::chrome();
 		$site   = (int) $chrome['matomo_site'];
 		$api    = (string) $chrome['matomo_api'];
 		$js_url = (string) $chrome['matomo_js'];
 
-		/**
-		 * Filter whether the analytics snippet is emitted at all.
-		 *
-		 * Por defecto solo en producción: en desarrollo mandaría visitas de
-		 * `localhost` a la estadística de verdad. Es un filtro y no una
-		 * comprobación suelta para que se pueda apagar en producción sin tocar
-		 * la configuración, y encender en un entorno de pruebas a propósito.
-		 *
-		 * @param bool $encendida Whether to emit the analytics snippet.
-		 */
+
+
+
+
+
+
+
+
+
+
 		$encendida = (bool) apply_filters( 'evt_analytics_enabled', 'production' === wp_get_environment_type() );
 
-		// Sin las tres cosas configuradas no se emite nada, y apagada tampoco.
+
 		if ( ! $encendida || $site <= 0 || '' === $api || '' === $js_url ) {
 			return '';
 		}
@@ -16608,24 +16608,24 @@ final class EventChrome {
 			. '_paq.push(["trackPageView"]);'
 			. '_paq.push(["enableLinkTracking"]);';
 
-		// phpcs:disable WordPress.WP.EnqueuedResources -- el documento de la página de evento lo escribimos nosotros entero: el aviso legal no puede depender de que nadie lo saque de la cola.
+
 		$html = '<script id="evt-matomo">' . $js . '</script>' . "\n"
 			. '<script src="' . esc_url( $js_url ) . '" async defer></script>' . "\n";
-		// phpcs:enable WordPress.WP.EnqueuedResources
+
 		return $html;
 	}
 
-	/**
-	 * Contrast ratio between two colours, WCAG 2.1 relative luminance.
-	 *
-	 * Pública porque el panel de apariencia tiene que avisar cuando la
-	 * combinación que se está eligiendo no llega a 4,5:1, y el aviso y lo que
-	 * se publica tienen que salir del mismo cálculo.
-	 *
-	 * @param string $uno Hex colour, `#rgb` or `#rrggbb`.
-	 * @param string $dos Hex colour.
-	 * @return float 1.0 when either colour is not a hex colour: sin dato no se acusa a nadie.
-	 */
+
+
+
+
+
+
+
+
+
+
+
 	public static function contrast_ratio( string $uno, string $dos ): float {
 		$a = self::luminance( $uno );
 		$b = self::luminance( $dos );
@@ -16637,20 +16637,20 @@ final class EventChrome {
 		return ( $claro + 0.05 ) / ( $oscuro + 0.05 );
 	}
 
-	/**
-	 * The ink to write on a background: the chosen one, or a readable one.
-	 *
-	 * El contraste se comprueba, no se supone: si la combinación que eligió el
-	 * evento no llega a 4,5:1 se escribe en blanco o en negro, el que gane
-	 * sobre ese fondo. Vale más una cabecera con el color de texto cambiado que
-	 * un título que no se lee. El panel de apariencia avisa antes de guardar,
-	 * pero esto tiene que aguantar lo que ya está guardado y lo que llegue de
-	 * la migración.
-	 *
-	 * @param string $fondo Background colour, hex.
-	 * @param string $texto Chosen text colour, hex; empty to decide from scratch.
-	 * @return string Hex colour.
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function readable_ink( string $fondo, string $texto ): string {
 		if ( '' !== $texto && self::contrast_ratio( $fondo, $texto ) >= self::MIN_CONTRAST ) {
 			return $texto;
@@ -16660,12 +16660,12 @@ final class EventChrome {
 			: '#000000';
 	}
 
-	/**
-	 * WCAG relative luminance of a hex colour.
-	 *
-	 * @param string $hex `#rgb` or `#rrggbb`.
-	 * @return float -1.0 when it is not a hex colour.
-	 */
+
+
+
+
+
+
 	private static function luminance( string $hex ): float {
 		$hex = ltrim( trim( $hex ), '#' );
 		if ( 3 === strlen( $hex ) ) {
@@ -16685,44 +16685,44 @@ final class EventChrome {
 	}
 }
 
-// ---- src/Evt/PublicFront/Home.php ----
-/**
- * Landing page of the events application.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 
-/**
- * Shortcode [evt_home]: la puerta de entrada.
- *
- * Una sola dirección que publicar en el menú, y detrás cada persona entra
- * directamente en su pantalla en vez de en un saludo con enlaces. Los accesos
- * en tarjeta se siguen pintando para quien llega sin sitio a donde ir: sin
- * permisos todavía, o con el perfil a medio rellenar.
- */
+
+
+
+
+
+
+
+
 final class Home {
 
 	public const SHORTCODE = 'evt_home';
 
-	/**
-	 * Register the shortcode and the redirection.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
 		add_action( 'template_redirect', array( self::class, 'send_to_landing' ) );
 	}
 
-	/**
-	 * Send whoever lands on the entry page to their first screen.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function send_to_landing(): void {
 		if ( is_admin() || ! is_singular() || ! is_user_logged_in() ) {
 			return;
@@ -16733,7 +16733,7 @@ final class Home {
 		}
 
 		$destino = self::landing();
-		// Si la portada es además la pantalla de destino, no hay a dónde ir.
+
 		if ( '' === $destino || untrailingslashit( $destino ) === untrailingslashit( (string) get_permalink( $post ) ) ) {
 			return;
 		}
@@ -16741,15 +16741,15 @@ final class Home {
 		Shell::leave( $destino );
 	}
 
-	/**
-	 * First screen of whoever is looking.
-	 *
-	 * @return string Empty when there is none.
-	 */
+
+
+
+
+
 	public static function landing(): string {
 		foreach ( Shell::sections() as $clave => $seccion ) {
-			// «Ajustes» es el escritorio de WordPress, no una pantalla en la
-			// que empezar el día.
+
+
 			if ( 'settings' === $clave ) {
 				continue;
 			}
@@ -16758,11 +16758,11 @@ final class Home {
 		return '';
 	}
 
-	/**
-	 * What the landing page has to say.
-	 *
-	 * @return array{logged_in:bool, name:string, sections:array<string, array{label:string, url:string, badge:?int}>, reason:string}
-	 */
+
+
+
+
+
 	public static function model(): array {
 		if ( ! is_user_logged_in() ) {
 			return array(
@@ -16791,12 +16791,12 @@ final class Home {
 		);
 	}
 
-	/**
-	 * The landing page, from its model.
-	 *
-	 * @param array{logged_in:bool, name:string, sections:array<string, array{label:string, url:string, badge:?int}>, reason:string} $model What model() returned.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function html( array $model ): string {
 		if ( ! $model['logged_in'] ) {
 			return Shell::render( 'Gestión de eventos', '', Shell::notice( 'aviso', $model['reason'] ) );
@@ -16827,12 +16827,12 @@ final class Home {
 		);
 	}
 
-	/**
-	 * Render the shortcode.
-	 *
-	 * @param array<string, string>|string $atts Attributes.
-	 * @return string
-	 */
+
+
+
+
+
+
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
@@ -16840,12 +16840,12 @@ final class Home {
 	}
 }
 
-// ---- src/Evt/Admin/EventAdmin.php ----
-/**
- * Admin list table for events: área scoping and columns.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Admin;
 
@@ -16857,20 +16857,20 @@ use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Lo que ve cada área en el escritorio.
- *
- * El acotado de aquí solo esconde filas; quien de verdad cierra la puerta es
- * `EventAccess::map_meta_cap()`. Las dos capas hacen falta: sin esta, el
- * listado enseña los eventos de todas las áreas aunque no se puedan abrir.
- */
+
+
+
+
+
+
+
 final class EventAdmin {
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'pre_get_posts', array( self::class, 'scope_admin_query' ) );
 		add_filter( 'manage_' . EventPostType::POST_TYPE . '_posts_columns', array( self::class, 'columns' ) );
@@ -16878,35 +16878,35 @@ final class EventAdmin {
 		add_action( 'admin_menu', array( self::class, 'add_new_submenus' ), 20 );
 	}
 
-	/**
-	 * Post types that hang off the events menu instead of having their own.
-	 *
-	 * @return array<int, string>
-	 */
+
+
+
+
+
 	public static function submenu_post_types(): array {
 		return array( SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE );
 	}
 
-	/**
-	 * Register the «Añadir …» entry of the two CPT that live under Eventos.
-	 *
-	 * Ponentes y actividades cuelgan del menú de Eventos (`show_in_menu` con
-	 * la dirección del padre, no `true`). Para esos, WordPress registra en el
-	 * submenú **solo** el listado: `_add_post_type_submenus()` añade
-	 * `edit.php?post_type=…` y nada más. Y `post-new.php` comprueba luego que
-	 * la pantalla esté en el menú de quien la pide
-	 * (`user_can_access_admin_page()`), así que el alta quedaba cerrada para
-	 * todo el que no fuera administración: el botón «Añadir ponente» llevaba a
-	 * «Lo siento, no tienes permisos para acceder a esta página» aunque las
-	 * capacidades estuvieran todas concedidas. Comprobado con `evt_organiser`
-	 * en el wp-env del proyecto.
-	 *
-	 * La capacidad que se exige es la misma que pide el propio WordPress al
-	 * entrar (`cap->create_posts`), para no inventar aquí una segunda regla
-	 * que mañana no coincida con la de `map_meta_cap`.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	public static function add_new_submenus(): void {
 		foreach ( self::submenu_post_types() as $tipo ) {
 			$objeto = get_post_type_object( $tipo );
@@ -16923,12 +16923,12 @@ final class EventAdmin {
 		}
 	}
 
-	/**
-	 * Limit the events list to the áreas of whoever is looking.
-	 *
-	 * @param \WP_Query $query Query.
-	 * @return void
-	 */
+
+
+
+
+
+
 	public static function scope_admin_query( $query ): void {
 		if ( ! is_admin() || ! ( $query instanceof \WP_Query ) || ! $query->is_main_query() ) {
 			return;
@@ -16942,8 +16942,8 @@ final class EventAdmin {
 
 		$areas = EventAccess::user_areas();
 		if ( array() === $areas ) {
-			// Falla en cerrado: sin área en el perfil, ni una fila. Un listado
-			// completo por un campo sin rellenar es como un área lee la de otra.
+
+
 			$query->set( 'post__in', array( 0 ) );
 			return;
 		}
@@ -16958,12 +16958,12 @@ final class EventAdmin {
 		$query->set( 'tax_query', $tax_query );
 	}
 
-	/**
-	 * Add the área and state columns after the title.
-	 *
-	 * @param array<string, string> $columns Columns.
-	 * @return array<string, string>
-	 */
+
+
+
+
+
+
 	public static function columns( array $columns ): array {
 		$new = array();
 		foreach ( $columns as $key => $label ) {
@@ -16976,13 +16976,13 @@ final class EventAdmin {
 		return $new;
 	}
 
-	/**
-	 * Render the custom column cells.
-	 *
-	 * @param string $column  Column key.
-	 * @param int    $post_id Post ID.
-	 * @return void
-	 */
+
+
+
+
+
+
+
 	public static function column_content( string $column, int $post_id ): void {
 		if ( 'evt_area' === $column ) {
 			$terms = get_the_terms( EventAccess::root_id( $post_id ), EventTaxonomies::AREA );
@@ -16997,8 +16997,8 @@ final class EventAdmin {
 				(string) get_post_meta( $root, EventMetaKeys::START_DATE, true ),
 				(string) get_post_meta( $root, EventMetaKeys::END_DATE, true )
 			);
-			// El cierre se dice también aquí: si no, en el escritorio una fila
-			// que no se deja editar no explica por qué.
+
+
 			echo esc_html(
 				EventAccess::is_archived( $post_id )
 					? EventState::label( $state ) . ' · Histórico'
@@ -17008,12 +17008,12 @@ final class EventAdmin {
 	}
 }
 
-// ---- src/Evt/Admin/Settings.php ----
-/**
- * Settings and diagnostics page for the application.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt\Admin;
 
@@ -17023,34 +17023,34 @@ use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Qué hay montado y qué falta, en una pantalla.
- *
- * De momento no guarda nada: la fase 1 no tiene ningún ajuste que decidir, y
- * lo que sí hace falta es poder mirar si los tipos, las taxonomías y los roles
- * están donde deberían sin abrir la base de datos.
- */
+
+
+
+
+
+
+
 final class Settings {
 
-	/**
-	 * Menu slug.
-	 */
+
+
+
 	public const PAGE = 'evt-settings';
 
-	/**
-	 * Register hooks.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function register(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
 	}
 
-	/**
-	 * Add the submenu page.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function menu(): void {
 		add_submenu_page(
 			'edit.php?post_type=' . EventPostType::POST_TYPE,
@@ -17062,11 +17062,11 @@ final class Settings {
 		);
 	}
 
-	/**
-	 * Render the diagnostics page.
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function render(): void {
 		if ( ! EventAccess::is_manager() ) {
 			wp_die( esc_html( 'No tiene permiso para ver los ajustes del aplicativo de eventos.' ), '', array( 'response' => 403 ) );
@@ -17180,12 +17180,12 @@ final class Settings {
 	}
 }
 
-// ---- src/Evt/App.php ----
-/**
- * Application bootstrap for the events CPT app.
- *
- * @package Evt
- */
+
+
+
+
+
+
 
 namespace Evt;
 
@@ -17211,30 +17211,30 @@ use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
-/**
- * Wires hooks for the modular events application.
- *
- * Se llama `App` y no `Plugin` a propósito: el validador de Code Snippets
- * compara los nombres declarados ignorando el namespace, así que un
- * `Evt\Plugin` chocaría con el `Code_Snippets\Plugin` del propio plugin y el
- * snippet se rechazaría con «code did not pass validation».
- */
+
+
+
+
+
+
+
+
 final class App {
 
-	/**
-	 * Option holding the parent page the application pages hang from.
-	 *
-	 * La escribe `scripts/setup-pages.php` y la lee {@see page_slug()}: sin
-	 * ella `get_page_by_path()` buscaría «mis-eventos» en la raíz del sitio y
-	 * no encontraría la hija de «/eventos/mis-eventos».
-	 */
+
+
+
+
+
+
+
 	public const PAGES_PARENT = 'evt_pages_parent';
 
-	/**
-	 * Boot the application (idempotent).
-	 *
-	 * @return void
-	 */
+
+
+
+
+
 	public static function boot(): void {
 		static $booted = false;
 		if ( $booted ) {
@@ -17254,18 +17254,18 @@ final class App {
 		RegistrationMetaRegistration::register();
 		EventAccess::register();
 
-		// Las páginas cuelgan de una madre si quien despliega lo pidió, y los
-		// enlaces del armazón tienen que llevar la ruta entera.
+
+
 		add_filter( 'evt_page_slug', array( self::class, 'page_slug' ), 10, 2 );
 
-		// El armazón primero: manda al acceso a quien no ha entrado (y lo hace
-		// antes de que `Home` redirija a nadie a ninguna pantalla), y deja
-		// registrada la hoja de estilos que las pantallas dan por puesta.
+
+
+
 		Assets::register();
 		Shell::register();
 
-		// Cada pantalla engancha su propio shortcode y, si muta, su manejador
-		// de POST en `init` 20: después de los tipos y sus capacidades.
+
+
 		Registrations::register();
 		SignupForm::register();
 		EventList::register();
@@ -17273,29 +17273,29 @@ final class App {
 		PageForm::register();
 		Home::register();
 
-		// La vista pública del evento no es una pantalla del aplicativo: no
-		// lleva ni la cabecera ni las pestañas del armazón. Se pinta el
-		// documento entero en `template_redirect`, como las pantallas, y un
-		// evento migrado se queda en el tema (ADR-0022).
+
+
+
+
 		EventView::register();
 
-		// El CSS y el JavaScript a medida se imprimen en la página pública del
-		// evento y en ninguna otra: `wp_head` y `wp_footer`, los dos al final
-		// de su cola. Quién los puede escribir lo deciden `EventAccess` y el
-		// `auth_callback` de sus dos metas; aquí solo se enchufa la salida.
+
+
+
+
 		CustomCode::register();
 
 		EventAdmin::register();
 		Settings::register();
 	}
 
-	/**
-	 * Prefix a section slug with the parent page, when there is one.
-	 *
-	 * @param string $slug    Page path proposed by the shell.
-	 * @param string $section Section key.
-	 * @return string
-	 */
+
+
+
+
+
+
+
 	public static function page_slug( string $slug, string $section = '' ): string {
 		unset( $section );
 		$padre = trim( (string) get_option( self::PAGES_PARENT, '' ), '/' );
@@ -17306,7 +17306,7 @@ final class App {
 	}
 }
 
-// ---- assets/ (inlined) ----
+
 \Evt\PublicFront\Assets::set_inline( array (
   'css/evt-app.css' => '/* Aplicativo de eventos: armazón (cabecera, pestañas, pie) y las piezas que
    comparten sus pantallas —tarjetas, tablas, formularios y el panel de
