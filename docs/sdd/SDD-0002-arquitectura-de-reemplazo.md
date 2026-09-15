@@ -931,6 +931,59 @@ son las condiciones de «hecho» que faltan.
 - [ ] **El acotado de la concesión global de `unfiltered_html`** mientras el
       formulario antiguo siga vivo.
 
+### Rendimiento: contar inscripciones sin cargarlas
+
+Medido el 2026-09-15 en el wp-env, con `SAVEQUERIES` y `wp eval-file`, sobre
+el evento de demostración con 10 talleres y 2.000 inscripciones sintéticas,
+creadas dentro de una transacción y deshechas con `ROLLBACK`. No hay ninguna
+consulta lenta: el listado, la portada pública y el cambio de taller están por
+debajo de 3 ms. **Lo único que crece con el número de inscripciones es la
+sección pública «Inscripción»**, que ve gente anónima y sin caché: 77 ms y
+21 MB por visita con 2.000 inscripciones, frente a 9 ms con 300; con 8.000
+rondaría los 80 MB por visita. Detrás van el taller del evento (94 ms y 10 MB)
+y la exportación a CSV (54 ms).
+
+La causa es una: `Registrations::all()` carga todas las inscripciones con sus
+diez metas, y se usa para **contar**. WordPress 7.1 deduplica la consulta en
+SQL dentro de la petición, pero el recorrido en PHP se repite una vez por
+taller.
+
+- [ ] **`Registrations::taken()`**: contar con un `get_posts` de
+      `fields => 'ids'`, `meta_key`/`meta_value` del taller, y
+      `update_post_meta_cache` y `update_post_term_cache` a `false`. Misma
+      firma; `choices()` y `fits()` no se tocan. Arregla también `seat()`, que
+      hoy hace la carga completa **dentro del candado** cuando el taller tiene
+      aforo
+      ([ADR-0033](../adr/ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md)).
+- [ ] **`Registrations::by_token()`**: la misma consulta con `REG_TOKEN` y
+      `numberposts => 1`, en vez de recorrer la lista. Conservar el
+      `hash_equals` sobre la encontrada: es una línea y mantiene lo que dice su
+      docblock.
+- [ ] **`Registrations::has_any()`**: `numberposts => 1` y `fields => 'ids'`.
+      Hoy carga la lista entera para devolver un booleano, dos veces por
+      pantalla del taller.
+- [ ] **En `EventWorkspace`, calcular `Participants::rows()` una sola vez**:
+      `counts()` y `fill_programme()` la construyen las dos, con diez metas y
+      un JSON por inscripción. Calcularla en `fill()` y pasársela a ambas. Sin
+      caché estática en `Participants::rows()`: los tests añaden filtros entre
+      llamadas y quedaría rancia.
+- [ ] **Un test que lo vigile**, en `tests/unit/test-registrations.php`:
+      cincuenta inscripciones, `wp_cache_flush()`, `Registrations::choices()`,
+      y comprobar que `get_num_queries()` sube poco y que ninguna inscripción
+      ha entrado en la caché de posts (`wp_cache_get( $id, 'posts' )` devuelve
+      `false`). Es lo que falla si alguien vuelve a contar en PHP.
+
+Lo que **no** hace falta tocar, y se dice para que nadie lo intente: ningún
+índice nuevo —`post_parent` y `meta_key` ya lo tienen—; ni el techo de 200
+eventos del listado, ya anotado en `EventList::scope()`; ni los
+`has_shortcode()` de `Shell::current_section()`, que cuestan 0,3 ms por cada
+doscientas llamadas. Para volver a medir: `SAVEQUERIES` a `true`,
+`wp_cache_flush()` antes de cada pantalla, `get_num_queries()` y
+`$wpdb->queries` después, y los datos sintéticos dentro de un
+`START TRANSACTION` … `ROLLBACK`. Tras el cambio, la sección de inscripción
+tiene que quedar en unos 10 ms y unas décimas de MB con cualquier número de
+inscripciones.
+
 ### Fase 3: inscripciones, talleres, aforo y certificados
 
 Nada de esto es un compromiso: son las piezas que la fase 3 tendría que
