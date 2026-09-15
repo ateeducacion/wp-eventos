@@ -248,6 +248,23 @@ check-plugin: start-if-not-running bundle ## Pasa WordPress Plugin Check sobre e
 	fi; \
 	echo "Plugin Check: sin errores ni avisos."
 
+# ─── Capturas ─────────────────────────────────────────────────────────────────
+#
+# Recorre las pantallas con Playwright y deja capturas/informe.html. Cada
+# pantalla se captura donde se usa: el aplicativo solo en horizontal, porque se
+# usa sentado delante de un ordenador; la página pública del evento **en los
+# dos**, porque se proyecta en una sala y se abre en el móvil de quien recibe el
+# enlace.
+#
+#   make capturas                todo
+#   make capturas ONLY=mobile    solo las de móvil
+#   make capturas ONLY=desktop   solo las de ordenador
+
+capturas: start-if-not-running ## Captura las pantallas en capturas/informe.html
+	@npx playwright install chromium > /dev/null
+	@ONLY="$(ONLY)" node scripts/capturas.mjs
+	@echo "Informe: capturas/informe.html"
+
 # ─── Skills de agentes ────────────────────────────────────────────────────────
 #
 # Las canónicas viven en .agents/skills/ y .claude/skills/ lleva una COPIA, no

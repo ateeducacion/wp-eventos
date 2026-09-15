@@ -194,6 +194,7 @@ Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
 | `make snippet-check` | Comprueba que los snippets sobreviven al guardado (doble eval) |
 | `make test` | PHPUnit (admite `FILE=…` y `FILTER=…`) |
 | `make skills-sync` | Copia `.agents/skills/` sobre `.claude/skills/` |
+| `make capturas` | Recorre las pantallas y deja `capturas/informe.html` (admite `ONLY=desktop` / `ONLY=mobile`) |
 | `make check-plugin` | Pasa WordPress Plugin Check sobre el código de los snippets |
 | `make test-browser` | Los tres escalones de la confirmación en un navegador real |
 | `make coverage` | Cobertura de `src/Evt` (reinicia wp-env con Xdebug) |

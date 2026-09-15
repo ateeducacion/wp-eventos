@@ -131,6 +131,7 @@ Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.
 | Probar sin Docker | `make playground` |
 | Antes de commit/PR | `make check` |
 | Comprobar el código como lo revisaría WordPress.org | `make check-plugin` (errores **y avisos**) |
+| Ver cómo queda todo después de un cambio | `make capturas` — y en cada PR sale solo, comentado |
 | Publicar una versión | `make release` (tras cerrar el bloque del CHANGELOG) |
 | Llevar un snippet al sitio de destino | `npm run snippets -- push <id> --file snippets/… --dry-run` (sin `--yes` no escribe) |
 
@@ -222,6 +223,12 @@ rápida, la REST API y las acciones en bloque. La capa que protege es
   encolado. **Nunca se inlinean en el bundle.** El CDN **no** es un problema en
   este proyecto: es el camino
   ([ADR-0015](docs/adr/ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md)).
+- **Workflows:** `make check` compila el JavaScript de `github-script`, que va
+  dentro de una cadena YAML y que si no nadie mira hasta que el job corre. **No**
+  valida las expresiones `${{ … }}`: un `if` que lea un contexto inexistente
+  —`secrets`, por ejemplo— es YAML válido, pasa aquí, y GitHub rechaza el fichero
+  entero al recibirlo: rojo a los cero segundos y sin un job que abrir. Eso solo
+  lo dice GitHub.
 - **Scripts de `scripts/`:** idempotentes, **sin `WP_CLI`** (corren también
   bajo Playground), raíz con `dirname( __DIR__ )`, y lanzan `RuntimeException`
   cuando algo falla, para que `make provision` se caiga en vez de seguir a

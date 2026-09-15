@@ -52,3 +52,6 @@ security-scans/
 /.design/*.html
 !/.design/*.dc.html
 .evt-plugin-check/
+
+# Capturas: se generan con `make capturas` y se publican en el PR, no aquí.
+/capturas/

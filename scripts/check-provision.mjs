@@ -12,7 +12,8 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +98,78 @@ const STEPS = [
 	'seed-demo.php',
 ];
 
+/**
+ * Comprueba que el JavaScript de los workflows compila.
+ *
+ * `actions/github-script` lleva su código **dentro de una cadena YAML**, así
+ * que nadie lo compila hasta que el job corre: tres minutos después de
+ * empujar, y solo si el resto del job llegó hasta ahí. Un identificador
+ * repetido o un paréntesis suelto se descubren en CI y no en local.
+ *
+ * El bloque se saca por indentación y no con un analizador de YAML, para que
+ * este guion siga **sin dependencias**: lo único que hay que entender es
+ * `script: |` seguido de líneas más indentadas, que es como está escrito en
+ * este repositorio.
+ *
+ * **Lo que esto NO comprueba**, y conviene no confundirlo: que las expresiones
+ * `${{ … }}` sean válidas. Un `if` que lea un contexto que ahí no existe
+ * —`secrets`, por ejemplo— es YAML perfectamente válido y JavaScript que ni se
+ * mira; GitHub lo rechaza al recibir el fichero y ninguna comprobación local lo
+ * ve venir. Eso solo lo dice GitHub.
+ *
+ * @return {void}
+ */
+function comprobarWorkflows() {
+	const dir = join( ROOT, '.github/workflows' );
+	const ficheros = readdirSync( dir ).filter( ( f ) => f.endsWith( '.yml' ) || f.endsWith( '.yaml' ) );
+
+	expect( ficheros.length > 0, 'no hay ningún workflow en .github/workflows' );
+
+	let guiones = 0;
+
+	for ( const nombre of ficheros ) {
+		const lineas = readFileSync( join( dir, nombre ), 'utf8' ).split( '\n' );
+
+		for ( let i = 0; i < lineas.length; i++ ) {
+			const apertura = lineas[ i ].match( /^(\s*)script:\s*\|/ );
+			if ( ! apertura ) {
+				continue;
+			}
+			// El bloque son las líneas siguientes con más indentación que la
+			// clave; una línea en blanco no lo corta.
+			const sangria = apertura[ 1 ].length;
+			const bloque = [];
+			let j = i + 1;
+			for ( ; j < lineas.length; j++ ) {
+				const linea = lineas[ j ];
+				if ( '' === linea.trim() ) {
+					bloque.push( '' );
+					continue;
+				}
+				if ( linea.search( /\S/ ) <= sangria ) {
+					break;
+				}
+				bloque.push( linea );
+			}
+			i = j - 1;
+
+			const corte = Math.min( ...bloque.filter( ( l ) => '' !== l ).map( ( l ) => l.search( /\S/ ) ) );
+			const codigo = bloque.map( ( l ) => l.slice( corte ) ).join( '\n' );
+			guiones += 1;
+
+			try {
+				// Como lo envuelve la propia acción: una función asíncrona.
+				new vm.Script( `(async () => {\n${ codigo }\n})` );
+			} catch ( error ) {
+				expect( false, `${ nombre }, línea ${ apertura.index + i }: el script no compila`, error.message );
+			}
+		}
+	}
+
+	expect( guiones > 0, 'no se encontró ningún bloque script: | en los workflows' );
+	console.log( `Workflows: ${ guiones } guion(es) de github-script compilan, en ${ ficheros.length } fichero(s).` );
+}
+
 const workdir = mkdtempSync( join( tmpdir(), 'evt-provision-' ) );
 
 try {
@@ -167,6 +240,8 @@ try {
 		.map( ( line ) => line.trim() )
 		.find( ( line ) => line.includes( 'run:' ) && line.includes( 'make phpmd' ) );
 	expect( Boolean( order ), 'el workflow de PHPMD ya no llama a `make phpmd`' );
+
+	comprobarWorkflows();
 
 	// Lo que va detrás de `run:`, sin la palabra `make`, es lo que se le pasa.
 	// Se trocea como lo haría una shell y no por espacios: uno de los
