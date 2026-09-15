@@ -370,6 +370,15 @@ Las copias canónicas viven en `.agents/skills/`. Claude Code las ve en
 `.claude/skills/` como **enlaces** a esas carpetas — `.gitignore` ignora
 directorios reales ahí (`.claude/skills/*/`).
 
+**Las que hay hoy** —todas de terceros y verbatim, con su índice y su origen en
+[`.agents/skills/README.md`](.agents/skills/README.md)—:
+
+| Para | Skills |
+|---|---|
+| Seguridad | `security-audit`, `wp-plugin-security`, `github-actions-hardening` |
+| WordPress | `wp-plugin-development`, `wp-performance`, `wp-wpcli-and-ops`, `wp-project-triage`, `wp-playground`, `blueprint` |
+| Pruebas | `playwright-cli` |
+
 Skills propias: créalas en `.agents/skills/<nombre>/` y
 `ln -s ../../.agents/skills/<nombre> .claude/skills/<nombre>`. Las de terceros,
 instálalas solo para Copilot y enlázalas igual:
