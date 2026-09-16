@@ -1263,11 +1263,7 @@ final class EventWorkspace {
 			if ( $subido <= 0 ) {
 				return false;
 			}
-			if ( ! self::image_meets_min_width( $subido, $min_width ) ) {
-				return false;
-			}
-			self::put_image( $event_id, $meta_key, $subido );
-			return true;
+			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width );
 		}
 
 		if ( ! empty( $_POST[ $campo . '_clear' ] ) ) {
@@ -1281,14 +1277,27 @@ final class EventWorkspace {
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		if ( $elegido > 0 && ! self::is_image_attachment( $elegido ) ) {
+		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width );
+	}
+
+	/**
+	 * Validate an image chosen by either upload path and store it.
+	 *
+	 * @param int    $event_id      Event post ID.
+	 * @param string $meta_key      Where the attachment ID lives; empty = thumbnail.
+	 * @param int    $attachment_id Attachment ID; 0 to clear it.
+	 * @param int    $min_width     Minimum width in pixels; 0 accepts any width.
+	 * @return bool False when the attachment is not a usable image.
+	 */
+	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
 			return false;
 		}
-		if ( $elegido > 0 && ! self::image_meets_min_width( $elegido, $min_width ) ) {
+		if ( $attachment_id > 0 && ! self::image_meets_min_width( $attachment_id, $min_width ) ) {
 			return false;
 		}
 
-		self::put_image( $event_id, $meta_key, $elegido );
+		self::put_image( $event_id, $meta_key, $attachment_id );
 		return true;
 	}
 
