@@ -609,17 +609,19 @@ final class EventView {
 	 */
 	private static function appearance( int $event_id ): array {
 		$vacia = array(
-			'bg'          => '',
-			'fg'          => '',
-			'title_font'  => '',
-			'body_font'   => '',
-			'logo'        => '',
-			'logo_alt'    => '',
-			'poster'      => '',
-			'poster_full' => '',
-			'poster_alt'  => '',
-			'shape'       => EventMetaKeys::SHAPE_SQUARE,
-			'separator'   => '',
+			'bg'                => '',
+			'fg'                => '',
+			'title_font'        => '',
+			'body_font'         => '',
+			'logo'              => '',
+			'logo_alt'          => '',
+			'header_banner'     => '',
+			'header_banner_alt' => '',
+			'poster'            => '',
+			'poster_full'       => '',
+			'poster_alt'        => '',
+			'shape'             => EventMetaKeys::SHAPE_SQUARE,
+			'separator'         => '',
 		);
 		if ( $event_id <= 0 ) {
 			return $vacia;
@@ -628,26 +630,29 @@ final class EventView {
 		$bg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
 		$fg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
 		$logo   = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$banner = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
 		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
 
 		return array(
-			'bg'          => is_string( $bg ) ? $bg : '',
-			'fg'          => is_string( $fg ) ? $fg : '',
-			'title_font'  => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
-			'body_font'   => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
-			'logo'        => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
-			'logo_alt'    => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
+			'bg'                => is_string( $bg ) ? $bg : '',
+			'fg'                => is_string( $fg ) ? $fg : '',
+			'title_font'        => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
+			'body_font'         => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
+			'logo'              => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
+			'logo_alt'          => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
+			'header_banner'     => $banner > 0 ? (string) wp_get_attachment_image_url( $banner, 'full' ) : '',
+			'header_banner_alt' => $banner > 0 ? (string) get_post_meta( $banner, '_wp_attachment_image_alt', true ) : '',
 			// El cartel se enseña reducido y enlaza al original: es la pieza que
 			// la gente se descarga y comparte, y para eso hace falta el tamaño real.
-			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
-			'poster_full' => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
-			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
-			'shape'       => EventMetaKeys::in_list(
+			'poster'            => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
+			'poster_full'       => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
+			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
+			'shape'             => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
 				EventMetaKeys::image_shapes(),
 				EventMetaKeys::SHAPE_SQUARE
 			),
-			'separator'   => EventMetaKeys::in_list(
+			'separator'         => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::SEPARATOR, true ),
 				EventMetaKeys::separators()
 			),

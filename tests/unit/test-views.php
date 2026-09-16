@@ -146,7 +146,7 @@ class Test_Views extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Las tres imágenes son el selector de medios, con respaldo sin guion.
+	 * Las cuatro imágenes son el selector de medios, con respaldo sin guion.
 	 *
 	 * Lo que viaja es el `hidden` con el identificador del adjunto, no el
 	 * fichero; el `input type="file"` se queda dentro del `<noscript>` para
@@ -169,15 +169,35 @@ class Test_Views extends WP_UnitTestCase {
 
 		$html = EventAppearancePanel::html( $m );
 
-		foreach ( array( 'evt_logo_id', 'evt_poster_id', 'evt_featured_id' ) as $campo ) {
+		foreach ( array( 'evt_logo_id', 'evt_header_banner_id', 'evt_poster_id', 'evt_featured_id' ) as $campo ) {
 			$this->assertStringContainsString( 'name="' . $campo . '"', $html, $campo );
 		}
 		$this->assertStringContainsString( 'data-evt-media-value', $html );
-		$this->assertStringContainsString( 'Elegir imagen', $html );
+		$this->assertStringContainsString( 'Seleccionar o subir', $html );
+		$this->assertStringContainsString( 'data-evt-media-type="image"', $html );
+		$this->assertStringContainsString( 'Arrastre una imagen hasta este campo', $html );
+		$this->assertStringContainsString( 'data-evt-media-status', $html );
+		$this->assertStringContainsString( 'data-evt-media-min-width="1920"', $html, 'el banner publica su límite también al cargador directo' );
 		$this->assertStringContainsString( 'cartel-jornadas.jpg', $html, 'el nombre del fichero que hay puesto' );
 		$this->assertStringContainsString( '<noscript>', $html );
 		$this->assertStringContainsString( 'name="evt_poster_file"', $html, 'el respaldo para subir sin guion' );
 		$this->assertStringContainsString( 'value="' . $adjunto . '"', $html );
+	}
+
+	/**
+	 * La foto de ponentes usa el mismo selector nativo que la apariencia.
+	 */
+	public function test_the_speaker_photo_uses_the_wordpress_media_picker() {
+		$m    = $this->taller( EventWorkspace::PANEL_SPEAKERS );
+		$html = EventWorkspaceView::html( $m );
+
+		$this->assertStringContainsString( 'name="evt_sp_photo"', $html );
+		$this->assertStringContainsString( 'data-evt-media-value', $html );
+		$this->assertStringContainsString( 'data-evt-media-pick', $html );
+		$this->assertStringContainsString( 'Seleccionar o subir', $html );
+		$this->assertStringContainsString( 'Eliminar del campo', $html );
+		$this->assertStringContainsString( 'arrastrar una nueva', $html );
+		$this->assertStringContainsString( 'data-evt-media-status', $html );
 	}
 
 	/**

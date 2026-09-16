@@ -297,6 +297,43 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Un banner sustituye la cabecera solo en la portada y quitarlo recupera
+	 * todos los datos anteriores, que nunca se borraron.
+	 */
+	public function test_a_banner_replaces_only_the_root_header_without_losing_its_data() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$banner  = self::factory()->attachment->create_upload_object(
+			DIR_TESTDATA . '/images/canola.jpg',
+			$evento
+		);
+		update_post_meta( $banner, '_wp_attachment_image_alt', 'Banner de las jornadas' );
+		update_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, $banner );
+
+		$this->acting_as( 0 );
+		$portada = EventChrome::cover( EventView::model( $evento ) );
+		$interna = EventChrome::cover( EventView::model( $seccion ) );
+
+		$this->assertStringContainsString( 'evt-ev__portada--banner', $portada );
+		$this->assertStringContainsString( 'Banner de las jornadas', $portada );
+		$this->assertStringContainsString( 'screen-reader-text', $portada, 'los datos esenciales siguen accesibles como texto' );
+		$this->assertStringNotContainsString( 'evt-ev__portada--banner', $interna, 'las secciones conservan la cabecera normal' );
+		$this->assertStringContainsString( 'Programa', $interna );
+
+		delete_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID );
+		$prop = new ReflectionProperty( EventView::class, 'models' );
+		$prop->setAccessible( true );
+		$prop->setValue( null, array() );
+		$restaurada = EventChrome::cover( EventView::model( $evento ) );
+
+		$this->assertStringNotContainsString( 'evt-ev__portada--banner', $restaurada );
+		$this->assertStringContainsString( 'Jornadas de Innovación', $restaurada );
+		$this->assertStringContainsString( 'Enseñar de otra manera', $restaurada );
+		$this->assertSame( '#0a3d62', get_post_meta( $evento, EventMetaKeys::HEADER_BG, true ) );
+	}
+
+	/**
 	 * Lo que no es un color ni una tipografía de la lista no viste nada.
 	 */
 	public function test_a_broken_appearance_paints_the_default_one() {

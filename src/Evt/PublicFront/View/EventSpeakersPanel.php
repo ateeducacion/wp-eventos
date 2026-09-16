@@ -151,24 +151,24 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media">
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+			data-evt-media-title="Elegir la foto del ponente" data-evt-media-button="Usar esta imagen">
 			<span class="evt-media-rotulo">Foto</span>
-			<div class="evt-media-ficha">
-				<?php if ( '' !== $url ) : ?>
-					<img class="evt-media-miniatura" src="<?php echo esc_url( $url ); ?>" alt="" width="96" height="96" />
-				<?php else : ?>
-					<p class="evt-media-vacia">Sin foto. La ficha se ve igual, con las iniciales.</p>
-				<?php endif; ?>
-				<?php if ( true === $m['can_upload'] ) : ?>
-					<div class="evt-media-botones">
-						<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>"
-							data-evt-media="evt-sp-photo" data-evt-media-titulo="Elegir la foto del ponente">Elegir imagen</button>
-						<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>"
-							data-evt-media-quitar="evt-sp-photo">Quitar</button>
-					</div>
-				<?php endif; ?>
+			<input type="hidden" id="evt-sp-photo" name="evt_sp_photo" value="<?php echo esc_attr( (string) $id ); ?>" data-evt-media-value />
+			<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>
+				<img class="evt-media-miniatura" src="<?php echo esc_url( $url ); ?>" alt="" width="96" height="96" data-evt-media-thumb />
+				<span class="evt-media-datos"><strong data-evt-media-name>Foto del ponente</strong><small data-evt-media-size></small></span>
 			</div>
-			<input type="hidden" id="evt-sp-photo" name="evt_sp_photo" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( '' !== $url ? 'hidden' : '' ); ?>>Sin foto. La ficha se ve igual, con las iniciales.</p>
+			<?php if ( true === $m['can_upload'] ) : ?>
+				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+				<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
+					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-pick>Seleccionar o subir</button>
+					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-clear <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>Eliminar del campo</button>
+				</p>
+			<?php endif; ?>
+			<small>La ventana de WordPress permite elegir una imagen existente, previsualizarla o arrastrar una nueva desde su equipo.</small>
 		</div>
 		<?php
 		return (string) ob_get_clean();

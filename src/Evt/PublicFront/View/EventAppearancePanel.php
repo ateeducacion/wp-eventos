@@ -108,6 +108,14 @@ final class EventAppearancePanel {
 			'Sale junto al título en la cabecera. Un PNG con fondo transparente queda mejor sobre el color de fondo.',
 			$subir
 		);
+		$img_banner    = self::image_field(
+			'evt_header_banner',
+			'Banner de cabecera',
+			self::image_of( (int) ( $medios['header_banner'] ?? 0 ) ),
+			'Sustituye visualmente la cabecera completa solo en la portada del evento. Debe tener al menos 1920 píxeles de ancho. Al quitarla reaparecen el título, el lema, las fechas, la sede y las acciones guardadas; esos datos no se borran.',
+			$subir,
+			1920
+		);
 		$img_cartel    = self::image_field(
 			'evt_poster',
 			'Cartel del evento',
@@ -165,8 +173,9 @@ final class EventAppearancePanel {
 			<fieldset class="evt-tarjeta">
 				<legend>Imágenes</legend>
 				<p>
-					Las tres salen de la biblioteca de medios del sitio: «Elegir imagen» abre la
-					biblioteca, donde puede reutilizar una que ya esté subida o subir una nueva
+					Las cuatro salen de la biblioteca de medios del sitio: «Seleccionar o subir» abre la
+					ventana nativa de WordPress, donde puede reutilizar una imagen, previsualizarla o
+					arrastrar una nueva desde su equipo
 					(JPG, PNG, WEBP o GIF). Nada cambia hasta que pulse «Guardar la apariencia».
 				</p>
 
@@ -177,6 +186,7 @@ final class EventAppearancePanel {
 				<?php endif; ?>
 
 				<?php echo $img_logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo $img_banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 				<?php echo $img_cartel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 				<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			</fieldset>
@@ -369,9 +379,10 @@ final class EventAppearancePanel {
 	 * @param array<string, mixed> $imagen   What model() knows about it.
 	 * @param string               $ayuda    Help text.
 	 * @param bool                 $can_load Whether this person may upload files.
+	 * @param int                  $min_width Minimum width for direct uploads.
 	 * @return string
 	 */
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load ): string {
+	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0 ): string {
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
 		$puesta = '' !== $url;
@@ -380,7 +391,9 @@ final class EventAppearancePanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>">
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
+			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="Usar esta imagen">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
 			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
@@ -399,17 +412,22 @@ final class EventAppearancePanel {
 				Todavía no hay ninguna imagen puesta.
 			</p>
 
+			<?php if ( $can_load ) : ?>
+				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+			<?php endif; ?>
+
 			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
 				<?php if ( $can_load ) : ?>
 					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
 						data-evt-media-pick aria-label="<?php echo esc_attr( 'Elegir imagen para: ' . $rotulo ); ?>">
-						Elegir imagen
+						Seleccionar o subir
 					</button>
 				<?php endif; ?>
 				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
 					data-evt-media-clear aria-label="<?php echo esc_attr( 'Quitar la imagen de: ' . $rotulo ); ?>"
 					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-					Quitar
+					Eliminar del campo
 				</button>
 			</p>
 

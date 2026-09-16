@@ -55,6 +55,7 @@ class Test_Appearance_Meta extends WP_UnitTestCase {
 			EventMetaKeys::TITLE_FONT,
 			EventMetaKeys::BODY_FONT,
 			EventMetaKeys::LOGO_ID,
+			EventMetaKeys::HEADER_BANNER_ID,
 			EventMetaKeys::POSTER_ID,
 			EventMetaKeys::IMAGE_SHAPE,
 			EventMetaKeys::SEPARATOR,

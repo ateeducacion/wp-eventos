@@ -246,10 +246,12 @@
 		} );
 	} );
 
-	/* --- 4. Elegir una imagen de la biblioteca --------------------------- */
+	/* --- 4. Elegir un archivo de la biblioteca ---------------------------- */
 
 	/*
-	 * Cada imagen del panel de apariencia es un `[data-evt-media]` con:
+	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`. La
+	 * ventana nativa de WordPress aporta biblioteca, subida por arrastre y la
+	 * previsualización del adjunto; la ficha conserva una vista rápida fuera.
 	 *
 	 *   [data-evt-media-value]   el `hidden` con el ID del adjunto: lo único que viaja
 	 *   [data-evt-media-card]    la ficha de lo que hay puesto ahora
@@ -295,7 +297,7 @@
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
 		var chica = adjunto.sizes && ( adjunto.sizes.medium || adjunto.sizes.thumbnail );
 		if ( mini ) {
-			mini.src = chica ? chica.url : adjunto.url;
+			mini.src = chica ? chica.url : ( adjunto.icon || adjunto.url );
 			mini.alt = adjunto.alt || '';
 		}
 		if ( nombre ) {
@@ -312,12 +314,16 @@
 		if ( ! window.wp || ! window.wp.media ) {
 			return;
 		}
-		var marco = window.wp.media( {
-			title: caja.getAttribute( 'data-evt-media-title' ) || 'Elegir imagen',
-			button: { text: 'Usar esta imagen' },
-			library: { type: 'image' },
+		var tipo = caja.getAttribute( 'data-evt-media-type' );
+		var opciones = {
+			title: caja.getAttribute( 'data-evt-media-title' ) || 'Elegir archivo',
+			button: { text: caja.getAttribute( 'data-evt-media-button' ) || 'Usar este archivo' },
 			multiple: false
-		} );
+		};
+		if ( tipo ) {
+			opciones.library = { type: tipo };
+		}
+		var marco = window.wp.media( opciones );
 		marco.on( 'select', function () {
 			var elegido = marco.state().get( 'selection' ).first();
 			if ( elegido ) {
@@ -353,6 +359,67 @@
 	// es por si algún día sube a la cabecera.
 	mostrarBotones();
 	document.addEventListener( 'DOMContentLoaded', mostrarBotones );
+
+	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
+	 * soltado. La subida crea el adjunto en WordPress inmediatamente; elegirlo
+	 * para el evento sigue esperando a «Guardar la apariencia» o el ponente. */
+	function arrancarSubidas() {
+		if ( ! window.wp || ! window.wp.Uploader || ! window.jQuery ) {
+			return;
+		}
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
+			if ( '1' === caja.dataset.evtUploader ) {
+				return;
+			}
+			caja.dataset.evtUploader = '1';
+			var estado = caja.querySelector( '[data-evt-media-status]' );
+			var tipo = caja.getAttribute( 'data-evt-media-type' );
+			var minimo = parseInt( caja.getAttribute( 'data-evt-media-min-width' ) || '0', 10 );
+			var opciones = {
+				container: caja,
+				dropzone: caja,
+				plupload: { multi_selection: false },
+				added: function ( adjunto ) {
+					if ( estado ) {
+						estado.textContent = 'Subiendo ' + ( adjunto.get( 'filename' ) || 'el archivo' ) + '…';
+					}
+				},
+				progress: function ( adjunto ) {
+					if ( estado ) {
+						estado.textContent = 'Subiendo… ' + ( adjunto.get( 'percent' ) || 0 ) + '%';
+					}
+				},
+				success: function ( adjunto ) {
+					var archivo = adjunto.toJSON();
+					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
+						if ( estado ) {
+							estado.textContent = 'La imagen se subió a la biblioteca, pero no se puede usar aquí: necesita al menos ' + minimo + ' px de ancho.';
+						}
+						return;
+					}
+					poner( caja, archivo );
+					if ( estado ) {
+						estado.textContent = 'Archivo subido. Guarde el formulario para aplicar el cambio.';
+					}
+				},
+				error: function ( mensaje ) {
+					if ( estado ) {
+						estado.textContent = mensaje || 'No se pudo subir el archivo.';
+					}
+				}
+			};
+			if ( 'image' === tipo ) {
+				opciones.plupload.filters = {
+					mime_types: [ { title: 'Imágenes', extensions: 'jpg,jpeg,png,gif,webp' } ]
+				};
+			}
+			new window.wp.Uploader( opciones );
+		} );
+	}
+
+	arrancarSubidas();
+	document.addEventListener( 'DOMContentLoaded', arrancarSubidas );
+	window.addEventListener( 'load', arrancarSubidas );
 
 	/* --- 5. El editor de código ------------------------------------------ */
 

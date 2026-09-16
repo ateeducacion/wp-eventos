@@ -655,6 +655,51 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * El banner exige 1920 píxeles y un intento inválido conserva el anterior.
+	 */
+	public function test_the_header_banner_requires_a_minimum_width_of_1920_pixels() {
+		$area     = $this->area( 'Innovación' );
+		$uid      = $this->administrator();
+		$evento   = $this->event( $uid, array( $area ) );
+		$anterior = $this->adjunto( 'image/jpeg', 'banner-anterior.jpg', $uid );
+		$estrecho = $this->adjunto( 'image/jpeg', 'banner-estrecho.jpg', $uid );
+		$ancho    = $this->adjunto( 'image/jpeg', 'banner-ancho.jpg', $uid );
+
+		wp_update_attachment_metadata(
+			$anterior,
+			array(
+				'width'  => 1920,
+				'height' => 600,
+				'file'   => '2026/03/banner-anterior.jpg',
+			)
+		);
+		wp_update_attachment_metadata(
+			$estrecho,
+			array(
+				'width'  => 1919,
+				'height' => 600,
+				'file'   => '2026/03/banner-estrecho.jpg',
+			)
+		);
+		wp_update_attachment_metadata(
+			$ancho,
+			array(
+				'width'  => 2400,
+				'height' => 750,
+				'file'   => '2026/03/banner-ancho.jpg',
+			)
+		);
+		update_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, $anterior );
+
+		$this->submit( $uid, EventWorkspace::PANEL_LOOK, $evento, 0, array( EventMetaKeys::HEADER_BANNER_ID => (string) $estrecho ) );
+		$this->assertSame( $anterior, (int) get_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, true ) );
+		$this->assertSame( 'aviso', $this->flash( $uid )['tipo'] );
+
+		$this->submit( $uid, EventWorkspace::PANEL_LOOK, $evento, 0, array( EventMetaKeys::HEADER_BANNER_ID => (string) $ancho ) );
+		$this->assertSame( $ancho, (int) get_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, true ) );
+	}
+
+	/**
 	 * El selector de medios manda un identificador de adjunto, y se comprueba.
 	 *
 	 * El `hidden` que rellena el guion lo escribe el navegador, así que lo

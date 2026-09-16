@@ -116,6 +116,14 @@ final class EventMetaKeys {
 	public const LOGO_ID = 'evt_logo_id';
 
 	/**
+	 * ID del adjunto que sustituye visualmente la cabecera de la portada.
+	 *
+	 * Los datos de la cabecera siguen guardados: quitar este banner los vuelve
+	 * a mostrar sin tener que reconstruirlos.
+	 */
+	public const HEADER_BANNER_ID = 'evt_header_banner_id';
+
+	/**
 	 * ID del adjunto con el cartel del evento.
 	 */
 	public const POSTER_ID = 'evt_poster_id';
@@ -222,6 +230,7 @@ final class EventMetaKeys {
 			self::TITLE_FONT,
 			self::BODY_FONT,
 			self::LOGO_ID,
+			self::HEADER_BANNER_ID,
 			self::POSTER_ID,
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,

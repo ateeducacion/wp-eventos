@@ -172,6 +172,33 @@ final class EventChrome {
 	public static function cover( array $m ): string {
 		$look   = (array) $m['appearance'];
 		$signup = (array) $m['signup'];
+		$banner = ! empty( $m['is_root'] ) ? (string) $look['header_banner'] : '';
+
+		if ( '' !== $banner ) {
+			ob_start();
+			?>
+			<div class="evt-ev__portada evt-ev__portada--banner">
+				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
+					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<div class="screen-reader-text">
+					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
+					<?php
+					if ( '' !== (string) $m['tagline'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['tagline'] ); ?></p><?php endif; ?>
+					<?php
+					if ( '' !== (string) $m['dates'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['dates'] ); ?></p><?php endif; ?>
+					<?php
+					if ( '' !== (string) $m['venue'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['venue'] ); ?></p><?php endif; ?>
+				</div>
+			</div>
+			<?php
+			return (string) ob_get_clean();
+		}
 
 		ob_start();
 		?>
