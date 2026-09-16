@@ -1224,12 +1224,13 @@ final class EventWorkspace {
 		// WordPress: eso dice la clave vacía.
 		$subidas = array(
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
+			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
 
 		if ( in_array( false, $subidas, true ) ) {
-			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF— y que no pese demasiado.' );
+			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho.' );
 			Shell::leave( $destino );
 			return;
 		}
@@ -1251,9 +1252,10 @@ final class EventWorkspace {
 	 * @param int    $event_id Event post ID.
 	 * @param string $campo    Field prefix, e.g. `evt_logo`.
 	 * @param string $meta_key Where the attachment ID lives; empty = thumbnail.
+	 * @param int    $min_width Minimum width in pixels; 0 accepts any width.
 	 * @return bool False when what was sent could not be stored.
 	 */
-	private static function save_image( int $event_id, string $campo, string $meta_key ): bool {
+	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0 ): bool {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- del fichero se encarga media_handle_upload(); del identificador, absint().
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
@@ -1261,8 +1263,7 @@ final class EventWorkspace {
 			if ( $subido <= 0 ) {
 				return false;
 			}
-			self::put_image( $event_id, $meta_key, $subido );
-			return true;
+			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width );
 		}
 
 		if ( ! empty( $_POST[ $campo . '_clear' ] ) ) {
@@ -1276,11 +1277,27 @@ final class EventWorkspace {
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		if ( $elegido > 0 && ! self::is_image_attachment( $elegido ) ) {
+		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width );
+	}
+
+	/**
+	 * Validate an image chosen by either upload path and store it.
+	 *
+	 * @param int    $event_id      Event post ID.
+	 * @param string $meta_key      Where the attachment ID lives; empty = thumbnail.
+	 * @param int    $attachment_id Attachment ID; 0 to clear it.
+	 * @param int    $min_width     Minimum width in pixels; 0 accepts any width.
+	 * @return bool False when the attachment is not a usable image.
+	 */
+	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
+			return false;
+		}
+		if ( $attachment_id > 0 && ! self::image_meets_min_width( $attachment_id, $min_width ) ) {
 			return false;
 		}
 
-		self::put_image( $event_id, $meta_key, $elegido );
+		self::put_image( $event_id, $meta_key, $attachment_id );
 		return true;
 	}
 
@@ -1324,6 +1341,21 @@ final class EventWorkspace {
 		return 'attachment' === get_post_type( $attachment_id )
 			&& wp_attachment_is_image( $attachment_id )
 			&& current_user_can( 'read_post', $attachment_id );
+	}
+
+	/**
+	 * Whether an image is wide enough for a field with a minimum resolution.
+	 *
+	 * @param int $attachment_id Image attachment ID.
+	 * @param int $min_width     Minimum width in pixels; 0 means unrestricted.
+	 * @return bool
+	 */
+	private static function image_meets_min_width( int $attachment_id, int $min_width ): bool {
+		if ( $min_width <= 0 ) {
+			return true;
+		}
+		$imagen = wp_get_attachment_image_src( $attachment_id, 'full' );
+		return is_array( $imagen ) && (int) $imagen[1] >= $min_width;
 	}
 
 	/**
@@ -1836,9 +1868,10 @@ final class EventWorkspace {
 		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
 		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
 		$m['media']        = array(
-			'logo'     => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
-			'poster'   => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
-			'featured' => (int) get_post_thumbnail_id( $event_id ),
+			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
+			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
+			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
+			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
 
 		return self::fill_signup( self::fill_programme( $m, $event_id ), $event_id );
@@ -2140,7 +2173,7 @@ final class EventWorkspace {
 		// nada que elegir. Quien no puede subir tampoco puede consultar la
 		// biblioteca por AJAX, así que a esa persona solo se le enseña
 		// «Quitar» y no se carga nada.
-		if ( self::PANEL_LOOK === (string) $m['panel'] && true === $m['can_upload'] ) {
+		if ( in_array( (string) $m['panel'], array( self::PANEL_LOOK, self::PANEL_SPEAKERS ), true ) && true === $m['can_upload'] ) {
 			wp_enqueue_media( array( 'post' => (int) $m['event_id'] ) );
 		}
 

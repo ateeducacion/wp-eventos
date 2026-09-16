@@ -742,7 +742,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-font-source-serif { font-family: "Source Serif 4", Georgia, serif; }
 .evt-font-merriweather { font-family: Merriweather, Georgia, serif; }
 
-/* --- las tres imágenes del evento ---------------------------------------- */
+/* --- archivos gestionados con la biblioteca de medios -------------------- */
 
 /* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
    adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
@@ -754,6 +754,12 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border: 1px solid var(--evt-linea);
   border-radius: 10px;
   background: var(--evt-sup);
+}
+.evt-media.supports-drag-drop { border-style: dashed; }
+.evt-media.supports-drag-drop.drag-over {
+  border-color: var(--evt-pri);
+  box-shadow: 0 0 0 3px rgba(27, 79, 138, .25);
+  background: var(--evt-sup-2);
 }
 .evt-media + .evt-media { margin-top: 12px; }
 .evt-media-rotulo { display: block; margin-bottom: 10px; font-weight: 600; }
@@ -771,6 +777,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-media-datos strong { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
 .evt-media-datos small { font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .evt-media-vacia { margin: 0 0 10px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-media-drop { margin: 0 0 8px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-media-estado { min-height: 1.4em; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .evt-media-botones { margin: 0 0 4px; }
 .evt-media noscript > label { display: block; margin-top: 8px; }
 /* `hidden` lo pone y lo quita el guion, y `display:flex` le gana al valor por

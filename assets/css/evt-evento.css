@@ -184,6 +184,17 @@
 	color: inherit;
 }
 
+.evt-ev__portada--banner {
+	padding: 0;
+	background: transparent;
+}
+
+.evt-ev__banner {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
 .evt-ev__logo {
 	max-height: 90px;
 	width: auto;

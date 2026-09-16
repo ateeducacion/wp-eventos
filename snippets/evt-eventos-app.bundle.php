@@ -145,6 +145,14 @@ final class EventMetaKeys {
 
 
 
+
+
+
+	public const HEADER_BANNER_ID = 'evt_header_banner_id';
+
+
+
+
 	public const POSTER_ID = 'evt_poster_id';
 
 
@@ -249,6 +257,7 @@ final class EventMetaKeys {
 			self::TITLE_FONT,
 			self::BODY_FONT,
 			self::LOGO_ID,
+			self::HEADER_BANNER_ID,
 			self::POSTER_ID,
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,
@@ -417,93 +426,97 @@ final class EventMetaRegistration {
 
 	public static function schema(): array {
 		return array(
-			EventMetaKeys::SECTION_TYPE   => array(
+			EventMetaKeys::SECTION_TYPE     => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_section_type' ),
 			),
-			EventMetaKeys::START_DATE     => array(
+			EventMetaKeys::START_DATE       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::END_DATE       => array(
+			EventMetaKeys::END_DATE         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::VENUE          => array(
+			EventMetaKeys::VENUE            => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::TAGLINE        => array(
+			EventMetaKeys::TAGLINE          => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::HASHTAG        => array(
+			EventMetaKeys::HASHTAG          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_hashtag' ),
 			),
-			EventMetaKeys::INTRO          => array(
+			EventMetaKeys::INTRO            => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			EventMetaKeys::SIGNUP_SHOW    => array(
+			EventMetaKeys::SIGNUP_SHOW      => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			EventMetaKeys::SIGNUP_LABEL   => array(
+			EventMetaKeys::SIGNUP_LABEL     => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::SIGNUP_URL     => array(
+			EventMetaKeys::SIGNUP_URL       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
-			EventMetaKeys::SIGNUP_FORM_ID => array(
+			EventMetaKeys::SIGNUP_FORM_ID   => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::HEADER_BG      => array(
+			EventMetaKeys::HEADER_BG        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::HEADER_TEXT    => array(
+			EventMetaKeys::HEADER_TEXT      => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::TITLE_FONT     => array(
+			EventMetaKeys::TITLE_FONT       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::BODY_FONT      => array(
+			EventMetaKeys::BODY_FONT        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::LOGO_ID        => array(
+			EventMetaKeys::LOGO_ID          => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::POSTER_ID      => array(
+			EventMetaKeys::HEADER_BANNER_ID => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::IMAGE_SHAPE    => array(
+			EventMetaKeys::POSTER_ID        => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::IMAGE_SHAPE      => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_image_shape' ),
 			),
-			EventMetaKeys::SEPARATOR      => array(
+			EventMetaKeys::SEPARATOR        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_separator' ),
 			),
-			EventMetaKeys::CUSTOM_CSS     => array(
+			EventMetaKeys::CUSTOM_CSS       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
 				'auth'     => array( self::class, 'auth_custom_css' ),
 			),
-			EventMetaKeys::CUSTOM_JS      => array(
+			EventMetaKeys::CUSTOM_JS        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_js' ),
 				'auth'     => array( self::class, 'auth_custom_js' ),
 			),
-			EventMetaKeys::ARCHIVED       => array(
+			EventMetaKeys::ARCHIVED         => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 				'auth'     => array( self::class, 'auth_archived' ),
@@ -9644,12 +9657,13 @@ final class EventWorkspace {
 
 		$subidas = array(
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
+			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
 
 		if ( in_array( false, $subidas, true ) ) {
-			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF— y que no pese demasiado.' );
+			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho.' );
 			Shell::leave( $destino );
 			return;
 		}
@@ -9673,12 +9687,16 @@ final class EventWorkspace {
 
 
 
-	private static function save_image( int $event_id, string $campo, string $meta_key ): bool {
+
+	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0 ): bool {
 
 
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
 			$subido = self::upload( $campo . '_file', $event_id );
 			if ( $subido <= 0 ) {
+				return false;
+			}
+			if ( ! self::image_meets_min_width( $subido, $min_width ) ) {
 				return false;
 			}
 			self::put_image( $event_id, $meta_key, $subido );
@@ -9697,6 +9715,9 @@ final class EventWorkspace {
 
 
 		if ( $elegido > 0 && ! self::is_image_attachment( $elegido ) ) {
+			return false;
+		}
+		if ( $elegido > 0 && ! self::image_meets_min_width( $elegido, $min_width ) ) {
 			return false;
 		}
 
@@ -9744,6 +9765,21 @@ final class EventWorkspace {
 		return 'attachment' === get_post_type( $attachment_id )
 			&& wp_attachment_is_image( $attachment_id )
 			&& current_user_can( 'read_post', $attachment_id );
+	}
+
+
+
+
+
+
+
+
+	private static function image_meets_min_width( int $attachment_id, int $min_width ): bool {
+		if ( $min_width <= 0 ) {
+			return true;
+		}
+		$imagen = wp_get_attachment_image_src( $attachment_id, 'full' );
+		return is_array( $imagen ) && (int) $imagen[1] >= $min_width;
 	}
 
 
@@ -10256,9 +10292,10 @@ final class EventWorkspace {
 		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
 		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
 		$m['media']        = array(
-			'logo'     => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
-			'poster'   => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
-			'featured' => (int) get_post_thumbnail_id( $event_id ),
+			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
+			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
+			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
+			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
 
 		return self::fill_signup( self::fill_programme( $m, $event_id ), $event_id );
@@ -10560,7 +10597,7 @@ final class EventWorkspace {
 
 
 
-		if ( self::PANEL_LOOK === (string) $m['panel'] && true === $m['can_upload'] ) {
+		if ( in_array( (string) $m['panel'], array( self::PANEL_LOOK, self::PANEL_SPEAKERS ), true ) && true === $m['can_upload'] ) {
 			wp_enqueue_media( array( 'post' => (int) $m['event_id'] ) );
 		}
 
@@ -10911,24 +10948,24 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media">
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+			data-evt-media-title="Elegir la foto del ponente" data-evt-media-button="Usar esta imagen">
 			<span class="evt-media-rotulo">Foto</span>
-			<div class="evt-media-ficha">
-				<?php if ( '' !== $url ) : ?>
-					<img class="evt-media-miniatura" src="<?php echo esc_url( $url ); ?>" alt="" width="96" height="96" />
-				<?php else : ?>
-					<p class="evt-media-vacia">Sin foto. La ficha se ve igual, con las iniciales.</p>
-				<?php endif; ?>
-				<?php if ( true === $m['can_upload'] ) : ?>
-					<div class="evt-media-botones">
-						<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>"
-							data-evt-media="evt-sp-photo" data-evt-media-titulo="Elegir la foto del ponente">Elegir imagen</button>
-						<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>"
-							data-evt-media-quitar="evt-sp-photo">Quitar</button>
-					</div>
-				<?php endif; ?>
+			<input type="hidden" id="evt-sp-photo" name="evt_sp_photo" value="<?php echo esc_attr( (string) $id ); ?>" data-evt-media-value />
+			<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>
+				<img class="evt-media-miniatura" src="<?php echo esc_url( $url ); ?>" alt="" width="96" height="96" data-evt-media-thumb />
+				<span class="evt-media-datos"><strong data-evt-media-name>Foto del ponente</strong><small data-evt-media-size></small></span>
 			</div>
-			<input type="hidden" id="evt-sp-photo" name="evt_sp_photo" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( '' !== $url ? 'hidden' : '' ); ?>>Sin foto. La ficha se ve igual, con las iniciales.</p>
+			<?php if ( true === $m['can_upload'] ) : ?>
+				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+				<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
+					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-pick>Seleccionar o subir</button>
+					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-clear <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>Eliminar del campo</button>
+				</p>
+			<?php endif; ?>
+			<small>La ventana de WordPress permite elegir una imagen existente, previsualizarla o arrastrar una nueva desde su equipo.</small>
 		</div>
 		<?php
 		return (string) ob_get_clean();
@@ -12670,6 +12707,14 @@ final class EventAppearancePanel {
 			'Sale junto al título en la cabecera. Un PNG con fondo transparente queda mejor sobre el color de fondo.',
 			$subir
 		);
+		$img_banner    = self::image_field(
+			'evt_header_banner',
+			'Banner de cabecera',
+			self::image_of( (int) ( $medios['header_banner'] ?? 0 ) ),
+			'Sustituye visualmente la cabecera completa solo en la portada del evento. Debe tener al menos 1920 píxeles de ancho. Al quitarla reaparecen el título, el lema, las fechas, la sede y las acciones guardadas; esos datos no se borran.',
+			$subir,
+			1920
+		);
 		$img_cartel    = self::image_field(
 			'evt_poster',
 			'Cartel del evento',
@@ -12727,8 +12772,9 @@ final class EventAppearancePanel {
 			<fieldset class="evt-tarjeta">
 				<legend>Imágenes</legend>
 				<p>
-					Las tres salen de la biblioteca de medios del sitio: «Elegir imagen» abre la
-					biblioteca, donde puede reutilizar una que ya esté subida o subir una nueva
+					Las cuatro salen de la biblioteca de medios del sitio: «Seleccionar o subir» abre la
+					ventana nativa de WordPress, donde puede reutilizar una imagen, previsualizarla o
+					arrastrar una nueva desde su equipo
 					(JPG, PNG, WEBP o GIF). Nada cambia hasta que pulse «Guardar la apariencia».
 				</p>
 
@@ -12739,6 +12785,7 @@ final class EventAppearancePanel {
 				<?php endif; ?>
 
 				<?php echo $img_logo; ?>
+				<?php echo $img_banner; ?>
 				<?php echo $img_cartel; ?>
 				<?php echo $img_destacada; ?>
 			</fieldset>
@@ -12933,7 +12980,8 @@ final class EventAppearancePanel {
 
 
 
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load ): string {
+
+	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0 ): string {
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
 		$puesta = '' !== $url;
@@ -12942,7 +12990,9 @@ final class EventAppearancePanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>">
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
+			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="Usar esta imagen">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
 			<?php ?>
@@ -12961,17 +13011,22 @@ final class EventAppearancePanel {
 				Todavía no hay ninguna imagen puesta.
 			</p>
 
+			<?php if ( $can_load ) : ?>
+				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+			<?php endif; ?>
+
 			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
 				<?php if ( $can_load ) : ?>
 					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
 						data-evt-media-pick aria-label="<?php echo esc_attr( 'Elegir imagen para: ' . $rotulo ); ?>">
-						Elegir imagen
+						Seleccionar o subir
 					</button>
 				<?php endif; ?>
 				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
 					data-evt-media-clear aria-label="<?php echo esc_attr( 'Quitar la imagen de: ' . $rotulo ); ?>"
 					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-					Quitar
+					Eliminar del campo
 				</button>
 			</p>
 
@@ -16055,17 +16110,19 @@ final class EventView {
 
 	private static function appearance( int $event_id ): array {
 		$vacia = array(
-			'bg'          => '',
-			'fg'          => '',
-			'title_font'  => '',
-			'body_font'   => '',
-			'logo'        => '',
-			'logo_alt'    => '',
-			'poster'      => '',
-			'poster_full' => '',
-			'poster_alt'  => '',
-			'shape'       => EventMetaKeys::SHAPE_SQUARE,
-			'separator'   => '',
+			'bg'                => '',
+			'fg'                => '',
+			'title_font'        => '',
+			'body_font'         => '',
+			'logo'              => '',
+			'logo_alt'          => '',
+			'header_banner'     => '',
+			'header_banner_alt' => '',
+			'poster'            => '',
+			'poster_full'       => '',
+			'poster_alt'        => '',
+			'shape'             => EventMetaKeys::SHAPE_SQUARE,
+			'separator'         => '',
 		);
 		if ( $event_id <= 0 ) {
 			return $vacia;
@@ -16074,26 +16131,29 @@ final class EventView {
 		$bg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
 		$fg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
 		$logo   = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$banner = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
 		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
 
 		return array(
-			'bg'          => is_string( $bg ) ? $bg : '',
-			'fg'          => is_string( $fg ) ? $fg : '',
-			'title_font'  => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
-			'body_font'   => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
-			'logo'        => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
-			'logo_alt'    => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
+			'bg'                => is_string( $bg ) ? $bg : '',
+			'fg'                => is_string( $fg ) ? $fg : '',
+			'title_font'        => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
+			'body_font'         => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
+			'logo'              => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
+			'logo_alt'          => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
+			'header_banner'     => $banner > 0 ? (string) wp_get_attachment_image_url( $banner, 'full' ) : '',
+			'header_banner_alt' => $banner > 0 ? (string) get_post_meta( $banner, '_wp_attachment_image_alt', true ) : '',
 
 
-			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
-			'poster_full' => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
-			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
-			'shape'       => EventMetaKeys::in_list(
+			'poster'            => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
+			'poster_full'       => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
+			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
+			'shape'             => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
 				EventMetaKeys::image_shapes(),
 				EventMetaKeys::SHAPE_SQUARE
 			),
-			'separator'   => EventMetaKeys::in_list(
+			'separator'         => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::SEPARATOR, true ),
 				EventMetaKeys::separators()
 			),
@@ -16406,6 +16466,33 @@ final class EventChrome {
 	public static function cover( array $m ): string {
 		$look   = (array) $m['appearance'];
 		$signup = (array) $m['signup'];
+		$banner = ! empty( $m['is_root'] ) ? (string) $look['header_banner'] : '';
+
+		if ( '' !== $banner ) {
+			ob_start();
+			?>
+			<div class="evt-ev__portada evt-ev__portada--banner">
+				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
+					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<div class="screen-reader-text">
+					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
+					<?php
+					if ( '' !== (string) $m['tagline'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['tagline'] ); ?></p><?php endif; ?>
+					<?php
+					if ( '' !== (string) $m['dates'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['dates'] ); ?></p><?php endif; ?>
+					<?php
+					if ( '' !== (string) $m['venue'] ) :
+						?>
+						<p><?php echo esc_html( (string) $m['venue'] ); ?></p><?php endif; ?>
+				</div>
+			</div>
+			<?php
+			return (string) ob_get_clean();
+		}
 
 		ob_start();
 		?>
@@ -18052,7 +18139,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-font-source-serif { font-family: "Source Serif 4", Georgia, serif; }
 .evt-font-merriweather { font-family: Merriweather, Georgia, serif; }
 
-/* --- las tres imágenes del evento ---------------------------------------- */
+/* --- archivos gestionados con la biblioteca de medios -------------------- */
 
 /* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
    adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
@@ -18064,6 +18151,12 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border: 1px solid var(--evt-linea);
   border-radius: 10px;
   background: var(--evt-sup);
+}
+.evt-media.supports-drag-drop { border-style: dashed; }
+.evt-media.supports-drag-drop.drag-over {
+  border-color: var(--evt-pri);
+  box-shadow: 0 0 0 3px rgba(27, 79, 138, .25);
+  background: var(--evt-sup-2);
 }
 .evt-media + .evt-media { margin-top: 12px; }
 .evt-media-rotulo { display: block; margin-bottom: 10px; font-weight: 600; }
@@ -18081,6 +18174,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-media-datos strong { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
 .evt-media-datos small { font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .evt-media-vacia { margin: 0 0 10px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-media-drop { margin: 0 0 8px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-media-estado { min-height: 1.4em; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .evt-media-botones { margin: 0 0 4px; }
 .evt-media noscript > label { display: block; margin-top: 8px; }
 /* `hidden` lo pone y lo quita el guion, y `display:flex` le gana al valor por
@@ -18449,6 +18544,17 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 
 .evt-ev__portada a {
 	color: inherit;
+}
+
+.evt-ev__portada--banner {
+	padding: 0;
+	background: transparent;
+}
+
+.evt-ev__banner {
+	display: block;
+	width: 100%;
+	height: auto;
 }
 
 .evt-ev__logo {
@@ -18930,10 +19036,12 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 		} );
 	} );
 
-	/* --- 4. Elegir una imagen de la biblioteca --------------------------- */
+	/* --- 4. Elegir un archivo de la biblioteca ---------------------------- */
 
 	/*
-	 * Cada imagen del panel de apariencia es un `[data-evt-media]` con:
+	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`. La
+	 * ventana nativa de WordPress aporta biblioteca, subida por arrastre y la
+	 * previsualización del adjunto; la ficha conserva una vista rápida fuera.
 	 *
 	 *   [data-evt-media-value]   el `hidden` con el ID del adjunto: lo único que viaja
 	 *   [data-evt-media-card]    la ficha de lo que hay puesto ahora
@@ -18979,7 +19087,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
 		var chica = adjunto.sizes && ( adjunto.sizes.medium || adjunto.sizes.thumbnail );
 		if ( mini ) {
-			mini.src = chica ? chica.url : adjunto.url;
+			mini.src = chica ? chica.url : ( adjunto.icon || adjunto.url );
 			mini.alt = adjunto.alt || \'\';
 		}
 		if ( nombre ) {
@@ -18996,12 +19104,16 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 		if ( ! window.wp || ! window.wp.media ) {
 			return;
 		}
-		var marco = window.wp.media( {
-			title: caja.getAttribute( \'data-evt-media-title\' ) || \'Elegir imagen\',
-			button: { text: \'Usar esta imagen\' },
-			library: { type: \'image\' },
+		var tipo = caja.getAttribute( \'data-evt-media-type\' );
+		var opciones = {
+			title: caja.getAttribute( \'data-evt-media-title\' ) || \'Elegir archivo\',
+			button: { text: caja.getAttribute( \'data-evt-media-button\' ) || \'Usar este archivo\' },
 			multiple: false
-		} );
+		};
+		if ( tipo ) {
+			opciones.library = { type: tipo };
+		}
+		var marco = window.wp.media( opciones );
 		marco.on( \'select\', function () {
 			var elegido = marco.state().get( \'selection\' ).first();
 			if ( elegido ) {
@@ -19037,6 +19149,67 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 	// es por si algún día sube a la cabecera.
 	mostrarBotones();
 	document.addEventListener( \'DOMContentLoaded\', mostrarBotones );
+
+	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
+	 * soltado. La subida crea el adjunto en WordPress inmediatamente; elegirlo
+	 * para el evento sigue esperando a «Guardar la apariencia» o el ponente. */
+	function arrancarSubidas() {
+		if ( ! window.wp || ! window.wp.Uploader || ! window.jQuery ) {
+			return;
+		}
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-media]\' ), function ( caja ) {
+			if ( \'1\' === caja.dataset.evtUploader ) {
+				return;
+			}
+			caja.dataset.evtUploader = \'1\';
+			var estado = caja.querySelector( \'[data-evt-media-status]\' );
+			var tipo = caja.getAttribute( \'data-evt-media-type\' );
+			var minimo = parseInt( caja.getAttribute( \'data-evt-media-min-width\' ) || \'0\', 10 );
+			var opciones = {
+				container: caja,
+				dropzone: caja,
+				plupload: { multi_selection: false },
+				added: function ( adjunto ) {
+					if ( estado ) {
+						estado.textContent = \'Subiendo \' + ( adjunto.get( \'filename\' ) || \'el archivo\' ) + \'…\';
+					}
+				},
+				progress: function ( adjunto ) {
+					if ( estado ) {
+						estado.textContent = \'Subiendo… \' + ( adjunto.get( \'percent\' ) || 0 ) + \'%\';
+					}
+				},
+				success: function ( adjunto ) {
+					var archivo = adjunto.toJSON();
+					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
+						if ( estado ) {
+							estado.textContent = \'La imagen se subió a la biblioteca, pero no se puede usar aquí: necesita al menos \' + minimo + \' px de ancho.\';
+						}
+						return;
+					}
+					poner( caja, archivo );
+					if ( estado ) {
+						estado.textContent = \'Archivo subido. Guarde el formulario para aplicar el cambio.\';
+					}
+				},
+				error: function ( mensaje ) {
+					if ( estado ) {
+						estado.textContent = mensaje || \'No se pudo subir el archivo.\';
+					}
+				}
+			};
+			if ( \'image\' === tipo ) {
+				opciones.plupload.filters = {
+					mime_types: [ { title: \'Imágenes\', extensions: \'jpg,jpeg,png,gif,webp\' } ]
+				};
+			}
+			new window.wp.Uploader( opciones );
+		} );
+	}
+
+	arrancarSubidas();
+	document.addEventListener( \'DOMContentLoaded\', arrancarSubidas );
+	window.addEventListener( \'load\', arrancarSubidas );
 
 	/* --- 5. El editor de código ------------------------------------------ */
 
