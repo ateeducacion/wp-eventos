@@ -350,6 +350,11 @@ En concreto, **nunca** ejecutes `git push origin main`, ni pulses el botón
 verde de *Merge* de GitHub en tu propio PR, ni `gh pr merge`. Avisa por el
 canal del equipo con el enlace del PR y espera.
 
+GitHub lo impone además por su cuenta: `main` tiene una regla que no deja
+mezclar un PR sin una aprobación de otra persona y sin `lint` y `test` en
+verde, así que el botón de *Merge* sale gris hasta entonces, también para quien
+administra el repositorio.
+
 Si te piden cambios, es lo normal y no es un suspenso. Los haces en la misma
 rama, repites `make check`, y:
 
@@ -435,7 +440,9 @@ Cinco cosas. Ninguna tiene excepciones.
    aquí, se revisa y se despliega. Un cambio hecho a mano en producción no está
    en ningún sitio y se pierde en el siguiente despliegue.
 2. **No subir nada a `main`.** Ni `git push origin main`, ni fusionar tu propio
-   PR, ni `gh pr merge`. Siempre rama + PR + revisión de otra persona.
+   PR, ni `gh pr merge`. Siempre rama + PR + revisión de otra persona. GitHub
+   lo impide además por su cuenta: `main` está protegida y rechaza el `push`
+   directo y el PR sin aprobación.
 3. **No subir ficheros con datos personales.** Ni exportaciones de
    inscripciones, ni listados con nombres, correos, DNI o teléfonos, ni
    capturas donde se lean. Ni en el repositorio, ni en un PR, ni en un

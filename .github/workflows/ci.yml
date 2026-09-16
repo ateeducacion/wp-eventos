@@ -2,11 +2,11 @@
 name: CI
 
 on:
+  # En los PR corre siempre, también cuando solo cambia documentación: `lint`
+  # y `test` son comprobaciones obligatorias de la regla que protege `main`
+  # (ADR-0034), y un check que el workflow se salta no se da por pasado: GitHub
+  # se queda esperándolo y el PR no se puede mezclar.
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/*.md'
   push:
     branches:
       - 'main'

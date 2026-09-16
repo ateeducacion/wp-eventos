@@ -229,6 +229,12 @@ rápida, la REST API y las acciones en bloque. La capa que protege es
   —`secrets`, por ejemplo— es YAML válido, pasa aquí, y GitHub rechaza el fichero
   entero al recibirlo: rojo a los cero segundos y sin un job que abrir. Eso solo
   lo dice GitHub.
+- **`main` está protegida** por una regla de rama de GitHub
+  ([ADR-0034](docs/adr/ADR-0034-main-solo-se-mezcla-con-revision-y-ci-en-verde.md)):
+  solo se mezcla por PR con una aprobación y con los checks `lint` y `test` de
+  `ci.yml` en verde. Si esos jobs cambian de nombre, hay que cambiar también la
+  regla, o ningún PR se podrá mezclar. Por eso mismo `ci.yml` corre en todos
+  los PR, también en los de solo documentación.
 - **Scripts de `scripts/`:** idempotentes, **sin `WP_CLI`** (corren también
   bajo Playground), raíz con `dirname( __DIR__ )`, y lanzan `RuntimeException`
   cuando algo falla, para que `make provision` se caiga en vez de seguir a
