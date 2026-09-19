@@ -36,7 +36,12 @@ use Evt\PublicFront\View\EventParticipantsPanel;
  */
 class Test_Registration_Files extends WP_UnitTestCase {
 
-	use Evt_Fixtures;
+	// Con alias porque esta clase define su propio `tear_down()`: un método de
+	// la clase gana al del trait, así que sin esto el de las fixtures **no se
+	// llamaría** y `$_FILES` y `$_GET` se colarían de un test al siguiente.
+	use Evt_Fixtures {
+		tear_down as fixtures_tear_down;
+	}
 
 	/**
 	 * Los ficheros temporales que ha fabricado un test.
@@ -66,8 +71,11 @@ class Test_Registration_Files extends WP_UnitTestCase {
 			$this->fs()->delete( $ruta );
 		}
 		$this->temporales = array();
-		remove_filter( 'evt_private_files_dir', array( $this, 'raiz_de_prueba' ) );
-		parent::tear_down();
+		// Y **todos**, no solo el nuestro: `almacen_roto()` engancha un cierre
+		// anónimo que no se puede quitar por referencia, y dejarlo puesto
+		// haría que el test siguiente escribiera en una raíz rota.
+		remove_all_filters( 'evt_private_files_dir' );
+		$this->fixtures_tear_down();
 	}
 
 	/**
