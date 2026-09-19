@@ -244,3 +244,44 @@ Se adopta la opción 5.
   nada sobre si el cliente remoto evita ya escrituras idénticas, porque no se
   ha comprobado que lo haga.
 - No cambia ninguna versión de dependencia.
+
+## Adenda — 2026-09-19
+
+Revisión de código sobre el PR de esta ADR encontró tres imprecisiones, ya
+corregidas en `scripts/lib/snippet-sync.php` y `scripts/sync-snippets.php`:
+
+- **«Reejecuta» era la descripción correcta del ahorro, pero imprecisa sobre
+  el mecanismo.** `Code_Snippets\save_snippet()` no ejecuta el código por sí
+  mismo: llama a `test_snippet_code()` —que valida con `Validator` y, si el
+  snippet está activo y no pasa `code_error`, sí llega a ejecutarlo vía
+  `execute_snippet()`— solo cuando `$snippet->active` es verdadero en el
+  momento de guardar. El sincronizador construía siempre un objeto `Snippet`
+  nuevo para el camino `updated`, y un objeto nuevo tiene `active = false`
+  por defecto (valor de `Snippet::$default_values`), así que esa ejecución
+  **no llegaba a producirse** en la ruta `updated` tal y como estaba escrito
+  el sincronizador — el ahorro real de esa ruta ya era involuntario. La
+  redacción correcta de lo que hace guardar un snippet activo: reescribe la
+  fila, actualiza `modified`, revalida el código (lo que puede desactivar el
+  snippet si `code_error`), incrementa la revisión si ya era mayor que 1 e
+  invalida la caché de snippets del sitio.
+- **`reactivated => true` no implicaba reactivación real.** Se fijaba así
+  incondicionalmente en la rama «existe, coincide el fingerprint, está
+  inactivo», aunque `evt_activate_snippet_with_fallback()` hubiera fallado.
+  Podía imprimirse «sin cambios, reactivado» junto con «ERROR al activar»
+  para el mismo snippet. Ahora `reactivated` es
+  `$activation['active']`: solo es `true` cuando la reactivación tuvo éxito.
+- **La ruta `updated` reconstruía un `Snippet` desde cero**, con
+  `name`/`desc`/`code`/`tags`/`scope`/`priority` del fichero más el `id`
+  existente, y dejaba el resto de campos —`active`, `locked`, `condition_id`,
+  `revision`, `cloud_id`— en los valores por defecto de la clase. Como
+  `save_snippet()` escribe esos campos sin más comprobación, actualizar el
+  contenido de un snippet podía desactivarlo, desbloquearlo o resetear su
+  `condition_id`/`revision`/`cloud_id` de fábrica. Corregido aplicando solo
+  los campos gestionados (`set_fields()`) sobre el objeto `Snippet` ya
+  cargado de la tabla, en vez de construir uno nuevo. Cubierto por
+  `test_updating_managed_content_preserves_unmanaged_fields()` en
+  `tests/unit/test-snippet-sync.php`.
+
+Ningún cambio de estos afecta a la Decisión (opción 5, fingerprint SHA-256):
+sigue siendo el fingerprint quien decide `updated` frente a `unchanged`. Lo
+que cambia es únicamente cómo se aplica un `updated` a la fila existente.

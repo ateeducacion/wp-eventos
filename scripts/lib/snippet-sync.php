@@ -259,7 +259,7 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 	 * - status      (string) 'created' | 'updated' | 'unchanged' | 'error'.
 	 * - active      (bool)   Whether the snippet ends up active.
 	 * - error       (string) Error message when something failed (in Spanish, UI-facing).
-	 * - reactivated (bool)   Whether an unchanged snippet was activated because it was inactive.
+	 * - reactivated (bool)   Whether an unchanged-but-inactive snippet was actually reactivated.
 	 *
 	 * @param string $dir Absolute path to the directory holding the snippet files.
 	 * @return array<string,array<string,mixed>> Result per snippet file; empty when Code Snippets is not active.
@@ -326,8 +326,9 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 
 			$existing_snippet = $existing[ $header['name'] ] ?? null;
 
-			// Existing and unchanged: never re-save. Saving is what updates
-			// `modified`, re-validates and re-executes the code, and clears
+			// Existing and unchanged: never re-save. Saving rewrites the row,
+			// updates `modified`, deactivates/reactivates the snippet, re-runs
+			// its validation (which executes the code) and clears the snippet
 			// caches — none of which represents an actual change. See ADR-0035.
 			if ( null !== $existing_snippet ) {
 				$desired_fingerprint = evt_snippet_fingerprint(
@@ -363,19 +364,26 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 						'status'      => 'unchanged',
 						'active'      => $activation['active'],
 						'error'       => $activation['error'],
-						'reactivated' => true,
+						'reactivated' => $activation['active'],
 					);
 					continue;
 				}
 
-				$args['id'] = (int) $existing_snippet->id;
+				// Changed: apply only the managed fields onto the already-loaded
+				// object instead of building a fresh Snippet from $args. A fresh
+				// object gets Snippet's defaults for everything else — active,
+				// locked, condition_id, revision, cloud_id — and save_snippet()
+				// writes those defaults straight over whatever the row had.
+				$existing_snippet->set_fields( $args );
+				$snippet = $existing_snippet;
+			} else {
+				// Always build a Snippet object: save_snippet() reads properties
+				// before converting plain arrays, which warns on PHP 8.
+				$class   = evt_code_snippets_model_class();
+				$snippet = new $class( $args );
 			}
 
-			// Always build a Snippet object: save_snippet() reads properties
-			// before converting plain arrays, which warns on PHP 8.
-			$class   = evt_code_snippets_model_class();
-			$snippet = new $class( $args );
-			$saved   = \Code_Snippets\save_snippet( $snippet );
+			$saved = \Code_Snippets\save_snippet( $snippet );
 
 			if ( ! $saved || ! $saved->id ) {
 				$results[ $basename ] = array(

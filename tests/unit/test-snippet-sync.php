@@ -7,11 +7,12 @@
 
 /**
  * `evt_sync_snippets_from_dir()` no puede volver a guardar un snippet
- * idéntico: guardarlo actualiza `modified`, revalida y reejecuta el código, y
- * limpia cachés por un cambio que no existe (ADR-0035). Estos tests cubren
- * las cuatro salidas —created, updated, unchanged, error— y que el
- * fingerprint SHA-256 del estado gestionado, no la versión EVT, es lo único
- * que decide cuál toca.
+ * idéntico: guardarlo reescribe la fila, actualiza `modified`, revalida el
+ * código —lo que puede llegar a ejecutarlo— y limpia cachés por un cambio que
+ * no existe (ADR-0035). Estos tests cubren las cuatro salidas —created,
+ * updated, unchanged, error—, que un `updated` conserva los campos que el
+ * repositorio no gestiona, y que el fingerprint SHA-256 del estado
+ * gestionado, no la versión EVT, es lo único que decide cuál toca.
  */
 class Test_Snippet_Sync extends WP_UnitTestCase {
 
@@ -340,7 +341,31 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 15. `<?php`, cierre PHP y salto final no producen falsos `updated`.
+	 * 15. Actualizar contenido gestionado conserva los campos no gestionados.
+	 *
+	 * `evt_sync_snippets_from_dir()` solo gestiona code/desc/scope/priority/
+	 * tags. Un campo ajeno —aquí `condition_id`— fijado a mano tiene que
+	 * sobrevivir a un `updated` en vez de volver al valor por defecto de
+	 * `Snippet`, que es lo que pasaba al construir siempre un objeto nuevo.
+	 */
+	public function test_updating_managed_content_preserves_unmanaged_fields() {
+		$this->write( 'a.php', 'EVT TEST — unmanaged', '// version uno' );
+		$created = $this->sync();
+		$id      = (int) $created['a.php']['id'];
+
+		$snippet               = \Code_Snippets\get_snippet( $id );
+		$snippet->condition_id = 42;
+		\Code_Snippets\save_snippet( $snippet );
+
+		$this->write( 'a.php', 'EVT TEST — unmanaged', '// version dos' );
+		$results = $this->sync();
+
+		$this->assertSame( 'updated', $results['a.php']['status'] );
+		$this->assertSame( 42, \Code_Snippets\get_snippet( $id )->condition_id );
+	}
+
+	/**
+	 * 16. `<?php`, cierre PHP y salto final no producen falsos `updated`.
 	 *
 	 * Es lo que quita `evt_strip_php_tags()`, y el fingerprint se calcula
 	 * sobre el código ya normalizado.

@@ -53,9 +53,14 @@ foreach ( $evt_results as $evt_file => $evt_result ) {
 			++$evt_updated;
 			$evt_action = 'actualizado';
 			break;
-		default:
+		case 'unchanged':
 			++$evt_unchanged;
 			$evt_action = $evt_result['reactivated'] ? 'sin cambios, reactivado' : 'sin cambios';
+			break;
+		default:
+			++$evt_errors;
+			echo esc_html( sprintf( '- %s: ERROR — estado de sincronización inesperado: %s', $evt_file, $evt_result['status'] ) ) . "\n";
+			continue 2;
 	}
 
 	if ( $evt_result['active'] ) {
