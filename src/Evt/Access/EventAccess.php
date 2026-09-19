@@ -486,6 +486,12 @@ final class EventAccess {
 	 * Esta es la capa que de verdad protege: el acotado del listado solo
 	 * esconde, y deja abiertos el enlace directo, la edición rápida y la REST.
 	 *
+	 * `read_post` va aquí junto a la escritura porque el acotado por área no es
+	 * solo de escritura: un evento en privado o en borrador es de su área hasta
+	 * que se publica, y sin esta rama WordPress lo resolvía con la capacidad
+	 * suelta `read_private_evt_events` —que tiene todo `evt_organiser`— y lo
+	 * entregaba entero a cualquier otra área por la REST.
+	 *
 	 * @param string[] $caps    Primitive caps.
 	 * @param string   $cap     Meta cap.
 	 * @param int      $user_id User ID.
@@ -493,17 +499,45 @@ final class EventAccess {
 	 * @return string[]
 	 */
 	public static function map_meta_cap( array $caps, string $cap, int $user_id, array $args ): array {
-		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post' ), true ) ) {
+		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post', 'read_post' ), true ) ) {
 			return $caps;
 		}
 		$post_id = isset( $args[0] ) ? (int) $args[0] : 0;
 		if ( $post_id <= 0 || ! isset( self::scoped_types()[ (string) get_post_type( $post_id ) ] ) ) {
 			return $caps;
 		}
+		if ( 'read_post' === $cap ) {
+			return self::map_read_post( $caps, $user_id, $post_id );
+		}
 		if ( ! self::can_edit( $user_id, $post_id ) ) {
 			return array( 'do_not_allow' );
 		}
 		return $caps;
+	}
+
+	/**
+	 * Scope reading a not-yet-public event, speaker or activity to its área.
+	 *
+	 * La puerta es {@see can_open()} y no {@see can_edit()}: un evento marcado
+	 * como histórico se sigue consultando y exportando desde su taller, así que
+	 * el cierre no puede quitar la lectura a su propia área.
+	 *
+	 * Los estados públicos se dejan como están: ahí `read_post` es la lectura de
+	 * una página publicada, que la ve cualquiera —incluido quien no ha entrado—
+	 * y no hay área que acotar. La rama solo entra cuando el estado no es
+	 * público, que es donde WordPress aceptaba `read_private_evt_events` a secas.
+	 *
+	 * @param string[] $caps    Primitive caps as core mapped them.
+	 * @param int      $user_id User ID.
+	 * @param int      $post_id Post ID.
+	 * @return string[]
+	 */
+	private static function map_read_post( array $caps, int $user_id, int $post_id ): array {
+		$status = get_post_status_object( (string) get_post_status( $post_id ) );
+		if ( null !== $status && $status->public ) {
+			return $caps;
+		}
+		return self::can_open( $user_id, $post_id ) ? $caps : array( 'do_not_allow' );
 	}
 
 	/**
