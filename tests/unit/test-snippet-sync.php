@@ -386,7 +386,44 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 17. Un `updated` que sigue activo no se vuelve a activar.
+	 * 17. Un `updated` no modifica in situ la instancia cacheada.
+	 *
+	 * `get_snippets()` deja sus objetos en la caché `all_snippets_<tabla>` y
+	 * `get_snippet()` devuelve esa misma instancia sin releer la tabla, así
+	 * que modificar el objeto existente le cambiaría a `save_snippet()` el
+	 * «estado anterior» que él mismo relee y pasa al gancho
+	 * `code_snippets/update_snippet` como tercer argumento. Se comprueba
+	 * contra el plugin real: lo que Code Snippets considera el estado
+	 * anterior tiene que seguir siendo el código viejo.
+	 */
+	public function test_an_update_does_not_mutate_the_cached_existing_snippet_in_place() {
+		$this->write( 'a.php', 'EVT TEST — caché', '// version uno' );
+		$this->sync();
+
+		$existing_code = null;
+		$saved_code    = null;
+		add_action(
+			'code_snippets/update_snippet',
+			function ( $updated, $table, $existing, $snippet ) use ( &$existing_code, &$saved_code ) {
+				$existing_code = (string) $existing->code;
+				$saved_code    = (string) $snippet->code;
+			},
+			10,
+			4
+		);
+
+		$this->write( 'a.php', 'EVT TEST — caché', '// version dos' );
+		$results = $this->sync();
+
+		$this->assertSame( 'updated', $results['a.php']['status'] );
+		$this->assertNotNull( $existing_code, 'el gancho code_snippets/update_snippet no llegó a dispararse' );
+		$this->assertStringContainsString( '// version uno', $existing_code );
+		$this->assertStringNotContainsString( '// version dos', $existing_code );
+		$this->assertStringContainsString( '// version dos', $saved_code );
+	}
+
+	/**
+	 * 18. Un `updated` que sigue activo no se vuelve a activar.
 	 *
 	 * `activate_snippet()` activa con un `UPDATE ... SET active = 1` y da por
 	 * fallida la llamada que no cambia ninguna fila, así que activar un
@@ -418,7 +455,7 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 18. Un `updated` que el guardado deja inactivo se recupera.
+	 * 19. Un `updated` que el guardado deja inactivo se recupera.
 	 *
 	 * `save_snippet()` revalida el código de un snippet activo
 	 * (`test_snippet_code()`) y lo desactiva si encuentra `code_error`. Aquí
@@ -459,7 +496,7 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 19. Un snippet bloqueado con código distinto es un error.
+	 * 20. Un snippet bloqueado con código distinto es un error.
 	 *
 	 * `save_snippet()` restaura el código de la fila cuando el snippet estaba
 	 * bloqueado y sigue estándolo, así que guardar diría «actualizado» sin
@@ -489,7 +526,7 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 20. Un snippet bloqueado con el mismo código sí actualiza su metadatos.
+	 * 21. Un snippet bloqueado con el mismo código sí actualiza su metadatos.
 	 *
 	 * El candado de Code Snippets protege el código y el nombre, no la
 	 * descripción, el ámbito, la prioridad ni las etiquetas: `locked` no

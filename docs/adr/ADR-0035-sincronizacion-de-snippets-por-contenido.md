@@ -359,3 +359,79 @@ Los cuatro casos —sigue activo, queda inactivo, bloqueado con código
 distinto, bloqueado solo con metadatos— están cubiertos contra el plugin real
 en `tests/unit/test-snippet-sync.php`, sin dobles del comportamiento
 principal.
+
+## Adenda — 2026-09-19 (segunda revisión)
+
+Una segunda revisión encontró que la adenda anterior daba por buena una
+autoridad que no lo es. **No se corrige aquella adenda, que queda como está**;
+lo que sigue la acota. Todo lo de aquí está leído en Code Snippets 3.10.2,
+que es la versión que monta el wp-env.
+
+### La caché de objetos del plugin
+
+`Code_Snippets\get_snippets()` deja sus objetos en la caché del sitio
+(`wp_cache_set( "all_snippets_$table_name", $snippets, CACHE_GROUP )`) y
+`get_snippet()` **devuelve esa misma instancia sin volver a leer la tabla**:
+
+```php
+$cached_snippets = wp_cache_get( "all_snippets_$table_name", CACHE_GROUP );
+
+if ( is_array( $cached_snippets ) ) {
+	foreach ( $cached_snippets as $snippet ) {
+		if ( $snippet->id === $id ) {
+			return apply_filters( 'code_snippets/get_snippet', $snippet, $id, $network );
+		}
+	}
+}
+```
+
+El sincronizador obtiene su `$existing_snippet` de `get_snippets()`, así que
+aplicarle los campos gestionados in situ le cambiaba al plugin el objeto que
+él mismo considera el estado anterior: dentro de `save_snippet()`,
+`$existing = get_snippet( $snippet->id, … )` devolvía el objeto ya modificado,
+y el gancho `code_snippets/update_snippet` recibía como «anterior» el código
+nuevo. La ruta `updated` **clona** ahora el snippet existente antes de
+tocarlo, y el clon es lo que se guarda. Cubierto por
+`test_an_update_does_not_mutate_the_cached_existing_snippet_in_place()`, que
+observa el tercer argumento real del gancho; sin el `clone`, falla.
+
+### El objeto que devuelve el guardado tampoco es la autoridad
+
+Por el mismo motivo. `save_snippet()` construye su valor de retorno con
+`$updated = get_snippet( $snippet->id, … )` **antes** de su
+`clean_snippets_cache( $table )` final, de modo que ese `get_snippet()` puede
+devolver la instancia cacheada de antes del guardado, con el `active` de
+antes. Mientras la sincronización mutaba el objeto in situ eso no se notaba
+—el objeto cacheado ya llevaba los valores nuevos—, así que el `clone` del
+punto anterior es justo lo que deja el problema a la vista.
+
+La decisión se toma ahora releyendo la fila, en `evt_settle_activation()`:
+cuando esa función corre, `save_snippet()` ya ha limpiado la caché, así que su
+`\Code_Snippets\get_snippet( $id )` sí va a la tabla. Si la fila persistida
+está activa no se llama a `activate_snippet()`; si está inactiva se conserva
+íntegra la recuperación con `evt_activate_snippet_with_fallback()`, que sigue
+siendo necesaria porque `save_snippet()` desactiva lo que no pasa
+`test_snippet_code()`. Comprobado sustituyendo temporalmente
+`evt_settle_activation()` por el `$saved->active` de la adenda anterior:
+`test_updated_and_deactivated_by_save_is_recovered()` falla, porque el
+snippet se da por activo leyendo el objeto viejo y la recuperación no llega a
+ejecutarse.
+
+Donde la adenda anterior dice que la autoridad es lo que devuelve
+`save_snippet()`, léase: **la fila persistida, releída después de guardar**.
+
+### La vía remota
+
+La política de `locked` de la adenda anterior no cambia. Lo que cambia es que
+la otra mitad del despliegue ya no se queda corta: la publicación remota pasa
+a `@erseco/code-snippets-client@0.1.7`, que incorpora la protección de las
+actualizaciones sobre snippets bloqueados detectada en esta revisión
+—preflight de `code` y `name`, verificación posterior a la escritura, `locked`
+enviado solo cuando quien llama lo pide, y recuperación condicional de la
+activación—. Este repositorio **consume** esa versión publicada: no duplica su
+lógica REST en `scripts/lib/snippet-sync.php` y no modifica el cliente. El
+reparto sigue igual: `make sync-snippets` sincroniza el wp-env local con la
+librería PHP; `npm run snippets` publica en el sitio de destino con el
+cliente.
+
+La decisión original —opción 5, fingerprint del estado gestionado— no cambia.

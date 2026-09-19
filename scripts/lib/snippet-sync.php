@@ -243,6 +243,36 @@ if ( ! function_exists( 'evt_activate_snippet_with_fallback' ) ) {
 	}
 }
 
+if ( ! function_exists( 'evt_settle_activation' ) ) {
+	/**
+	 * Leave a just-saved snippet active, activating it only if the row is not.
+	 *
+	 * La autoridad es la fila persistida, releída después de guardar, y no el
+	 * objeto que devuelve `save_snippet()`. Ese objeto sale de un
+	 * `get_snippet()` que el plugin hace **antes** de su
+	 * `clean_snippets_cache()` final, y `get_snippet()` devuelve tal cual la
+	 * instancia que tenga en la caché `all_snippets_<tabla>` sin volver a
+	 * leer la base de datos: puede ser el snippet de antes del guardado, con
+	 * el `active` de antes. Aquí la caché ya está limpia, así que este
+	 * `get_snippet()` sí va a la tabla.
+	 *
+	 * @param int $id Snippet ID.
+	 * @return array{active:bool,error:string} Whether the snippet ends up active, and any warning/error message.
+	 */
+	function evt_settle_activation( int $id ): array {
+		$stored = \Code_Snippets\get_snippet( $id );
+
+		if ( $stored && $stored->active ) {
+			return array(
+				'active' => true,
+				'error'  => '',
+			);
+		}
+
+		return evt_activate_snippet_with_fallback( $id );
+	}
+}
+
 if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 	/**
 	 * Sync every *.php file in a directory into the Code Snippets table.
@@ -251,11 +281,12 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 	 * so the sync is idempotent: re-running it updates instead of duplicating.
 	 * An existing snippet is only saved again when its managed state actually
 	 * changed (`evt_snippet_fingerprint()`); an unchanged-but-inactive snippet
-	 * is only reactivated, never re-saved. After a save, the snippet is only
-	 * activated when the state save_snippet() returns is not active already.
-	 * A locked snippet whose code differs is reported as an error instead of
-	 * being saved, because Code Snippets would silently keep the stored code.
-	 * See ADR-0035.
+	 * is only reactivated, never re-saved. A changed snippet is saved from a
+	 * clone of the existing one, and is only activated afterwards when the
+	 * persisted row — read again, not the object save_snippet() returned —
+	 * is not active already. A locked snippet whose code differs is reported
+	 * as an error instead of being saved, because Code Snippets would
+	 * silently keep the stored code. See ADR-0035.
 	 *
 	 * Result entries are keyed by file basename and contain:
 	 * - name        (string) Snippet name from the header.
@@ -395,13 +426,18 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 					continue;
 				}
 
-				// Changed: apply only the managed fields onto the already-loaded
-				// object instead of building a fresh Snippet from $args. A fresh
-				// object gets Snippet's defaults for everything else — active,
-				// locked, condition_id, revision, cloud_id — and save_snippet()
-				// writes those defaults straight over whatever the row had.
-				$existing_snippet->set_fields( $args );
-				$snippet = $existing_snippet;
+				// Changed: se parte de un clon del snippet existente y se le
+				// aplican solo los campos gestionados. Del objeto existente,
+				// porque uno nuevo traería los valores por defecto de la clase
+				// para todo lo demás —active, locked, condition_id, revision,
+				// cloud_id— y `save_snippet()` los escribiría encima de lo que
+				// hubiera en la fila. Y de un **clon**, porque el objeto que
+				// devuelve `get_snippets()` es el que el plugin guarda en su
+				// caché: `get_snippet()` devuelve esa misma instancia sin
+				// releer la tabla, así que modificarlo aquí le cambiaría a
+				// `save_snippet()` el «estado anterior» con el que se compara.
+				$snippet = clone $existing_snippet;
+				$snippet->set_fields( $args );
 			} else {
 				// Always build a Snippet object: save_snippet() reads properties
 				// before converting plain arrays, which warns on PHP 8.
@@ -423,19 +459,13 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 				continue;
 			}
 
-			// Manda el estado que devuelve el guardado, no el de antes:
-			// save_snippet() revalida el código de un snippet activo y lo
-			// desactiva si la validación falla, así que un `updated` puede
-			// salir inactivo y hay que recuperarlo. Al revés también importa:
-			// activar uno que ya está activo es un UPDATE de cero filas, que
-			// Code Snippets da por fallido, y saldría un aviso de activación
-			// que no corresponde a ningún problema.
-			$activation = $saved->active
-				? array(
-					'active' => true,
-					'error'  => '',
-				)
-				: evt_activate_snippet_with_fallback( (int) $saved->id );
+			// Manda la fila persistida, releída después de guardar: un
+			// `updated` puede salir inactivo —save_snippet() revalida el
+			// código de un snippet activo y lo desactiva si falla— y hay que
+			// recuperarlo, mientras que activar uno que ya está activo es un
+			// UPDATE de cero filas, que Code Snippets da por fallido y saldría
+			// como un aviso que no corresponde a ningún problema.
+			$activation = evt_settle_activation( (int) $saved->id );
 
 			$results[ $basename ] = array(
 				'name'        => $header['name'],
