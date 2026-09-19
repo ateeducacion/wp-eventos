@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -269,6 +269,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) | La inscripción es un contenido del evento, y no se enseña en el escritorio | Aceptada (sustituye a la [ADR-0007](ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md)) | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) | Elegir taller: aforo duro, cambio hasta el cierre y un solo candado por evento | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0034](ADR-0034-main-solo-se-mezcla-con-revision-y-ci-en-verde.md) | La rama `main` solo se mezcla con una revisión y el CI en verde | Aceptada | 2026-09-16 | [ADR-0011](ADR-0011-ci-y-politica-de-pruebas.md) |
+| [ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md) | Sincronización de snippets por contenido | Aceptada | 2026-09-19 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -483,3 +484,17 @@ de solo documentación, porque un check obligatorio que no se emite deja el PR
 esperando para siempre. Lo que la ADR no esconde: la regla vive fuera de git, y
 hace falta una segunda persona con permiso de escritura para mezclar cualquier
 cosa.
+
+**La sincronización de snippets deja de guardar lo que no cambió, 2026-09-19:
+ADR-0035.** `evt_sync_snippets_from_dir()` guardaba siempre un snippet
+existente, aunque fuera idéntico, y guardar uno activo lo reejecuta y le
+cambia `modified`. La
+[ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md) lo resuelve
+con un fingerprint SHA-256 del estado que gestiona el repositorio —código ya
+normalizado, descripción, ámbito, prioridad y etiquetas—, no con la versión
+del aplicativo EVT, que es de otra cosa. Un snippet sin cambios no se guarda;
+uno sin cambios pero inactivo solo se reactiva. Las librerías de terceros no
+entran: siguen con versión exacta y SRI, como fija la
+[ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md). Lo que la ADR
+no esconde: hasta este cambio ningún test de la suite ejercitaba la API de
+Code Snippets, y activar el plugin para PHPUnit fue parte del trabajo.
