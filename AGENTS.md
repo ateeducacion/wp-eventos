@@ -242,8 +242,10 @@ rápida, la REST API y las acciones en bloque. La capa que protege es
 - **Listas cerradas en código, no en taxonomía:** los tipos de sección
   (`programa`, `ponentes`, `inscripcion`, `multimedia`, `contacto`,
   `actividades`, `encuesta`, `participacion`, `preguntas`, `directo`, `otra`) y
-  los estados viven en `Meta/EventMetaKeys.php`. La lección de `convocatoria`
-  es que una taxonomía abierta acaba mezclando cuatro ejes.
+  los estados viven en `Meta/EventMetaKeys.php`, y los cinco tipos de pregunta
+  de la inscripción —`check`, `one`, `many`, `text`, `file`— en
+  `Meta/RegistrationMetaKeys.php`. La lección de `convocatoria` es que una
+  taxonomía abierta acaba mezclando cuatro ejes.
 
 ### Idiomas
 
@@ -354,6 +356,14 @@ también a `scripts/check-public.mjs`: esa lista es donde vive lo aprendido.
 - `evt_registration` **sí** se registra: una inscripción es un contenido que
   cuelga de su evento (ADR-0032). `evt_session` **no**: elegir taller es el ID
   de la actividad guardado en la inscripción, no un tipo de contenido (ADR-0033).
+- **Un documento aportado en una inscripción NO es un adjunto de WordPress**
+  (ADR-0036): no se llama a `wp_insert_attachment()`, `media_handle_upload()`
+  ni `media_handle_sideload()`, no se guardan IDs de adjunto y **no se
+  instalan filtros** para esconder la biblioteca de medios, la REST de medios
+  ni las páginas de adjunto. Vive en `PublicFront/RegistrationFiles`, con
+  nombre físico opaco y descarga autorizada por `EventAccess::can_open()` o
+  por el testigo de la inscripción. Los assets editoriales del evento —cartel,
+  logo, fotos de ponentes— siguen siendo adjuntos normales, con su URL pública.
 - El mu-plugin de `scripts/mu-plugins/` es solo desarrollo.
 - Diffs pequeños y enfocados. No inventar ficheros que nadie ha pedido.
 
