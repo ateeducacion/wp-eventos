@@ -7,11 +7,14 @@
 
 use Evt\Domain\SignupQuestions;
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\Meta\RegistrationMetaRegistration;
 use Evt\PostType\RegistrationPostType;
+use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\SignupForm;
+use Evt\PublicFront\View\EventParticipantsPanel;
 
 /**
  * Un documento aportado en una inscripción **no es un adjunto de WordPress**.
@@ -850,6 +853,484 @@ class Test_Registration_Files extends WP_UnitTestCase {
 		// Y el filtro no busca dentro de eso: busca en las columnas.
 		$this->assertSame( $filas, Participants::filter( $filas, 'autorizacion' ) );
 		$this->assertSame( array(), Participants::filter( $filas, $d['file'] ) );
+	}
+
+	// ─── lo que ve quien se inscribe ───────────────────────────────────────
+
+	/**
+	 * El formulario público pinta el campo de fichero, y viaja como fichero.
+	 *
+	 * Es lo único que ve quien se inscribe, así que es lo que hay que
+	 * comprobar: sin `multipart/form-data` el documento no llega, y sin
+	 * `<input type="file">` no hay dónde adjuntarlo.
+	 */
+	public function test_the_public_form_paints_a_file_field() {
+		$datos = $this->evento_con_pregunta_de_fichero( true );
+		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+
+		$html = SignupBlock::html(
+			array(
+				'section_type' => SignupBlock::NAME,
+				'event_id'     => $datos['event'],
+			)
+		);
+
+		$this->assertStringContainsString( 'enctype="multipart/form-data"', $html, 'Sin esto el fichero no sube.' );
+		$this->assertStringContainsString( 'type="file"', $html );
+		$this->assertStringContainsString(
+			'name="' . RegistrationFiles::FIELD . '[' . $datos['question'] . ']"',
+			$html,
+			'El fichero viaja bajo el identificador de su pregunta.'
+		);
+		$this->assertStringContainsString( 'Autorización firmada', $html );
+		$this->assertStringContainsString( 'required', $html );
+		// Y dice lo que admite, que es la política del aplicativo.
+		$this->assertStringContainsString( 'application/pdf', $html );
+		$this->assertStringContainsString( esc_html( size_format( RegistrationFiles::max_bytes() ) ), $html );
+		// Sin Base64 por ningún lado: sube como fichero HTTP normal.
+		$this->assertStringNotContainsString( 'base64', strtolower( $html ) );
+	}
+
+	/**
+	 * Una pregunta de texto sigue pintándose como texto.
+	 */
+	public function test_a_text_question_is_still_a_text_field() {
+		$this->app();
+		$evento = $this->event(
+			$this->administrator(),
+			array( $this->area( 'Innovación' ) ),
+			array( RegistrationMetaKeys::SIGNUP_OPEN => true )
+		);
+		update_post_meta(
+			$evento,
+			RegistrationMetaKeys::SIGNUP_QUESTIONS,
+			wp_slash(
+				(string) wp_json_encode(
+					array(
+						array(
+							'id'    => 'qtxt0001',
+							'label' => 'Alergias',
+							'type'  => 'text',
+						),
+					)
+				)
+			)
+		);
+		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+
+		$html = SignupBlock::html(
+			array(
+				'section_type' => SignupBlock::NAME,
+				'event_id'     => $evento,
+			)
+		);
+
+		$this->assertStringContainsString( 'name="' . SignupForm::FIELD_ANSWERS . '[qtxt0001]"', $html );
+		$this->assertStringContainsString( 'maxlength="250"', $html );
+		$this->assertStringNotContainsString( 'type="file"', $html );
+	}
+
+	/**
+	 * La pestaña «Participantes» ofrece la descarga, y no una ruta.
+	 */
+	public function test_the_participants_tab_offers_the_download() {
+		$this->pages();
+		$d     = $this->un_documento_guardado();
+		$filas = Participants::rows( $d['event'] );
+
+		$html = EventParticipantsPanel::html(
+			array(
+				'event_id'      => $d['event'],
+				'people'        => $filas,
+				'people_total'  => count( $filas ),
+				'people_cols'   => Participants::columns(),
+				'people_tags'   => array(),
+				'people_q'      => '',
+				'people_filter' => '',
+				'form_id'       => 0,
+			)
+		);
+
+		$this->assertStringContainsString( 'Documentos', $html, 'La columna tiene su cabecera.' );
+		$this->assertStringContainsString( 'autorizacion-de-Maria-Perez.pdf', $html );
+		$this->assertStringContainsString( RegistrationFiles::ARG_FILE . '=' . $d['file'], $html );
+		$this->assertStringContainsString( RegistrationFiles::ARG_REG . '=' . $d['reg'], $html );
+		$this->assertStringContainsString( 'download', $html );
+		// Y nunca la ruta física ni el testigo de nadie.
+		$this->assertStringNotContainsString( 'evt-private', $html );
+		$this->assertStringNotContainsString( $d['token'], $html );
+	}
+
+	/**
+	 * Sin documentos, la celda dice que no hay y no pinta ningún enlace.
+	 */
+	public function test_a_row_without_documents_paints_no_link() {
+		$this->pages();
+		$datos = $this->evento_con_pregunta_de_fichero();
+		$this->una_inscripcion( $datos['event'] );
+		$filas = Participants::rows( $datos['event'] );
+
+		$html = EventParticipantsPanel::html(
+			array(
+				'event_id'      => $datos['event'],
+				'people'        => $filas,
+				'people_total'  => count( $filas ),
+				'people_cols'   => Participants::columns(),
+				'people_tags'   => array(),
+				'people_q'      => '',
+				'people_filter' => '',
+				'form_id'       => 0,
+			)
+		);
+
+		$this->assertStringNotContainsString( RegistrationFiles::ARG_FILE . '=', $html );
+	}
+
+	/**
+	 * Una fila que conteste otro origen, sin documentos, se pinta igual.
+	 *
+	 * La costura del filtro `evt_participants` sigue abierta (ADR-0027): un
+	 * despliegue puede traer sus participantes desde un snippet, y esa fila no
+	 * sabe nada de `evt_reg_files`. La pantalla no puede romperse por eso.
+	 */
+	public function test_a_row_from_another_source_paints_without_documents() {
+		$this->pages();
+		$datos = $this->evento_con_pregunta_de_fichero();
+
+		add_filter(
+			Participants::HOOK,
+			static function ( array $filas ): array {
+				$filas[] = array(
+					'name'   => 'Alguien De Otro Sitio',
+					'email'  => 'alguien@example.org',
+					'centre' => 'CEIP Ejemplo',
+				);
+				return $filas;
+			},
+			20
+		);
+
+		$filas = Participants::rows( $datos['event'] );
+		$this->assertCount( 1, $filas );
+		$this->assertArrayNotHasKey( Participants::KEY_FILES, $filas[0], 'Ese origen no trae documentos.' );
+
+		$html = EventParticipantsPanel::html(
+			array(
+				'event_id'      => $datos['event'],
+				'people'        => $filas,
+				'people_total'  => count( $filas ),
+				'people_cols'   => Participants::columns(),
+				'people_tags'   => array(),
+				'people_q'      => '',
+				'people_filter' => '',
+				'form_id'       => 0,
+			)
+		);
+
+		$this->assertStringContainsString( 'Alguien De Otro Sitio', $html );
+		$this->assertStringNotContainsString( RegistrationFiles::ARG_FILE . '=', $html );
+	}
+
+	/**
+	 * El enlace que se le da a quien se inscribe lleva su testigo.
+	 *
+	 * Es la única credencial que tiene esa persona (ADR-0033): sin el testigo
+	 * en el enlace, no puede abrir su propio documento.
+	 */
+	public function test_the_link_for_the_participant_carries_the_token() {
+		$d   = $this->un_documento_guardado();
+		$url = RegistrationFiles::url( $d['reg'], $d['file'], $d['token'] );
+
+		$this->assertSame( (string) $d['reg'], $this->query_arg( $url, RegistrationFiles::ARG_REG ) );
+		$this->assertSame( $d['file'], $this->query_arg( $url, RegistrationFiles::ARG_FILE ) );
+		$this->assertSame( $d['token'], $this->query_arg( $url, SignupForm::ARG_TOKEN ) );
+
+		// Y sin testigo no lo lleva: el de la pantalla de gestión no filtra la
+		// credencial de nadie.
+		$this->assertSame( '', $this->query_arg( RegistrationFiles::url( $d['reg'], $d['file'] ), SignupForm::ARG_TOKEN ) );
+	}
+
+	// ─── el borde: peticiones que no son nuestras, o que vienen tocadas ────
+
+	/**
+	 * Una petición sin nuestro parámetro no la toca nadie.
+	 *
+	 * Esto corre en **cada carga de página del sitio**, así que tiene que
+	 * salirse sin mirar nada más.
+	 */
+	public function test_a_request_without_our_argument_is_left_alone() {
+		$_GET = array( 'otra' => 'cosa' );
+
+		$this->assertSame( '', $this->served( array( RegistrationFiles::class, 'handle' ) ) );
+	}
+
+	/**
+	 * Un identificador de inscripción tocado a mano no abre nada.
+	 */
+	public function test_a_tampered_registration_id_is_denied() {
+		$d      = $this->un_documento_guardado();
+		$evento = $d['event'];
+
+		foreach ( array( 0, -1, $evento ) as $tocado ) {
+			$_GET   = array(
+				RegistrationFiles::ARG_REG  => $tocado,
+				RegistrationFiles::ARG_FILE => $d['file'],
+				SignupForm::ARG_TOKEN       => $d['token'],
+			);
+			$cuerpo = $this->served( array( RegistrationFiles::class, 'handle' ) );
+
+			$this->assertStringNotContainsString( '%PDF', $cuerpo, 'Ni con el testigo bueno: ' . $tocado );
+			$this->assertStringContainsString( 'No puede descargar', $cuerpo );
+		}
+	}
+
+	/**
+	 * Un identificador de fichero que no tiene nuestra forma no se busca.
+	 */
+	public function test_a_malformed_file_id_finds_nothing() {
+		$d = $this->un_documento_guardado();
+
+		foreach ( array( 'nope', '../../etc/passwd', str_repeat( 'z', 32 ), '' ) as $malo ) {
+			$this->assertNull( RegistrationFiles::find( $d['reg'], $malo ) );
+		}
+	}
+
+	/**
+	 * Con el descriptor puesto y el fichero ya no en disco, se responde 404.
+	 *
+	 * Pasa de verdad: una restauración a medias, o una limpieza a mano. Lo que
+	 * no puede pasar es que el aplicativo sirva basura o se caiga.
+	 */
+	public function test_a_descriptor_without_its_file_answers_that_it_is_gone() {
+		$d = $this->un_documento_guardado();
+		$this->fs()->delete( RegistrationFiles::path( RegistrationFiles::descriptors( $d['reg'] )['qdoc0001'] ) );
+
+		$this->acting_as( 0 );
+		$_GET   = array(
+			RegistrationFiles::ARG_REG  => $d['reg'],
+			RegistrationFiles::ARG_FILE => $d['file'],
+			SignupForm::ARG_TOKEN       => $d['token'],
+		);
+		$cuerpo = $this->served( array( RegistrationFiles::class, 'handle' ) );
+
+		$this->assertStringContainsString( 'ya no está', $cuerpo );
+		$this->assertNull( RegistrationFiles::read( RegistrationFiles::descriptors( $d['reg'] )['qdoc0001'] ) );
+	}
+
+	/**
+	 * Borrar cualquier otra cosa no dispara la limpieza.
+	 *
+	 * El gancho es global: cuelga de `before_delete_post` y lo recibe el
+	 * borrado de cualquier entrada del sitio.
+	 */
+	public function test_deleting_anything_else_touches_no_file() {
+		$d      = $this->un_documento_guardado();
+		$camino = RegistrationFiles::path( RegistrationFiles::descriptors( $d['reg'] )['qdoc0001'] );
+
+		wp_delete_post( (int) self::factory()->post->create( array( 'post_type' => 'post' ) ), true );
+
+		$this->assertFileExists( $camino );
+		$this->assertCount( 1, RegistrationFiles::descriptors( $d['reg'] ) );
+	}
+
+	/**
+	 * Una pregunta que no es de fichero no aporta ni error ni fichero.
+	 */
+	public function test_questions_that_are_not_files_are_skipped() {
+		$mezcla = SignupQuestions::read(
+			array(
+				array(
+					'id'       => 'qtxt0001',
+					'label'    => 'Alergias',
+					'type'     => 'text',
+					'required' => true,
+				),
+				array(
+					'id'       => 'qchk0001',
+					'label'    => 'Se queda a comer',
+					'type'     => 'check',
+					'required' => true,
+				),
+			)
+		);
+
+		$v = RegistrationFiles::submitted( $mezcla );
+
+		$this->assertTrue( $v['ok'], 'Sin preguntas de fichero no hay nada que comprobar aquí.' );
+		$this->assertSame( array(), $v['files'] );
+	}
+
+	/**
+	 * Un campo de fichero que se deja vacío no es un error, si no es obligatorio.
+	 *
+	 * Es lo que manda el navegador de verdad cuando no se elige nada: el campo
+	 * viaja igual, con el nombre en blanco y `UPLOAD_ERR_NO_FILE`.
+	 */
+	public function test_an_empty_file_field_is_not_a_file() {
+		$datos                              = $this->evento_con_pregunta_de_fichero( false );
+		$_FILES[ RegistrationFiles::FIELD ] = array(
+			'name'     => array( $datos['question'] => '' ),
+			'tmp_name' => array( $datos['question'] => '' ),
+			'size'     => array( $datos['question'] => 0 ),
+			'error'    => array( $datos['question'] => UPLOAD_ERR_NO_FILE ),
+			'type'     => array( $datos['question'] => '' ),
+		);
+
+		$v = RegistrationFiles::submitted( Registrations::questions( $datos['event'] ) );
+
+		$this->assertTrue( $v['ok'] );
+		$this->assertSame( array(), $v['files'] );
+	}
+
+	// ─── el almacén que no se puede escribir ───────────────────────────────
+
+	/**
+	 * Dejar la raíz privada donde no se puede crear.
+	 *
+	 * Un fichero no es un directorio, así que `wp_mkdir_p()` no puede colgar
+	 * nada de él: es la forma limpia de comprobar qué pasa cuando el almacén
+	 * no está disponible, sin romper nada más.
+	 *
+	 * @return void
+	 */
+	private function almacen_roto(): void {
+		$tapon = tempnam( get_temp_dir(), 'evtno' );
+		$this->fs()->put_contents( $tapon, 'no soy un directorio', FS_CHMOD_FILE );
+		$this->temporales[] = $tapon;
+
+		remove_filter( 'evt_private_files_dir', array( $this, 'raiz_de_prueba' ) );
+		add_filter(
+			'evt_private_files_dir',
+			static function () use ( $tapon ): string {
+				return $tapon . '/dentro';
+			}
+		);
+	}
+
+	/**
+	 * Sin almacén no se guarda nada, y se dice que no.
+	 */
+	public function test_without_a_usable_store_nothing_is_saved() {
+		$datos = $this->evento_con_pregunta_de_fichero();
+		$id    = $this->una_inscripcion( $datos['event'] );
+		$this->almacen_roto();
+
+		$this->assertFalse( RegistrationFiles::store_all( $id, array( $datos['question'] => $this->un_pdf() ) ) );
+		$this->assertSame( array(), RegistrationFiles::descriptors( $id ) );
+	}
+
+	/**
+	 * Y en el alta entera: si el documento no se puede guardar, no hay inscripción.
+	 *
+	 * Es la regla de la ADR-0036 comprobada de punta a punta y por el camino
+	 * que de verdad se recorre: el formulario. No puede quedar una inscripción
+	 * registrada cuyo documento obligatorio no está en ningún sitio.
+	 */
+	public function test_a_signup_whose_document_cannot_be_stored_leaves_no_registration() {
+		$datos = $this->evento_con_pregunta_de_fichero( true );
+		$this->en_files( array( $datos['question'] => $this->un_pdf() ) );
+		$this->almacen_roto();
+
+		$this->post(
+			array(
+				SignupForm::FIELD_OP    => SignupForm::OP_SIGNUP,
+				SignupForm::FIELD_EVENT => $datos['event'],
+				'tax_id'                => '12345678Z',
+				'name'                  => 'María',
+				'surname'               => 'Pérez',
+				'email'                 => 'maria@example.org',
+				'centre'                => 'CEIP Ejemplo',
+				'consent'               => '1',
+			),
+			SignupForm::NONCE_ACTION,
+			SignupForm::NONCE_FIELD
+		);
+		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+
+		SignupForm::maybe_handle_submit();
+
+		$this->assertSame(
+			array(),
+			Registrations::all( $datos['event'] ),
+			'La inscripción se deshace entera: fail closed (ADR-0036).'
+		);
+		$this->assertStringContainsString( 'no se ha registrado', SignupForm::notice()['message'] );
+	}
+
+	// ─── guardas pequeñas que se cruzan todos los días ─────────────────────
+
+	/**
+	 * Sin inscripción no hay descriptores ni hay nada que guardar.
+	 */
+	public function test_no_registration_means_nothing_to_store_or_read() {
+		$this->app();
+
+		$this->assertSame( array(), RegistrationFiles::descriptors( 0 ) );
+		$this->assertFalse( RegistrationFiles::store_all( 0, array() ) );
+		$this->assertTrue( RegistrationFiles::store_all( 1, array() ), 'Sin ficheros no hay nada que hacer.' );
+		$this->assertFalse( RegistrationFiles::may_read( 0, 0, '' ), 'Falla en cerrado.' );
+	}
+
+	/**
+	 * Un descriptor sin nombre se sirve igual, con uno genérico.
+	 */
+	public function test_a_descriptor_without_a_name_still_downloads() {
+		$cabeceras = RegistrationFiles::headers( array( 'mime' => 'application/pdf' ), 0 );
+
+		$this->assertContains( 'Content-Disposition: attachment; filename="documento"', $cabeceras );
+	}
+
+	/**
+	 * Un error que no conocemos no inventa un mensaje.
+	 */
+	public function test_an_unknown_error_says_nothing() {
+		$this->assertSame( '', RegistrationFiles::why( array( 'lo_que_sea' ) ) );
+		$this->assertSame( '', RegistrationFiles::why( array() ) );
+	}
+
+	// ─── lo que se guarda en la meta ───────────────────────────────────────
+
+	/**
+	 * La meta tira lo que no tenga forma de descriptor.
+	 *
+	 * Es la última red antes de la base de datos: aunque algo llegue aquí por
+	 * un camino que hoy no existe, lo que no sea un descriptor nuestro no se
+	 * guarda. En particular, **una ruta absoluta o una URL no pasan**.
+	 */
+	public function test_the_meta_throws_away_anything_that_is_not_a_descriptor() {
+		$bueno = array(
+			'id'     => str_repeat( 'a', 32 ),
+			'name'   => 'acta.pdf',
+			'mime'   => 'application/pdf',
+			'size'   => 10,
+			'sha256' => str_repeat( 'b', 64 ),
+			'stored' => 'aa/bb/' . str_repeat( 'a', 32 ) . '.pdf',
+		);
+
+		$limpio = json_decode(
+			RegistrationMetaRegistration::sanitize_files(
+				array(
+					'qdoc0001'     => $bueno,
+					// Una clave que no es de una pregunta nuestra.
+					'no-es-una-id' => $bueno,
+					// Un descriptor que no lo es.
+					'qdoc0002'     => 'una cadena',
+					// Ruta absoluta en `stored`.
+					'qdoc0003'     => array_merge( $bueno, array( 'stored' => '/etc/passwd' ) ),
+					// Una URL en `stored`.
+					'qdoc0004'     => array_merge( $bueno, array( 'stored' => 'https://example.org/x.pdf' ) ),
+					// Un identificador que no tiene nuestra forma.
+					'qdoc0005'     => array_merge( $bueno, array( 'id' => 'corto' ) ),
+					// Y un hash que tampoco.
+					'qdoc0006'     => array_merge( $bueno, array( 'sha256' => 'nope' ) ),
+				)
+			),
+			true
+		);
+
+		$this->assertSame( array( 'qdoc0001' ), array_keys( $limpio ) );
+		$this->assertSame( $bueno, $limpio['qdoc0001'] );
+		$this->assertSame( '', RegistrationMetaRegistration::sanitize_files( 'ni esto es una lista' ) );
 	}
 
 	// ─── y lo público sigue público ────────────────────────────────────────
