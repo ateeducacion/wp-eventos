@@ -319,6 +319,24 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Lo publicado se lee desde cualquier área, que es lo que hace que la
+	 * página de un evento sea pública. El núcleo ni llega a preguntar por
+	 * `read_post` cuando el estado es público, así que la rama solo se ve
+	 * desde aquí.
+	 */
+	public function test_the_guard_leaves_public_statuses_alone() {
+		$event = $this->event(
+			$this->owner,
+			array( $this->area_owner ),
+			array(),
+			array( 'post_title' => 'Jornada anunciada' )
+		);
+
+		$this->assertTrue( user_can( $this->outsider, 'read_post', $event ) );
+		$this->assertTrue( user_can( $this->owner, 'read_post', $event ) );
+	}
+
+	/**
 	 * La regla vive en el guardián y no en la REST, así que se comprueba
 	 * también donde de verdad está.
 	 */
