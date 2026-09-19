@@ -285,3 +285,77 @@ corregidas en `scripts/lib/snippet-sync.php` y `scripts/sync-snippets.php`:
 Ningún cambio de estos afecta a la Decisión (opción 5, fingerprint SHA-256):
 sigue siendo el fingerprint quien decide `updated` frente a `unchanged`. Lo
 que cambia es únicamente cómo se aplica un `updated` a la fila existente.
+
+Conservar `active` obliga además a cambiar lo que viene **después** del
+guardado, y deja a la vista un segundo campo no gestionado con semántica
+propia, `locked`. Las dos aclaraciones, con la evidencia que las sostiene:
+
+### Después de guardar solo se activa lo que no quedó activo
+
+La autoridad sobre el estado ya no es el que tenía el snippet antes, sino el
+que devuelve `save_snippet()`, que relee la fila (`get_snippet()`) al
+terminar:
+
+- **Devuelve activo** → no se llama a `activate_snippet()`. Activar es un
+  `UPDATE ... SET active = 1` y el plugin trata como fallo la llamada que no
+  cambia ninguna fila (`if ( ! $result ) { return __( 'Could not activate
+  snippet.' ) }`, `snippet-ops.php`). Sobre un snippet que ya estaba activo
+  devolvía siempre ese error, la degradación a
+  `evt_force_activate_snippet()` lo «arreglaba» con otro `UPDATE` de cero
+  filas y el resultado era un aviso por pantalla —«activo con AVISO —
+  activado saltando el validador de Code Snippets: Could not activate
+  snippet.»— que no correspondía a ningún problema. Comprobado ejecutando
+  `make sync-snippets` sobre el wp-env: la línea del bundle actualizado pasa
+  de llevar ese aviso a quedar en «actualizado, activo».
+- **Devuelve inactivo** → se conserva íntegra la recuperación con
+  `evt_activate_snippet_with_fallback()`, que sigue haciendo falta. Un
+  snippet activo cuyo código cambia **puede** salir inactivo del guardado:
+  `save_snippet()` llama a `test_snippet_code()` cuando el objeto llega
+  activo, y `test_snippet_code()` no se queda en el análisis léxico —si el
+  `Validator` no encuentra nada, llega a `execute_snippet( $snippet->code,
+  $snippet->id, true )`—, de modo que un error de validación o de ejecución
+  pone `code_error` y el guardado escribe la fila con `active = 0`.
+
+Es el mismo comportamiento condicional que implementa el cliente de
+despliegue `@erseco/code-snippets-client`, que lee el estado remoto, preserva
+`active`, actualiza y solo intenta restaurar la activación si el snippet
+estaba activo y el resultado vuelve inactivo. Se cita como precedente: esta
+ADR no cambia esa dependencia ni su versión.
+
+### `locked` se preserva, pero no es «inmutable»
+
+`locked` es estado no gestionado y se conserva como el resto, pero tiene una
+semántica que obliga a mirar el caso aparte. `save_snippet()` protege el
+código y el nombre de un snippet bloqueado restaurándolos desde la fila:
+
+```php
+if ( $old_snippet->locked && $snippet->locked ) {
+	$snippet->code = $old_snippet->code;
+	$snippet->name = $old_snippet->name;
+}
+```
+
+Como `set_fields()` conserva `locked`, esa rama se activa, y guardar un
+snippet bloqueado cuyo código difiere del repositorio habría informado
+`updated` dejando el código viejo en la tabla: un «actualizado» falso que la
+siguiente sincronización volvería a encontrar. Por eso:
+
+- **Bloqueado y el código difiere** → `status = 'error'`, con mensaje en
+  castellano, y no se toca nada: ni el candado, ni el código, ni la metadatos
+  gestionada, que si no quedaría aplicada a medias. El sincronizador **nunca**
+  quita el candado por su cuenta; desbloquear es una decisión de quien lo
+  puso.
+- **Bloqueado y el código coincide** → se actualiza con normalidad la
+  metadatos gestionada (descripción, ámbito, prioridad, etiquetas), que el
+  candado no protege, y el snippet sigue bloqueado.
+
+Con los ficheros de `snippets/`, esa segunda divergencia solo puede nacer en
+la base de datos —de quien edite la descripción desde el escritorio de Code
+Snippets—, porque la descripción, el ámbito y la prioridad se declaran en la
+cabecera del propio fichero: cambiarlas en el repositorio cambia también el
+código, que es justo lo que el candado no deja tocar.
+
+Los cuatro casos —sigue activo, queda inactivo, bloqueado con código
+distinto, bloqueado solo con metadatos— están cubiertos contra el plugin real
+en `tests/unit/test-snippet-sync.php`, sin dobles del comportamiento
+principal.

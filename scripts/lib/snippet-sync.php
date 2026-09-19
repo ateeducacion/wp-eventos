@@ -251,7 +251,11 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 	 * so the sync is idempotent: re-running it updates instead of duplicating.
 	 * An existing snippet is only saved again when its managed state actually
 	 * changed (`evt_snippet_fingerprint()`); an unchanged-but-inactive snippet
-	 * is only reactivated, never re-saved. See ADR-0035.
+	 * is only reactivated, never re-saved. After a save, the snippet is only
+	 * activated when the state save_snippet() returns is not active already.
+	 * A locked snippet whose code differs is reported as an error instead of
+	 * being saved, because Code Snippets would silently keep the stored code.
+	 * See ADR-0035.
 	 *
 	 * Result entries are keyed by file basename and contain:
 	 * - name        (string) Snippet name from the header.
@@ -369,6 +373,28 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 					continue;
 				}
 
+				// Un snippet bloqueado conserva su código pase lo que pase:
+				// save_snippet() lo restaura desde la fila cuando el snippet
+				// estaba bloqueado y sigue estándolo. Guardar aquí diría
+				// «actualizado» dejando el código viejo en la tabla, y la
+				// siguiente sincronización encontraría otra vez la misma
+				// diferencia. Se informa del conflicto sin tocar nada —ni el
+				// candado, ni el código, ni la metadatos gestionada, que si no
+				// quedaría aplicada a medias— y se deja que lo desbloquee
+				// quien corresponda.
+				if ( $existing_snippet->locked
+					&& evt_strip_php_tags( (string) $existing_snippet->code ) !== $args['code'] ) {
+					$results[ $basename ] = array(
+						'name'        => $header['name'],
+						'id'          => (int) $existing_snippet->id,
+						'status'      => 'error',
+						'active'      => (bool) $existing_snippet->active,
+						'error'       => 'El snippet está bloqueado en Code Snippets y su código difiere del repositorio; desbloquéelo para poder actualizarlo.',
+						'reactivated' => false,
+					);
+					continue;
+				}
+
 				// Changed: apply only the managed fields onto the already-loaded
 				// object instead of building a fresh Snippet from $args. A fresh
 				// object gets Snippet's defaults for everything else — active,
@@ -397,7 +423,19 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 				continue;
 			}
 
-			$activation = evt_activate_snippet_with_fallback( (int) $saved->id );
+			// Manda el estado que devuelve el guardado, no el de antes:
+			// save_snippet() revalida el código de un snippet activo y lo
+			// desactiva si la validación falla, así que un `updated` puede
+			// salir inactivo y hay que recuperarlo. Al revés también importa:
+			// activar uno que ya está activo es un UPDATE de cero filas, que
+			// Code Snippets da por fallido, y saldría un aviso de activación
+			// que no corresponde a ningún problema.
+			$activation = $saved->active
+				? array(
+					'active' => true,
+					'error'  => '',
+				)
+				: evt_activate_snippet_with_fallback( (int) $saved->id );
 
 			$results[ $basename ] = array(
 				'name'        => $header['name'],

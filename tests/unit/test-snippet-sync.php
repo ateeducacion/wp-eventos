@@ -79,6 +79,10 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 		rmdir( $this->dir );
 
 		foreach ( $this->ids as $id ) {
+			// Code Snippets se niega a borrar un snippet bloqueado, así que se
+			// quita el candado antes: si no, los tests de `locked` dejarían
+			// filas vivas para los siguientes.
+			\Code_Snippets\set_snippet_locked( $id, false );
 			\Code_Snippets\delete_snippet( $id );
 		}
 		$this->ids = array();
@@ -379,5 +383,142 @@ class Test_Snippet_Sync extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( $normalizado, $sin_normalizar );
+	}
+
+	/**
+	 * 17. Un `updated` que sigue activo no se vuelve a activar.
+	 *
+	 * `activate_snippet()` activa con un `UPDATE ... SET active = 1` y da por
+	 * fallida la llamada que no cambia ninguna fila, así que activar un
+	 * snippet que ya está activo devuelve «Could not activate snippet.» y
+	 * acababa saliendo por pantalla como un aviso de algo que no había
+	 * pasado. Lo que lo demuestra es `error` vacío; el contador del gancho
+	 * comprueba además que ni siquiera se intenta.
+	 */
+	public function test_updated_and_still_active_is_not_activated_again() {
+		$this->write( 'a.php', 'EVT TEST — sigue activo', '// version uno' );
+		$created = $this->sync();
+		$this->assertTrue( $created['a.php']['active'] );
+
+		$activations = 0;
+		add_action(
+			'code_snippets/activate_snippet',
+			function () use ( &$activations ) {
+				++$activations;
+			}
+		);
+
+		$this->write( 'a.php', 'EVT TEST — sigue activo', '// version dos' );
+		$results = $this->sync();
+
+		$this->assertSame( 'updated', $results['a.php']['status'] );
+		$this->assertTrue( $results['a.php']['active'] );
+		$this->assertSame( '', $results['a.php']['error'] );
+		$this->assertSame( 0, $activations );
+	}
+
+	/**
+	 * 18. Un `updated` que el guardado deja inactivo se recupera.
+	 *
+	 * `save_snippet()` revalida el código de un snippet activo
+	 * (`test_snippet_code()`) y lo desactiva si encuentra `code_error`. Aquí
+	 * se provoca de verdad, sin dobles: el `Validator` de Code Snippets
+	 * rechaza un snippet que redeclare una función ya definida —compara
+	 * contra `get_defined_functions()`—, así que se declara aquí mismo una
+	 * con un nombre exclusivo de este test y el snippet pasa a redeclararla.
+	 * La cadena que se comprueba es activo → el guardado lo desactiva → la
+	 * sincronización lo recupera con `evt_activate_snippet_with_fallback()` →
+	 * vuelve a quedar activo.
+	 *
+	 * El código del snippet no llega a ejecutarse en ningún momento: el
+	 * `Validator` corta antes de `execute_snippet()`, y `activate_snippet()`
+	 * vuelve a validar antes de tocar la tabla.
+	 */
+	public function test_updated_and_deactivated_by_save_is_recovered() {
+		if ( ! function_exists( 'evt_test_snippet_sync_identifier_clash' ) ) {
+			/**
+			 * Nombre que el snippet del test redeclara para no validar.
+			 */
+			function evt_test_snippet_sync_identifier_clash() {
+			}
+		}
+
+		$this->write( 'a.php', 'EVT TEST — recuperar', '// version uno' );
+		$created = $this->sync();
+		$id      = (int) $created['a.php']['id'];
+		$this->assertTrue( $created['a.php']['active'] );
+
+		$this->write( 'a.php', 'EVT TEST — recuperar', "function evt_test_snippet_sync_identifier_clash() {\n}" );
+		$results = $this->sync();
+
+		$this->assertSame( 'updated', $results['a.php']['status'] );
+		$this->assertTrue( $results['a.php']['active'] );
+		// La recuperación deja dicho por qué hizo falta saltarse el validador.
+		$this->assertNotSame( '', $results['a.php']['error'] );
+		$this->assertTrue( (bool) \Code_Snippets\get_snippet( $id )->active );
+	}
+
+	/**
+	 * 19. Un snippet bloqueado con código distinto es un error.
+	 *
+	 * `save_snippet()` restaura el código de la fila cuando el snippet estaba
+	 * bloqueado y sigue estándolo, así que guardar diría «actualizado» sin
+	 * haber actualizado nada. Ni se guarda, ni se desbloquea, ni se aplica la
+	 * metadatos a medias, y la siguiente pasada vuelve a avisar.
+	 */
+	public function test_locked_snippet_with_different_code_is_an_error() {
+		$this->write( 'a.php', 'EVT TEST — locked código', '// version uno' );
+		$created = $this->sync();
+		$id      = (int) $created['a.php']['id'];
+
+		\Code_Snippets\set_snippet_locked( $id, true );
+
+		$this->write( 'a.php', 'EVT TEST — locked código', '// version dos' );
+		$results = $this->sync();
+
+		$this->assertSame( 'error', $results['a.php']['status'] );
+
+		$snippet = \Code_Snippets\get_snippet( $id );
+		$this->assertTrue( $snippet->locked );
+		$this->assertStringContainsString( '// version uno', $snippet->code );
+		$this->assertStringNotContainsString( '// version dos', $snippet->code );
+		$this->assertTrue( (bool) $snippet->active );
+
+		$otra_vez = $this->sync();
+		$this->assertSame( 'error', $otra_vez['a.php']['status'] );
+	}
+
+	/**
+	 * 20. Un snippet bloqueado con el mismo código sí actualiza su metadatos.
+	 *
+	 * El candado de Code Snippets protege el código y el nombre, no la
+	 * descripción, el ámbito, la prioridad ni las etiquetas: `locked` no
+	 * convierte el snippet en inmutable y la sincronización no lo trata como
+	 * si lo hiciera.
+	 *
+	 * La divergencia tiene que venir de la tabla, y no del fichero, porque en
+	 * este repositorio la descripción, el ámbito y la prioridad se declaran en
+	 * la cabecera del propio fichero: cambiarlas ahí cambia también el código,
+	 * que es justo lo que el candado no deja tocar. El caso real es el de
+	 * quien edita la descripción desde el escritorio de Code Snippets.
+	 */
+	public function test_locked_snippet_with_identical_code_updates_its_metadata() {
+		$this->write( 'a.php', 'EVT TEST — locked metadatos', '// no-op', 'La del repositorio.' );
+		$created = $this->sync();
+		$id      = (int) $created['a.php']['id'];
+
+		$snippet       = \Code_Snippets\get_snippet( $id );
+		$snippet->desc = 'La de alguien, cambiada a mano.';
+		\Code_Snippets\save_snippet( $snippet );
+		\Code_Snippets\set_snippet_locked( $id, true );
+
+		$results = $this->sync();
+
+		$this->assertSame( 'updated', $results['a.php']['status'] );
+
+		$snippet = \Code_Snippets\get_snippet( $id );
+		$this->assertSame( 'La del repositorio.', $snippet->desc );
+		$this->assertTrue( $snippet->locked );
+		$this->assertStringContainsString( '// no-op', $snippet->code );
 	}
 }
