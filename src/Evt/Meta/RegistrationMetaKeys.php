@@ -59,6 +59,17 @@ final class RegistrationMetaKeys {
 	public const REG_ANSWERS = 'evt_reg_answers';
 
 	/**
+	 * The private documents of this registration, as JSON keyed by question ID.
+	 *
+	 * **Ni una ruta absoluta, ni una URL, ni un identificador de adjunto**: un
+	 * descriptor con lo que hace falta para enseñarlo y para encontrarlo
+	 * (ADR-0036). Va aparte de {@see REG_ANSWERS} a propósito: ahí viven las
+	 * respuestas a las preguntas de lista cerrada, y un almacén de ficheros
+	 * metido dentro las convertiría en otra cosa.
+	 */
+	public const REG_FILES = 'evt_reg_files';
+
+	/**
 	 * The one-time token that lets this person back into their registration.
 	 *
 	 * No es una sesión: abre esta inscripción y nada más del sitio (ADR-0033).
@@ -114,6 +125,7 @@ final class RegistrationMetaKeys {
 			self::REG_CONSENT_AT,
 			self::REG_WORKSHOP,
 			self::REG_ANSWERS,
+			self::REG_FILES,
 			self::REG_TOKEN,
 		);
 	}
@@ -137,11 +149,15 @@ final class RegistrationMetaKeys {
 	}
 
 	/**
-	 * The four field types a question may have, with their label.
+	 * The five field types a question may have, with their label.
 	 *
-	 * Lista cerrada y corta a propósito: son las cuatro de la ADR-0031, y
-	 * añadir una quinta es mover la raya que separa esto de un constructor de
-	 * formularios.
+	 * Lista cerrada y corta a propósito. Eran las cuatro de la ADR-0031 y son
+	 * cinco desde la ADR-0036, que añadió `file` porque pedir un documento
+	 * —una autorización, un justificante— era lo único que obligaba a mandar a
+	 * la gente fuera del formulario. La raya sigue donde estaba: un `file`
+	 * tiene rótulo, tipo y si es obligatorio, **y nada más**. Ni tamaño, ni
+	 * tipos, ni varios ficheros por pregunta: eso es del aplicativo entero y
+	 * vive en {@see \Evt\PublicFront\RegistrationFiles}.
 	 *
 	 * @return array<string, string>
 	 */
@@ -151,6 +167,7 @@ final class RegistrationMetaKeys {
 			'one'   => 'Una opción',
 			'many'  => 'Varias opciones',
 			'text'  => 'Texto corto',
+			'file'  => 'Archivo',
 		);
 	}
 

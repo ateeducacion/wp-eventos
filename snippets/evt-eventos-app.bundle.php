@@ -1174,6 +1174,17 @@ final class RegistrationMetaKeys {
 
 
 
+
+
+
+
+	public const REG_FILES = 'evt_reg_files';
+
+
+
+
+
+
 	public const REG_TOKEN = 'evt_reg_token';
 
 
@@ -1225,6 +1236,7 @@ final class RegistrationMetaKeys {
 			self::REG_CONSENT_AT,
 			self::REG_WORKSHOP,
 			self::REG_ANSWERS,
+			self::REG_FILES,
 			self::REG_TOKEN,
 		);
 	}
@@ -1256,12 +1268,17 @@ final class RegistrationMetaKeys {
 
 
 
+
+
+
+
 	public static function question_types(): array {
 		return array(
 			'check' => 'Casilla',
 			'one'   => 'Una opción',
 			'many'  => 'Varias opciones',
 			'text'  => 'Texto corto',
+			'file'  => 'Archivo',
 		);
 	}
 
@@ -1621,6 +1638,8 @@ use Evt\Meta\RegistrationMetaKeys;
 
 
 
+
+
 final class SignupQuestions {
 
 
@@ -1816,6 +1835,13 @@ final class SignupQuestions {
 
 
 
+
+
+
+
+
+
+
 	public static function answers( array $preguntas, array $raw ): array {
 		$errores = array();
 		$datos   = array();
@@ -1823,6 +1849,10 @@ final class SignupQuestions {
 		foreach ( $preguntas as $pregunta ) {
 			$id    = (string) $pregunta['id'];
 			$valor = $raw[ $id ] ?? null;
+
+			if ( 'file' === $pregunta['type'] ) {
+				continue;
+			}
 
 			switch ( $pregunta['type'] ) {
 				case 'check':
@@ -3410,6 +3440,10 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_answers' ),
 			),
+			RegistrationMetaKeys::REG_FILES           => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_files' ),
+			),
 			RegistrationMetaKeys::REG_TOKEN           => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_token' ),
@@ -3550,6 +3584,54 @@ final class RegistrationMetaRegistration {
 			} elseif ( is_scalar( $respuesta ) ) {
 				$out[ $id ] = sanitize_text_field( (string) $respuesta );
 			}
+		}
+
+		return (string) wp_json_encode( $out );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function sanitize_files( $value ): string {
+		if ( is_string( $value ) ) {
+			$value = '' === trim( $value ) ? array() : json_decode( $value, true );
+		}
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+
+		$out = array();
+		foreach ( $value as $id => $descriptor ) {
+			$id = (string) $id;
+			if ( ! SignupQuestions::is_id( $id ) || ! is_array( $descriptor ) ) {
+				continue;
+			}
+			$opaco  = isset( $descriptor['id'] ) ? strtolower( (string) $descriptor['id'] ) : '';
+			$stored = isset( $descriptor['stored'] ) ? (string) $descriptor['stored'] : '';
+			$sha    = isset( $descriptor['sha256'] ) ? strtolower( (string) $descriptor['sha256'] ) : '';
+			if ( ! preg_match( '/^[a-f0-9]{32}$/', $opaco )
+				|| ! preg_match( '#^[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{32}\.[a-z0-9]{1,8}$#', $stored )
+				|| ! preg_match( '/^[a-f0-9]{64}$/', $sha ) ) {
+				continue;
+			}
+
+			$out[ $id ] = array(
+				'id'     => $opaco,
+				'name'   => sanitize_file_name( (string) ( $descriptor['name'] ?? '' ) ),
+				'mime'   => sanitize_mime_type( (string) ( $descriptor['mime'] ?? '' ) ),
+				'size'   => max( 0, (int) ( $descriptor['size'] ?? 0 ) ),
+				'sha256' => $sha,
+				'stored' => $stored,
+			);
 		}
 
 		return (string) wp_json_encode( $out );
@@ -7364,6 +7446,18 @@ final class Participants {
 
 
 
+
+
+	public const KEY_FILES = '_files';
+
+
+
+
+
+
+
+
+
 	public static function columns(): array {
 		return array(
 			'name'     => 'Nombre',
@@ -7372,6 +7466,7 @@ final class Participants {
 			'workshop' => 'Taller',
 			'date'     => 'Fecha de inscripción',
 			'consent'  => 'Consentimiento',
+			'files'    => 'Documentos',
 		);
 	}
 
@@ -7418,6 +7513,12 @@ final class Participants {
 				$valor            = $fila[ $clave ] ?? '';
 				$limpia[ $clave ] = is_scalar( $valor ) ? trim( (string) $valor ) : '';
 			}
+
+
+
+			if ( isset( $fila[ self::KEY_FILES ] ) && is_array( $fila[ self::KEY_FILES ] ) ) {
+				$limpia[ self::KEY_FILES ] = array_values( $fila[ self::KEY_FILES ] );
+			}
 			$out[] = $limpia;
 		}
 		return $out;
@@ -7448,7 +7549,13 @@ final class Participants {
 			if ( '' !== $taller && ( $fila['workshop'] ?? '' ) !== $taller ) {
 				continue;
 			}
-			if ( '' !== $buscado && false === strpos( self::fold( implode( ' ', $fila ) ), $buscado ) ) {
+
+
+			$texto_fila = '';
+			foreach ( array_keys( self::columns() ) as $clave ) {
+				$texto_fila .= ( $fila[ $clave ] ?? '' ) . ' ';
+			}
+			if ( '' !== $buscado && false === strpos( self::fold( $texto_fila ), $buscado ) ) {
 				continue;
 			}
 			$out[] = $fila;
@@ -7685,14 +7792,29 @@ final class Registrations {
 			$meta   = self::meta( $inscripcion->ID );
 			$taller = (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ];
 
-			$fila = array(
+
+
+
+
+			$documentos = array();
+			foreach ( RegistrationFiles::descriptors( (int) $inscripcion->ID ) as $descriptor ) {
+				$documentos[] = array(
+					'reg'  => (int) $inscripcion->ID,
+					'id'   => (string) $descriptor['id'],
+					'name' => (string) ( $descriptor['name'] ?? '' ),
+				);
+			}
+
+			$fila                            = array(
 				'name'     => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
 				'email'    => $meta[ RegistrationMetaKeys::REG_EMAIL ],
 				'centre'   => $meta[ RegistrationMetaKeys::REG_CENTRE ],
 				'workshop' => $talleres[ $taller ] ?? '',
 				'date'     => get_the_date( 'Y-m-d H:i', $inscripcion ),
 				'consent'  => self::consent_text( $meta ),
+				'files'    => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
+			$fila[ Participants::KEY_FILES ] = $documentos;
 
 
 
@@ -8152,6 +8274,764 @@ final class Registrations {
 
 namespace Evt\PublicFront;
 
+use Evt\Access\EventAccess;
+use Evt\Meta\RegistrationMetaKeys;
+use Evt\PostType\RegistrationPostType;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class RegistrationFiles {
+
+
+
+
+	public const FIELD = 'evt_qf';
+
+
+
+
+	public const ARG_REG = 'evt_reg';
+
+
+
+
+	public const ARG_FILE = 'evt_file';
+
+
+
+
+	public const DIR = 'evt-private';
+
+
+
+
+
+
+
+
+	public const MAX_BYTES = 10 * MB_IN_BYTES;
+
+
+
+
+
+
+
+
+
+	private const MODE_CLOSED = 0200;
+
+
+
+
+	private const MODE_OPEN = 0400;
+
+
+
+
+
+
+
+
+
+	private const STORED_SHAPE = '#^[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{32}\.[a-z0-9]{1,8}$#';
+
+
+
+
+
+
+	public static function register(): void {
+
+
+
+		add_action( 'init', array( self::class, 'handle' ), 20 );
+
+
+
+		add_action( 'before_delete_post', array( self::class, 'on_delete' ), 10, 2 );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function mimes(): array {
+		$mimes = array(
+			'pdf'          => 'application/pdf',
+			'jpg|jpeg|jpe' => 'image/jpeg',
+			'png'          => 'image/png',
+			'docx'         => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'odt'          => 'application/vnd.oasis.opendocument.text',
+		);
+
+
+
+
+
+
+
+
+
+
+		$mimes = apply_filters( 'evt_private_file_mimes', $mimes );
+		return is_array( $mimes ) ? $mimes : array();
+	}
+
+
+
+
+
+
+	public static function max_bytes(): int {
+		$servidor = (int) wp_max_upload_size();
+		return $servidor > 0 ? min( self::MAX_BYTES, $servidor ) : self::MAX_BYTES;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function root(): string {
+		$uploads = wp_upload_dir();
+		$base    = isset( $uploads['basedir'] ) && ! $uploads['error'] ? (string) $uploads['basedir'] : '';
+		$raiz    = '' === $base ? '' : $base . '/' . self::DIR;
+
+
+
+
+
+
+		return rtrim( (string) apply_filters( 'evt_private_files_dir', $raiz ), '/' );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function submitted( array $preguntas ): array {
+		$errores = array();
+		$traidos = array();
+
+		foreach ( $preguntas as $pregunta ) {
+			if ( 'file' !== $pregunta['type'] ) {
+				continue;
+			}
+			$id      = (string) $pregunta['id'];
+			$fichero = self::from_request( $id );
+
+			if ( null === $fichero ) {
+				if ( ! empty( $pregunta['required'] ) ) {
+					$errores[] = 'file_missing';
+				}
+				continue;
+			}
+
+			$porque = self::refuse( $fichero );
+			if ( '' !== $porque ) {
+				$errores[] = $porque;
+				continue;
+			}
+			$traidos[ $id ] = $fichero;
+		}
+
+		return array(
+			'ok'     => array() === $errores,
+			'errors' => $errores,
+			'files'  => $traidos,
+		);
+	}
+
+
+
+
+
+
+
+	private static function from_request( string $question_id ): ?array {
+
+
+		$campo = isset( $_FILES[ self::FIELD ] ) && is_array( $_FILES[ self::FIELD ] ) ? $_FILES[ self::FIELD ] : array();
+		if ( ! isset( $campo['name'][ $question_id ] ) || ! is_scalar( $campo['name'][ $question_id ] ) ) {
+			return null;
+		}
+
+		$nombre = sanitize_text_field( (string) $campo['name'][ $question_id ] );
+		$tmp    = isset( $campo['tmp_name'][ $question_id ] ) ? (string) $campo['tmp_name'][ $question_id ] : '';
+		$error  = isset( $campo['error'][ $question_id ] ) ? (int) $campo['error'][ $question_id ] : UPLOAD_ERR_NO_FILE;
+		$tamano = isset( $campo['size'][ $question_id ] ) ? (int) $campo['size'][ $question_id ] : 0;
+
+
+		if ( '' === $nombre && UPLOAD_ERR_NO_FILE === $error ) {
+			return null;
+		}
+
+
+
+
+
+
+
+
+
+
+		return array(
+			'name'     => basename( $nombre ),
+			'tmp_name' => $tmp,
+			'size'     => $tamano,
+			'error'    => $error,
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function refuse( array $fichero ): string {
+		if ( UPLOAD_ERR_INI_SIZE === $fichero['error'] || UPLOAD_ERR_FORM_SIZE === $fichero['error'] ) {
+			return 'file_too_big';
+		}
+		if ( UPLOAD_ERR_OK !== $fichero['error'] || '' === $fichero['tmp_name'] ) {
+			return 'file_broken';
+		}
+		if ( $fichero['size'] <= 0 || $fichero['size'] > self::max_bytes() ) {
+			return 'file_too_big';
+		}
+
+		$mimes    = self::mimes();
+		$revisado = wp_check_filetype_and_ext( $fichero['tmp_name'], $fichero['name'], $mimes );
+		$tipo     = isset( $revisado['type'] ) && is_string( $revisado['type'] ) ? $revisado['type'] : '';
+		$ext      = isset( $revisado['ext'] ) && is_string( $revisado['ext'] ) ? $revisado['ext'] : '';
+
+		if ( '' === $tipo || '' === $ext || ! in_array( $tipo, array_values( $mimes ), true ) ) {
+			return 'file_type';
+		}
+		return '';
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function store_all( int $registration_id, array $files ): bool {
+		if ( $registration_id <= 0 ) {
+			return false;
+		}
+		if ( array() === $files ) {
+			return true;
+		}
+
+		$descriptores = array();
+		foreach ( $files as $question_id => $fichero ) {
+			$descriptor = self::store( $fichero );
+			if ( null === $descriptor ) {
+				foreach ( $descriptores as $hecho ) {
+					self::erase( $hecho );
+				}
+				return false;
+			}
+			$descriptores[ (string) $question_id ] = $descriptor;
+		}
+
+		update_post_meta(
+			$registration_id,
+			RegistrationMetaKeys::REG_FILES,
+			wp_slash( (string) wp_json_encode( $descriptores ) )
+		);
+		return true;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function store( array $fichero ): ?array {
+		if ( '' !== self::refuse( $fichero ) ) {
+			return null;
+		}
+
+		$raiz = self::root();
+		$fs   = self::filesystem();
+		if ( '' === $raiz || null === $fs ) {
+			return null;
+		}
+
+		$revisado = wp_check_filetype_and_ext( $fichero['tmp_name'], $fichero['name'], self::mimes() );
+		$ext      = strtolower( (string) $revisado['ext'] );
+		$mime     = (string) $revisado['type'];
+
+		$bytes = $fs->get_contents( $fichero['tmp_name'] );
+		if ( ! is_string( $bytes ) || '' === $bytes ) {
+			return null;
+		}
+
+		$opaco  = bin2hex( random_bytes( 16 ) );
+		$stored = substr( $opaco, 0, 2 ) . '/' . substr( $opaco, 2, 2 ) . '/' . $opaco . '.' . $ext;
+		$camino = $raiz . '/' . $stored;
+
+		if ( ! self::prepare_dir( dirname( $camino ) ) ) {
+			return null;
+		}
+		if ( ! $fs->put_contents( $camino, $bytes, self::MODE_CLOSED ) ) {
+			return null;
+		}
+
+
+		$fs->chmod( $camino, self::MODE_CLOSED );
+
+		return array(
+			'id'     => bin2hex( random_bytes( 16 ) ),
+			'name'   => sanitize_file_name( $fichero['name'] ),
+			'mime'   => $mime,
+			'size'   => strlen( $bytes ),
+			'sha256' => hash( 'sha256', $bytes ),
+			'stored' => $stored,
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function prepare_dir( string $dir ): bool {
+		$raiz = self::root();
+		$fs   = self::filesystem();
+		if ( '' === $raiz || null === $fs ) {
+			return false;
+		}
+
+		if ( ! $fs->is_dir( $raiz ) && ! wp_mkdir_p( $raiz ) ) {
+			return false;
+		}
+		if ( ! $fs->exists( $raiz . '/.htaccess' ) ) {
+			$fs->put_contents(
+				$raiz . '/.htaccess',
+				"# Los documentos de las inscripciones no se sirven directamente (ADR-0036).\n"
+					. "<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n"
+					. "<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n",
+				FS_CHMOD_FILE
+			);
+		}
+		if ( ! $fs->exists( $raiz . '/index.php' ) ) {
+			$fs->put_contents( $raiz . '/index.php', "<?php\n// Silence is golden.\n", FS_CHMOD_FILE );
+		}
+
+		return $fs->is_dir( $dir ) || wp_mkdir_p( $dir );
+	}
+
+
+
+
+
+
+
+
+
+	public static function descriptors( int $registration_id ): array {
+		if ( $registration_id <= 0 ) {
+			return array();
+		}
+		$crudo = get_post_meta( $registration_id, RegistrationMetaKeys::REG_FILES, true );
+		$datos = is_string( $crudo ) && '' !== $crudo ? json_decode( $crudo, true ) : $crudo;
+		if ( ! is_array( $datos ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $datos as $question_id => $descriptor ) {
+			if ( is_array( $descriptor ) && isset( $descriptor['id'], $descriptor['stored'] ) ) {
+				$out[ (string) $question_id ] = $descriptor;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+
+	public static function find( int $registration_id, string $file_id ): ?array {
+		if ( ! (bool) preg_match( '/^[a-f0-9]{32}$/', $file_id ) ) {
+			return null;
+		}
+		foreach ( self::descriptors( $registration_id ) as $descriptor ) {
+			if ( hash_equals( (string) $descriptor['id'], $file_id ) ) {
+				return $descriptor;
+			}
+		}
+		return null;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function read( array $descriptor ): ?string {
+		$camino = self::path( $descriptor );
+		$fs     = self::filesystem();
+		if ( '' === $camino || null === $fs || ! $fs->exists( $camino ) ) {
+			return null;
+		}
+
+		try {
+			$fs->chmod( $camino, self::MODE_OPEN );
+			$bytes = $fs->get_contents( $camino );
+		} finally {
+			$fs->chmod( $camino, self::MODE_CLOSED );
+		}
+		return is_string( $bytes ) ? $bytes : null;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function path( array $descriptor ): string {
+		$stored = isset( $descriptor['stored'] ) ? (string) $descriptor['stored'] : '';
+		$raiz   = self::root();
+		if ( '' === $raiz || ! (bool) preg_match( self::STORED_SHAPE, $stored ) ) {
+			return '';
+		}
+		$camino = $raiz . '/' . $stored;
+		return 0 === strpos( $camino, $raiz . '/' ) ? $camino : '';
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function on_delete( int $post_id, $post = null ): void {
+		$tipo = $post instanceof \WP_Post ? (string) $post->post_type : (string) get_post_type( $post_id );
+		if ( RegistrationPostType::POST_TYPE !== $tipo ) {
+			return;
+		}
+		self::delete_all( $post_id );
+	}
+
+
+
+
+
+
+
+	public static function delete_all( int $registration_id ): void {
+		foreach ( self::descriptors( $registration_id ) as $descriptor ) {
+			self::erase( $descriptor );
+		}
+		delete_post_meta( $registration_id, RegistrationMetaKeys::REG_FILES );
+	}
+
+
+
+
+
+
+
+	private static function erase( array $descriptor ): void {
+		$camino = self::path( $descriptor );
+		$fs     = self::filesystem();
+		if ( '' !== $camino && null !== $fs && $fs->exists( $camino ) ) {
+			$fs->delete( $camino );
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function url( int $registration_id, string $file_id, string $token = '' ): string {
+		$args = array(
+			self::ARG_REG  => $registration_id,
+			self::ARG_FILE => $file_id,
+		);
+		if ( '' !== $token ) {
+			$args[ SignupForm::ARG_TOKEN ] = rawurlencode( $token );
+		}
+		return add_query_arg( $args, home_url( '/' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function handle(): void {
+
+		$file_id = isset( $_GET[ self::ARG_FILE ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_FILE ] ) ) : '';
+		if ( '' === $file_id ) {
+			return;
+		}
+		$registration_id = isset( $_GET[ self::ARG_REG ] ) ? absint( wp_unslash( $_GET[ self::ARG_REG ] ) ) : 0;
+		$token           = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
+
+
+		if ( $registration_id <= 0
+			|| RegistrationPostType::POST_TYPE !== (string) get_post_type( $registration_id ) ) {
+			self::deny();
+			return;
+		}
+
+		$event_id = (int) get_post_field( 'post_parent', $registration_id );
+		if ( ! self::may_read( $registration_id, $event_id, $token ) ) {
+			self::deny();
+			return;
+		}
+
+		$descriptor = self::find( $registration_id, $file_id );
+		$bytes      = null === $descriptor ? null : self::read( $descriptor );
+		if ( null === $descriptor || null === $bytes ) {
+			self::deny( 404, 'Ese documento ya no está.' );
+			return;
+		}
+
+		self::send( $descriptor, $bytes );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function may_read( int $registration_id, int $event_id, string $token ): bool {
+		if ( $registration_id <= 0 || $event_id <= 0 ) {
+			return false;
+		}
+		if ( '' !== $token && Registrations::by_token( $event_id, $token ) === $registration_id ) {
+			return true;
+		}
+		return EventAccess::can_open( get_current_user_id(), $event_id );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function send( array $descriptor, string $bytes ): void {
+		foreach ( self::headers( $descriptor, strlen( $bytes ) ) as $linea ) {
+			Shell::send_header( $linea );
+		}
+
+		echo $bytes; 
+		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function headers( array $descriptor, int $bytes ): array {
+		$nombre = sanitize_file_name( (string) ( $descriptor['name'] ?? '' ) );
+		if ( '' === $nombre ) {
+			$nombre = 'documento';
+		}
+
+		return array(
+			'Content-Type: ' . sanitize_mime_type( (string) ( $descriptor['mime'] ?? '' ) ),
+			'Content-Disposition: attachment; filename="' . $nombre . '"',
+			'Content-Length: ' . $bytes,
+			'X-Content-Type-Options: nosniff',
+			'Cache-Control: private, no-store',
+		);
+	}
+
+
+
+
+
+
+
+
+	private static function deny( int $codigo = 403, string $texto = 'No puede descargar este documento.' ): void {
+		status_header( $codigo );
+		Shell::send_header( 'Content-Type: text/plain; charset=utf-8' );
+		Shell::send_header( 'X-Content-Type-Options: nosniff' );
+		Shell::send_header( 'Cache-Control: private, no-store' );
+		echo esc_html( $texto );
+		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+
+	public static function why( array $errors ): string {
+		$textos = array(
+			'file_missing' => 'Falta un documento obligatorio.',
+			'file_too_big' => 'El documento es demasiado grande: el máximo son ' . size_format( self::max_bytes() ) . '.',
+			'file_type'    => 'Ese tipo de documento no se admite. Se aceptan PDF, JPG, PNG, DOCX y ODT.',
+			'file_broken'  => 'El documento no ha llegado completo. Vuelva a adjuntarlo.',
+		);
+
+		foreach ( $errors as $error ) {
+			if ( isset( $textos[ $error ] ) ) {
+				return $textos[ $error ];
+			}
+		}
+		return '';
+	}
+
+
+
+
+
+
+	private static function filesystem(): ?\WP_Filesystem_Base {
+		global $wp_filesystem;
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		return $wp_filesystem instanceof \WP_Filesystem_Base ? $wp_filesystem : null;
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
 
@@ -8273,10 +9153,17 @@ final class SignupForm {
 			: array();
 
 		$v = Registrations::validate( $event_id, $raw, $respuestas );
-		if ( ! $v['ok'] ) {
+
+
+
+
+		$ficheros = RegistrationFiles::submitted( Registrations::questions( $event_id ) );
+
+		if ( ! $v['ok'] || ! $ficheros['ok'] ) {
+			$porque       = RegistrationFiles::why( $ficheros['errors'] );
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => RegistrationInput::why( $v['errors'] ),
+				'message' => '' !== $porque && $v['ok'] ? $porque : RegistrationInput::why( $v['errors'] ),
 			);
 			return;
 		}
@@ -8286,6 +9173,19 @@ final class SignupForm {
 			self::$notice = array(
 				'level'   => 'error',
 				'message' => 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+			);
+			return;
+		}
+
+
+
+
+
+		if ( ! RegistrationFiles::store_all( $id, $ficheros['files'] ) ) {
+			wp_delete_post( $id, true );
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'No se ha podido guardar el documento que adjuntó, así que la inscripción no se ha registrado. Vuelva a intentarlo.',
 			);
 			return;
 		}
@@ -11541,6 +12441,7 @@ namespace Evt\PublicFront\View;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
+use Evt\PublicFront\RegistrationFiles;
 
 
 
@@ -11599,7 +12500,11 @@ final class EventParticipantsPanel {
 							<tr>
 								<?php foreach ( (array) $m['people_cols'] as $clave => $rotulo ) : ?>
 									<td data-rotulo="<?php echo esc_attr( (string) $rotulo ); ?>">
-										<?php echo esc_html( '' !== (string) ( $fila[ $clave ] ?? '' ) ? (string) $fila[ $clave ] : '—' ); ?>
+										<?php if ( 'files' === $clave ) : ?>
+											<?php echo self::downloads( $fila ); ?>
+										<?php else : ?>
+											<?php echo esc_html( '' !== (string) ( $fila[ $clave ] ?? '' ) ? (string) $fila[ $clave ] : '—' ); ?>
+										<?php endif; ?>
 									</td>
 								<?php endforeach; ?>
 							</tr>
@@ -11610,6 +12515,37 @@ final class EventParticipantsPanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function downloads( array $fila ): string {
+		$documentos = isset( $fila[ Participants::KEY_FILES ] ) && is_array( $fila[ Participants::KEY_FILES ] )
+			? $fila[ Participants::KEY_FILES ]
+			: array();
+		if ( array() === $documentos ) {
+			return '—';
+		}
+
+		$enlaces = array();
+		foreach ( $documentos as $documento ) {
+			$nombre    = (string) ( $documento['name'] ?? '' );
+			$enlaces[] = sprintf(
+				'<a class="evt-descarga" href="%1$s" download>%2$s</a>',
+				esc_url( RegistrationFiles::url( (int) ( $documento['reg'] ?? 0 ), (string) ( $documento['id'] ?? '' ) ) ),
+				esc_html( '' !== $nombre ? $nombre : 'Descargar' )
+			);
+		}
+		return implode( ' ', $enlaces );
 	}
 
 
@@ -14816,6 +15752,7 @@ namespace Evt\PublicFront\Block;
 
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\SignupForm;
 
 
@@ -14899,7 +15836,10 @@ final class SignupBlock {
 
 
 	private static function form( int $evento ): string {
-		$html  = '<form class="evt-ins" method="post">';
+
+
+
+		$html  = '<form class="evt-ins" method="post" enctype="multipart/form-data">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
 
 		$html .= '<fieldset class="evt-ins__nucleo"><legend>Sus datos</legend>';
@@ -15092,6 +16032,20 @@ final class SignupBlock {
 				esc_attr( $name ),
 				$p['required'] ? ' required' : '',
 				$rotulo
+			);
+		}
+
+		if ( 'file' === $p['type'] ) {
+			return sprintf(
+				'<p class="evt-campo evt-campo--fichero"><label for="%1$s">%2$s</label>'
+					. '<input type="file" id="%1$s" name="%3$s" accept="%4$s"%5$s>'
+					. '<small>Un solo documento, de hasta %6$s. Se admiten PDF, JPG, PNG, DOCX y ODT.</small></p>',
+				esc_attr( $id ),
+				$rotulo,
+				esc_attr( RegistrationFiles::FIELD . '[' . $p['id'] . ']' ),
+				esc_attr( implode( ',', array_values( RegistrationFiles::mimes() ) ) ),
+				$p['required'] ? ' required' : '',
+				esc_html( size_format( RegistrationFiles::max_bytes() ) )
 			);
 		}
 
@@ -17302,6 +18256,7 @@ use Evt\PublicFront\EventView;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
+use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Shell;
@@ -17363,6 +18318,10 @@ final class App {
 
 
 		Registrations::register();
+
+
+
+		RegistrationFiles::register();
 		SignupForm::register();
 		EventList::register();
 		EventWorkspace::register();

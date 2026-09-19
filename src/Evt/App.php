@@ -24,6 +24,7 @@ use Evt\PublicFront\EventView;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
+use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Shell;
@@ -85,6 +86,10 @@ final class App {
 		// Cada pantalla engancha su propio shortcode y, si muta, su manejador
 		// de POST en `init` 20: después de los tipos y sus capacidades.
 		Registrations::register();
+		// Los documentos privados de una inscripción: el manejador de descarga
+		// y la limpieza al borrarla. **No son adjuntos de WordPress** y no
+		// tocan la biblioteca de medios (ADR-0036).
+		RegistrationFiles::register();
 		SignupForm::register();
 		EventList::register();
 		EventWorkspace::register();

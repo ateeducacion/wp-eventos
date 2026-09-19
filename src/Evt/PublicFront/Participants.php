@@ -34,6 +34,18 @@ final class Participants {
 	public const HOOK = 'evt_participants';
 
 	/**
+	 * Key a row may carry with its private documents, for the screen only.
+	 *
+	 * **No es una columna.** Es lo que la pantalla necesita para pintar un
+	 * botón de descarga, y por eso no sale ni en el CSV ni en el filtro: ahí
+	 * va el nombre del documento, en la columna `files`, y nunca una ruta ni
+	 * una dirección (ADR-0036). Dentro hay `{reg, id, name}` por documento, y
+	 * de ahí sale la URL del manejador del aplicativo, que la compone
+	 * {@see RegistrationFiles::url()} al pintar.
+	 */
+	public const KEY_FILES = '_files';
+
+	/**
 	 * The columns of the table, in order, with their heading.
 	 *
 	 * Es el contrato con quien conteste al filtro: una fila es este array.
@@ -49,6 +61,7 @@ final class Participants {
 			'workshop' => 'Taller',
 			'date'     => 'Fecha de inscripción',
 			'consent'  => 'Consentimiento',
+			'files'    => 'Documentos',
 		);
 	}
 
@@ -95,6 +108,12 @@ final class Participants {
 				$valor            = $fila[ $clave ] ?? '';
 				$limpia[ $clave ] = is_scalar( $valor ) ? trim( (string) $valor ) : '';
 			}
+			// Y lo único que no es columna: los documentos, para el botón de
+			// descarga. Se copia tal cual y no lo mira nadie más que la
+			// pantalla.
+			if ( isset( $fila[ self::KEY_FILES ] ) && is_array( $fila[ self::KEY_FILES ] ) ) {
+				$limpia[ self::KEY_FILES ] = array_values( $fila[ self::KEY_FILES ] );
+			}
 			$out[] = $limpia;
 		}
 		return $out;
@@ -125,7 +144,13 @@ final class Participants {
 			if ( '' !== $taller && ( $fila['workshop'] ?? '' ) !== $taller ) {
 				continue;
 			}
-			if ( '' !== $buscado && false === strpos( self::fold( implode( ' ', $fila ) ), $buscado ) ) {
+			// Se busca en las columnas declaradas y en ninguna otra clave: lo
+			// que se pinta es lo que se filtra.
+			$texto_fila = '';
+			foreach ( array_keys( self::columns() ) as $clave ) {
+				$texto_fila .= ( $fila[ $clave ] ?? '' ) . ' ';
+			}
+			if ( '' !== $buscado && false === strpos( self::fold( $texto_fila ), $buscado ) ) {
 				continue;
 			}
 			$out[] = $fila;
