@@ -81,6 +81,10 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_answers' ),
 			),
+			RegistrationMetaKeys::REG_FILES           => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_files' ),
+			),
 			RegistrationMetaKeys::REG_TOKEN           => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_token' ),
@@ -221,6 +225,54 @@ final class RegistrationMetaRegistration {
 			} elseif ( is_scalar( $respuesta ) ) {
 				$out[ $id ] = sanitize_text_field( (string) $respuesta );
 			}
+		}
+
+		return (string) wp_json_encode( $out );
+	}
+
+	/**
+	 * Store the private file descriptors as JSON, and nothing else.
+	 *
+	 * Lo que entra tiene la forma de un descriptor de
+	 * {@see \Evt\PublicFront\RegistrationFiles} o no entra. En particular
+	 * `stored` es una **ruta relativa** a la raíz privada, con la forma que
+	 * compone el aplicativo: ni ruta absoluta, ni URL, ni identificador de
+	 * adjunto (ADR-0036).
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_files( $value ): string {
+		if ( is_string( $value ) ) {
+			$value = '' === trim( $value ) ? array() : json_decode( $value, true );
+		}
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+
+		$out = array();
+		foreach ( $value as $id => $descriptor ) {
+			$id = (string) $id;
+			if ( ! SignupQuestions::is_id( $id ) || ! is_array( $descriptor ) ) {
+				continue;
+			}
+			$opaco  = isset( $descriptor['id'] ) ? strtolower( (string) $descriptor['id'] ) : '';
+			$stored = isset( $descriptor['stored'] ) ? (string) $descriptor['stored'] : '';
+			$sha    = isset( $descriptor['sha256'] ) ? strtolower( (string) $descriptor['sha256'] ) : '';
+			if ( ! preg_match( '/^[a-f0-9]{32}$/', $opaco )
+				|| ! preg_match( '#^[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{32}\.[a-z0-9]{1,8}$#', $stored )
+				|| ! preg_match( '/^[a-f0-9]{64}$/', $sha ) ) {
+				continue;
+			}
+
+			$out[ $id ] = array(
+				'id'     => $opaco,
+				'name'   => sanitize_file_name( (string) ( $descriptor['name'] ?? '' ) ),
+				'mime'   => sanitize_mime_type( (string) ( $descriptor['mime'] ?? '' ) ),
+				'size'   => max( 0, (int) ( $descriptor['size'] ?? 0 ) ),
+				'sha256' => $sha,
+				'stored' => $stored,
+			);
 		}
 
 		return (string) wp_json_encode( $out );

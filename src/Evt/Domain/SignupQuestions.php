@@ -16,7 +16,9 @@ use Evt\Meta\RegistrationMetaKeys;
  * {@see ActivityInput}.
  *
  * Una pregunta tiene exactamente cuatro cosas —rótulo, tipo, opciones y si es
- * obligatoria— y ninguna más (ADR-0031). No hay lógica condicional y no hay
+ * obligatoria— y ninguna más (ADR-0031). Vale igual para las de tipo `file`,
+ * que la ADR-0036 añadió sin traerse nada consigo: ni tamaño propio, ni tipos
+ * propios, ni varios ficheros. No hay lógica condicional y no hay
  * reglas de validación propias: **el tipo es toda la validación que existe**.
  * Si alguna vez se añade una de esas dos cosas, esto deja de ser una lista de
  * preguntas y pasa a ser el constructor de formularios del que se sale.
@@ -216,6 +218,13 @@ final class SignupQuestions {
 	 * El tipo es toda la validación que hay: una opción de la lista es una de
 	 * la lista, y un texto corto es un texto corto.
 	 *
+	 * Las preguntas de tipo `file` **no pasan por aquí**, ni para validarse ni
+	 * para guardarse. Esto es puro y no lee `$_FILES`; el fichero es del borde
+	 * de la aplicación, se guarda en su propia meta y lo comprueba
+	 * {@see \Evt\PublicFront\RegistrationFiles} (ADR-0036). Meterlo aquí
+	 * obligaría a esta clase a saber de peticiones, que es justo lo que no
+	 * sabe.
+	 *
 	 * @param array<int, array<string, mixed>> $preguntas Normalised questions.
 	 * @param array<string, mixed>             $raw       Raw answers, keyed by question ID.
 	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
@@ -227,6 +236,10 @@ final class SignupQuestions {
 		foreach ( $preguntas as $pregunta ) {
 			$id    = (string) $pregunta['id'];
 			$valor = $raw[ $id ] ?? null;
+
+			if ( 'file' === $pregunta['type'] ) {
+				continue;
+			}
 
 			switch ( $pregunta['type'] ) {
 				case 'check':

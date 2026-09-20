@@ -10,6 +10,7 @@ namespace Evt\PublicFront\View;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
+use Evt\PublicFront\RegistrationFiles;
 
 /**
  * Quién se ha inscrito: filtro y exportación a CSV.
@@ -68,7 +69,11 @@ final class EventParticipantsPanel {
 							<tr>
 								<?php foreach ( (array) $m['people_cols'] as $clave => $rotulo ) : ?>
 									<td data-rotulo="<?php echo esc_attr( (string) $rotulo ); ?>">
-										<?php echo esc_html( '' !== (string) ( $fila[ $clave ] ?? '' ) ? (string) $fila[ $clave ] : '—' ); ?>
+										<?php if ( 'files' === $clave ) : ?>
+											<?php echo self::downloads( $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+										<?php else : ?>
+											<?php echo esc_html( '' !== (string) ( $fila[ $clave ] ?? '' ) ? (string) $fila[ $clave ] : '—' ); ?>
+										<?php endif; ?>
 									</td>
 								<?php endforeach; ?>
 							</tr>
@@ -79,6 +84,37 @@ final class EventParticipantsPanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The download links of the private documents of one row.
+	 *
+	 * El enlace se compone **aquí**, al pintar: es presentación, y por eso no
+	 * viaja dentro de la fila ni acaba en el CSV (ADR-0036). Apunta al
+	 * manejador del aplicativo, que vuelve a comprobar quién pregunta: este
+	 * botón no autoriza nada.
+	 *
+	 * @param array<string, mixed> $fila One row.
+	 * @return string
+	 */
+	private static function downloads( array $fila ): string {
+		$documentos = isset( $fila[ Participants::KEY_FILES ] ) && is_array( $fila[ Participants::KEY_FILES ] )
+			? $fila[ Participants::KEY_FILES ]
+			: array();
+		if ( array() === $documentos ) {
+			return '—';
+		}
+
+		$enlaces = array();
+		foreach ( $documentos as $documento ) {
+			$nombre    = (string) ( $documento['name'] ?? '' );
+			$enlaces[] = sprintf(
+				'<a class="evt-descarga" href="%1$s" download>%2$s</a>',
+				esc_url( RegistrationFiles::url( (int) ( $documento['reg'] ?? 0 ), (string) ( $documento['id'] ?? '' ) ) ),
+				esc_html( '' !== $nombre ? $nombre : 'Descargar' )
+			);
+		}
+		return implode( ' ', $enlaces );
 	}
 
 	/**
