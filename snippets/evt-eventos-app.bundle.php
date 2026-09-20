@@ -2749,18 +2749,52 @@ final class EventAccess {
 
 
 
+
+
+
+
+
+
 	public static function map_meta_cap( array $caps, string $cap, int $user_id, array $args ): array {
-		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post' ), true ) ) {
+		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post', 'read_post' ), true ) ) {
 			return $caps;
 		}
 		$post_id = isset( $args[0] ) ? (int) $args[0] : 0;
 		if ( $post_id <= 0 || ! isset( self::scoped_types()[ (string) get_post_type( $post_id ) ] ) ) {
 			return $caps;
 		}
+		if ( 'read_post' === $cap ) {
+			return self::map_read_post( $caps, $user_id, $post_id );
+		}
 		if ( ! self::can_edit( $user_id, $post_id ) ) {
 			return array( 'do_not_allow' );
 		}
 		return $caps;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function map_read_post( array $caps, int $user_id, int $post_id ): array {
+		$status = get_post_status_object( (string) get_post_status( $post_id ) );
+		if ( null !== $status && $status->public ) {
+			return $caps;
+		}
+		return self::can_open( $user_id, $post_id ) ? $caps : array( 'do_not_allow' );
 	}
 
 
