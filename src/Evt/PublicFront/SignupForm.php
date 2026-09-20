@@ -128,10 +128,17 @@ final class SignupForm {
 			: array();
 
 		$v = Registrations::validate( $event_id, $raw, $respuestas );
-		if ( ! $v['ok'] ) {
+
+		// Los ficheros se comprueban **antes** de crear nada: si una pregunta
+		// obligatoria viene sin documento, o el que viene no pasa la política,
+		// no llega a existir ninguna inscripción (ADR-0036).
+		$ficheros = RegistrationFiles::submitted( Registrations::questions( $event_id ) );
+
+		if ( ! $v['ok'] || ! $ficheros['ok'] ) {
+			$porque       = RegistrationFiles::why( $ficheros['errors'] );
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => RegistrationInput::why( $v['errors'] ),
+				'message' => '' !== $porque && $v['ok'] ? $porque : RegistrationInput::why( $v['errors'] ),
 			);
 			return;
 		}
@@ -141,6 +148,19 @@ final class SignupForm {
 			self::$notice = array(
 				'level'   => 'error',
 				'message' => 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+			);
+			return;
+		}
+
+		// Y si guardar un documento falla con la inscripción ya creada, se
+		// deshace entera: ni inscripción a medias, ni fichero huérfano, ni
+		// descriptor apuntando a nada. `RegistrationFiles::store_all()` ya ha
+		// borrado los que había guardado antes de fallar.
+		if ( ! RegistrationFiles::store_all( $id, $ficheros['files'] ) ) {
+			wp_delete_post( $id, true );
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'No se ha podido guardar el documento que adjuntó, así que la inscripción no se ha registrado. Vuelva a intentarlo.',
 			);
 			return;
 		}

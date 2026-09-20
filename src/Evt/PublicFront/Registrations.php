@@ -105,14 +105,29 @@ final class Registrations {
 			$meta   = self::meta( $inscripcion->ID );
 			$taller = (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ];
 
-			$fila = array(
+			// Los documentos privados: en la columna va su **nombre**, que es lo
+			// que se lee y lo que se exporta; la descarga la compone la pantalla
+			// con el identificador opaco. Ni una ruta ni una dirección entra
+			// aquí (ADR-0036).
+			$documentos = array();
+			foreach ( RegistrationFiles::descriptors( (int) $inscripcion->ID ) as $descriptor ) {
+				$documentos[] = array(
+					'reg'  => (int) $inscripcion->ID,
+					'id'   => (string) $descriptor['id'],
+					'name' => (string) ( $descriptor['name'] ?? '' ),
+				);
+			}
+
+			$fila                            = array(
 				'name'     => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
 				'email'    => $meta[ RegistrationMetaKeys::REG_EMAIL ],
 				'centre'   => $meta[ RegistrationMetaKeys::REG_CENTRE ],
 				'workshop' => $talleres[ $taller ] ?? '',
 				'date'     => get_the_date( 'Y-m-d H:i', $inscripcion ),
 				'consent'  => self::consent_text( $meta ),
+				'files'    => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
+			$fila[ Participants::KEY_FILES ] = $documentos;
 
 			// Una columna por pregunta, con el rótulo por cabecera. La clave es
 			// el identificador, así que reescribir el rótulo mueve la cabecera

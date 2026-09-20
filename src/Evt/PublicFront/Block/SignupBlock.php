@@ -9,6 +9,7 @@ namespace Evt\PublicFront\Block;
 
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\SignupForm;
 
 /**
@@ -92,7 +93,10 @@ final class SignupBlock {
 	 * @return string
 	 */
 	private static function form( int $evento ): string {
-		$html  = '<form class="evt-ins" method="post">';
+		// `multipart/form-data` **solo** porque ahora puede llevar un documento
+		// (ADR-0036). No se convierte nada a Base64 ni viaja por JavaScript: el
+		// fichero sube como un fichero HTTP normal.
+		$html  = '<form class="evt-ins" method="post" enctype="multipart/form-data">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
 
 		$html .= '<fieldset class="evt-ins__nucleo"><legend>Sus datos</legend>';
@@ -285,6 +289,20 @@ final class SignupBlock {
 				esc_attr( $name ),
 				$p['required'] ? ' required' : '',
 				$rotulo
+			);
+		}
+
+		if ( 'file' === $p['type'] ) {
+			return sprintf(
+				'<p class="evt-campo evt-campo--fichero"><label for="%1$s">%2$s</label>'
+					. '<input type="file" id="%1$s" name="%3$s" accept="%4$s"%5$s>'
+					. '<small>Un solo documento, de hasta %6$s. Se admiten PDF, JPG, PNG, DOCX y ODT.</small></p>',
+				esc_attr( $id ),
+				$rotulo,
+				esc_attr( RegistrationFiles::FIELD . '[' . $p['id'] . ']' ),
+				esc_attr( implode( ',', array_values( RegistrationFiles::mimes() ) ) ),
+				$p['required'] ? ' required' : '',
+				esc_html( size_format( RegistrationFiles::max_bytes() ) )
 			);
 		}
 
