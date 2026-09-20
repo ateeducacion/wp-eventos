@@ -153,20 +153,148 @@ if ( ! function_exists( 'evt_strip_php_tags' ) ) {
 	}
 }
 
+if ( ! function_exists( 'evt_snippet_managed_state' ) ) {
+	/**
+	 * Build the canonical, comparable state of a snippet's repository-managed fields.
+	 *
+	 * Both sides of a comparison — the file on disk and the row already in the
+	 * table — go through this same normalisation before they are compared or
+	 * hashed (`evt_snippet_fingerprint()`), so a difference that means nothing
+	 * (an extra `<?php`, a trailing newline, tags in another order) never reads
+	 * as a real change. See ADR-0035.
+	 *
+	 * @param string        $code     Snippet code, with or without PHP tags.
+	 * @param string        $desc     Snippet description.
+	 * @param string        $scope    Snippet scope.
+	 * @param int           $priority Snippet priority.
+	 * @param array<string> $tags     Snippet tags, in any order.
+	 * @return array{code:string,desc:string,scope:string,priority:int,tags:array<string>} Canonical managed state.
+	 */
+	function evt_snippet_managed_state( string $code, string $desc, string $scope, int $priority, array $tags ): array {
+		$tags = array_values( array_unique( array_map( 'strval', $tags ) ) );
+		sort( $tags, SORT_STRING );
+
+		return array(
+			'code'     => evt_strip_php_tags( $code ),
+			'desc'     => $desc,
+			'scope'    => $scope,
+			'priority' => $priority,
+			'tags'     => $tags,
+		);
+	}
+}
+
+if ( ! function_exists( 'evt_snippet_fingerprint' ) ) {
+	/**
+	 * SHA-256 fingerprint of a snippet's managed state.
+	 *
+	 * A deterministic JSON encoding — fixed keys, no ambiguous concatenation —
+	 * of the array `evt_snippet_managed_state()` returns. Two states with the
+	 * same fingerprint are, for sync purposes, the same snippet; this is what
+	 * decides `updated` versus `unchanged`, never the EVT application version.
+	 *
+	 * @param array{code:string,desc:string,scope:string,priority:int,tags:array<string>} $managed_state As returned by evt_snippet_managed_state().
+	 * @return string Hex-encoded SHA-256 hash.
+	 */
+	function evt_snippet_fingerprint( array $managed_state ): string {
+		return hash( 'sha256', (string) wp_json_encode( $managed_state, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+	}
+}
+
+if ( ! function_exists( 'evt_activate_snippet_with_fallback' ) ) {
+	/**
+	 * Activate a snippet, falling back to a forced activation on the plugin's own rejection.
+	 *
+	 * Shared by every path that ends in activation — creating, updating and
+	 * reactivating an unchanged-but-inactive snippet all need the same
+	 * fallback to `evt_force_activate_snippet()`.
+	 *
+	 * @param int $id Snippet ID.
+	 * @return array{active:bool,error:string} Whether activation succeeded, and any warning/error message.
+	 */
+	function evt_activate_snippet_with_fallback( int $id ): array {
+		// activate_snippet() returns the Snippet on success and an error
+		// message string on failure (e.g. the code does not pass validation).
+		$activation = \Code_Snippets\activate_snippet( $id );
+
+		if ( ! is_string( $activation ) ) {
+			return array(
+				'active' => true,
+				'error'  => '',
+			);
+		}
+
+		// Code Snippets ≥ 3.10 validates by bare identifier name, ignoring
+		// namespaces, and skips only `class` bodies. En este entorno de
+		// desarrollo se activa igualmente: un entorno que nadie puede
+		// provisionar es peor que un aviso. En producción el despliegue pasa
+		// por la herramienta de sincronización, que sí mira el veredicto.
+		if ( evt_force_activate_snippet( $id ) ) {
+			return array(
+				'active' => true,
+				'error'  => 'activado saltando el validador de Code Snippets: ' . $activation,
+			);
+		}
+
+		return array(
+			'active' => false,
+			'error'  => $activation,
+		);
+	}
+}
+
+if ( ! function_exists( 'evt_settle_activation' ) ) {
+	/**
+	 * Leave a just-saved snippet active, activating it only if the row is not.
+	 *
+	 * La autoridad es la fila persistida, releída después de guardar, y no el
+	 * objeto que devuelve `save_snippet()`. Ese objeto sale de un
+	 * `get_snippet()` que el plugin hace **antes** de su
+	 * `clean_snippets_cache()` final, y `get_snippet()` devuelve tal cual la
+	 * instancia que tenga en la caché `all_snippets_<tabla>` sin volver a
+	 * leer la base de datos: puede ser el snippet de antes del guardado, con
+	 * el `active` de antes. Aquí la caché ya está limpia, así que este
+	 * `get_snippet()` sí va a la tabla.
+	 *
+	 * @param int $id Snippet ID.
+	 * @return array{active:bool,error:string} Whether the snippet ends up active, and any warning/error message.
+	 */
+	function evt_settle_activation( int $id ): array {
+		$stored = \Code_Snippets\get_snippet( $id );
+
+		if ( $stored && $stored->active ) {
+			return array(
+				'active' => true,
+				'error'  => '',
+			);
+		}
+
+		return evt_activate_snippet_with_fallback( $id );
+	}
+}
+
 if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 	/**
 	 * Sync every *.php file in a directory into the Code Snippets table.
 	 *
 	 * Existing snippets are matched by exact name (the `Snippet Name:` header),
 	 * so the sync is idempotent: re-running it updates instead of duplicating.
-	 * Every synced snippet is (re)activated afterwards.
+	 * An existing snippet is only saved again when its managed state actually
+	 * changed (`evt_snippet_fingerprint()`); an unchanged-but-inactive snippet
+	 * is only reactivated, never re-saved. A changed snippet is saved from a
+	 * clone of the existing one, and is only activated afterwards when the
+	 * persisted row — read again, not the object save_snippet() returned —
+	 * is not active already. A locked snippet whose code differs is reported
+	 * as an error instead of being saved, because Code Snippets would
+	 * silently keep the stored code. See ADR-0035.
 	 *
 	 * Result entries are keyed by file basename and contain:
-	 * - name   (string) Snippet name from the header.
-	 * - id     (int)    Snippet ID in the table (0 on save failure).
-	 * - status (string) 'created' | 'updated' | 'error'.
-	 * - active (bool)   Whether activation succeeded.
-	 * - error  (string) Error message when something failed (in Spanish, UI-facing).
+	 * - name        (string) Snippet name from the header.
+	 * - id          (int)    Snippet ID in the table (0 on save failure).
+	 * - status      (string) 'created' | 'updated' | 'unchanged' | 'error'.
+	 * - active      (bool)   Whether the snippet ends up active.
+	 * - error       (string) Error message when something failed (in Spanish, UI-facing).
+	 * - reactivated (bool)   Whether an unchanged-but-inactive snippet was actually reactivated.
 	 *
 	 * @param string $dir Absolute path to the directory holding the snippet files.
 	 * @return array<string,array<string,mixed>> Result per snippet file; empty when Code Snippets is not active.
@@ -198,11 +326,12 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 
 			if ( false === $code ) {
 				$results[ $basename ] = array(
-					'name'   => '',
-					'id'     => 0,
-					'status' => 'error',
-					'active' => false,
-					'error'  => 'No se pudo leer el fichero.',
+					'name'        => '',
+					'id'          => 0,
+					'status'      => 'error',
+					'active'      => false,
+					'error'       => 'No se pudo leer el fichero.',
+					'reactivated' => false,
 				);
 				continue;
 			}
@@ -211,11 +340,12 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 
 			if ( '' === $header['name'] ) {
 				$results[ $basename ] = array(
-					'name'   => '',
-					'id'     => 0,
-					'status' => 'error',
-					'active' => false,
-					'error'  => 'Falta la cabecera "Snippet Name:" en el fichero.',
+					'name'        => '',
+					'id'          => 0,
+					'status'      => 'error',
+					'active'      => false,
+					'error'       => 'Falta la cabecera "Snippet Name:" en el fichero.',
+					'reactivated' => false,
 				);
 				continue;
 			}
@@ -229,53 +359,121 @@ if ( ! function_exists( 'evt_sync_snippets_from_dir' ) ) {
 				'priority' => $header['priority'],
 			);
 
-			$is_update = isset( $existing[ $header['name'] ] );
+			$existing_snippet = $existing[ $header['name'] ] ?? null;
 
-			if ( $is_update ) {
-				$args['id'] = (int) $existing[ $header['name'] ]->id;
+			// Existing and unchanged: never re-save. Saving rewrites the row,
+			// updates `modified`, deactivates/reactivates the snippet, re-runs
+			// its validation (which executes the code) and clears the snippet
+			// caches — none of which represents an actual change. See ADR-0035.
+			if ( null !== $existing_snippet ) {
+				$desired_fingerprint = evt_snippet_fingerprint(
+					evt_snippet_managed_state( $args['code'], $args['desc'], $args['scope'], (int) $args['priority'], $args['tags'] )
+				);
+				$current_fingerprint = evt_snippet_fingerprint(
+					evt_snippet_managed_state(
+						(string) $existing_snippet->code,
+						(string) $existing_snippet->desc,
+						(string) $existing_snippet->scope,
+						(int) $existing_snippet->priority,
+						(array) $existing_snippet->tags
+					)
+				);
+
+				if ( hash_equals( $current_fingerprint, $desired_fingerprint ) ) {
+					if ( $existing_snippet->active ) {
+						$results[ $basename ] = array(
+							'name'        => $header['name'],
+							'id'          => (int) $existing_snippet->id,
+							'status'      => 'unchanged',
+							'active'      => true,
+							'error'       => '',
+							'reactivated' => false,
+						);
+						continue;
+					}
+
+					$activation           = evt_activate_snippet_with_fallback( (int) $existing_snippet->id );
+					$results[ $basename ] = array(
+						'name'        => $header['name'],
+						'id'          => (int) $existing_snippet->id,
+						'status'      => 'unchanged',
+						'active'      => $activation['active'],
+						'error'       => $activation['error'],
+						'reactivated' => $activation['active'],
+					);
+					continue;
+				}
+
+				// Un snippet bloqueado conserva su código pase lo que pase:
+				// save_snippet() lo restaura desde la fila cuando el snippet
+				// estaba bloqueado y sigue estándolo. Guardar aquí diría
+				// «actualizado» dejando el código viejo en la tabla, y la
+				// siguiente sincronización encontraría otra vez la misma
+				// diferencia. Se informa del conflicto sin tocar nada —ni el
+				// candado, ni el código, ni la metadatos gestionada, que si no
+				// quedaría aplicada a medias— y se deja que lo desbloquee
+				// quien corresponda.
+				if ( $existing_snippet->locked
+					&& evt_strip_php_tags( (string) $existing_snippet->code ) !== $args['code'] ) {
+					$results[ $basename ] = array(
+						'name'        => $header['name'],
+						'id'          => (int) $existing_snippet->id,
+						'status'      => 'error',
+						'active'      => (bool) $existing_snippet->active,
+						'error'       => 'El snippet está bloqueado en Code Snippets y su código difiere del repositorio; desbloquéelo para poder actualizarlo.',
+						'reactivated' => false,
+					);
+					continue;
+				}
+
+				// Changed: se parte de un clon del snippet existente y se le
+				// aplican solo los campos gestionados. Del objeto existente,
+				// porque uno nuevo traería los valores por defecto de la clase
+				// para todo lo demás —active, locked, condition_id, revision,
+				// cloud_id— y `save_snippet()` los escribiría encima de lo que
+				// hubiera en la fila. Y de un **clon**, porque el objeto que
+				// devuelve `get_snippets()` es el que el plugin guarda en su
+				// caché: `get_snippet()` devuelve esa misma instancia sin
+				// releer la tabla, así que modificarlo aquí le cambiaría a
+				// `save_snippet()` el «estado anterior» con el que se compara.
+				$snippet = clone $existing_snippet;
+				$snippet->set_fields( $args );
+			} else {
+				// Always build a Snippet object: save_snippet() reads properties
+				// before converting plain arrays, which warns on PHP 8.
+				$class   = evt_code_snippets_model_class();
+				$snippet = new $class( $args );
 			}
 
-			// Always build a Snippet object: save_snippet() reads properties
-			// before converting plain arrays, which warns on PHP 8.
-			$class   = evt_code_snippets_model_class();
-			$snippet = new $class( $args );
-			$saved   = \Code_Snippets\save_snippet( $snippet );
+			$saved = \Code_Snippets\save_snippet( $snippet );
 
 			if ( ! $saved || ! $saved->id ) {
 				$results[ $basename ] = array(
-					'name'   => $header['name'],
-					'id'     => 0,
-					'status' => 'error',
-					'active' => false,
-					'error'  => 'No se pudo guardar el snippet en la base de datos.',
+					'name'        => $header['name'],
+					'id'          => 0,
+					'status'      => 'error',
+					'active'      => false,
+					'error'       => 'No se pudo guardar el snippet en la base de datos.',
+					'reactivated' => false,
 				);
 				continue;
 			}
 
-			// activate_snippet() returns the Snippet on success and an error
-			// message string on failure (e.g. the code does not pass validation).
-			$activation = \Code_Snippets\activate_snippet( (int) $saved->id );
-			$aviso      = '';
-
-			if ( is_string( $activation ) ) {
-				// Code Snippets ≥ 3.10 validates by bare identifier name, ignoring
-				// namespaces, and skips only `class` bodies. En este entorno de
-				// desarrollo se activa igualmente: un entorno que nadie puede
-				// provisionar es peor que un aviso. En producción el despliegue
-				// pasa por la herramienta de sincronización, que sí mira el
-				// veredicto.
-				if ( evt_force_activate_snippet( (int) $saved->id ) ) {
-					$aviso      = 'activado saltando el validador de Code Snippets: ' . $activation;
-					$activation = null;
-				}
-			}
+			// Manda la fila persistida, releída después de guardar: un
+			// `updated` puede salir inactivo —save_snippet() revalida el
+			// código de un snippet activo y lo desactiva si falla— y hay que
+			// recuperarlo, mientras que activar uno que ya está activo es un
+			// UPDATE de cero filas, que Code Snippets da por fallido y saldría
+			// como un aviso que no corresponde a ningún problema.
+			$activation = evt_settle_activation( (int) $saved->id );
 
 			$results[ $basename ] = array(
-				'name'   => $header['name'],
-				'id'     => (int) $saved->id,
-				'status' => $is_update ? 'updated' : 'created',
-				'active' => ! is_string( $activation ),
-				'error'  => is_string( $activation ) ? $activation : $aviso,
+				'name'        => $header['name'],
+				'id'          => (int) $saved->id,
+				'status'      => null !== $existing_snippet ? 'updated' : 'created',
+				'active'      => $activation['active'],
+				'error'       => $activation['error'],
+				'reactivated' => false,
 			);
 		}
 
