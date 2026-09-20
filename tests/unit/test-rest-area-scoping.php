@@ -11,6 +11,7 @@
  * @package Evt
  */
 
+use Evt\Access\EventAccess;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
@@ -119,19 +120,36 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
 	}
 
-	/** Classic-editor tax_input cannot move an event to another scope. */
+	/** Saving one branch of a shared event must not remove the other branch. */
+	public function test_rest_preserves_foreign_scope_on_shared_event() {
+		$event = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $event, array( 'evt_area' => array( $this->area_owner ) ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Admin form rejects a foreign term before saving; programmatic writes are not given a false empty-content error. */
 	public function test_classic_post_rejects_foreign_scope_without_changing_terms() {
 		$event = $this->event( $this->owner, array( $this->area_owner ) );
 		$this->acting_as( $this->owner );
-		$result = wp_update_post(
+		$result = EventAccess::admin_area_error(
 			array(
-				'ID'        => $event,
+				'post_type' => 'evt_event',
 				'tax_input' => array( 'evt_area' => array( $this->area_other ) ),
-			),
-			true
+			)
 		);
 		$this->assertWPError( $result );
 		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+		$this->assertFalse( has_filter( 'wp_insert_post_empty_content', array( EventAccess::class, 'validate_classic_areas' ) ) );
+		$updated = wp_update_post(
+			array(
+				'ID'        => $event,
+				'tax_input' => array( 'evt_area' => array( $this->area_owner ) ),
+			),
+			true
+		);
+		$this->assertSame( $event, $updated );
 	}
 
 	/**

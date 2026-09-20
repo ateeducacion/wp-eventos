@@ -502,8 +502,7 @@ final class EventList {
 			'notice'      => self::flash(),
 			'page_id'     => self::hidden_page_id(),
 			'scoped'      => ! $all_areas,
-			// Con una sola área el desplegable no elige nada: siempre la misma.
-			'area_filter' => $all_areas || count( EventAccess::user_areas( $user_id ) ) > 1,
+			'area_filter' => $all_areas || count( EventAccess::scope_areas( $user_id ) ) > 1,
 			'subtitle'    => $all_areas
 				? 'Todos los eventos, de todos los ámbitos.'
 				: 'Solo los eventos de su ámbito y sus descendientes.',

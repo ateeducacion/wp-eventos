@@ -64,7 +64,7 @@ final class EventAccess {
 	public static function register(): void {
 		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		add_filter( 'rest_pre_insert_evt_event', array( self::class, 'validate_rest_areas' ), 10, 2 );
-		add_filter( 'wp_insert_post_empty_content', array( self::class, 'validate_classic_areas' ), 10, 2 );
+		add_action( 'admin_init', array( self::class, 'validate_admin_areas' ) );
 		add_action( 'save_post_' . EventPostType::POST_TYPE, array( self::class, 'stamp_area' ), 20 );
 		add_action( 'save_post_' . SpeakerPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 		add_action( 'save_post_' . ActivityPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
@@ -136,7 +136,7 @@ final class EventAccess {
 				$ids[] = $id;
 			}
 		}
-		return $ids;
+		return 1 === count( $ids ) ? $ids : array();
 	}
 
 	/**
@@ -181,6 +181,10 @@ final class EventAccess {
 		if ( ! self::may_assign_areas( (array) $request->get_param( EventTaxonomies::AREA ) ) ) {
 			return new \WP_Error( 'evt_area_forbidden', 'Ámbito no permitido.', array( 'status' => 403 ) );
 		}
+		if ( $request->get_param( 'id' ) ) {
+			$foreign = array_diff( self::post_areas( absint( $request->get_param( 'id' ) ) ), self::scope_areas() );
+			$request->set_param( EventTaxonomies::AREA, array_values( array_unique( array_merge( (array) $request->get_param( EventTaxonomies::AREA ), $foreign ) ) ) );
+		}
 		return $prepared;
 	}
 
@@ -209,18 +213,42 @@ final class EventAccess {
 	}
 
 	/**
-	 * Block classic-editor tax_input before wp_insert_post writes any terms.
+	 * Validate only the interactive wp-admin post form, before WordPress writes.
 	 *
-	 * @param bool  $is_empty Existing core decision.
-	 * @param array $postarr Raw post data.
-	 * @return bool
+	 * Programmatic wp_insert_post calls do not pass through this request guard.
 	 */
-	public static function validate_classic_areas( bool $is_empty, array $postarr ): bool {
-		if ( EventPostType::POST_TYPE !== ( $postarr['post_type'] ?? '' ) || ! isset( $postarr['tax_input'][ EventTaxonomies::AREA ] ) ) {
-			return $is_empty;
+	public static function validate_admin_areas(): void {
+		global $pagenow;
+		// Core verifies the post nonce before writing; this guard does not persist data.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$action = isset( $_POST['action'] ) ? (string) $_POST['action'] : '';
+		if ( ! ( 'post.php' === $pagenow && 'editpost' === $action ) && ! ( 'admin-ajax.php' === $pagenow && 'inline-save' === $action ) && ! ( 'edit.php' === $pagenow && in_array( $action, array( 'edit', 'bulk_edit' ), true ) ) ) {
+			return;
 		}
-		$requested = $postarr['tax_input'][ EventTaxonomies::AREA ];
-		return ! self::may_assign_areas( is_array( $requested ) ? $requested : explode( ',', (string) $requested ) ) || $is_empty;
+		$error = self::admin_area_error( wp_unslash( $_POST ) );
+		if ( $error instanceof \WP_Error ) {
+			wp_die( esc_html( $error->get_error_message() ), 'Ámbito no permitido', array( 'response' => 403 ) );
+		}
+		if ( ! self::can_edit_all_areas() && isset( $_POST['tax_input'][ EventTaxonomies::AREA ], $_POST['post_ID'] ) ) {
+			$foreign                                     = array_diff( self::post_areas( absint( $_POST['post_ID'] ) ), self::scope_areas() );
+			$_POST['tax_input'][ EventTaxonomies::AREA ] = array_values( array_unique( array_merge( (array) $_POST['tax_input'][ EventTaxonomies::AREA ], $foreign ) ) );
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	}
+
+	/**
+	 * Return an error before an interactive post request can alter its terms.
+	 *
+	 * @param array<string, mixed> $request Unslashed admin request.
+	 * @return \WP_Error|null
+	 */
+	public static function admin_area_error( array $request ) {
+		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) ) {
+			return null;
+		}
+		$requested = $request['tax_input'][ EventTaxonomies::AREA ];
+		$requested = is_array( $requested ) ? $requested : explode( ',', (string) $requested );
+		return self::may_assign_areas( $requested ) ? null : new \WP_Error( 'evt_area_forbidden', 'No puede asignar este ámbito al evento. No se ha guardado ningún cambio.' );
 	}
 
 	/**

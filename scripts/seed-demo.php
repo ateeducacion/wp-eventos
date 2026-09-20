@@ -26,9 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * demuestra que la organización edita también lo de sus compañeras. Y
  * `organizacion3` está en otra área, que es lo que demuestra el acotado.
  *
- * `coordinacion` conserva el nombre del rol retirado el 2026-09-13, pero hoy es
- * una organización más: la que pertenece a DOS áreas a la vez, que es el único
- * caso que enseña el filtro por área del listado. No tiene ámbito completo.
+ * `coordinacion` conserva el nombre del rol retirado el 2026-09-13, pero hoy
+ * solo tiene un ámbito, como las demás cuentas de edición.
  *
  * El que trabaja sobre todas las áreas es `admin`, el administrador que ya crea
  * wp-env: el aplicativo tiene un solo rol propio y la administración es la
@@ -38,25 +37,35 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function evt_demo_accounts(): array {
 	return array(
-		'coordinacion'  => array(
+		'coordinacion'     => array(
 			'role'  => 'evt_organiser',
-			'areas' => array( 'innovacion', 'convivencia-escolar' ),
-			'label' => 'Coordinación (dos áreas)',
+			'areas' => array( 'ambito-1' ),
+			'label' => 'Coordinación (Ámbito 1)',
 		),
-		'organizacion'  => array(
+		'organizacion'     => array(
 			'role'  => 'evt_organiser',
-			'areas' => array( 'innovacion' ),
-			'label' => 'Organización (Innovación)',
+			'areas' => array( 'ambito-1' ),
+			'label' => 'Organización (Ámbito 1)',
 		),
-		'organizacion2' => array(
+		'organizacion2'    => array(
 			'role'  => 'evt_organiser',
-			'areas' => array( 'innovacion' ),
-			'label' => 'Organización 2 (Innovación)',
+			'areas' => array( 'ambito-1' ),
+			'label' => 'Organización 2 (Ámbito 1)',
 		),
-		'organizacion3' => array(
+		'organizacion3'    => array(
 			'role'  => 'evt_organiser',
-			'areas' => array( 'convivencia-escolar' ),
-			'label' => 'Organización 3 (Convivencia escolar)',
+			'areas' => array( 'ambito-2' ),
+			'label' => 'Organización 3 (Ámbito 2)',
+		),
+		'editor-ambito'    => array(
+			'role'  => 'editor',
+			'areas' => array( 'ambito-1' ),
+			'label' => 'Editor (Ámbito 1)',
+		),
+		'editor-subambito' => array(
+			'role'  => 'editor',
+			'areas' => array( 'subambito-1' ),
+			'label' => 'Editor (Subámbito 1)',
 		),
 	);
 }
@@ -100,7 +109,7 @@ function evt_demo_events(): array {
 			'slug'      => 'jornadas-tecnologia-educativa',
 			'title'     => 'III Jornadas de Tecnología Educativa',
 			'author'    => 'organizacion',
-			'area'      => 'innovacion',
+			'area'      => 'subambito-1',
 			'type'      => 'jornadas',
 			'start'     => $proximo_inicio,
 			'end'       => $proximo_fin,
@@ -278,7 +287,7 @@ function evt_demo_events(): array {
 			'slug'     => 'encuentro-escuelas-rurales',
 			'title'    => 'Encuentro de Escuelas Rurales',
 			'author'   => 'organizacion3',
-			'area'     => 'convivencia-escolar',
+			'area'     => 'ambito-2',
 			'type'     => 'encuentro',
 			'start'    => $abierto_inicio,
 			'end'      => $abierto_fin,
@@ -326,9 +335,21 @@ function evt_demo_events(): array {
 					'type'    => 'contacto',
 					'order'   => 4,
 					'status'  => 'publish',
-					'content' => 'Organiza el área de Convivencia escolar con la colaboración del Centro de formación Oeste.',
+					'content' => 'Organiza el Ámbito 2 con la colaboración de un centro de demostración.',
 				),
 			),
+		),
+		array(
+			'slug'     => 'evento-subambito-2',
+			'title'    => 'Evento del Subámbito 2',
+			'author'   => 'editor-ambito',
+			'area'     => 'subambito-2',
+			'type'     => 'jornadas',
+			'start'    => $proximo_inicio,
+			'end'      => $proximo_fin,
+			'venue'    => 'Sede de demostración',
+			'meta'     => array(),
+			'sections' => array(),
 		),
 	);
 }

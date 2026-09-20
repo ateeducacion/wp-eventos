@@ -114,6 +114,11 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		EventTaxonomies::save_fields( $area );
 		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
 		$this->assertSame( $image, (int) get_term_meta( $area, EventTaxonomies::IMAGE_ID, true ) );
+		$_POST[ EventTaxonomies::EMAIL ]    = '@@@';
+		$_POST[ EventTaxonomies::IMAGE_ID ] = 'not-an-image';
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+		$this->assertSame( $image, (int) get_term_meta( $area, EventTaxonomies::IMAGE_ID, true ) );
 
 		$this->acting_as( $this->organiser() );
 		$_POST[ EventTaxonomies::EMAIL ] = 'attacker@example.org';
@@ -127,5 +132,23 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::EMAIL ) );
 		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::IMAGE_ID ) );
 		$_POST = array();
+	}
+
+	/** Native selectors expose only effective descendants with unambiguous paths. */
+	public function test_scope_options_follow_the_tree() {
+		$root    = $this->area( 'Ámbito general' );
+		$service = $this->area( 'Ámbito 1' );
+		$child   = $this->area( 'Subámbito' );
+		$other   = $this->area( 'Ámbito 2' );
+		wp_update_term( $service, EventTaxonomies::AREA, array( 'parent' => $root ) );
+		wp_update_term( $child, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $other, EventTaxonomies::AREA, array( 'parent' => $root ) );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
+		$this->assertEqualsCanonicalizing( array( $service, $child ), array_keys( EventTaxonomies::area_options( $editor ) ) );
+		$this->assertSame( 'Ámbito general › Ámbito 1 › Subámbito', EventTaxonomies::area_options( $editor )[ $child ] );
+		$this->assertArrayNotHasKey( $other, EventTaxonomies::area_options( $editor ) );
+		$this->acting_as( $editor );
+		$this->assertEqualsCanonicalizing( array( $service, $child ), EventTaxonomies::rest_area_query( array() )['include'] );
 	}
 }

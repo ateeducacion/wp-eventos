@@ -308,13 +308,21 @@ class Test_Event_List extends WP_UnitTestCase {
 	 */
 	public function test_the_area_dropdown_only_shows_when_there_is_a_choice() {
 		$una  = $this->area( 'Formación del Profesorado' );
-		$otra = $this->area( 'Innovación' );
+		$otra = $this->area( 'Subámbito A' );
+		$dos  = $this->area( 'Subámbito B' );
+		wp_update_term( $otra, 'evt_area', array( 'parent' => $una ) );
+		wp_update_term( $dos, 'evt_area', array( 'parent' => $una ) );
+		$first  = $this->event( $this->administrator(), array( $otra ), array(), array( 'post_title' => 'Evento A' ) );
+		$second = $this->event( $this->administrator(), array( $dos ), array(), array( 'post_title' => 'Evento B' ) );
 
 		$this->acting_as( $this->organiser( array( $una ) ) );
-		$this->assertFalse( EventList::model()['area_filter'] );
-
-		$this->acting_as( $this->organiser( array( $una, $otra ) ) );
 		$this->assertTrue( EventList::model()['area_filter'] );
+		$this->assertEqualSets( array( $first, $second ), $this->ids( EventList::model() ) );
+		$_GET[ EventList::VAR_AREA ] = (string) $otra;
+		$this->assertSame( array( $first ), $this->ids( EventList::model() ) );
+		$_GET[ EventList::VAR_AREA ] = (string) $dos;
+		$this->assertSame( array( $second ), $this->ids( EventList::model() ) );
+		unset( $_GET[ EventList::VAR_AREA ] );
 
 		$this->acting_as( $this->administrator() );
 		$this->assertTrue( EventList::model()['area_filter'] );

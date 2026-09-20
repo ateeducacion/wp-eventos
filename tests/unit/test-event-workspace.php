@@ -577,6 +577,31 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		);
 	}
 
+	/** An editor can update a shared event without removing another branch. */
+	public function test_shared_event_keeps_all_organising_scopes() {
+		$mine    = $this->area( 'Ámbito 1' );
+		$foreign = $this->area( 'Ámbito 2' );
+		$editor  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $mine ) );
+		$event = $this->event( $editor, array( $mine, $foreign ) );
+		$this->submit(
+			$editor,
+			EventWorkspace::PANEL_SETTINGS,
+			$event,
+			0,
+			array(
+				EventWorkspace::FIELD_TITLE => 'Evento compartido',
+				EventWorkspace::FIELD_AREA  => array( $mine ),
+				EventMetaKeys::START_DATE   => '2026-10-01',
+			)
+		);
+		$this->assertEqualsCanonicalizing( array( $mine, $foreign ), EventAccess::post_areas( $event ) );
+		$this->acting_as( $editor );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $event;
+		$model                             = EventWorkspace::model();
+		$this->assertEqualsCanonicalizing( array( $mine, $foreign ), array_map( 'intval', explode( ',', $model['values'][ EventWorkspace::FIELD_AREA ] ) ) );
+	}
+
 	// ─── el panel de apariencia ────────────────────────────────────────────
 
 	/**

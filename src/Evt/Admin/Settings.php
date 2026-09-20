@@ -188,7 +188,7 @@ final class Settings {
 				</tbody>
 			</table>
 
-			<h2>Roles del aplicativo</h2>
+			<h2>Roles del aplicativo y Editor nativo</h2>
 			<?php if ( ! function_exists( 'evt_roles_status' ) ) : ?>
 				<p>El snippet <code>EVT — Roles y perfiles</code> no está activo, así que no hay roles que revisar.</p>
 			<?php else : ?>
@@ -201,6 +201,8 @@ final class Settings {
 								<?php
 								if ( empty( $estado['exists'] ) ) {
 									echo 'Falta el rol';
+								} elseif ( ! empty( $estado['forbidden'] ) ) {
+									echo esc_html( 'Capacidades indebidas: ' . implode( ', ', (array) $estado['forbidden'] ) );
 								} elseif ( ! empty( $estado['missing'] ) ) {
 									echo esc_html( 'Sin ' . implode( ', ', (array) $estado['missing'] ) );
 								} else {

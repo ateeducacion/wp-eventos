@@ -50,7 +50,9 @@ final class EventTaxonomies {
 	 * @return void
 	 */
 	public static function register(): void {
-		register_taxonomy( self::AREA, EventPostType::POST_TYPE, self::args( 'Ámbitos organizativos', 'Ámbito organizativo' ) );
+		$area_args                = self::args( 'Ámbitos organizativos', 'Ámbito organizativo' );
+		$area_args['meta_box_cb'] = array( self::class, 'area_meta_box' );
+		register_taxonomy( self::AREA, EventPostType::POST_TYPE, $area_args );
 		register_taxonomy( self::TYPE, EventPostType::POST_TYPE, self::args( 'Tipologías', 'Tipología' ) );
 		register_taxonomy( self::COURSE, EventPostType::POST_TYPE, self::args( 'Cursos escolares', 'Curso escolar' ) );
 		register_term_meta(
@@ -78,6 +80,81 @@ final class EventTaxonomies {
 		add_action( 'created_' . self::AREA, array( self::class, 'save_fields' ) );
 		add_action( 'edited_' . self::AREA, array( self::class, 'save_fields' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_media' ) );
+		add_action( 'admin_notices', array( self::class, 'scope_notice' ) );
+		add_filter( 'rest_' . self::AREA . '_query', array( self::class, 'rest_area_query' ) );
+	}
+
+	/**
+	 * Keep the block editor's term collection inside the editor's subtree.
+	 *
+	 * @param array<string, mixed> $args Term query arguments.
+	 * @return array<string, mixed>
+	 */
+	public static function rest_area_query( array $args ): array {
+		$user_id = get_current_user_id();
+		if ( $user_id > 0 && user_can( $user_id, 'edit_evt_events' ) && ! EventAccess::can_edit_all_areas( $user_id ) ) {
+			$allowed         = EventAccess::scope_areas( $user_id );
+			$args['include'] = array() === $allowed ? array( 0 ) : $allowed;
+		}
+		return $args;
+	}
+
+	/**
+	 * Named paths for scope selectors, restricted to the current user's tree.
+	 *
+	 * @param int $user_id User ID, or current user.
+	 * @return array<int, string>
+	 */
+	public static function area_options( int $user_id = 0 ): array {
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+		$allowed = EventAccess::can_edit_all_areas( $user_id ) ? null : EventAccess::scope_areas( $user_id );
+		$terms   = get_terms(
+			array(
+				'taxonomy'   => self::AREA,
+				'hide_empty' => false,
+			)
+		);
+		if ( ! is_array( $terms ) ) {
+			return array();
+		}
+		$names = array();
+		foreach ( $terms as $term ) {
+			$names[ (int) $term->term_id ] = $term->name;
+		}
+		$options = array();
+		foreach ( $terms as $term ) {
+			$id = (int) $term->term_id;
+			if ( null !== $allowed && ! in_array( $id, $allowed, true ) ) {
+				continue;
+			}
+			$path           = array_reverse( get_ancestors( $id, self::AREA, 'taxonomy' ) );
+			$path[]         = $id;
+			$options[ $id ] = implode(
+				' › ',
+				array_map(
+					static function ( $part ) use ( $names ) {
+						return $names[ $part ] ?? '';
+					},
+					$path
+				)
+			);
+		}
+		return $options;
+	}
+
+	/**
+	 * Replace the native scope box with choices from the same access rule.
+	 *
+	 * @param \WP_Post $post Edited event.
+	 * @return void
+	 */
+	public static function area_meta_box( $post ): void {
+		$selected = $post instanceof \WP_Post ? EventAccess::post_areas( $post->ID ) : array();
+		echo '<div class="inside"><p>Seleccione los ámbitos que organizan este evento.</p>';
+		foreach ( self::area_options() as $id => $label ) {
+			printf( '<label><input type="checkbox" name="tax_input[%1$s][]" value="%2$d"%3$s /> %4$s</label><br />', esc_attr( self::AREA ), (int) $id, in_array( $id, $selected, true ) ? ' checked="checked"' : '', esc_html( $label ) );
+		}
+		echo '</div>';
 	}
 
 	/**
@@ -107,7 +184,8 @@ final class EventTaxonomies {
 		}
 		wp_nonce_field( 'evt_scope_meta', 'evt_scope_meta_nonce' );
 		printf( '<tr class="form-field"><th><label for="evt_scope_email">Correo del ámbito</label></th><td><input type="email" id="evt_scope_email" name="evt_scope_email" value="%s" /></td></tr>', esc_attr( (string) get_term_meta( $term->term_id, self::EMAIL, true ) ) );
-		printf( '<tr class="form-field"><th><label for="evt_scope_image_id">Imagen del ámbito</label></th><td><input type="hidden" id="evt_scope_image_id" name="evt_scope_image_id" value="%d" /><button type="button" class="button evt-scope-choose-image">Elegir imagen</button> <button type="button" class="button evt-scope-remove-image">Quitar imagen</button><span class="evt-scope-image-name"></span></td></tr>', absint( get_term_meta( $term->term_id, self::IMAGE_ID, true ) ) );
+		$image_id = absint( get_term_meta( $term->term_id, self::IMAGE_ID, true ) );
+		printf( '<tr class="form-field"><th><label for="evt_scope_image_id">Imagen del ámbito</label></th><td><input type="hidden" id="evt_scope_image_id" name="evt_scope_image_id" value="%1$s" /><button type="button" class="button evt-scope-choose-image">Elegir imagen</button> <button type="button" class="button evt-scope-remove-image">Quitar imagen</button> <span class="evt-scope-image-name">%2$s</span></td></tr>', esc_attr( (string) $image_id ), $image_id ? esc_html( get_the_title( $image_id ) . ' (ID ' . $image_id . ')' ) : 'Sin imagen' );
 	}
 
 	/** Load the native media picker only on the scope taxonomy screen. */
@@ -134,21 +212,42 @@ final class EventTaxonomies {
 			return;
 		}
 		if ( isset( $_POST[ self::EMAIL ] ) ) {
-			$email = sanitize_email( wp_unslash( $_POST[ self::EMAIL ] ) );
-			if ( '' === $email ) {
+			$raw_email = trim( sanitize_text_field( wp_unslash( $_POST[ self::EMAIL ] ) ) );
+			$email     = sanitize_email( $raw_email );
+			if ( '' === $raw_email ) {
 				delete_term_meta( $term_id, self::EMAIL );
 			} elseif ( is_email( $email ) ) {
 				update_term_meta( $term_id, self::EMAIL, $email );
+			} else {
+				set_transient( 'evt_scope_error_' . get_current_user_id(), 'El correo del ámbito no es válido; se ha conservado el anterior.', 60 );
 			}
 		}
 		if ( isset( $_POST[ self::IMAGE_ID ] ) ) {
-			$image_id = absint( wp_unslash( $_POST[ self::IMAGE_ID ] ) );
-			if ( 0 === $image_id ) {
+			$raw_image = sanitize_text_field( wp_unslash( $_POST[ self::IMAGE_ID ] ) );
+			$image_id  = absint( $raw_image );
+			if ( '0' === $raw_image ) {
 				delete_term_meta( $term_id, self::IMAGE_ID );
 			} elseif ( wp_attachment_is_image( $image_id ) ) {
 				update_term_meta( $term_id, self::IMAGE_ID, $image_id );
+			} else {
+				set_transient( 'evt_scope_error_' . get_current_user_id(), 'La imagen del ámbito no es válida; se ha conservado la anterior.', 60 );
 			}
 		}
+	}
+
+	/** Show validation errors after the taxonomy form redirects. */
+	public static function scope_notice(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || self::AREA !== $screen->taxonomy || ! self::can_edit_meta() ) {
+			return;
+		}
+		$key     = 'evt_scope_error_' . get_current_user_id();
+		$message = get_transient( $key );
+		if ( ! is_string( $message ) ) {
+			return;
+		}
+		delete_transient( $key );
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $message ) );
 	}
 
 	/**

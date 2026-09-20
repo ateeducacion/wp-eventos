@@ -174,10 +174,13 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$first  = $this->area( 'Primer ámbito' );
 		$second = $this->area( 'Segundo ámbito' );
 		update_user_meta( $uid, EventAccess::USER_AREA_META, array( $first, (string) $first, $second, 0, 'x' ) );
-		$this->assertSame( array( $first, $second ), EventAccess::user_areas( $uid ) );
+		$this->assertSame( array(), EventAccess::user_areas( $uid ), 'dos ámbitos históricos no eligen uno por su cuenta' );
 
 		update_user_meta( $uid, EventAccess::USER_AREA_META, $first . ',' . $second );
-		$this->assertSame( array( $first, $second ), EventAccess::user_areas( $uid ) );
+		$this->assertSame( array(), EventAccess::user_areas( $uid ) );
+
+		update_user_meta( $uid, EventAccess::USER_AREA_META, array( $first ) );
+		$this->assertSame( array( $first ), EventAccess::user_areas( $uid ) );
 
 		update_user_meta( $uid, EventAccess::USER_AREA_META, '   ' );
 		$this->assertSame( array(), EventAccess::user_areas( $uid ) );
@@ -202,9 +205,19 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
 		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
 		$this->assertEqualsCanonicalizing( array( $service, $area, $team, $sibling ), EventAccess::scope_areas( $editor ) );
+		foreach ( array( $service, $area, $team, $sibling ) as $term ) {
+			$this->assertTrue( EventAccess::may_assign_areas( array( $term ), $editor ) );
+			$this->assertTrue( user_can( $editor, 'assign_term', $term ) );
+		}
+		foreach ( array( $dg, $other ) as $term ) {
+			$this->assertFalse( EventAccess::may_assign_areas( array( $term ), $editor ) );
+			$this->assertFalse( user_can( $editor, 'assign_term', $term ) );
+		}
 		$new_child = $this->area( 'Nueva área' );
 		wp_update_term( $new_child, EventTaxonomies::AREA, array( 'parent' => $service ) );
 		$this->assertContains( $new_child, EventAccess::scope_areas( $editor ) );
+		wp_update_term( $new_child, EventTaxonomies::AREA, array( 'parent' => $other ) );
+		$this->assertNotContains( $new_child, EventAccess::scope_areas( $editor ) );
 		foreach ( array( $service, $area, $team, $sibling ) as $term ) {
 			$this->assertTrue( EventAccess::can_edit( $editor, $this->event( $this->administrator(), array( $term ) ) ) );
 		}
@@ -216,6 +229,8 @@ class Test_Event_Access extends WP_UnitTestCase {
 		}
 		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $area ) );
 		$this->assertEqualsCanonicalizing( array( $area, $team ), EventAccess::scope_areas( $editor ) );
+		wp_delete_term( $area, EventTaxonomies::AREA );
+		$this->assertSame( array(), EventAccess::scope_areas( $editor ) );
 	}
 
 	/**

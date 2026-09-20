@@ -942,6 +942,16 @@ final class EventWorkspace {
 			return;
 		}
 
+		$valores = self::submitted_values( $crudo );
+		if ( '' === $valores[ self::FIELD_AREA ] ) {
+			$valores[ self::FIELD_AREA ] = implode( ',', EventAccess::user_areas( $user_id ) );
+		}
+		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
+			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos antes de crear el evento.', $valores );
+			Shell::leave( self::url( 0, self::PANEL_SETTINGS ) );
+			return;
+		}
+
 		$id = wp_insert_post(
 			array(
 				'post_type'   => EventPostType::POST_TYPE,
@@ -957,8 +967,7 @@ final class EventWorkspace {
 			return;
 		}
 
-		$id      = (int) $id;
-		$valores = self::submitted_values( $crudo );
+		$id = (int) $id;
 		self::save_meta( $id, $valores, $revisado['data'] );
 		self::save_terms( $id, $user_id, $valores );
 		EventAccess::stamp_area( $id );
@@ -981,7 +990,8 @@ final class EventWorkspace {
 
 		return array(
 			self::FIELD_TITLE             => (string) $crudo['title'],
-			self::FIELD_AREA              => (string) (int) self::field( self::FIELD_AREA ),
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
+			self::FIELD_AREA              => implode( ',', array_map( 'absint', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
 			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
 			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
 			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
@@ -1014,13 +1024,22 @@ final class EventWorkspace {
 			'parent'     => 0,
 		);
 
-		$valores  = self::submitted_values( $crudo );
+		$valores = self::submitted_values( $crudo );
+		if ( '' === $valores[ self::FIELD_AREA ] ) {
+			$mine                        = EventAccess::can_edit_all_areas( $user_id ) ? EventAccess::post_areas( $event_id ) : array_intersect( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) );
+			$valores[ self::FIELD_AREA ] = implode( ',', $mine );
+		}
 		$revisado = EventInput::validate( $crudo );
 		if ( ! $revisado['ok'] ) {
 			// Se devuelve lo tecleado junto al aviso: perder catorce campos
 			// por una fecha mal escrita es la forma más rápida de que no se
 			// vuelva a intentar.
 			self::set_flash( 'error', self::why( $revisado['errors'] ), $valores );
+			Shell::leave( $destino );
+			return;
+		}
+		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
+			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos. No se ha guardado ningún cambio.', $valores );
 			Shell::leave( $destino );
 			return;
 		}
@@ -1076,13 +1095,16 @@ final class EventWorkspace {
 	 * @return void
 	 */
 	private static function save_terms( int $event_id, int $user_id, array $valores ): void {
-		$area_id = (int) $valores[ self::FIELD_AREA ];
-		$mapa    = array(
+		$area_ids = array_map( 'absint', explode( ',', $valores[ self::FIELD_AREA ] ) );
+		$mapa     = array(
 			EventTaxonomies::TYPE   => (int) $valores[ self::FIELD_TYPE ],
 			EventTaxonomies::COURSE => (int) $valores[ self::FIELD_COURSE ],
 		);
-		if ( self::may_set_area( $user_id, $area_id ) ) {
-			$mapa[ EventTaxonomies::AREA ] = $area_id;
+		if ( self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
+			if ( ! EventAccess::can_edit_all_areas( $user_id ) ) {
+				$area_ids = array_values( array_unique( array_merge( $area_ids, array_diff( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) ) ) ) );
+			}
+			wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
 		}
 		foreach ( $mapa as $taxonomia => $term_id ) {
 			wp_set_object_terms( $event_id, $term_id > 0 ? array( $term_id ) : array(), $taxonomia, false );
@@ -1102,6 +1124,26 @@ final class EventWorkspace {
 	 */
 	public static function may_set_area( int $user_id, int $area_id ): bool {
 		return EventAccess::may_assign_areas( array( $area_id ), $user_id );
+	}
+
+	/**
+	 * Validate every selected scope before replacing the event's terms.
+	 *
+	 * @param int    $user_id Editor ID.
+	 * @param string $value   Comma-separated selected IDs.
+	 * @return bool
+	 */
+	public static function may_set_areas( int $user_id, string $value ): bool {
+		$ids = explode( ',', $value );
+		if ( '' === $value ) {
+			return false;
+		}
+		foreach ( $ids as $id ) {
+			if ( absint( $id ) <= 0 || ! ( get_term( absint( $id ), EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
+				return false;
+			}
+		}
+		return EventAccess::may_assign_areas( $ids, $user_id );
 	}
 
 	/**
@@ -2032,7 +2074,7 @@ final class EventWorkspace {
 			// pantalla es la página «Evento» del aplicativo— y el alta abriría
 			// con el título ya escrito. Al crear, el título está vacío.
 			self::FIELD_TITLE             => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
-			self::FIELD_AREA              => (string) self::first_term( $event_id, EventTaxonomies::AREA ),
+			self::FIELD_AREA              => implode( ',', EventAccess::post_areas( $event_id ) ),
 			self::FIELD_TYPE              => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
 			self::FIELD_COURSE            => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
 			EventMetaKeys::TAGLINE        => self::meta( $event_id, EventMetaKeys::TAGLINE ),
@@ -2096,6 +2138,9 @@ final class EventWorkspace {
 	 * @return array<int, string> term_id => nombre.
 	 */
 	private static function term_options( string $taxonomy, array $solo = array() ): array {
+		if ( EventTaxonomies::AREA === $taxonomy ) {
+			return EventTaxonomies::area_options();
+		}
 		$terms = get_terms(
 			array(
 				'taxonomy'   => $taxonomy,

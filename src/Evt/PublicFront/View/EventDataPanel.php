@@ -37,15 +37,15 @@ final class EventDataPanel {
 		// Los desplegables se arman antes de la plantilla: dentro de cada
 		// ayudante la salida ya va escapada, y así cada `echo` de la plantilla
 		// es de una sola línea.
-		$sel_area    = self::term_select(
+		$sel_area    = self::area_checks(
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
-			'Ámbito organizativo',
+			'Ámbitos organizativos',
 			(array) ( $listas['area'] ?? array() ),
-			(int) $v[ EventWorkspace::FIELD_AREA ],
+			(string) $v[ EventWorkspace::FIELD_AREA ],
 			(bool) $m['can_set_area']
-				? 'El ámbito que organiza. Cambiarlo cambia también quién puede editar el evento.'
-				: 'El ámbito que organiza. Solo puede elegir dentro de su subárbol: para pasarlo a otro, pídalo a quien administra el aplicativo.'
+				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
+				: 'Seleccione solo ámbitos dentro de su subárbol.'
 		);
 		$sel_tipo    = self::term_select(
 			'evt-type',
@@ -134,7 +134,7 @@ final class EventDataPanel {
 
 			<fieldset class="evt-tarjeta">
 				<legend>Clasificación</legend>
-				<p>Con qué se ordena y se busca el evento. El área es además quién lo edita: solo su área y quien administra el aplicativo.</p>
+				<p>Con qué se ordena y se busca el evento. Cada ámbito seleccionado puede editarlo.</p>
 
 				<div class="evt-form-fila">
 					<div><?php echo $sel_area; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
@@ -204,14 +204,39 @@ final class EventDataPanel {
 	}
 
 	/**
-	 * One taxonomy dropdown, with its help line.
+	 * Multi-value scope choices, with their help line.
 	 *
 	 * @param string             $id      Field id.
 	 * @param string             $nombre  Field name.
 	 * @param string             $rotulo  Label.
 	 * @param array<int, string> $terminos term_id => nombre.
-	 * @param int                $elegido Selected term ID.
+	 * @param string             $elegidos Comma-separated selected term IDs.
 	 * @param string             $ayuda   Help text.
+	 * @return string
+	 */
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, string $ayuda ): string {
+		$ids = array_map( 'absint', explode( ',', $elegidos ) );
+		ob_start();
+		?>
+		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
+			<?php foreach ( $terminos as $term_id => $texto ) : ?>
+				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
+			<?php endforeach; ?>
+			<small><?php echo esc_html( $ayuda ); ?></small>
+		</fieldset>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * One taxonomy dropdown, with its help line.
+	 *
+	 * @param string             $id       Field id.
+	 * @param string             $nombre   Field name.
+	 * @param string             $rotulo   Label.
+	 * @param array<int, string> $terminos Term labels.
+	 * @param int                $elegido  Selected term ID.
+	 * @param string             $ayuda    Help text.
 	 * @return string
 	 */
 	private static function term_select( string $id, string $nombre, string $rotulo, array $terminos, int $elegido, string $ayuda ): string {
