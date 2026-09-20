@@ -113,7 +113,7 @@ Tras la revisión del diseño inicial se introducen las siguientes precisiones y
 1. **Código oficial de exactamente 8 dígitos**:
    - Se fija el contrato formal con la expresión regular `^\d{8}$` en todas las capas del aplicativo (`RegistrationInput::is_centre_code()`, `CentreCatalogueSync`).
    - Se rechaza cualquier código que no tenga exactamente 8 dígitos (7 dígitos, 9 dígitos, letras o caracteres especiales), sin normalización con ceros a la izquierda.
-   - En el formulario de inscripción, lo que envía el navegador es el código oficial (`centre_code`); nunca se confía en un nombre enviado por el cliente ni se acepta la denominación como identidad de una inscripción nueva.
+   - En el formulario de inscripción, lo que envía el navegador en el campo `centre` es exclusivamente el código oficial; `centre_code` y el snapshot `centre` se derivan en servidor a partir del catálogo. Nunca se confía en un nombre enviado por el cliente ni se acepta la denominación como identidad de una inscripción nueva.
 
 2. **HTTPS obligatorio y prevención de SSRF**:
    - Las fuentes remotas del catálogo (`manifest.json` y `centros.min.json`) exigen obligatoriamente el esquema `https://`.
@@ -126,7 +126,7 @@ Tras la revisión del diseño inicial se introducen las siguientes precisiones y
    - Si un candado caduca tras 300 segundos (proceso muerto), el mecanismo lo retira y lo vuelve a reclamar de forma atómica.
 
 4. **Integración en Ajustes y diagnóstico (`Evt\Admin\Settings`)**:
-   - Se descarta la pantalla independiente `CentreSettings` bajo `manage_options`.
+   - Se descarta la pantalla independiente `CentreSettings` bajo `manage_options` (esta adenda sustituye la ubicación inicial «Ajustes → Centros educativos» propuesta más arriba).
    - La información de diagnóstico del catálogo se integra en la pantalla existente del aplicativo (`Ajustes y diagnóstico de eventos`), respetando la capacidad propia del aplicativo (`EventAccess::CAP_MANAGE`).
    - Se expone el estado, recuentos de registros, fechas, SHA-256 y un botón de actualización manual con nonce y control de acceso.
 
