@@ -1954,7 +1954,7 @@ final class RegistrationInput {
 
 
 
-	public static function core( array $raw, ?array $centres = null ): array {
+	public static function core( array $raw, array $centres = array() ): array {
 		$errors = array();
 
 		$tax_id      = self::tax_id( self::text( $raw, 'tax_id' ) );
@@ -1981,17 +1981,17 @@ final class RegistrationInput {
 		}
 
 
-		if ( '' === $centre || ! self::is_centre_code( $centre ) ) {
-			$errors[] = 'centre';
-		} elseif ( is_array( $centres ) ) {
-			if ( ! isset( $centres[ $centre ] ) ) {
-				$errors[] = 'centre';
-			} else {
-				$centre_code = $centre;
-				$centre_name = (string) $centres[ $centre ];
-			}
-		} else {
+
+		if (
+			'' !== $centre &&
+			self::is_centre_code( $centre ) &&
+			! empty( $centres ) &&
+			isset( $centres[ $centre ] )
+		) {
 			$centre_code = $centre;
+			$centre_name = (string) $centres[ $centre ];
+		} else {
+			$errors[] = 'centre';
 		}
 		if ( ! $consent ) {
 			$errors[] = 'consent';
@@ -3746,12 +3746,23 @@ final class CentreCatalogueSync {
 		if ( is_array( $current ) && isset( $current['time'] ) ) {
 			$elapsed = time() - (int) $current['time'];
 			if ( $elapsed > self::LOCK_TTL ) {
-				delete_option( self::OPTION_LOCK );
-				wp_cache_delete( self::OPTION_LOCK, 'options' );
-				wp_cache_delete( 'notoptions', 'options' );
+				global $wpdb;
 
-				if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
-					return $token;
+				$deleted = $wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+						self::OPTION_LOCK,
+						maybe_serialize( $current )
+					)
+				);
+
+				if ( $deleted ) {
+					wp_cache_delete( self::OPTION_LOCK, 'options' );
+					wp_cache_delete( 'notoptions', 'options' );
+
+					if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+						return $token;
+					}
 				}
 			}
 		}
@@ -3769,7 +3780,20 @@ final class CentreCatalogueSync {
 		wp_cache_delete( self::OPTION_LOCK, 'options' );
 		$current = get_option( self::OPTION_LOCK );
 		if ( is_array( $current ) && isset( $current['token'] ) && hash_equals( (string) $current['token'], $token ) ) {
-			return delete_option( self::OPTION_LOCK );
+			global $wpdb;
+
+			$deleted = $wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+					self::OPTION_LOCK,
+					maybe_serialize( $current )
+				)
+			);
+			if ( $deleted ) {
+				wp_cache_delete( self::OPTION_LOCK, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+				return true;
+			}
 		}
 		return false;
 	}
@@ -3796,7 +3820,7 @@ final class CentreCatalogueSync {
 			}
 
 
-			$manifest_response = wp_remote_get(
+			$manifest_response = wp_safe_remote_get(
 				$manifest_url,
 				array(
 					'timeout'    => self::HTTP_TIMEOUT,
@@ -3860,7 +3884,7 @@ final class CentreCatalogueSync {
 				throw new RuntimeException( 'URL del catálogo de centros inválida o no utiliza HTTPS.' );
 			}
 
-			$cat_response = wp_remote_get(
+			$cat_response = wp_safe_remote_get(
 				$catalogue_url,
 				array(
 					'timeout'    => 45,
@@ -8895,11 +8919,9 @@ final class Registrations {
 
 
 
-
-
-
-
 	public static function centres(): array {
+
+
 
 
 
@@ -8911,20 +8933,11 @@ final class Registrations {
 		}
 
 		$out = array();
-		if ( array_is_list( $centros ) ) {
-			foreach ( $centros as $nombre ) {
-				$nombre = trim( (string) $nombre );
-				if ( '' !== $nombre ) {
-					$out[ $nombre ] = $nombre;
-				}
-			}
-		} else {
-			foreach ( $centros as $codigo => $denominacion ) {
-				$codigo       = trim( (string) $codigo );
-				$denominacion = trim( (string) $denominacion );
-				if ( '' !== $codigo && '' !== $denominacion ) {
-					$out[ $codigo ] = $denominacion;
-				}
+		foreach ( $centros as $codigo => $denominacion ) {
+			$codigo       = trim( (string) $codigo );
+			$denominacion = trim( (string) $denominacion );
+			if ( 1 === preg_match( '/^\d{8}$/', $codigo ) && '' !== $denominacion ) {
+				$out[ $codigo ] = $denominacion;
 			}
 		}
 		return $out;

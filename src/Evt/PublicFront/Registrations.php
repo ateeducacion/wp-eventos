@@ -562,21 +562,19 @@ final class Registrations {
 	/**
 	 * The catalogue of centres a person may pick from.
 	 *
-	 * El centro **nunca se teclea** (ADR-0031). El catálogo maestro se consulta
-	 * mediante el filtro `evt_centres`.
+	 * El centro **nunca se teclea** (ADR-0031). El catálogo se consulta
+	 * mediante el filtro `evt_centres`, cuyo contrato exige un mapa asociativo
+	 * de código oficial de 8 dígitos a denominación.
 	 *
-	 * Acepta preferentemente un array asociativo `codigo => denominacion`,
-	 * pero conserva compatibilidad con proveedores antiguos que devuelvan una
-	 * lista simple de strings `[ 'IES X', 'CEIP Y' ]`, normalizándola a
-	 * `[ 'IES X' => 'IES X', 'CEIP Y' => 'CEIP Y' ]`.
-	 *
-	 * @return array<string, string> Map of code => name.
+	 * @return array<string, string> Map of 8-digit code => name.
 	 */
 	public static function centres(): array {
 		/**
 		 * Filter the catalogue of centres.
 		 *
-		 * @param array<string|int, string>|string[] $centres Map of code => name, or list of names.
+		 * Debe devolver un mapa asociativo de código oficial de 8 dígitos a denominación.
+		 *
+		 * @param array<string, string> $centres Map of 8-digit code => name.
 		 */
 		$centros = apply_filters( 'evt_centres', array() );
 		if ( ! is_array( $centros ) ) {
@@ -584,20 +582,11 @@ final class Registrations {
 		}
 
 		$out = array();
-		if ( array_is_list( $centros ) ) {
-			foreach ( $centros as $nombre ) {
-				$nombre = trim( (string) $nombre );
-				if ( '' !== $nombre ) {
-					$out[ $nombre ] = $nombre;
-				}
-			}
-		} else {
-			foreach ( $centros as $codigo => $denominacion ) {
-				$codigo       = trim( (string) $codigo );
-				$denominacion = trim( (string) $denominacion );
-				if ( '' !== $codigo && '' !== $denominacion ) {
-					$out[ $codigo ] = $denominacion;
-				}
+		foreach ( $centros as $codigo => $denominacion ) {
+			$codigo       = trim( (string) $codigo );
+			$denominacion = trim( (string) $denominacion );
+			if ( 1 === preg_match( '/^\d{8}$/', $codigo ) && '' !== $denominacion ) {
+				$out[ $codigo ] = $denominacion;
 			}
 		}
 		return $out;

@@ -152,12 +152,23 @@ final class CentreCatalogueSync {
 		if ( is_array( $current ) && isset( $current['time'] ) ) {
 			$elapsed = time() - (int) $current['time'];
 			if ( $elapsed > self::LOCK_TTL ) {
-				delete_option( self::OPTION_LOCK );
-				wp_cache_delete( self::OPTION_LOCK, 'options' );
-				wp_cache_delete( 'notoptions', 'options' );
+				global $wpdb;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Compare-and-delete atómico de candado expirado.
+				$deleted = $wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+						self::OPTION_LOCK,
+						maybe_serialize( $current )
+					)
+				);
 
-				if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
-					return $token;
+				if ( $deleted ) {
+					wp_cache_delete( self::OPTION_LOCK, 'options' );
+					wp_cache_delete( 'notoptions', 'options' );
+
+					if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+						return $token;
+					}
 				}
 			}
 		}
@@ -175,7 +186,20 @@ final class CentreCatalogueSync {
 		wp_cache_delete( self::OPTION_LOCK, 'options' );
 		$current = get_option( self::OPTION_LOCK );
 		if ( is_array( $current ) && isset( $current['token'] ) && hash_equals( (string) $current['token'], $token ) ) {
-			return delete_option( self::OPTION_LOCK );
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Compare-and-delete atómico para liberar candado propio.
+			$deleted = $wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+					self::OPTION_LOCK,
+					maybe_serialize( $current )
+				)
+			);
+			if ( $deleted ) {
+				wp_cache_delete( self::OPTION_LOCK, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+				return true;
+			}
 		}
 		return false;
 	}
@@ -202,7 +226,7 @@ final class CentreCatalogueSync {
 			}
 
 			// 1. Descargar manifest.json.
-			$manifest_response = wp_remote_get(
+			$manifest_response = wp_safe_remote_get(
 				$manifest_url,
 				array(
 					'timeout'    => self::HTTP_TIMEOUT,
@@ -266,7 +290,7 @@ final class CentreCatalogueSync {
 				throw new RuntimeException( 'URL del catálogo de centros inválida o no utiliza HTTPS.' );
 			}
 
-			$cat_response = wp_remote_get(
+			$cat_response = wp_safe_remote_get(
 				$catalogue_url,
 				array(
 					'timeout'    => 45,

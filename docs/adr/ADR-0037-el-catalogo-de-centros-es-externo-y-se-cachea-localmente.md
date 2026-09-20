@@ -138,3 +138,18 @@ Tras la revisión del diseño inicial se introducen las siguientes precisiones y
    - `Código de centro` contiene `evt_reg_centre_code` y `Centro` contiene el snapshot de `evt_reg_centre`.
    - En inscripciones históricas sin código, `Código de centro` permanece vacío (`""`) sin intentar rellenarlo retrospectivamente a partir del catálogo actual.
 
+### Revisión final de validación, transporte y concurrencia
+
+1. **Fail-closed real sin catálogo**:
+   - `RegistrationInput::core()` no acepta inscripciones con centro si el catálogo está vacío o no se proporciona (`array()`), eliminando cualquier semántica de bypass con `null`.
+   - El contrato del filtro `evt_centres` y de la validación exige un mapa asociativo estricto `array<string, string>` indexado por el código oficial de 8 dígitos (`key = código 8 dígitos, value = denominación`). Se descartan listas de cadenas que no cumplan este contrato.
+
+2. **Transporte seguro con `wp_safe_remote_get()` y HTTPS**:
+   - Tanto `manifest.json` como `centros.min.json` se descargan exclusivamente mediante `wp_safe_remote_get()`, previniendo redirecciones o resoluciones a direcciones de bucle local o redes privadas internas (mitigación SSRF).
+   - Se mantiene complementariamente la validación sintáctica estricta de `https://` y host no vacío (`is_valid_https_url()`).
+
+3. **Recuperación segura de candado caducado (compare-and-delete)**:
+   - La recuperación de un candado expirado (>300 s) y su posterior liberación ejecutan un compare-and-delete atómico en base de datos (`DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s`).
+   - Esto evita condiciones de carrera donde un proceso lento intente eliminar un candado antiguo y borre accidentalmente el candado nuevo recién adquirido por otro proceso contemporáneo.
+
+

@@ -810,7 +810,37 @@ class Test_Centres extends WP_UnitTestCase {
 		$this->assertNotSame( $token1, $token2 );
 		$this->assertTrue( CentreCatalogueSync::release_lock( $token2 ) );
 
-		// 3. URLs.
+		// 3. Carrera de recuperación de candado caducado: compare-and-delete atómico.
+		$expired_token = 'token-antiguo';
+		$expired_time  = time() - 305;
+		$expired_lock  = array(
+			'token' => $expired_token,
+			'time'  => $expired_time,
+		);
+		update_option( CentreCatalogueSync::OPTION_LOCK, $expired_lock, false );
+
+		// Simulamos que otro proceso B se adelanta y adquiere un candado nuevo legítimo.
+		$new_lock = array(
+			'token' => 'token-nuevo-proceso-b',
+			'time'  => time(),
+		);
+		update_option( CentreCatalogueSync::OPTION_LOCK, $new_lock, false );
+
+		// Proceso A, que tenía en memoria $expired_lock, no debe poder borrar el lock nuevo.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Simulación de carrera en test.
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+				CentreCatalogueSync::OPTION_LOCK,
+				maybe_serialize( $expired_lock )
+			)
+		);
+		$this->assertSame( 0, $deleted );
+		$current_lock = get_option( CentreCatalogueSync::OPTION_LOCK );
+		$this->assertSame( 'token-nuevo-proceso-b', $current_lock['token'] );
+
+		// 4. URLs.
 		update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, 'https://example.org/directorio/manifest.json', false );
 		$this->assertSame( 'https://example.org/directorio/manifest.json', CentreCatalogueSync::manifest_url() );
 		$this->assertSame( 'https://example.org/directorio/centros.min.json', CentreCatalogueSync::catalogue_url( 'https://example.org/directorio/manifest.json' ) );
@@ -839,6 +869,7 @@ class Test_Centres extends WP_UnitTestCase {
 		$this->assertTrue( CentreCatalogueSync::is_valid_https_url( 'https://example.org/manifest.json' ) );
 		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( 'http://example.org/manifest.json' ) );
 		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( 'ftp://example.org/manifest.json' ) );
+		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( 'file:///etc/passwd' ) );
 		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( '//example.org/manifest.json' ) );
 		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( '/manifest.json' ) );
 		$this->assertFalse( CentreCatalogueSync::is_valid_https_url( '' ) );
@@ -1032,7 +1063,7 @@ class Test_Centres extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 24. Registrations::centres soporta listas simples y mapas asociativos.
+	 * 24. Registrations::centres exige contrato de mapa asociativo [ código 8 dígitos => nombre ].
 	 */
 	public function test_registrations_centres_formats(): void {
 		// 1. Sin filtro o devolviendo no array.
@@ -1040,24 +1071,27 @@ class Test_Centres extends WP_UnitTestCase {
 		$this->assertSame( array(), Registrations::centres() );
 		remove_all_filters( 'evt_centres' );
 
-		// 2. Lista simple de strings (formato legado).
+		// 2. Lista de strings o claves que no son códigos de 8 dígitos se descartan.
 		add_filter(
 			'evt_centres',
 			static function () {
-				return array( 'IES Uno', 'CEIP Dos' );
+				return array(
+					'IES Uno'  => 'IES Uno',
+					'123'      => 'Código Corto',
+					'38017731' => 'CIFP Válido',
+				);
 			}
 		);
-		$legacy = Registrations::centres();
+		$filtered = Registrations::centres();
 		$this->assertSame(
 			array(
-				'IES Uno'  => 'IES Uno',
-				'CEIP Dos' => 'CEIP Dos',
+				'38017731' => 'CIFP Válido',
 			),
-			$legacy
+			$filtered
 		);
 		remove_all_filters( 'evt_centres' );
 
-		// 3. Mapa asociativo (código => nombre).
+		// 3. Mapa asociativo válido (código 8 dígitos => nombre).
 		add_filter(
 			'evt_centres',
 			static function () {
@@ -1070,7 +1104,7 @@ class Test_Centres extends WP_UnitTestCase {
 	}
 
 	/**
-	 * 25. RegistrationInput validación estricta de 8 dígitos y contrato de catálogo.
+	 * 25. RegistrationInput validación estricta de 8 dígitos y contrato de catálogo (fail-closed).
 	 */
 	public function test_registration_input_code_validation_and_resolution(): void {
 		$this->assertTrue( RegistrationInput::is_centre_code( '38017731' ) );
@@ -1154,8 +1188,22 @@ class Test_Centres extends WP_UnitTestCase {
 		$this->assertFalse( $val_9['ok'] );
 		$this->assertContains( 'centre', $val_9['errors'] );
 
-		// Sin catálogo cargado (null), pero pasando código oficial en centre.
-		$val_null = RegistrationInput::core(
+		// Sin catálogo cargado (vacío por defecto o []), se rechaza (fail-closed).
+		$val_empty = RegistrationInput::core(
+			array(
+				'tax_id'  => '12345678Z',
+				'name'    => 'Laura',
+				'surname' => 'Gómez',
+				'email'   => 'laura@example.org',
+				'phone'   => '600111222',
+				'centre'  => '38017731',
+				'consent' => '1',
+			)
+		);
+		$this->assertFalse( $val_empty['ok'] );
+		$this->assertContains( 'centre', $val_empty['errors'] );
+
+		$val_empty_array = RegistrationInput::core(
 			array(
 				'tax_id'  => '12345678Z',
 				'name'    => 'Laura',
@@ -1165,10 +1213,9 @@ class Test_Centres extends WP_UnitTestCase {
 				'centre'  => '38017731',
 				'consent' => '1',
 			),
-			null
+			array()
 		);
-		$this->assertTrue( $val_null['ok'] );
-		$this->assertSame( '38017731', $val_null['data']['centre_code'] );
-		$this->assertSame( '', $val_null['data']['centre'] );
+		$this->assertFalse( $val_empty_array['ok'] );
+		$this->assertContains( 'centre', $val_empty_array['errors'] );
 	}
 }

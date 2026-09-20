@@ -27,11 +27,11 @@ final class RegistrationInput {
 	 * el consentimiento. El teléfono no: hay quien no lo da, y exigirlo es
 	 * fabricar teléfonos falsos.
 	 *
-	 * @param array<string, mixed> $raw     Raw fields.
-	 * @param string[]             $centres Valid centre codes; empty means «no catalogue loaded».
+	 * @param array<string, mixed>  $raw     Raw fields.
+	 * @param array<string, string> $centres Valid centre map [code => name].
 	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
 	 */
-	public static function core( array $raw, ?array $centres = null ): array {
+	public static function core( array $raw, array $centres = array() ): array {
 		$errors = array();
 
 		$tax_id      = self::tax_id( self::text( $raw, 'tax_id' ) );
@@ -58,17 +58,17 @@ final class RegistrationInput {
 		}
 		// El centro se elige de un catálogo por su código oficial de 8 dígitos (ADR-0031, ADR-0037).
 		// Lo que envía el navegador es el código oficial; la denominación se obtiene del catálogo.
-		if ( '' === $centre || ! self::is_centre_code( $centre ) ) {
-			$errors[] = 'centre';
-		} elseif ( is_array( $centres ) ) {
-			if ( ! isset( $centres[ $centre ] ) ) {
-				$errors[] = 'centre';
-			} else {
-				$centre_code = $centre;
-				$centre_name = (string) $centres[ $centre ];
-			}
-		} else {
+		// Fail-closed: si no hay catálogo o el código no está en él, se rechaza.
+		if (
+			'' !== $centre &&
+			self::is_centre_code( $centre ) &&
+			! empty( $centres ) &&
+			isset( $centres[ $centre ] )
+		) {
 			$centre_code = $centre;
+			$centre_name = (string) $centres[ $centre ];
+		} else {
+			$errors[] = 'centre';
 		}
 		if ( ! $consent ) {
 			$errors[] = 'consent';

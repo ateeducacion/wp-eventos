@@ -147,7 +147,8 @@ class Test_Registrations extends WP_UnitTestCase {
 			$this->assertContains( $campo, $vacio['errors'], $campo . ' tenía que ser obligatorio' );
 		}
 
-		$sin_telefono = RegistrationInput::core( $this->nucleo( array( 'phone' => '' ) ) );
+		$catalogo     = array( '38000001' => 'CEIP El Molino' );
+		$sin_telefono = RegistrationInput::core( $this->nucleo( array( 'phone' => '' ) ), $catalogo );
 		$this->assertTrue( $sin_telefono['ok'], 'el teléfono no se exige: exigirlo fabrica teléfonos falsos' );
 	}
 
@@ -186,7 +187,8 @@ class Test_Registrations extends WP_UnitTestCase {
 	 * Sin consentimiento no hay inscripción, y la comprobación es del servidor.
 	 */
 	public function test_without_consent_there_is_no_signup() {
-		$sin = RegistrationInput::core( $this->nucleo( array( 'consent' => '' ) ) );
+		$catalogo = array( '38000001' => 'CEIP El Molino' );
+		$sin      = RegistrationInput::core( $this->nucleo( array( 'consent' => '' ) ), $catalogo );
 		$this->assertFalse( $sin['ok'] );
 		$this->assertContains( 'consent', $sin['errors'] );
 		$this->assertStringContainsString( 'tratamiento de datos', RegistrationInput::why( $sin['errors'] ) );
