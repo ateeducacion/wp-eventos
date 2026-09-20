@@ -1129,26 +1129,6 @@ final class EventWorkspace {
 	}
 
 	/**
-	 * Validate every selected scope before replacing the event's terms.
-	 *
-	 * @param int    $user_id Editor ID.
-	 * @param string $value   Comma-separated selected IDs.
-	 * @return bool
-	 */
-	public static function may_set_areas( int $user_id, string $value ): bool {
-		$ids = explode( ',', $value );
-		if ( '' === $value ) {
-			return false;
-		}
-		foreach ( $ids as $id ) {
-			if ( absint( $id ) <= 0 || ! ( get_term( absint( $id ), EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
-				return false;
-			}
-		}
-		return EventAccess::may_assign_areas( $ids, $user_id );
-	}
-
-	/**
 	 * Whether this person may write any of the two code fields of the event.
 	 *
 	 * Es la condición de que exista la pestaña «Código». Con «alguna» basta, y

@@ -11591,26 +11591,6 @@ final class EventWorkspace {
 
 
 
-	public static function may_set_areas( int $user_id, string $value ): bool {
-		$ids = explode( ',', $value );
-		if ( '' === $value ) {
-			return false;
-		}
-		foreach ( $ids as $id ) {
-			if ( absint( $id ) <= 0 || ! ( get_term( absint( $id ), EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
-				return false;
-			}
-		}
-		return EventAccess::may_assign_areas( $ids, $user_id );
-	}
-
-
-
-
-
-
-
-
 
 
 

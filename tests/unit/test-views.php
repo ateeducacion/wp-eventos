@@ -125,6 +125,23 @@ class Test_Views extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Guardar los datos', $html );
 	}
 
+	/** A shared event names foreign organisers without editable controls. */
+	public function test_data_panel_shows_foreign_organiser_read_only() {
+		$mine    = $this->area( 'Ámbito 1' );
+		$foreign = $this->area( 'Ámbito 2' );
+		$editor  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, 'evt_area', array( $mine ) );
+		$event = $this->event( $editor, array( $mine, $foreign ) );
+		$this->acting_as( $editor );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $event;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_SETTINGS;
+		$html                              = EventDataPanel::html( EventWorkspace::model() );
+		$this->assertStringContainsString( 'Otros ámbitos organizadores (solo lectura)', $html );
+		$this->assertStringContainsString( 'Ámbito 2', $html );
+		$this->assertStringContainsString( 'value="' . $mine . '"', $html );
+		$this->assertStringNotContainsString( 'value="' . $foreign . '"', $html );
+	}
+
 	/**
 	 * El panel de apariencia pinta la vista previa con la silueta elegida.
 	 *

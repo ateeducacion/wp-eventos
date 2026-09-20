@@ -134,6 +134,14 @@ class Test_Admin_Screens extends WP_UnitTestCase {
 	 * Quien administra ve el diagnóstico, con los tipos y las taxonomías.
 	 */
 	public function test_the_diagnostics_screen_lists_what_is_registered() {
+		$area   = $this->area( 'Ámbito 1' );
+		$editor = (int) self::factory()->user->create(
+			array(
+				'role'       => 'editor',
+				'user_login' => 'editor-pendiente',
+			)
+		);
+		update_user_meta( $editor, EventAccess::USER_AREA_META, $area . ',99999999' );
 		$this->acting_as( $this->administrator() );
 		$this->assertTrue( EventAccess::is_manager() );
 
@@ -154,6 +162,9 @@ class Test_Admin_Screens extends WP_UnitTestCase {
 		// siempre.
 		$this->assertStringContainsString( '<td>Registrado</td>', $html );
 		$this->assertStringNotContainsString( '<td>Sin registrar</td>', $html );
+		$this->assertStringContainsString( 'editor-pendiente', $html );
+		$this->assertStringContainsString( '<td>invalid</td>', $html );
+		$this->assertStringContainsString( '99999999', $html );
 	}
 
 	/**
