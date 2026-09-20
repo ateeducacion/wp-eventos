@@ -301,4 +301,17 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertSame( array(), EventAccess::resolve_area_assignment( $event, array(), $admin ) );
 		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array(), $editor ) );
 	}
+
+	/** The deployment report classifies editorial accounts without changing them. */
+	public function test_scope_diagnostics_classifies_without_migrating() {
+		$area  = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$raw   = $area . ',' . $other;
+		update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+		$rows = array_column( EventAccess::scope_diagnostics(), null, 'user_id' );
+		$this->assertSame( 'ambiguous', $rows[ $user ]['state'] );
+		$this->assertTrue( $rows[ $user ]['legacy'] );
+		$this->assertSame( $raw, get_user_meta( $user, EventAccess::USER_AREA_META, true ) );
+	}
 }

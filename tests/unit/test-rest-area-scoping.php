@@ -129,6 +129,19 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 		$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
 	}
 
+	/** REST may remove an editor's own organiser only when another remains. */
+	public function test_rest_can_withdraw_own_scope_from_shared_event() {
+		$shared = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $shared, array( 'evt_area' => array() ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( $this->area_other ), wp_get_post_terms( $shared, 'evt_area', array( 'fields' => 'ids' ) ) );
+		$own      = $this->event( $this->owner, array( $this->area_owner ) );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $own, array( 'evt_area' => array() ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $own, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
 	/** Admin form rejects a foreign term before saving; programmatic writes are not given a false empty-content error. */
 	public function test_classic_post_rejects_foreign_scope_without_changing_terms() {
 		$event = $this->event( $this->owner, array( $this->area_owner ) );
