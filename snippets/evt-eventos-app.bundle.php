@@ -3436,6 +3436,40 @@ final class RegistrationPostType {
 
 
 
+namespace Evt\PublicFront;
+
+
+
+
+
+
+final class ExitSignal extends \RuntimeException {
+
+
+
+
+
+
+	public $url = '';
+
+
+
+
+
+
+	public function __construct( string $url = '' ) {
+		parent::__construct( '' === $url ? 'Salida sin redirección' : 'Redirección a ' . $url );
+		$this->url = $url;
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\Centre;
 
 
@@ -3966,6 +4000,7 @@ final class CentreCatalog {
 
 namespace Evt\Centre;
 
+use Evt\PublicFront\ExitSignal;
 use RuntimeException;
 
 
@@ -3997,14 +4032,15 @@ final class CentreSettings {
 
 
 
-	public static function add_menu_page(): void {
-		add_options_page(
+	public static function add_menu_page(): string {
+		$hook = add_options_page(
 			'Centros educativos',
 			'Centros educativos',
 			'manage_options',
 			self::MENU_SLUG,
 			array( self::class, 'render_page' )
 		);
+		return is_string( $hook ) ? $hook : '';
 	}
 
 
@@ -4023,6 +4059,7 @@ final class CentreSettings {
 			'sync_now' === $_POST['evt_centres_action'] &&
 			check_admin_referer( self::NONCE_MANUAL_SYNC, '_evt_centres_nonce' )
 		) {
+			$redirect_args = array( 'page' => self::MENU_SLUG );
 			try {
 				$result = CentreCatalogueSync::sync( true );
 				$msg    = sprintf(
@@ -4031,29 +4068,13 @@ final class CentreSettings {
 					$result['active'],
 					substr( $result['sha256'], 0, 12 ) . '…'
 				);
-				wp_safe_redirect(
-					add_query_arg(
-						array(
-							'page'    => self::MENU_SLUG,
-							'updated' => 'synced',
-							'msg'     => rawurlencode( $msg ),
-						),
-						admin_url( 'options-general.php' )
-					)
-				);
-				exit;
+				$redirect_args['updated'] = 'synced';
+				$redirect_args['msg']     = rawurlencode( $msg );
 			} catch ( RuntimeException $e ) {
-				wp_safe_redirect(
-					add_query_arg(
-						array(
-							'page'  => self::MENU_SLUG,
-							'error' => rawurlencode( $e->getMessage() ),
-						),
-						admin_url( 'options-general.php' )
-					)
-				);
-				exit;
+				$redirect_args['error'] = rawurlencode( $e->getMessage() );
 			}
+
+			self::leave( add_query_arg( $redirect_args, admin_url( 'options-general.php' ) ) );
 		}
 
 
@@ -4068,7 +4089,7 @@ final class CentreSettings {
 			update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, $manifest_url, false );
 			update_option( CentreCatalogueSync::OPTION_CATALOGUE_URL, $catalogue_url, false );
 
-			wp_safe_redirect(
+			self::leave(
 				add_query_arg(
 					array(
 						'page'    => self::MENU_SLUG,
@@ -4077,8 +4098,21 @@ final class CentreSettings {
 					admin_url( 'options-general.php' )
 				)
 			);
-			exit;
 		}
+	}
+
+
+
+
+
+
+
+	private static function leave( string $url ): void {
+		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
+			throw new ExitSignal( $url );
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 
@@ -4111,11 +4145,11 @@ final class CentreSettings {
 			</p>
 
 			<?php if ( isset( $_GET['updated'] ) && 'synced' === $_GET['updated'] && ! empty( $_GET['msg'] ) ) : ?>
-				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( wp_unslash( (string) $_GET['msg'] ) ); ?></p></div>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['msg'] ) ) ); ?></p></div>
 			<?php elseif ( isset( $_GET['updated'] ) && 'saved' === $_GET['updated'] ) : ?>
 				<div class="notice notice-success is-dismissible"><p>Ajustes guardados correctamente.</p></div>
 			<?php elseif ( isset( $_GET['error'] ) ) : ?>
-				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( wp_unslash( (string) $_GET['error'] ) ); ?></p></div>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); ?></p></div>
 			<?php endif; ?>
 
 			<div style="display:flex; gap:2rem; flex-wrap:wrap; margin-top:1.5rem;">
@@ -4917,40 +4951,6 @@ final class Assets {
 
 
 		return (string) file_get_contents( $path );
-	}
-}
-
-
-
-
-
-
-
-
-namespace Evt\PublicFront;
-
-
-
-
-
-
-final class ExitSignal extends \RuntimeException {
-
-
-
-
-
-
-	public $url = '';
-
-
-
-
-
-
-	public function __construct( string $url = '' ) {
-		parent::__construct( '' === $url ? 'Salida sin redirección' : 'Redirección a ' . $url );
-		$this->url = $url;
 	}
 }
 

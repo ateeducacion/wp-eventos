@@ -7,6 +7,7 @@
 
 namespace Evt\Centre;
 
+use Evt\PublicFront\ExitSignal;
 use RuntimeException;
 
 /**
@@ -36,16 +37,17 @@ final class CentreSettings {
 	/**
 	 * Add submenu page under Settings.
 	 *
-	 * @return void
+	 * @return string
 	 */
-	public static function add_menu_page(): void {
-		add_options_page(
+	public static function add_menu_page(): string {
+		$hook = add_options_page(
 			'Centros educativos',
 			'Centros educativos',
 			'manage_options',
 			self::MENU_SLUG,
 			array( self::class, 'render_page' )
 		);
+		return is_string( $hook ) ? $hook : '';
 	}
 
 	/**
@@ -64,6 +66,7 @@ final class CentreSettings {
 			'sync_now' === $_POST['evt_centres_action'] &&
 			check_admin_referer( self::NONCE_MANUAL_SYNC, '_evt_centres_nonce' )
 		) {
+			$redirect_args = array( 'page' => self::MENU_SLUG );
 			try {
 				$result = CentreCatalogueSync::sync( true );
 				$msg    = sprintf(
@@ -72,29 +75,14 @@ final class CentreSettings {
 					$result['active'],
 					substr( $result['sha256'], 0, 12 ) . '…'
 				);
-				wp_safe_redirect(
-					add_query_arg(
-						array(
-							'page'    => self::MENU_SLUG,
-							'updated' => 'synced',
-							'msg'     => rawurlencode( $msg ),
-						),
-						admin_url( 'options-general.php' )
-					)
-				);
-				exit;
+
+				$redirect_args['updated'] = 'synced';
+				$redirect_args['msg']     = rawurlencode( $msg );
 			} catch ( RuntimeException $e ) {
-				wp_safe_redirect(
-					add_query_arg(
-						array(
-							'page'  => self::MENU_SLUG,
-							'error' => rawurlencode( $e->getMessage() ),
-						),
-						admin_url( 'options-general.php' )
-					)
-				);
-				exit;
+				$redirect_args['error'] = rawurlencode( $e->getMessage() );
 			}
+
+			self::leave( add_query_arg( $redirect_args, admin_url( 'options-general.php' ) ) );
 		}
 
 		// 2. Guardar ajustes de URLs.
@@ -109,7 +97,7 @@ final class CentreSettings {
 			update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, $manifest_url, false );
 			update_option( CentreCatalogueSync::OPTION_CATALOGUE_URL, $catalogue_url, false );
 
-			wp_safe_redirect(
+			self::leave(
 				add_query_arg(
 					array(
 						'page'    => self::MENU_SLUG,
@@ -118,8 +106,23 @@ final class CentreSettings {
 					admin_url( 'options-general.php' )
 				)
 			);
-			exit;
 		}
+	}
+
+	/**
+	 * Safe exit or throw ExitSignal under tests.
+	 *
+	 * @param string $url Target redirect URL.
+	 * @throws ExitSignal When running under tests with exit filter.
+	 * @return void
+	 */
+	private static function leave( string $url ): void {
+		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- la URL viaja para que el test la lea; no se imprime.
+			throw new ExitSignal( $url );
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 	/**

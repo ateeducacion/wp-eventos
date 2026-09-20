@@ -8,12 +8,15 @@
 use Evt\Centre\CentreCatalog;
 use Evt\Centre\CentreCatalogue;
 use Evt\Centre\CentreCatalogueSync;
+use Evt\Centre\CentreCli;
 use Evt\Centre\CentreSettings;
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\Registrations;
+
+require_once dirname( __DIR__ ) . '/WP_CLI_Mock.php';
 
 /**
  * Pruebas unitarias del catálogo de centros educativos.
@@ -34,6 +37,7 @@ class Test_Centres extends WP_UnitTestCase {
 		delete_option( CentreCatalogueSync::OPTION_MANIFEST_URL );
 		delete_option( CentreCatalogueSync::OPTION_CATALOGUE_URL );
 		delete_transient( CentreCatalogueSync::LOCK_KEY );
+		WP_CLI::reset();
 	}
 
 	/**
@@ -51,6 +55,7 @@ class Test_Centres extends WP_UnitTestCase {
 		remove_all_filters( 'evt_centres' );
 		remove_all_filters( 'evt_centres_manifest_url' );
 		remove_all_filters( 'evt_centres_catalogue_url' );
+		WP_CLI::reset();
 		parent::tear_down();
 	}
 
@@ -86,27 +91,33 @@ class Test_Centres extends WP_UnitTestCase {
 	/**
 	 * Helper to mock HTTP responses for manifest and catalogue.
 	 *
-	 * @param string $manifest_body  Manifest response body.
-	 * @param string $catalogue_body Catalogue response body.
-	 * @param int    $manifest_code  HTTP code for manifest.
-	 * @param int    $catalogue_code HTTP code for catalogue.
+	 * @param string|WP_Error $manifest_body  Manifest response body or WP_Error.
+	 * @param string|WP_Error $catalogue_body Catalogue response body or WP_Error.
+	 * @param int             $manifest_code  HTTP code for manifest.
+	 * @param int             $catalogue_code HTTP code for catalogue.
 	 * @return void
 	 */
-	private function mock_http( string $manifest_body, string $catalogue_body, int $manifest_code = 200, int $catalogue_code = 200 ): void {
+	private function mock_http( $manifest_body, $catalogue_body, int $manifest_code = 200, int $catalogue_code = 200 ): void {
 		add_filter(
 			'pre_http_request',
 			static function ( $pre, $parsed_args, $url ) use ( $manifest_body, $catalogue_body, $manifest_code, $catalogue_code ) {
 				unset( $pre, $parsed_args );
 				if ( false !== strpos( $url, 'manifest.json' ) ) {
+					if ( is_wp_error( $manifest_body ) ) {
+						return $manifest_body;
+					}
 					return array(
 						'response' => array( 'code' => $manifest_code ),
-						'body'     => $manifest_body,
+						'body'     => (string) $manifest_body,
 					);
 				}
 				if ( false !== strpos( $url, 'centros.min.json' ) ) {
+					if ( is_wp_error( $catalogue_body ) ) {
+						return $catalogue_body;
+					}
 					return array(
 						'response' => array( 'code' => $catalogue_code ),
-						'body'     => $catalogue_body,
+						'body'     => (string) $catalogue_body,
 					);
 				}
 				return false;
@@ -164,6 +175,16 @@ class Test_Centres extends WP_UnitTestCase {
 		$this->assertSame( 2, $status['record_count'] );
 		$this->assertSame( 1, $status['active_count'] );
 		$this->assertEmpty( $status['last_error'] );
+
+		// Métodos de conteo y consulta.
+		$this->assertSame( 2, CentreCatalogue::count() );
+		$this->assertSame( 1, CentreCatalogue::active_count() );
+		$this->assertNotNull( CentreCatalogue::find( '38017731' ) );
+		$this->assertNull( CentreCatalogue::find( '99999999' ) );
+		$this->assertNull( CentreCatalogue::find( '' ) );
+		$this->assertTrue( CentreCatalogue::is_active( '38017731' ) );
+		$this->assertFalse( CentreCatalogue::is_active( '35000011' ) );
+		$this->assertFalse( CentreCatalogue::is_active( '99999999' ) );
 	}
 
 	/**
@@ -574,11 +595,518 @@ class Test_Centres extends WP_UnitTestCase {
 	 * 17. Diagnóstico y actualización manual comprueban capability.
 	 */
 	public function test_manual_refresh_checks_capability(): void {
-		// Usuario sin manage_options.
 		$user_id = $this->factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $user_id );
 
 		$this->expectException( WPDieException::class );
 		CentreSettings::render_page();
+	}
+
+	/**
+	 * 18. CentreSettings::register y add_menu_page registran hooks y menú.
+	 */
+	public function test_centre_settings_register_and_menu(): void {
+		CentreSettings::register();
+		$this->assertNotFalse( has_action( 'admin_menu', array( CentreSettings::class, 'add_menu_page' ) ) );
+		$this->assertNotFalse( has_action( 'admin_init', array( CentreSettings::class, 'handle_actions' ) ) );
+
+		$admin = $this->administrator();
+		$this->acting_as( $admin );
+		set_current_screen( 'dashboard' );
+
+		$hook = CentreSettings::add_menu_page();
+		$this->assertStringContainsString( CentreSettings::MENU_SLUG, $hook );
+	}
+
+	/**
+	 * 19. CentreSettings::render_page renderiza correctamente para administrador.
+	 */
+	public function test_centre_settings_render_page_admin(): void {
+		$admin = $this->administrator();
+		$this->acting_as( $admin );
+
+		// 1. Catálogo vacío con notices.
+		$_GET['updated'] = 'synced';
+		$_GET['msg']     = 'Catálogo actualizado';
+		ob_start();
+		CentreSettings::render_page();
+		$html = (string) ob_get_clean();
+		$this->assertStringContainsString( 'Catálogo actualizado', $html );
+		$this->assertStringContainsString( 'No (catálogo vacío)', $html );
+
+		// 2. Con error y catálogo poblado.
+		$catalog = array(
+			'38017731' => array(
+				'code'         => '38017731',
+				'name'         => 'CIFP Ejemplo',
+				'island'       => 'Isla',
+				'municipality' => 'Mun',
+				'type'         => 'CIFP',
+				'active'       => true,
+			),
+		);
+		update_option( CentreCatalogue::OPTION_CATALOGUE, $catalog, false );
+		update_option(
+			CentreCatalogue::OPTION_STATUS,
+			array(
+				'sha256'     => 'abcdef',
+				'last_error' => 'Fallo previo',
+			),
+			false
+		);
+
+		unset( $_GET['msg'] );
+		$_GET['updated'] = 'saved';
+		ob_start();
+		CentreSettings::render_page();
+		$html2 = (string) ob_get_clean();
+		$this->assertStringContainsString( 'Ajustes guardados correctamente', $html2 );
+		$this->assertStringContainsString( 'Fallo previo', $html2 );
+		$this->assertStringContainsString( 'abcdef', $html2 );
+
+		// 3. Con error directo en query.
+		unset( $_GET['updated'] );
+		$_GET['error'] = 'Error fatal simulado';
+		ob_start();
+		CentreSettings::render_page();
+		$html3 = (string) ob_get_clean();
+		$this->assertStringContainsString( 'Error fatal simulado', $html3 );
+	}
+
+	/**
+	 * 20. CentreSettings::handle_actions maneja sync_now y save_settings.
+	 */
+	public function test_centre_settings_handle_actions(): void {
+		$admin = $this->administrator();
+		$this->acting_as( $admin );
+		set_current_screen( 'options-general' );
+
+		// 1. sync_now con éxito.
+		$items   = array(
+			array(
+				'code'         => '38017731',
+				'name'         => 'CIFP Test',
+				'island'       => 'Isla',
+				'municipality' => 'Mun',
+				'type'         => 'CIFP',
+				'active'       => true,
+			),
+		);
+		$payload = $this->make_payload( $items );
+		$this->mock_http( $payload['manifest_json'], $payload['catalogue_json'] );
+		update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, 'https://example.org/manifest.json', false );
+
+		$this->post(
+			array(
+				'evt_centres_action' => 'sync_now',
+			),
+			CentreSettings::NONCE_MANUAL_SYNC,
+			'_evt_centres_nonce'
+		);
+
+		$url = $this->exit_url( array( CentreSettings::class, 'handle_actions' ) );
+		$this->assertNotNull( $url );
+		$this->assertSame( 'synced', $this->query_arg( $url, 'updated' ) );
+
+		// 2. sync_now con excepción.
+		$this->mock_http( '', '', 500, 500 );
+		$this->post(
+			array(
+				'evt_centres_action' => 'sync_now',
+			),
+			CentreSettings::NONCE_MANUAL_SYNC,
+			'_evt_centres_nonce'
+		);
+		$url_err = $this->exit_url( array( CentreSettings::class, 'handle_actions' ) );
+		$this->assertNotNull( $url_err );
+		$this->assertNotEmpty( $this->query_arg( $url_err, 'error' ) );
+
+		// 3. save_settings.
+		$this->post(
+			array(
+				'evt_centres_action' => 'save_settings',
+				'manifest_url'       => 'https://example.org/nuevo-manifest.json',
+				'catalogue_url'      => 'https://example.org/nuevo-catalogo.json',
+			),
+			CentreSettings::NONCE_SETTINGS,
+			'_evt_centres_nonce'
+		);
+		$url_save = $this->exit_url( array( CentreSettings::class, 'handle_actions' ) );
+		$this->assertNotNull( $url_save );
+		$this->assertSame( 'saved', $this->query_arg( $url_save, 'updated' ) );
+		$this->assertSame( 'https://example.org/nuevo-manifest.json', get_option( CentreCatalogueSync::OPTION_MANIFEST_URL ) );
+		$this->assertSame( 'https://example.org/nuevo-catalogo.json', get_option( CentreCatalogueSync::OPTION_CATALOGUE_URL ) );
+
+		// 4. Usuario sin permisos no ejecuta nada.
+		$sub = $this->factory()->user->create( array( 'role' => 'subscriber' ) );
+		$this->acting_as( $sub );
+		$this->post(
+			array(
+				'evt_centres_action' => 'save_settings',
+			),
+			CentreSettings::NONCE_SETTINGS,
+			'_evt_centres_nonce'
+		);
+		$url_sub = $this->exit_url( array( CentreSettings::class, 'handle_actions' ) );
+		$this->assertNull( $url_sub );
+	}
+
+	/**
+	 * 21. CentreCli::register y CentreCli::sync.
+	 */
+	public function test_centre_cli_commands(): void {
+		CentreCli::register();
+		$this->assertArrayHasKey( 'evt centres sync', WP_CLI::$commands );
+
+		$items   = array(
+			array(
+				'code'         => '38017731',
+				'name'         => 'CIFP CLI',
+				'island'       => 'Isla',
+				'municipality' => 'Mun',
+				'type'         => 'CIFP',
+				'active'       => true,
+			),
+		);
+		$payload = $this->make_payload( $items );
+		$this->mock_http( $payload['manifest_json'], $payload['catalogue_json'] );
+		update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, 'https://example.org/manifest.json', false );
+
+		// 1. Sincronización normal (updated).
+		CentreCli::sync( array(), array( 'force' => true ) );
+		$this->assertNotEmpty( WP_CLI::$successes );
+		$this->assertStringContainsString( 'Sincronización completada con éxito', WP_CLI::$successes[0] );
+
+		// 2. Sincronización sin cambios (unchanged).
+		WP_CLI::reset();
+		CentreCli::sync( array(), array() );
+		$this->assertNotEmpty( WP_CLI::$successes );
+		$this->assertStringContainsString( 'ya está al día', WP_CLI::$successes[0] );
+
+		// 3. Error en sync.
+		$this->mock_http( '', '', 500, 500 );
+		WP_CLI::reset();
+		try {
+			CentreCli::sync( array(), array( 'force' => true ) );
+			$this->fail( 'Se esperaba una excepción de WP_CLI::error.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'WP_CLI_ERROR', $e->getMessage() );
+		}
+	}
+
+	/**
+	 * 22. CentreCatalog::register y CentreCatalog::centres.
+	 */
+	public function test_centre_catalog_filter_hook(): void {
+		CentreCatalog::register();
+		$this->assertNotFalse( has_filter( 'evt_centres', array( CentreCatalog::class, 'provide_centres' ) ) );
+
+		// Con centros ya pasados, no los sobreescribe.
+		$input    = array( 'custom' => 'Centro Propio' );
+		$filtered = CentreCatalog::provide_centres( $input );
+		$this->assertSame( $input, $filtered );
+
+		// Con array vacío, devuelve active_options.
+		$catalog = array(
+			'38017731' => array(
+				'code'         => '38017731',
+				'name'         => 'CIFP Activo',
+				'island'       => 'Isla',
+				'municipality' => 'Mun',
+				'type'         => 'CIFP',
+				'active'       => true,
+			),
+		);
+		update_option( CentreCatalogue::OPTION_CATALOGUE, $catalog, false );
+		$options = CentreCatalog::provide_centres( array() );
+		$this->assertArrayHasKey( '38017731', $options );
+		$this->assertSame( 'CIFP Activo', $options['38017731'] );
+	}
+
+	/**
+	 * 23. CentreCatalogueSync: WP-Cron, locks y URLs configurables.
+	 */
+	public function test_sync_cron_locks_and_urls(): void {
+		// 1. Cron.
+		CentreCatalogueSync::register_cron();
+		$this->assertNotFalse( has_action( CentreCatalogueSync::CRON_HOOK, array( CentreCatalogueSync::class, 'cron_sync' ) ) );
+		$this->assertNotFalse( wp_next_scheduled( CentreCatalogueSync::CRON_HOOK ) );
+
+		// cron_sync() no propaga excepción si falla.
+		$this->mock_http( '', '', 500, 500 );
+		CentreCatalogueSync::cron_sync(); // No lanza excepción.
+
+		// 2. Locks.
+		$this->assertTrue( CentreCatalogueSync::acquire_lock() );
+		$this->assertFalse( CentreCatalogueSync::acquire_lock() );
+		CentreCatalogueSync::release_lock();
+		$this->assertTrue( CentreCatalogueSync::acquire_lock() );
+		CentreCatalogueSync::release_lock();
+
+		// 3. URLs.
+		update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, 'https://example.org/directorio/manifest.json', false );
+		$this->assertSame( 'https://example.org/directorio/manifest.json', CentreCatalogueSync::manifest_url() );
+		$this->assertSame( 'https://example.org/directorio/centros.min.json', CentreCatalogueSync::catalogue_url( 'https://example.org/directorio/manifest.json' ) );
+
+		// Filtros de URL.
+		add_filter(
+			'evt_centres_manifest_url',
+			static function () {
+				return 'https://filtrado.org/manifest.json';
+			}
+		);
+		add_filter(
+			'evt_centres_catalogue_url',
+			static function () {
+				return 'https://filtrado.org/centros.min.json';
+			}
+		);
+		$this->assertSame( 'https://filtrado.org/manifest.json', CentreCatalogueSync::manifest_url() );
+		$this->assertSame( 'https://filtrado.org/centros.min.json', CentreCatalogueSync::catalogue_url() );
+	}
+
+	/**
+	 * 24. CentreCatalogueSync: ramas de error en sync.
+	 */
+	public function test_sync_error_branches(): void {
+		// 1. Bloqueo ya adquirido.
+		CentreCatalogueSync::acquire_lock();
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por bloqueo.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'otra sincronización de centros en curso', $e->getMessage() );
+		}
+		CentreCatalogueSync::release_lock();
+
+		// 2. URL de manifest vacía.
+		delete_option( CentreCatalogueSync::OPTION_MANIFEST_URL );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por URL vacía.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'URL de manifest de centros no configurada', $e->getMessage() );
+		}
+
+		update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, 'https://example.org/manifest.json', false );
+
+		// 3. Error de red (WP_Error) al descargar manifest.
+		$this->mock_http( new WP_Error( 'http_err', 'Fallo de conexión' ), '' );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por WP_Error en manifest.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'Fallo de conexión', $e->getMessage() );
+		}
+
+		// 4. Manifest con JSON inválido.
+		$this->mock_http( 'esto no es json', '' );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por JSON inválido en manifest.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'JSON válido', $e->getMessage() );
+		}
+
+		// 5. Manifest sin sha256.
+		$bad_manifest = (string) wp_json_encode(
+			array(
+				'schema_version' => 1,
+				'files'          => array( 'centros.min.json' => array() ),
+			)
+		);
+		$this->mock_http( $bad_manifest, '[]' );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por sha256 ausente en manifest.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'no declara la entrada de centros.min.json con su sha256', $e->getMessage() );
+		}
+
+		// 6. Error de red (WP_Error) al descargar centros.min.json.
+		$payload = $this->make_payload( array() );
+		$this->mock_http( $payload['manifest_json'], new WP_Error( 'cat_err', 'Error al descargar catálogo' ) );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por WP_Error en catálogo.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'Error al descargar catálogo', $e->getMessage() );
+		}
+
+		// 7. HTTP distinto de 200 en centros.min.json.
+		$this->mock_http( $payload['manifest_json'], 'Error', 200, 403 );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por HTTP 403 en catálogo.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'HTTP 403', $e->getMessage() );
+		}
+
+		// 8. Discrepancia de recuento declarado vs contenido.
+		$manifest_count_mismatch = array(
+			'schema_version' => 1,
+			'files'          => array(
+				'centros.min.json' => array(
+					'sha256'  => hash( 'sha256', '[]' ),
+					'records' => 5,
+				),
+			),
+		);
+		$this->mock_http( (string) wp_json_encode( $manifest_count_mismatch ), '[]' );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por discrepancia de recuento.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'no coincide con el declarado en el manifest', $e->getMessage() );
+		}
+
+		// 9. Elemento del array no es un objeto.
+		$bad_item_payload = $this->make_payload( array( 'no es un objeto' ) );
+		$this->mock_http( $bad_item_payload['manifest_json'], $bad_item_payload['catalogue_json'] );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por registro no array.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'no es un objeto válido', $e->getMessage() );
+		}
+
+		// 10. Código de centro con formato inválido (no son 8 dígitos).
+		$bad_code_payload = $this->make_payload(
+			array(
+				array(
+					'code'   => '1234',
+					'name'   => 'Test',
+					'active' => true,
+				),
+			)
+		);
+		$this->mock_http( $bad_code_payload['manifest_json'], $bad_code_payload['catalogue_json'] );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por código no de 8 dígitos.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'debe tener exactamente 8 dígitos', $e->getMessage() );
+		}
+
+		// 11. Denominación vacía.
+		$empty_name_payload = $this->make_payload(
+			array(
+				array(
+					'code'   => '38017731',
+					'name'   => '',
+					'active' => true,
+				),
+			)
+		);
+		$this->mock_http( $empty_name_payload['manifest_json'], $empty_name_payload['catalogue_json'] );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por denominación vacía.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'Denominación vacía', $e->getMessage() );
+		}
+
+		// 12. Campo active no es booleano.
+		$bad_active_payload = $this->make_payload(
+			array(
+				array(
+					'code'   => '38017731',
+					'name'   => 'CIFP Test',
+					'active' => 'si',
+				),
+			)
+		);
+		$this->mock_http( $bad_active_payload['manifest_json'], $bad_active_payload['catalogue_json'] );
+		try {
+			CentreCatalogueSync::sync();
+			$this->fail( 'Se esperaba fallo por active no booleano.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertStringContainsString( 'debe ser booleano', $e->getMessage() );
+		}
+	}
+
+	/**
+	 * 25. Registrations::centres soporta listas simples y mapas asociativos.
+	 */
+	public function test_registrations_centres_formats(): void {
+		// 1. Sin filtro o devolviendo no array.
+		add_filter( 'evt_centres', '__return_false' );
+		$this->assertSame( array(), Registrations::centres() );
+		remove_all_filters( 'evt_centres' );
+
+		// 2. Lista simple de strings (formato legado).
+		add_filter(
+			'evt_centres',
+			static function () {
+				return array( 'IES Uno', 'CEIP Dos' );
+			}
+		);
+		$legacy = Registrations::centres();
+		$this->assertSame(
+			array(
+				'IES Uno'  => 'IES Uno',
+				'CEIP Dos' => 'CEIP Dos',
+			),
+			$legacy
+		);
+		remove_all_filters( 'evt_centres' );
+
+		// 3. Mapa asociativo (código => nombre).
+		add_filter(
+			'evt_centres',
+			static function () {
+				return array( '38017731' => 'CIFP Icod' );
+			}
+		);
+		$map = Registrations::centres();
+		$this->assertSame( array( '38017731' => 'CIFP Icod' ), $map );
+		remove_all_filters( 'evt_centres' );
+	}
+
+	/**
+	 * 26. RegistrationInput helpers y matching por denominación.
+	 */
+	public function test_registration_input_code_matching(): void {
+		$this->assertTrue( RegistrationInput::is_centre_code( '38017731' ) );
+		$this->assertTrue( RegistrationInput::is_centre_code( '3801773' ) );
+		$this->assertFalse( RegistrationInput::is_centre_code( '12345' ) );
+		$this->assertFalse( RegistrationInput::is_centre_code( '1234567890' ) );
+		$this->assertFalse( RegistrationInput::is_centre_code( 'abcdefgh' ) );
+
+		// Matching cuando se pasa la denominación y el catálogo tiene código => denominación.
+		$catalog = array(
+			'38017731' => 'CIFP En Icod',
+		);
+		$val     = RegistrationInput::core(
+			array(
+				'tax_id'  => '12345678Z',
+				'name'    => 'Laura',
+				'surname' => 'Gómez',
+				'email'   => 'laura@example.org',
+				'phone'   => '600111222',
+				'centre'  => 'CIFP En Icod',
+				'consent' => '1',
+			),
+			$catalog
+		);
+		$this->assertTrue( $val['ok'] );
+		$this->assertSame( '38017731', $val['data']['centre_code'] );
+		$this->assertSame( 'CIFP En Icod', $val['data']['centre'] );
+
+		// Sin catálogo cargado (null), pero pasando código oficial en centre.
+		$val_null = RegistrationInput::core(
+			array(
+				'tax_id'  => '12345678Z',
+				'name'    => 'Laura',
+				'surname' => 'Gómez',
+				'email'   => 'laura@example.org',
+				'phone'   => '600111222',
+				'centre'  => '38017731',
+				'consent' => '1',
+			),
+			null
+		);
+		$this->assertTrue( $val_null['ok'] );
+		$this->assertSame( '38017731', $val_null['data']['centre_code'] );
 	}
 }
