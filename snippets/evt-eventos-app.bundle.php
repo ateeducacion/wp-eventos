@@ -2521,12 +2521,28 @@ final class EventAccess {
 
 
 	public static function validate_rest_areas( $prepared, $request ) {
-		if ( is_wp_error( $prepared ) || ! $request->has_param( EventTaxonomies::AREA ) ) {
+		if ( is_wp_error( $prepared ) ) {
 			return $prepared;
 		}
-		$final = self::resolve_area_assignment( absint( $request->get_param( 'id' ) ), (array) $request->get_param( EventTaxonomies::AREA ) );
+		$post_id = absint( $request->get_url_params()['id'] ?? 0 );
+		if ( ! $request->has_param( EventTaxonomies::AREA ) ) {
+			if ( $post_id > 0 || self::can_edit_all_areas() ) {
+				return $prepared;
+			}
+			$assigned = self::user_areas();
+			if ( array() === $assigned ) {
+				return new \WP_Error( 'evt_area_forbidden', self::scope_assignment_message( get_current_user_id() ), array( 'status' => 403 ) );
+			}
+			$requested = $assigned;
+		} else {
+			$requested = (array) $request->get_param( EventTaxonomies::AREA );
+		}
+		$final = self::resolve_area_assignment( $post_id, $requested );
 		if ( is_wp_error( $final ) ) {
 			return $final;
+		}
+		if ( 0 === $post_id && ! self::can_edit_all_areas() && in_array( $request->get_param( 'status' ), array( 'publish', 'future', 'private' ), true ) ) {
+			return new \WP_Error( 'evt_scope_draft_first', 'Cree el evento como borrador antes de publicarlo, para que tenga ámbito desde el principio.', array( 'status' => 400 ) );
 		}
 		$request->set_param( EventTaxonomies::AREA, $final );
 		return $prepared;
@@ -2544,6 +2560,9 @@ final class EventAccess {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
 		$ids     = array();
 		foreach ( $requested as $value ) {
+			if ( ! is_scalar( $value ) ) {
+				return new \WP_Error( 'evt_area_invalid', 'El ámbito solicitado no existe.', array( 'status' => 400 ) );
+			}
 			$value = trim( (string) $value );
 			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
 			if ( $id <= 0 || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
@@ -2794,9 +2813,6 @@ final class EventAccess {
 
 
 
-
-
-
 			return 'auto-draft' === get_post_status( self::root_id( $post_id ) )
 				&& (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
 		}
@@ -2845,9 +2861,6 @@ final class EventAccess {
 		$tipo  = (string) get_post_type( $post_id );
 		return isset( $tipos[ $tipo ] ) ? $tipos[ $tipo ] : '';
 	}
-
-
-
 
 
 

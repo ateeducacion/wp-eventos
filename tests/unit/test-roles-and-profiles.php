@@ -125,8 +125,11 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		evt_render_profile_fields( get_user_by( 'id', $editor ) );
 		$html = ob_get_clean();
 		$this->assertStringContainsString( 'value="' . $first . '" selected=', $html );
+		$this->assertStringNotContainsString( '__keep_unresolved__', $html );
+		$_POST['evt_area'] = (string) $first;
 		evt_save_profile_fields( $editor );
-		$this->assertSame( (string) $first, get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array( $first ), get_user_meta( $editor, 'evt_area', true ) );
+		$_POST['evt_area'] = '__keep_unresolved__';
 		foreach ( array( array( $first, $second ), $first . ',' . $second, array( $first, 99999999 ) ) as $raw ) {
 			update_user_meta( $editor, 'evt_area', $raw );
 			ob_start();

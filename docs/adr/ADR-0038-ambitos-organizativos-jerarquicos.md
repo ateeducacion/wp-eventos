@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: []
 ai_assistance:
   tool: "Codex"
-  model: "GPT-6"
+  model: "unknown"
 ---
 
 # ADR-0038: Ámbitos organizativos jerárquicos para la edición
@@ -25,7 +25,7 @@ ai_assistance:
 
 La interfaz y la documentación dirán **Ámbito organizativo**. Se conserva `evt_area` como taxonomía y meta persistentes. Cada usuario Editor tiene **un** término asignado, que concede ese nodo y todos sus descendientes. La meta conserva el formato de lista de IDs para compatibilidad de lectura, pero un perfil histórico con varios términos válidos queda sin acceso hasta que administración elija uno: no se escoge arbitrariamente. También se aceptan cadenas antiguas separadas por comas. Un término inexistente o un error al obtener descendientes no concede acceso. Sin ámbito, el resultado es vacío. Administración (`evt_manage_app` o `manage_options`, con `evt_edit_all_areas`) no está acotada.
 
-Un `evt_event` puede tener **varios** ámbitos organizadores. Cualquier usuario cuyo ámbito efectivo cruce al menos uno de ellos puede editarlo; al guardar desde el taller, los ámbitos de otras ramas se conservan. Un evento nuevo recibe por defecto el único ámbito de su autor si no se indicó otro; la interfaz permite elegir varios ámbitos autorizados. No se publica contenido sin ámbito. Ponentes y actividades mantienen su asociación multivalor, y las páginas satélite heredan la del evento raíz.
+Un `evt_event` puede tener **varios** ámbitos organizadores. Cualquier usuario cuyo ámbito efectivo cruce al menos uno de ellos puede editarlo; al guardar desde el taller, los ámbitos de otras ramas se conservan. Un evento nuevo de una persona editora recibe por defecto su único ámbito asignado si no se indicó otro permitido; la interfaz permite elegir varios ámbitos autorizados. Una persona editora acotada no puede crear ni dejar un evento sin organizadores. Administración conserva la posibilidad de crear, publicar o reparar contenido huérfano. Ponentes y actividades mantienen su asociación multivalor, y las páginas satélite heredan la del evento raíz.
 
 El rol nativo `editor` recibe las mismas capacidades de CPT de trabajo que `evt_organiser`, además de `evt_edit_custom_css`. No recibe `manage_options`, `evt_manage_app`, `evt_edit_all_areas`, gestión de términos ni JavaScript a medida. `evt_organiser` queda como compatibilidad para perfiles existentes; no se borra ni se migra automáticamente porque una persona podría tener otros roles y una conversión sin inventario cambiaría permisos. El alta funcional nueva usa `editor`. Una retirada futura requerirá una migración única, auditada e idempotente, como la de `evt_coordinator` en `snippets/roles-and-profiles.php`.
 
@@ -39,8 +39,8 @@ Un Editor situado en un ámbito puede editar contenidos asociados a ese nodo o s
 
 ## Adenda — 2026-09-20
 
-La frase «No se publica contenido sin ámbito» de la decisión inicial no describe una invariante global implementable sin interceptar también las escrituras programáticas de administración. Administración conserva la posibilidad explícita de publicar o reparar un evento sin ámbito; una persona editora acotada no puede crear ni dejar un evento sin ámbitos organizadores. La demo crea primero el borrador, asigna los términos y solo entonces publica, para no disparar hooks públicos con un evento huérfano.
+En REST, una persona editora acotada crea primero un borrador y luego lo publica: la transición directa a `publish`, `future` o `private` se rechaza porque `transition_post_status` ocurre antes de que WordPress asigne los términos REST. La demo sigue el mismo orden para no disparar hooks públicos con un evento huérfano. Al crear sin `evt_area`, REST usa el único ámbito directo del perfil; al actualizar sin ese parámetro, conserva los términos.
 
 La asignación compartida se resuelve en `EventAccess::resolve_area_assignment()`: un Editor solo cambia términos de su subárbol, conserva los ajenos y puede retirar todos los propios si queda otro organizador. En tal caso pierde acceso al guardar y el taller lo comunica. Si el conjunto final queda vacío, se rechaza. Los organizadores ajenos existentes son visibles en solo lectura en el taller y en wp-admin.
 
-El perfil interpreta de forma centralizada meta escalar, cadena separada por comas o lista. Un único ID válido resuelve el ámbito; varios válidos son ambiguos, y la mezcla de un ID válido con otro inexistente es inválida. Ambos estados bloquean acceso. Abrir y guardar otros campos del perfil preserva literalmente esa meta hasta que administración elige explícitamente un único ámbito o «Sin ámbito». Como aún no hay cuentas reales, no hace falta una migración masiva; Ajustes y diagnóstico enumera perfiles problemáticos antes del despliegue.
+El perfil interpreta de forma centralizada meta escalar, cadena separada por comas o lista. Un único ID válido resuelve el ámbito y se normaliza a una lista unitaria al guardar el perfil; varios válidos son ambiguos, y la mezcla de un ID válido con otro inexistente es inválida. Ambos estados bloquean acceso y su meta se preserva literalmente mientras administración no elija explícitamente un único ámbito o «Sin ámbito». Como aún no hay cuentas reales, no hace falta una migración masiva; Ajustes y diagnóstico enumera perfiles problemáticos antes del despliegue.

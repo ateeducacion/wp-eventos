@@ -62,6 +62,11 @@ function evt_demo_accounts(): array {
 			'areas' => array( 'ambito-1' ),
 			'label' => 'Editor (Ámbito 1)',
 		),
+		'editor-ambito2'   => array(
+			'role'  => 'editor',
+			'areas' => array( 'ambito-2' ),
+			'label' => 'Editor (Ámbito 2)',
+		),
 		'editor-subambito' => array(
 			'role'  => 'editor',
 			'areas' => array( 'subambito-1' ),

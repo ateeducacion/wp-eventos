@@ -130,6 +130,12 @@ WordPress y solo se le cuelgan las capacidades del aplicativo. El detalle
 completo, capacidad a capacidad, está en
 [docs/roles-y-permisos.md](docs/roles-y-permisos.md).
 
+En REST, un Editor crea primero el evento en borrador y después lo publica:
+así los hooks de publicación ya encuentran su ámbito. Si omite `evt_area` al
+crear, recibe su ámbito directo; si lo omite al actualizar, conserva los
+organizadores actuales. Administración puede crear contenido huérfano para
+repararlo.
+
 ## Requisitos
 
 - **Docker** (wp-env)
@@ -176,6 +182,7 @@ contraseña es `password` en todos.
 | `organizacion2` | `evt_organiser` | Ámbito 1 |
 | `organizacion3` | `evt_organiser` | Ámbito 2 |
 | `editor-ambito` | `editor` | Ámbito 1: puede editar eventos de Subámbito 1 y Subámbito 2 |
+| `editor-ambito2` | `editor` | Ámbito 2: puede editar el evento compartido, sin acceder a los demás del Ámbito 1 |
 | `editor-subambito` | `editor` | Subámbito 1: no puede editar Subámbito 2 |
 
 La cuenta `coordinacion` conserva el nombre de cuando existía un rol de
@@ -186,9 +193,9 @@ global entra como `admin`.
 Flujo sugerido: entra como `editor-ambito` y comprueba que puede editar los
 eventos de Subámbito 1 y Subámbito 2. Con `editor-subambito`, el de Subámbito 1
 se abre y el de Subámbito 2 no aparece ni se abre por enlace directo. El
-«Evento compartido de demostración» lo organizan Subámbito 1 y Ámbito 2: cada
-editor de esas ramas puede modificar su propia participación sin quitar la
-ajena.
+«Evento compartido de demostración» lo organizan Subámbito 1 y Ámbito 2:
+`editor-subambito` y `editor-ambito2` pueden modificar su propia participación
+sin quitar la ajena.
 
 Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
 «Switch To» en Usuarios), igual que en producción.

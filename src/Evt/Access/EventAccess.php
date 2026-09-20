@@ -233,19 +233,35 @@ final class EventAccess {
 	}
 
 	/**
-	 * Reject REST assignments outside the editor's effective scope before saving.
+	 * Resolve REST creation and explicit assignment before saving the post.
 	 *
 	 * @param mixed            $prepared Prepared post or prior error.
 	 * @param \WP_REST_Request $request REST request.
 	 * @return mixed
 	 */
 	public static function validate_rest_areas( $prepared, $request ) {
-		if ( is_wp_error( $prepared ) || ! $request->has_param( EventTaxonomies::AREA ) ) {
+		if ( is_wp_error( $prepared ) ) {
 			return $prepared;
 		}
-		$final = self::resolve_area_assignment( absint( $request->get_param( 'id' ) ), (array) $request->get_param( EventTaxonomies::AREA ) );
+		$post_id = absint( $request->get_url_params()['id'] ?? 0 );
+		if ( ! $request->has_param( EventTaxonomies::AREA ) ) {
+			if ( $post_id > 0 || self::can_edit_all_areas() ) {
+				return $prepared;
+			}
+			$assigned = self::user_areas();
+			if ( array() === $assigned ) {
+				return new \WP_Error( 'evt_area_forbidden', self::scope_assignment_message( get_current_user_id() ), array( 'status' => 403 ) );
+			}
+			$requested = $assigned;
+		} else {
+			$requested = (array) $request->get_param( EventTaxonomies::AREA );
+		}
+		$final = self::resolve_area_assignment( $post_id, $requested );
 		if ( is_wp_error( $final ) ) {
 			return $final;
+		}
+		if ( 0 === $post_id && ! self::can_edit_all_areas() && in_array( $request->get_param( 'status' ), array( 'publish', 'future', 'private' ), true ) ) {
+			return new \WP_Error( 'evt_scope_draft_first', 'Cree el evento como borrador antes de publicarlo, para que tenga ámbito desde el principio.', array( 'status' => 400 ) );
 		}
 		$request->set_param( EventTaxonomies::AREA, $final );
 		return $prepared;
@@ -263,6 +279,9 @@ final class EventAccess {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
 		$ids     = array();
 		foreach ( $requested as $value ) {
+			if ( ! is_scalar( $value ) ) {
+				return new \WP_Error( 'evt_area_invalid', 'El ámbito solicitado no existe.', array( 'status' => 400 ) );
+			}
 			$value = trim( (string) $value );
 			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
 			if ( $id <= 0 || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
@@ -510,12 +529,9 @@ final class EventAccess {
 
 		$theirs = self::post_areas( $post_id );
 		if ( array() === $theirs ) {
-			// Recién creado y todavía sin área: lo edita quien lo creó, que es
-			// quien tiene que ponérsela. Para los ponentes y las actividades es
-			// una ventana muy corta, porque `stamp_area()` se la pone al
-			// guardar; se queda abierta cuando quien lo crea no tiene área
-			// propia —la administración—, y entonces solo lo
-			// toca esa persona hasta que alguien le asigne un área.
+			// El auto-borrador todavía sin ámbito solo lo abre quien lo creó.
+			// `stamp_area()` asigna el ámbito al guardar; fuera de esa ventana
+			// el contenido huérfano no concede acceso a una persona acotada.
 			return 'auto-draft' === get_post_status( self::root_id( $post_id ) )
 				&& (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
 		}
@@ -566,16 +582,13 @@ final class EventAccess {
 	}
 
 	/**
-	 * Give a brand new speaker or activity the áreas of whoever created it.
+	 * Give a new event, speaker or activity the creator's direct scope.
 	 *
-	 * Sin esto un ponente nace sin área y solo lo toca quien lo tecleó, no sus
-	 * compañeras: el área es el ámbito de trabajo, no la autoría (ADR-0006).
-	 * Solo escribe cuando todavía no hay ninguna, así que compartir un ponente
-	 * con otra área —añadirle su término— no se deshace en el siguiente
-	 * guardado. Se mira el área de quien firma el post y no la de quien guarda,
-	 * para que la migración y WP-CLI den el mismo resultado.
+	 * Solo escribe cuando todavía no hay términos, así que no deshace un
+	 * contenido compartido. Usa el perfil del autor, no el de quien guarda,
+	 * también en migraciones y WP-CLI.
 	 *
-	 * @param int $post_id Speaker or activity being saved.
+	 * @param int $post_id Post being saved.
 	 * @return void
 	 */
 	public static function stamp_area( int $post_id ): void {

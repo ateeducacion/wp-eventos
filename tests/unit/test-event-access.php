@@ -264,6 +264,7 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $foreign ), $editor ) );
 		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( 99999999 ), $editor ) );
 		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $a1, 99999999 ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( array( $a1 ) ), $editor ) );
 		$own = $this->event( $this->administrator(), array( $a1 ) );
 		$this->assertWPError( EventAccess::resolve_area_assignment( $own, array(), $editor ) );
 		$this->assertEqualsCanonicalizing( array( $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a2, $foreign ), $this->administrator() ) );

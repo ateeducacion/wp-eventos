@@ -109,6 +109,122 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 		);
 	}
 
+	/** REST creation defaults to the editor's direct scope and rejects unresolved profiles. */
+	public function test_rest_creation_without_scope_is_fail_closed() {
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin  = $this->administrator();
+		$this->acting_as( $admin );
+		$before = count(
+			get_posts(
+				array(
+					'post_type'   => EventPostType::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+				)
+			)
+		);
+		foreach ( array( array(), array( $this->area_owner, $this->area_other ), array( 99999999 ) ) as $raw ) {
+			update_user_meta( $editor, EventAccess::USER_AREA_META, $raw );
+			$this->acting_as( $editor );
+			foreach ( array( 'draft', 'publish' ) as $status ) {
+				$this->acting_as( $editor );
+				$response = $this->rest(
+					'POST',
+					'/wp/v2/evt_event',
+					array(
+						'title'  => 'Sin ámbito',
+						'status' => $status,
+					)
+				);
+				$this->assertSame( 403, $response->get_status() );
+				$this->acting_as( $admin );
+				$this->assertSame(
+					$before,
+					count(
+						get_posts(
+							array(
+								'post_type'   => EventPostType::POST_TYPE,
+								'post_status' => 'any',
+								'numberposts' => -1,
+							)
+						)
+					)
+				);
+			}
+		}
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $this->area_owner ) );
+		$this->acting_as( $editor );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Con ámbito',
+				'status' => 'draft',
+			)
+		);
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $response->get_data()['id'], EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Directo a publicación',
+				'status' => 'publish',
+			)
+		);
+		$this->assertSame( 400, $response->get_status() );
+		$this->acting_as( $this->administrator() );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Reparación',
+				'status' => 'publish',
+			)
+		);
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( array(), wp_get_post_terms( $response->get_data()['id'], EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Publication hooks must never observe a scoped editor's event as orphaned. */
+	public function test_rest_publish_transition_has_scope() {
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $this->area_owner ) );
+		$seen  = array();
+		$watch = static function ( $new_status, $old_status, $post ) use ( &$seen ) {
+			if ( EventPostType::POST_TYPE === $post->post_type && 'publish' === $new_status ) {
+				$seen[] = wp_get_post_terms( $post->ID, EventTaxonomies::AREA, array( 'fields' => 'ids' ) );
+			}
+		};
+		add_action( 'transition_post_status', $watch, 10, 3 );
+		$this->acting_as( $editor );
+		$direct = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'    => 'Publicación',
+				'status'   => 'publish',
+				'evt_area' => array( $this->area_owner ),
+			)
+		);
+		$this->assertSame( 400, $direct->get_status() );
+		$this->assertSame( array(), $seen );
+		$draft = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'    => 'Publicación',
+				'status'   => 'draft',
+				'evt_area' => array( $this->area_owner ),
+			)
+		);
+		$this->assertSame( 201, $draft->get_status() );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $draft->get_data()['id'], array( 'status' => 'publish' ) );
+		remove_action( 'transition_post_status', $watch, 10 );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( array( $this->area_owner ) ), $seen );
+	}
+
 	/**
 	 * A scoped editor cannot move an event to a foreign branch via REST.
 	 */
