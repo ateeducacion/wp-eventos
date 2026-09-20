@@ -216,6 +216,23 @@ final class Settings {
 				</table>
 			<?php endif; ?>
 
+			<h2>Ámbitos de los perfiles editores</h2>
+			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil.</p>
+			<table class="widefat striped" style="max-width:46rem">
+				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th></tr></thead>
+				<tbody>
+				<?php foreach ( EventAccess::scope_diagnostics() as $row ) : ?>
+					<tr>
+						<td><a href="<?php echo esc_url( get_edit_user_link( $row['user_id'] ) ); ?>"><?php echo esc_html( $row['login'] ); ?></a></td>
+						<td><?php echo esc_html( $row['state'] ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['ids'] ) ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['invalid'] ) ); ?></td>
+						<td><?php echo $row['legacy'] ? 'Sí' : 'No'; ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+
 			<h2>Catálogo de centros educativos</h2>
 			<?php
 			$status       = CentreCatalogue::status();

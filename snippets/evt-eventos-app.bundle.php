@@ -2401,23 +2401,88 @@ final class EventAccess {
 
 
 	public static function user_areas( int $user_id = 0 ): array {
+		$assignment = self::scope_assignment_state( $user_id );
+		return 'resolved' === $assignment['state'] ? $assignment['ids'] : array();
+	}
+
+
+
+
+
+
+
+	public static function scope_assignment_state( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
 		if ( $user_id <= 0 ) {
-			return array();
+			return array(
+				'state'   => 'empty',
+				'ids'     => array(),
+				'invalid' => array(),
+				'legacy'  => false,
+			);
 		}
-		$raw = get_user_meta( $user_id, self::USER_AREA_META, true );
-		if ( ! is_array( $raw ) ) {
-			$raw = '' === trim( (string) $raw ) ? array() : explode( ',', (string) $raw );
-		}
-		$ids = array();
-		foreach ( self::clean_ids( $raw ) as $id ) {
-			if ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) {
+		$raw     = get_user_meta( $user_id, self::USER_AREA_META, true );
+		$scalar  = is_scalar( $raw ) ? trim( (string) $raw ) : '';
+		$legacy  = ! is_array( $raw ) && '' !== $scalar;
+		$values  = is_array( $raw ) ? $raw : ( '' === $scalar ? array() : explode( ',', $scalar ) );
+		$ids     = array();
+		$invalid = array();
+		foreach ( $values as $value ) {
+			$value = is_scalar( $value ) ? trim( (string) $value ) : '';
+			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
+			if ( $id > 0 && get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) {
 				$ids[] = $id;
+			} else {
+				$invalid[] = $value;
 			}
 		}
-		return 1 === count( $ids ) ? $ids : array();
+		$ids   = array_values( array_unique( $ids ) );
+		$state = $invalid ? 'invalid' : ( count( $ids ) > 1 ? 'ambiguous' : ( $ids ? 'resolved' : 'empty' ) );
+		return compact( 'state', 'ids', 'invalid', 'legacy' );
+	}
+
+
+
+
+
+
+
+	public static function scope_assignment_message( int $user_id ): string {
+		$state = self::scope_assignment_state( $user_id )['state'];
+		if ( 'ambiguous' === $state ) {
+			return 'Su perfil conserva varios ámbitos y necesita que administración elija uno.';
+		}
+		if ( 'invalid' === $state ) {
+			return 'Su perfil contiene un ámbito inválido y necesita que administración lo revise.';
+		}
+		return 'No tiene ningún ámbito asignado en su perfil. El ámbito lo pone quien administra el aplicativo.';
+	}
+
+
+
+
+
+
+	public static function scope_diagnostics(): array {
+		$rows = array();
+		foreach ( get_users() as $user ) {
+			if ( ! ( $user instanceof \WP_User ) || self::can_edit_all_areas( $user->ID ) ) {
+				continue;
+			}
+			if ( ! user_can( $user, 'edit_evt_events' ) && ! array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) ) {
+				continue;
+			}
+			$rows[] = array_merge(
+				array(
+					'user_id' => $user->ID,
+					'login'   => $user->user_login,
+				),
+				self::scope_assignment_state( $user->ID )
+			);
+		}
+		return $rows;
 	}
 
 
@@ -2456,17 +2521,53 @@ final class EventAccess {
 
 
 	public static function validate_rest_areas( $prepared, $request ) {
-		if ( is_wp_error( $prepared ) || ! $request->has_param( EventTaxonomies::AREA ) || self::can_edit_all_areas() ) {
+		if ( is_wp_error( $prepared ) || ! $request->has_param( EventTaxonomies::AREA ) ) {
 			return $prepared;
 		}
-		if ( ! self::may_assign_areas( (array) $request->get_param( EventTaxonomies::AREA ) ) ) {
-			return new \WP_Error( 'evt_area_forbidden', 'Ámbito no permitido.', array( 'status' => 403 ) );
+		$final = self::resolve_area_assignment( absint( $request->get_param( 'id' ) ), (array) $request->get_param( EventTaxonomies::AREA ) );
+		if ( is_wp_error( $final ) ) {
+			return $final;
 		}
-		if ( $request->get_param( 'id' ) ) {
-			$foreign = array_diff( self::post_areas( absint( $request->get_param( 'id' ) ) ), self::scope_areas() );
-			$request->set_param( EventTaxonomies::AREA, array_values( array_unique( array_merge( (array) $request->get_param( EventTaxonomies::AREA ), $foreign ) ) ) );
-		}
+		$request->set_param( EventTaxonomies::AREA, $final );
 		return $prepared;
+	}
+
+
+
+
+
+
+
+
+
+	public static function resolve_area_assignment( int $post_id, array $requested, int $user_id = 0 ) {
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+		$ids     = array();
+		foreach ( $requested as $value ) {
+			$value = trim( (string) $value );
+			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
+			if ( $id <= 0 || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
+				return new \WP_Error( 'evt_area_invalid', 'El ámbito solicitado no existe.', array( 'status' => 400 ) );
+			}
+			$ids[] = $id;
+		}
+		$ids = array_values( array_unique( $ids ) );
+		if ( self::can_edit_all_areas( $user_id ) ) {
+			return $ids;
+		}
+		$allowed = self::scope_areas( $user_id );
+		if ( array() === $allowed ) {
+			return new \WP_Error( 'evt_area_forbidden', self::scope_assignment_message( $user_id ), array( 'status' => 403 ) );
+		}
+		if ( array_diff( $ids, $allowed ) ) {
+			return new \WP_Error( 'evt_area_forbidden', 'No puede asignar un ámbito de otra rama.', array( 'status' => 403 ) );
+		}
+		$foreign = $post_id > 0 ? array_diff( self::post_areas( $post_id ), $allowed ) : array();
+		$final   = array_values( array_unique( array_merge( $ids, $foreign ) ) );
+		if ( array() === $final ) {
+			return new \WP_Error( 'evt_area_required', 'El contenido debe conservar al menos un ámbito organizador.', array( 'status' => 400 ) );
+		}
+		return $final;
 	}
 
 
@@ -2506,14 +2607,17 @@ final class EventAccess {
 		if ( ! ( 'post.php' === $pagenow && 'editpost' === $action ) && ! ( 'admin-ajax.php' === $pagenow && 'inline-save' === $action ) && ! ( 'edit.php' === $pagenow && in_array( $action, array( 'edit', 'bulk_edit' ), true ) ) ) {
 			return;
 		}
-		$error = self::admin_area_error( wp_unslash( $_POST ) );
-		if ( $error instanceof \WP_Error ) {
-			wp_die( esc_html( $error->get_error_message() ), 'Ámbito no permitido', array( 'response' => 403 ) );
+		$request = wp_unslash( $_POST );
+		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ( ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) && empty( $request['evt_area_present'] ) ) ) {
+			return;
 		}
-		if ( ! self::can_edit_all_areas() && isset( $_POST['tax_input'][ EventTaxonomies::AREA ], $_POST['post_ID'] ) ) {
-			$foreign                                     = array_diff( self::post_areas( absint( $_POST['post_ID'] ) ), self::scope_areas() );
-			$_POST['tax_input'][ EventTaxonomies::AREA ] = array_values( array_unique( array_merge( (array) $_POST['tax_input'][ EventTaxonomies::AREA ], $foreign ) ) );
+		$requested = $request['tax_input'][ EventTaxonomies::AREA ] ?? array();
+		$requested = is_array( $requested ) ? $requested : explode( ',', (string) $requested );
+		$final     = self::resolve_area_assignment( absint( $request['post_ID'] ?? 0 ), $requested );
+		if ( is_wp_error( $final ) ) {
+			wp_die( esc_html( $final->get_error_message() ), 'Ámbito no permitido', array( 'response' => absint( $final->get_error_data()['status'] ?? 403 ) ) );
 		}
+		$_POST['tax_input'][ EventTaxonomies::AREA ] = $final;
 
 	}
 
@@ -2524,12 +2628,13 @@ final class EventAccess {
 
 
 	public static function admin_area_error( array $request ) {
-		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) ) {
+		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ( ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) && empty( $request['evt_area_present'] ) ) ) {
 			return null;
 		}
-		$requested = $request['tax_input'][ EventTaxonomies::AREA ];
+		$requested = $request['tax_input'][ EventTaxonomies::AREA ] ?? array();
 		$requested = is_array( $requested ) ? $requested : explode( ',', (string) $requested );
-		return self::may_assign_areas( $requested ) ? null : new \WP_Error( 'evt_area_forbidden', 'No puede asignar este ámbito al evento. No se ha guardado ningún cambio.' );
+		$result    = self::resolve_area_assignment( absint( $request['post_ID'] ?? 0 ), $requested );
+		return is_wp_error( $result ) ? $result : null;
 	}
 
 
@@ -2872,7 +2977,7 @@ final class EventAccess {
 			return 'Su perfil no organiza eventos. Si debería hacerlo, pídalo a quien administre el aplicativo.';
 		}
 		if ( array() === self::user_areas( $user_id ) ) {
-			return 'No tiene ningún ámbito asignado en su perfil, así que no puede editar eventos. El ámbito lo pone quien administra el aplicativo.';
+			return self::scope_assignment_message( $user_id );
 		}
 		$nombres = array(
 			EventPostType::POST_TYPE    => 'Este evento',
@@ -4603,9 +4708,10 @@ final class EventTaxonomies {
 
 
 
-	public static function area_options( int $user_id = 0 ): array {
+
+	public static function area_options( int $user_id = 0, bool $all = false ): array {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
-		$allowed = EventAccess::can_edit_all_areas( $user_id ) ? null : EventAccess::scope_areas( $user_id );
+		$allowed = $all || EventAccess::can_edit_all_areas( $user_id ) ? null : EventAccess::scope_areas( $user_id );
 		$terms   = get_terms(
 			array(
 				'taxonomy'   => self::AREA,
@@ -4648,9 +4754,19 @@ final class EventTaxonomies {
 
 	public static function area_meta_box( $post ): void {
 		$selected = $post instanceof \WP_Post ? EventAccess::post_areas( $post->ID ) : array();
-		echo '<div class="inside"><p>Seleccione los ámbitos que organizan este evento.</p>';
+		$allowed  = EventAccess::can_edit_all_areas() ? $selected : EventAccess::scope_areas();
+		echo '<div class="inside"><p>Seleccione los ámbitos que organiza su perfil.</p><input type="hidden" name="evt_area_present" value="1" />';
 		foreach ( self::area_options() as $id => $label ) {
 			printf( '<label><input type="checkbox" name="tax_input[%1$s][]" value="%2$d"%3$s /> %4$s</label><br />', esc_attr( self::AREA ), (int) $id, in_array( $id, $selected, true ) ? ' checked="checked"' : '', esc_html( $label ) );
+		}
+		$foreign = array_diff( $selected, $allowed );
+		if ( $foreign ) {
+			$labels = self::area_options( 0, true );
+			echo '<p>Otros ámbitos organizadores (solo lectura):</p><ul>';
+			foreach ( $foreign as $id ) {
+				printf( '<li>%s</li>', esc_html( $labels[ $id ] ?? '' ) );
+			}
+			echo '</ul><p>Se conservarán al guardar. Solo administración o una persona de ese ámbito puede modificar su participación.</p>';
 		}
 		echo '</div>';
 	}
@@ -4709,6 +4825,7 @@ final class EventTaxonomies {
 		if ( ! ( $term instanceof \WP_Term ) || ! self::can_edit_meta() || ! isset( $_POST['evt_scope_meta_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_scope_meta_nonce'] ) ), 'evt_scope_meta' ) ) {
 			return;
 		}
+		$errors = array();
 		if ( isset( $_POST[ self::EMAIL ] ) ) {
 			$raw_email = trim( sanitize_text_field( wp_unslash( $_POST[ self::EMAIL ] ) ) );
 			$email     = sanitize_email( $raw_email );
@@ -4717,7 +4834,7 @@ final class EventTaxonomies {
 			} elseif ( is_email( $email ) ) {
 				update_term_meta( $term_id, self::EMAIL, $email );
 			} else {
-				set_transient( 'evt_scope_error_' . get_current_user_id(), 'El correo del ámbito no es válido; se ha conservado el anterior.', 60 );
+				$errors[] = 'El correo del ámbito no es válido; se ha conservado el anterior.';
 			}
 		}
 		if ( isset( $_POST[ self::IMAGE_ID ] ) ) {
@@ -4728,8 +4845,11 @@ final class EventTaxonomies {
 			} elseif ( wp_attachment_is_image( $image_id ) ) {
 				update_term_meta( $term_id, self::IMAGE_ID, $image_id );
 			} else {
-				set_transient( 'evt_scope_error_' . get_current_user_id(), 'La imagen del ámbito no es válida; se ha conservado la anterior.', 60 );
+				$errors[] = 'La imagen del ámbito no es válida; se ha conservado la anterior.';
 			}
+		}
+		if ( $errors ) {
+			set_transient( 'evt_scope_error_' . get_current_user_id(), implode( ' ', $errors ), 60 );
 		}
 	}
 
@@ -7001,7 +7121,7 @@ final class EventList {
 
 
 		return user_can( $user_id, 'edit_evt_events' ) || EventAccess::is_manager( $user_id )
-			? 'No tiene ningún ámbito asignado en su perfil, así que todavía no puede gestionar eventos. El ámbito lo pone quien administra el aplicativo.'
+			? EventAccess::scope_assignment_message( $user_id )
 			: 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.';
 	}
 
@@ -7477,6 +7597,7 @@ final class EventList {
 		$avisos = array(
 			'creado'       => array( 'ok', 'Evento creado. Ya puede añadirle secciones.' ),
 			'guardado'     => array( 'ok', 'Cambios guardados.' ),
+			'retirado'     => array( 'ok', 'El evento se ha guardado. Su ámbito ya no lo organiza y dejará de tener acceso a su edición.' ),
 			'borrado'      => array( 'ok', 'Evento enviado a la papelera. Nada se ha perdido: está en «Papelera» y se restaura desde ahí.' ),
 			'restaurado'   => array( 'ok', 'Evento restaurado, en borrador: revíselo y publíquelo cuando esté listo.' ),
 			'publicado'    => array( 'ok', 'Evento publicado: ya se ve en la web. Sus páginas se publican cada una desde el taller.' ),
@@ -11281,8 +11402,9 @@ final class EventWorkspace {
 		if ( '' === $valores[ self::FIELD_AREA ] ) {
 			$valores[ self::FIELD_AREA ] = implode( ',', EventAccess::user_areas( $user_id ) );
 		}
-		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos antes de crear el evento.', $valores );
+		$area_ids = EventAccess::resolve_area_assignment( 0, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message(), $valores );
 			Shell::leave( self::url( 0, self::PANEL_SETTINGS ) );
 			return;
 		}
@@ -11304,7 +11426,7 @@ final class EventWorkspace {
 
 		$id = (int) $id;
 		self::save_meta( $id, $valores, $revisado['data'] );
-		self::save_terms( $id, $user_id, $valores );
+		self::save_terms( $id, $area_ids, $valores );
 		EventAccess::stamp_area( $id );
 
 		self::set_flash( 'ok', 'Evento creado, en borrador. Añada sus páginas, sus ponentes y su programa, y publíquelo cuando esté listo.' );
@@ -11326,7 +11448,7 @@ final class EventWorkspace {
 		return array(
 			self::FIELD_TITLE             => (string) $crudo['title'],
 
-			self::FIELD_AREA              => implode( ',', array_map( 'absint', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
+			self::FIELD_AREA              => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
 			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
 			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
 			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
@@ -11360,7 +11482,8 @@ final class EventWorkspace {
 		);
 
 		$valores = self::submitted_values( $crudo );
-		if ( '' === $valores[ self::FIELD_AREA ] ) {
+
+		if ( '' === $valores[ self::FIELD_AREA ] && ! isset( $_POST['evt_area_present'] ) ) {
 			$mine                        = EventAccess::can_edit_all_areas( $user_id ) ? EventAccess::post_areas( $event_id ) : array_intersect( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) );
 			$valores[ self::FIELD_AREA ] = implode( ',', $mine );
 		}
@@ -11373,11 +11496,13 @@ final class EventWorkspace {
 			Shell::leave( $destino );
 			return;
 		}
-		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos. No se ha guardado ningún cambio.', $valores );
+		$area_ids = EventAccess::resolve_area_assignment( $event_id, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message() . ' No se ha guardado ningún cambio.', $valores );
 			Shell::leave( $destino );
 			return;
 		}
+		$loses_access = ! EventAccess::can_edit_all_areas( $user_id ) && ! array_intersect( $area_ids, EventAccess::scope_areas( $user_id ) );
 
 		wp_update_post(
 			array(
@@ -11386,8 +11511,12 @@ final class EventWorkspace {
 			)
 		);
 		self::save_meta( $event_id, $valores, $revisado['data'] );
-		self::save_terms( $event_id, $user_id, $valores );
+		self::save_terms( $event_id, $area_ids, $valores );
 
+		if ( $loses_access ) {
+			Shell::leave( add_query_arg( EventList::VAR_NOTICE, 'retirado', Shell::url( 'events' ) ) );
+			return;
+		}
 		self::set_flash( 'ok', 'Datos del evento guardados.' );
 		Shell::leave( $destino );
 	}
@@ -11429,18 +11558,12 @@ final class EventWorkspace {
 
 
 
-	private static function save_terms( int $event_id, int $user_id, array $valores ): void {
-		$area_ids = array_map( 'absint', explode( ',', $valores[ self::FIELD_AREA ] ) );
-		$mapa     = array(
+	private static function save_terms( int $event_id, array $area_ids, array $valores ): void {
+		$mapa = array(
 			EventTaxonomies::TYPE   => (int) $valores[ self::FIELD_TYPE ],
 			EventTaxonomies::COURSE => (int) $valores[ self::FIELD_COURSE ],
 		);
-		if ( self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			if ( ! EventAccess::can_edit_all_areas( $user_id ) ) {
-				$area_ids = array_values( array_unique( array_merge( $area_ids, array_diff( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) ) ) ) );
-			}
-			wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
-		}
+		wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
 		foreach ( $mapa as $taxonomia => $term_id ) {
 			wp_set_object_terms( $event_id, $term_id > 0 ? array( $term_id ) : array(), $taxonomia, false );
 		}
@@ -12147,6 +12270,7 @@ final class EventWorkspace {
 			'status'        => '',
 			'status_label'  => '',
 			'area_ids'      => array(),
+			'foreign_areas' => array(),
 			'view_url'      => '',
 			'events_url'    => Shell::url( 'events' ),
 			'section_url'   => Shell::url( 'section' ),
@@ -12226,24 +12350,27 @@ final class EventWorkspace {
 		$m['can_edit_js']   = $js_ok;
 
 
-		$m['code']         = array(
+		$m['code']          = array(
 			'css' => $css_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_CSS ) : '',
 			'js'  => $js_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_JS ) : '',
 		);
-		$m['view_url']     = (string) get_permalink( $evento );
-		$m['status']       = (string) $evento->post_status;
-		$m['status_label'] = self::status_label( (string) $evento->post_status );
-		$m['state']        = EventState::of(
+		$m['view_url']      = (string) get_permalink( $evento );
+		$m['status']        = (string) $evento->post_status;
+		$m['status_label']  = self::status_label( (string) $evento->post_status );
+		$m['state']         = EventState::of(
 			self::meta( $event_id, EventMetaKeys::START_DATE ),
 			self::meta( $event_id, EventMetaKeys::END_DATE )
 		);
-		$m['state_label']  = EventState::label( (string) $m['state'] );
-		$m['area_ids']     = EventAccess::post_areas( $event_id );
-		$m['sections']     = self::section_rows( $event_id );
-		$m['trashed']      = self::section_rows( $event_id, true );
-		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id );
-		$m['media']        = array(
+		$m['state_label']   = EventState::label( (string) $m['state'] );
+		$m['area_ids']      = EventAccess::post_areas( $event_id );
+		$foreign_ids        = EventAccess::can_edit_all_areas( $user_id ) ? array() : array_diff( $m['area_ids'], EventAccess::scope_areas( $user_id ) );
+		$all_labels         = EventTaxonomies::area_options( 0, true );
+		$m['foreign_areas'] = array_values( array_intersect_key( $all_labels, array_flip( $foreign_ids ) ) );
+		$m['sections']      = self::section_rows( $event_id );
+		$m['trashed']       = self::section_rows( $event_id, true );
+		$m['values']        = self::values( $event_id, (array) $m['flash']['values'] );
+		$m['terms']         = self::term_lists( $user_id );
+		$m['media']         = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
@@ -14398,6 +14525,7 @@ final class EventDataPanel {
 			'Ámbitos organizativos',
 			(array) ( $listas['area'] ?? array() ),
 			(string) $v[ EventWorkspace::FIELD_AREA ],
+			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
 				: 'Seleccione solo ámbitos dentro de su subárbol.'
@@ -14569,14 +14697,25 @@ final class EventDataPanel {
 
 
 
-	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, string $ayuda ): string {
+
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
 		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
+			<input type="hidden" name="evt_area_present" value="1" />
 			<?php foreach ( $terminos as $term_id => $texto ) : ?>
 				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
 			<?php endforeach; ?>
+			<?php if ( $foreign ) : ?>
+				<p>Otros ámbitos organizadores (solo lectura):</p>
+				<ul>
+				<?php
+				foreach ( $foreign as $label ) :
+					?>
+					<li><?php echo esc_html( $label ); ?></li><?php endforeach; ?></ul>
+				<small>Se conservarán al guardar. Solo administración o una persona de ese ámbito puede modificar su participación.</small><br />
+			<?php endif; ?>
 			<small><?php echo esc_html( $ayuda ); ?></small>
 		</fieldset>
 		<?php
@@ -18904,7 +19043,7 @@ final class Home {
 		if ( array() === $secciones ) {
 			$motivo = ! user_can( $user_id, 'edit_evt_events' ) && ! EventAccess::is_manager( $user_id )
 				? 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.'
-				: 'No tiene ningún ámbito asignado en su perfil, así que todavía no puede gestionar eventos. El ámbito lo pone quien administra el aplicativo.';
+				: EventAccess::scope_assignment_message( $user_id );
 		}
 
 		return array(
@@ -19349,6 +19488,23 @@ final class Settings {
 					</tbody>
 				</table>
 			<?php endif; ?>
+
+			<h2>Ámbitos de los perfiles editores</h2>
+			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil.</p>
+			<table class="widefat striped" style="max-width:46rem">
+				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th></tr></thead>
+				<tbody>
+				<?php foreach ( EventAccess::scope_diagnostics() as $row ) : ?>
+					<tr>
+						<td><a href="<?php echo esc_url( get_edit_user_link( $row['user_id'] ) ); ?>"><?php echo esc_html( $row['login'] ); ?></a></td>
+						<td><?php echo esc_html( $row['state'] ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['ids'] ) ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['invalid'] ) ); ?></td>
+						<td><?php echo $row['legacy'] ? 'Sí' : 'No'; ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
 
 			<h2>Catálogo de centros educativos</h2>
 			<?php

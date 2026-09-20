@@ -152,8 +152,8 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertEqualsCanonicalizing( array( $service, $child ), EventTaxonomies::rest_area_query( array() )['include'] );
 	}
 
-	/** The native editor shows only assignable paths, even on a shared event. */
-	public function test_native_scope_box_keeps_foreign_terms_hidden() {
+	/** The native editor shows foreign organisers read-only on shared events. */
+	public function test_native_scope_box_shows_foreign_terms_read_only() {
 		$own   = $this->area( 'Ámbito 1' );
 		$other = $this->area( 'Ámbito 2' );
 		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -165,6 +165,8 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$html = ob_get_clean();
 		$this->assertStringContainsString( 'value="' . $own . '" checked="checked"', $html );
 		$this->assertStringNotContainsString( 'value="' . $other . '"', $html );
+		$this->assertStringContainsString( 'Otros ámbitos organizadores', $html );
+		$this->assertStringContainsString( 'Ámbito 2', $html );
 	}
 
 	/** Term forms display the saved image and a validation notice without altering metadata. */

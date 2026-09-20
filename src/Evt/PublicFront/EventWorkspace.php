@@ -946,8 +946,9 @@ final class EventWorkspace {
 		if ( '' === $valores[ self::FIELD_AREA ] ) {
 			$valores[ self::FIELD_AREA ] = implode( ',', EventAccess::user_areas( $user_id ) );
 		}
-		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos antes de crear el evento.', $valores );
+		$area_ids = EventAccess::resolve_area_assignment( 0, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message(), $valores );
 			Shell::leave( self::url( 0, self::PANEL_SETTINGS ) );
 			return;
 		}
@@ -969,7 +970,7 @@ final class EventWorkspace {
 
 		$id = (int) $id;
 		self::save_meta( $id, $valores, $revisado['data'] );
-		self::save_terms( $id, $user_id, $valores );
+		self::save_terms( $id, $area_ids, $valores );
 		EventAccess::stamp_area( $id );
 
 		self::set_flash( 'ok', 'Evento creado, en borrador. Añada sus páginas, sus ponentes y su programa, y publíquelo cuando esté listo.' );
@@ -991,7 +992,7 @@ final class EventWorkspace {
 		return array(
 			self::FIELD_TITLE             => (string) $crudo['title'],
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
-			self::FIELD_AREA              => implode( ',', array_map( 'absint', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
+			self::FIELD_AREA              => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
 			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
 			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
 			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
@@ -1025,7 +1026,8 @@ final class EventWorkspace {
 		);
 
 		$valores = self::submitted_values( $crudo );
-		if ( '' === $valores[ self::FIELD_AREA ] ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
+		if ( '' === $valores[ self::FIELD_AREA ] && ! isset( $_POST['evt_area_present'] ) ) {
 			$mine                        = EventAccess::can_edit_all_areas( $user_id ) ? EventAccess::post_areas( $event_id ) : array_intersect( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) );
 			$valores[ self::FIELD_AREA ] = implode( ',', $mine );
 		}
@@ -1038,11 +1040,13 @@ final class EventWorkspace {
 			Shell::leave( $destino );
 			return;
 		}
-		if ( ! self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			self::set_flash( 'error', 'Seleccione uno o varios ámbitos permitidos. No se ha guardado ningún cambio.', $valores );
+		$area_ids = EventAccess::resolve_area_assignment( $event_id, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message() . ' No se ha guardado ningún cambio.', $valores );
 			Shell::leave( $destino );
 			return;
 		}
+		$loses_access = ! EventAccess::can_edit_all_areas( $user_id ) && ! array_intersect( $area_ids, EventAccess::scope_areas( $user_id ) );
 
 		wp_update_post(
 			array(
@@ -1051,8 +1055,12 @@ final class EventWorkspace {
 			)
 		);
 		self::save_meta( $event_id, $valores, $revisado['data'] );
-		self::save_terms( $event_id, $user_id, $valores );
+		self::save_terms( $event_id, $area_ids, $valores );
 
+		if ( $loses_access ) {
+			Shell::leave( add_query_arg( EventList::VAR_NOTICE, 'retirado', Shell::url( 'events' ) ) );
+			return;
+		}
 		self::set_flash( 'ok', 'Datos del evento guardados.' );
 		Shell::leave( $destino );
 	}
@@ -1090,22 +1098,16 @@ final class EventWorkspace {
 	 * File the event under its área, its tipología and its curso escolar.
 	 *
 	 * @param int                   $event_id Event post ID.
-	 * @param int                   $user_id  Who is asking.
+	 * @param int[]                 $area_ids Final scope terms from EventAccess.
 	 * @param array<string, string> $valores  What the form submitted.
 	 * @return void
 	 */
-	private static function save_terms( int $event_id, int $user_id, array $valores ): void {
-		$area_ids = array_map( 'absint', explode( ',', $valores[ self::FIELD_AREA ] ) );
-		$mapa     = array(
+	private static function save_terms( int $event_id, array $area_ids, array $valores ): void {
+		$mapa = array(
 			EventTaxonomies::TYPE   => (int) $valores[ self::FIELD_TYPE ],
 			EventTaxonomies::COURSE => (int) $valores[ self::FIELD_COURSE ],
 		);
-		if ( self::may_set_areas( $user_id, $valores[ self::FIELD_AREA ] ) ) {
-			if ( ! EventAccess::can_edit_all_areas( $user_id ) ) {
-				$area_ids = array_values( array_unique( array_merge( $area_ids, array_diff( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) ) ) ) );
-			}
-			wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
-		}
+		wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
 		foreach ( $mapa as $taxonomia => $term_id ) {
 			wp_set_object_terms( $event_id, $term_id > 0 ? array( $term_id ) : array(), $taxonomia, false );
 		}
@@ -1812,6 +1814,7 @@ final class EventWorkspace {
 			'status'        => '',
 			'status_label'  => '',
 			'area_ids'      => array(),
+			'foreign_areas' => array(),
 			'view_url'      => '',
 			'events_url'    => Shell::url( 'events' ),
 			'section_url'   => Shell::url( 'section' ),
@@ -1891,24 +1894,27 @@ final class EventWorkspace {
 		$m['can_edit_js']   = $js_ok;
 		// Lo guardado solo se devuelve a quien puede escribirlo: el modelo no
 		// es un sitio donde el código se asome a quien no le corresponde.
-		$m['code']         = array(
+		$m['code']          = array(
 			'css' => $css_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_CSS ) : '',
 			'js'  => $js_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_JS ) : '',
 		);
-		$m['view_url']     = (string) get_permalink( $evento );
-		$m['status']       = (string) $evento->post_status;
-		$m['status_label'] = self::status_label( (string) $evento->post_status );
-		$m['state']        = EventState::of(
+		$m['view_url']      = (string) get_permalink( $evento );
+		$m['status']        = (string) $evento->post_status;
+		$m['status_label']  = self::status_label( (string) $evento->post_status );
+		$m['state']         = EventState::of(
 			self::meta( $event_id, EventMetaKeys::START_DATE ),
 			self::meta( $event_id, EventMetaKeys::END_DATE )
 		);
-		$m['state_label']  = EventState::label( (string) $m['state'] );
-		$m['area_ids']     = EventAccess::post_areas( $event_id );
-		$m['sections']     = self::section_rows( $event_id );
-		$m['trashed']      = self::section_rows( $event_id, true );
-		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id );
-		$m['media']        = array(
+		$m['state_label']   = EventState::label( (string) $m['state'] );
+		$m['area_ids']      = EventAccess::post_areas( $event_id );
+		$foreign_ids        = EventAccess::can_edit_all_areas( $user_id ) ? array() : array_diff( $m['area_ids'], EventAccess::scope_areas( $user_id ) );
+		$all_labels         = EventTaxonomies::area_options( 0, true );
+		$m['foreign_areas'] = array_values( array_intersect_key( $all_labels, array_flip( $foreign_ids ) ) );
+		$m['sections']      = self::section_rows( $event_id );
+		$m['trashed']       = self::section_rows( $event_id, true );
+		$m['values']        = self::values( $event_id, (array) $m['flash']['values'] );
+		$m['terms']         = self::term_lists( $user_id );
+		$m['media']         = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),

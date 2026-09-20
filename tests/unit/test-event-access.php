@@ -245,4 +245,60 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertTrue( EventAccess::can_edit( $admin, $evento ) );
 		$this->assertFalse( EventAccess::is_manager( $this->organiser( array( $otra ) ) ) );
 	}
+
+	/** A scoped editor may withdraw only their own organiser terms. */
+	public function test_resolve_shared_area_assignment() {
+		$service = $this->area( 'Ámbito 1' );
+		$a1      = $this->area( 'Subámbito 1' );
+		$a2      = $this->area( 'Subámbito 2' );
+		$foreign = $this->area( 'Ámbito 2' );
+		wp_update_term( $a1, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $a2, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
+		$event = $this->event( $this->administrator(), array( $a1, $foreign ) );
+		$this->assertEqualsCanonicalizing( array( $a1, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a1 ), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a2 ), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a1, $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a1, $a2 ), $editor ) );
+		$this->assertSame( array( $foreign ), EventAccess::resolve_area_assignment( $event, array(), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $foreign ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( 99999999 ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $a1, 99999999 ), $editor ) );
+		$own = $this->event( $this->administrator(), array( $a1 ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $own, array(), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a2, $foreign ), $this->administrator() ) );
+	}
+
+	/** A historical profile is classified once and never widens runtime access. */
+	public function test_historical_scope_states() {
+		$first = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = $this->organiser();
+		foreach ( array( (string) $first, array( $first ) ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'resolved', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array( $first ), EventAccess::user_areas( $user ) );
+		}
+		foreach ( array( array( $first, $other ), $first . ',' . $other ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'ambiguous', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array(), EventAccess::user_areas( $user ) );
+		}
+		foreach ( array( array( $first, 99999999 ), '99999999' ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'invalid', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array(), EventAccess::user_areas( $user ) );
+		}
+	}
+
+	/** Administrators retain the explicit orphan repair path; editors do not. */
+	public function test_admin_can_repair_an_unscoped_event() {
+		$admin  = $this->administrator();
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$area   = $this->area( 'Ámbito 1' );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $area ) );
+		$event = $this->event( $admin, array( $area ) );
+		$this->assertSame( array(), EventAccess::resolve_area_assignment( $event, array(), $admin ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array(), $editor ) );
+	}
 }

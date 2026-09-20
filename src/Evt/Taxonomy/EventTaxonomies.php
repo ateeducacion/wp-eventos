@@ -102,12 +102,13 @@ final class EventTaxonomies {
 	/**
 	 * Named paths for scope selectors, restricted to the current user's tree.
 	 *
-	 * @param int $user_id User ID, or current user.
+	 * @param int  $user_id User ID, or current user.
+	 * @param bool $all     Include all terms for read-only labels.
 	 * @return array<int, string>
 	 */
-	public static function area_options( int $user_id = 0 ): array {
+	public static function area_options( int $user_id = 0, bool $all = false ): array {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
-		$allowed = EventAccess::can_edit_all_areas( $user_id ) ? null : EventAccess::scope_areas( $user_id );
+		$allowed = $all || EventAccess::can_edit_all_areas( $user_id ) ? null : EventAccess::scope_areas( $user_id );
 		$terms   = get_terms(
 			array(
 				'taxonomy'   => self::AREA,
@@ -150,9 +151,19 @@ final class EventTaxonomies {
 	 */
 	public static function area_meta_box( $post ): void {
 		$selected = $post instanceof \WP_Post ? EventAccess::post_areas( $post->ID ) : array();
-		echo '<div class="inside"><p>Seleccione los ámbitos que organizan este evento.</p>';
+		$allowed  = EventAccess::can_edit_all_areas() ? $selected : EventAccess::scope_areas();
+		echo '<div class="inside"><p>Seleccione los ámbitos que organiza su perfil.</p><input type="hidden" name="evt_area_present" value="1" />';
 		foreach ( self::area_options() as $id => $label ) {
 			printf( '<label><input type="checkbox" name="tax_input[%1$s][]" value="%2$d"%3$s /> %4$s</label><br />', esc_attr( self::AREA ), (int) $id, in_array( $id, $selected, true ) ? ' checked="checked"' : '', esc_html( $label ) );
+		}
+		$foreign = array_diff( $selected, $allowed );
+		if ( $foreign ) {
+			$labels = self::area_options( 0, true );
+			echo '<p>Otros ámbitos organizadores (solo lectura):</p><ul>';
+			foreach ( $foreign as $id ) {
+				printf( '<li>%s</li>', esc_html( $labels[ $id ] ?? '' ) );
+			}
+			echo '</ul><p>Se conservarán al guardar. Solo administración o una persona de ese ámbito puede modificar su participación.</p>';
 		}
 		echo '</div>';
 	}
@@ -211,6 +222,7 @@ final class EventTaxonomies {
 		if ( ! ( $term instanceof \WP_Term ) || ! self::can_edit_meta() || ! isset( $_POST['evt_scope_meta_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_scope_meta_nonce'] ) ), 'evt_scope_meta' ) ) {
 			return;
 		}
+		$errors = array();
 		if ( isset( $_POST[ self::EMAIL ] ) ) {
 			$raw_email = trim( sanitize_text_field( wp_unslash( $_POST[ self::EMAIL ] ) ) );
 			$email     = sanitize_email( $raw_email );
@@ -219,7 +231,7 @@ final class EventTaxonomies {
 			} elseif ( is_email( $email ) ) {
 				update_term_meta( $term_id, self::EMAIL, $email );
 			} else {
-				set_transient( 'evt_scope_error_' . get_current_user_id(), 'El correo del ámbito no es válido; se ha conservado el anterior.', 60 );
+				$errors[] = 'El correo del ámbito no es válido; se ha conservado el anterior.';
 			}
 		}
 		if ( isset( $_POST[ self::IMAGE_ID ] ) ) {
@@ -230,8 +242,11 @@ final class EventTaxonomies {
 			} elseif ( wp_attachment_is_image( $image_id ) ) {
 				update_term_meta( $term_id, self::IMAGE_ID, $image_id );
 			} else {
-				set_transient( 'evt_scope_error_' . get_current_user_id(), 'La imagen del ámbito no es válida; se ha conservado la anterior.', 60 );
+				$errors[] = 'La imagen del ámbito no es válida; se ha conservado la anterior.';
 			}
+		}
+		if ( $errors ) {
+			set_transient( 'evt_scope_error_' . get_current_user_id(), implode( ' ', $errors ), 60 );
 		}
 	}
 

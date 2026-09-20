@@ -2,7 +2,7 @@
 /**
  * Demo users and demo events for the development environment.
  *
- * Idempotente: crea lo que falta y repone siempre el rol y el área de cada
+ * Idempotente: crea lo que falta y repone siempre el rol y el ámbito de cada
  * cuenta, y los datos, la clasificación y la apariencia de cada evento. Corre
  * bajo `wp eval-file` y bajo Playground `runPHP`, así que nunca depende de
  * WP_CLI.
@@ -20,16 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Demo accounts: login => role, área slugs and label.
+ * Demo accounts: login => role, scope slugs and label.
  *
- * `organizacion` y `organizacion2` comparten área a propósito: es lo que
+ * `organizacion` y `organizacion2` comparten ámbito a propósito: es lo que
  * demuestra que la organización edita también lo de sus compañeras. Y
- * `organizacion3` está en otra área, que es lo que demuestra el acotado.
+ * `organizacion3` está en otro ámbito, que es lo que demuestra el acotado.
  *
  * `coordinacion` conserva el nombre del rol retirado el 2026-09-13, pero hoy
  * solo tiene un ámbito, como las demás cuentas de edición.
  *
- * El que trabaja sobre todas las áreas es `admin`, el administrador que ya crea
+ * El que trabaja sobre todos los ámbitos es `admin`, el administrador que ya crea
  * wp-env: el aplicativo tiene un solo rol propio y la administración es la
  * nativa de WordPress, así que no hay ninguna cuenta más que sembrar.
  *
@@ -109,7 +109,7 @@ function evt_demo_events(): array {
 			'slug'      => 'jornadas-tecnologia-educativa',
 			'title'     => 'III Jornadas de Tecnología Educativa',
 			'author'    => 'organizacion',
-			'area'      => 'subambito-1',
+			'areas'     => array( 'subambito-1' ),
 			'type'      => 'jornadas',
 			'start'     => $proximo_inicio,
 			'end'       => $proximo_fin,
@@ -287,7 +287,7 @@ function evt_demo_events(): array {
 			'slug'     => 'encuentro-escuelas-rurales',
 			'title'    => 'Encuentro de Escuelas Rurales',
 			'author'   => 'organizacion3',
-			'area'     => 'ambito-2',
+			'areas'    => array( 'ambito-2' ),
 			'type'     => 'encuentro',
 			'start'    => $abierto_inicio,
 			'end'      => $abierto_fin,
@@ -343,7 +343,19 @@ function evt_demo_events(): array {
 			'slug'     => 'evento-subambito-2',
 			'title'    => 'Evento del Subámbito 2',
 			'author'   => 'editor-ambito',
-			'area'     => 'subambito-2',
+			'areas'    => array( 'subambito-2' ),
+			'type'     => 'jornadas',
+			'start'    => $proximo_inicio,
+			'end'      => $proximo_fin,
+			'venue'    => 'Sede de demostración',
+			'meta'     => array(),
+			'sections' => array(),
+		),
+		array(
+			'slug'     => 'evento-compartido-demo',
+			'title'    => 'Evento compartido de demostración',
+			'author'   => 'editor-ambito',
+			'areas'    => array( 'subambito-1', 'ambito-2' ),
 			'type'     => 'jornadas',
 			'start'    => $proximo_inicio,
 			'end'      => $proximo_fin,
@@ -383,12 +395,12 @@ define(
 );
 
 /**
- * Create or update one demo account and its área.
+ * Create or update one demo account and its scope.
  *
  * @param string                                           $login   Login name.
  * @param array{role:string, areas:string[], label:string} $account Account definition.
  * @return int User ID.
- * @throws RuntimeException If the user cannot be created or an área is missing.
+ * @throws RuntimeException If the user cannot be created or a scope is missing.
  */
 function evt_seed_account( string $login, array $account ): int {
 	$user = get_user_by( 'login', $login );
@@ -432,7 +444,7 @@ function evt_seed_account( string $login, array $account ): int {
 	foreach ( $account['areas'] as $slug ) {
 		$term = get_term_by( 'slug', $slug, 'evt_area' );
 		if ( ! $term instanceof WP_Term ) {
-			throw new RuntimeException( esc_html( "No existe el área «{$slug}»: ejecute antes scripts/setup-vocabulary.php." ) );
+			throw new RuntimeException( esc_html( "No existe el ámbito «{$slug}»: ejecute antes scripts/setup-vocabulary.php." ) );
 		}
 		$areas[] = (int) $term->term_id;
 	}
@@ -545,7 +557,7 @@ function evt_seed_event( array $event ): bool {
 		$root = wp_insert_post(
 			array(
 				'post_type'    => 'evt_event',
-				'post_status'  => 'publish',
+				'post_status'  => 'draft',
 				'post_name'    => $event['slug'],
 				'post_title'   => $event['title'],
 				'post_author'  => $author,
@@ -568,9 +580,23 @@ function evt_seed_event( array $event ): bool {
 	// Los términos van por ID: `wp_set_object_terms()` con una cadena en una
 	// taxonomía jerárquica crearía un término nuevo si el slug no existiese, y
 	// lo que hace falta es enterarse de que falta el vocabulario.
-	wp_set_object_terms( $root, array( evt_demo_term( 'evt_area', $event['area'] ) ), 'evt_area' );
+	$area_ids = array_map(
+		static function ( string $slug ): int {
+			return evt_demo_term( 'evt_area', $slug );
+		},
+		$event['areas']
+	);
+	wp_set_object_terms( $root, $area_ids, 'evt_area' );
 	wp_set_object_terms( $root, array( evt_demo_term( 'evt_type', $event['type'] ) ), 'evt_type' );
 	wp_set_object_terms( $root, array( evt_demo_term( 'evt_course', evt_demo_course( $event['start'] ) ) ), 'evt_course' );
+	if ( 'publish' !== get_post_status( $root ) ) {
+		wp_update_post(
+			array(
+				'ID'          => $root,
+				'post_status' => 'publish',
+			)
+		);
+	}
 
 	$creadas = 0;
 	foreach ( $event['sections'] as $section ) {
@@ -648,7 +674,7 @@ function evt_seed_programme( int $root, array $event ): void {
 /**
  * One speaker or activity of an event, created once and updated after that.
  *
- * Cuelgan del evento por `post_parent`: de ahí les llega el área y el cierre
+ * Cuelgan del evento por `post_parent`: de ahí les llega el ámbito y el cierre
  * por histórico, sin ninguna meta que mantener al día.
  *
  * @param int    $root      Event post ID.

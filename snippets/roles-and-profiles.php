@@ -279,8 +279,9 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 		}
 		$terms = \Evt\Taxonomy\EventTaxonomies::area_options();
 
-		$mine = get_user_meta( $user->ID, 'evt_area', true );
-		$mine = is_array( $mine ) && 1 === count( $mine ) ? (int) reset( $mine ) : 0;
+		$assignment = \Evt\Access\EventAccess::scope_assignment_state( $user->ID );
+		$mine       = 'resolved' === $assignment['state'] ? $assignment['ids'][0] : 0;
+		$unresolved = in_array( $assignment['state'], array( 'ambiguous', 'invalid' ), true );
 
 		echo '<h2>Eventos</h2>';
 		echo '<table class="form-table" role="presentation"><tr>';
@@ -288,7 +289,11 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 		wp_nonce_field( 'evt_profile_scope_' . $user->ID, 'evt_profile_scope_nonce' );
 
 		echo '<input type="hidden" name="evt_area_present" value="1" />';
-		echo '<select name="evt_area" id="evt_area" class="regular-text"><option value="">Sin ámbito</option>';
+		echo '<select name="evt_area" id="evt_area" class="regular-text">';
+		if ( $unresolved ) {
+			echo '<option value="__keep_unresolved__" selected="selected">Pendiente de resolver (conservar datos)</option>';
+		}
+		printf( '<option value=""%s>Sin ámbito</option>', 'empty' === $assignment['state'] ? ' selected="selected"' : '' );
 		foreach ( $terms as $term_id => $label ) {
 			printf(
 				'<option value="%1$d"%2$s>%3$s</option>',
@@ -298,6 +303,19 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 			);
 		}
 		echo '</select>';
+		if ( $unresolved ) {
+			$labels = \Evt\Taxonomy\EventTaxonomies::area_options( 0, true );
+			$names  = array_map(
+				static function ( $id ) use ( $labels ) {
+					return $labels[ $id ] ?? (string) $id;
+				},
+				$assignment['ids']
+			);
+			if ( $assignment['invalid'] ) {
+				$names[] = 'IDs inválidos: ' . implode( ', ', $assignment['invalid'] );
+			}
+			printf( '<p class="notice notice-warning">Este perfil conserva ámbitos históricos: %s. Debe elegir uno para recuperar el acceso; mientras tanto, el usuario no accede a contenidos acotados. Si guarda sin elegir, se conservarán los datos.</p>', esc_html( implode( ', ', $names ) ) );
+		}
 		echo '<p class="description">Un ámbito incluye sus descendientes. Sin ámbito, esta persona no ve ni edita ningún evento.</p>';
 		echo '</td></tr></table>';
 	}
@@ -327,8 +345,18 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 			return;
 		}
 
-		$raw = isset( $post['evt_area'] ) ? $post['evt_area'] : '';
+		if ( ! array_key_exists( 'evt_area', $post ) ) {
+			return;
+		}
+		$raw = $post['evt_area'];
 		if ( is_array( $raw ) ) {
+			return;
+		}
+		$raw = sanitize_text_field( (string) $raw );
+		if ( '__keep_unresolved__' === $raw ) {
+			return;
+		}
+		if ( '' !== $raw && ! ctype_digit( $raw ) ) {
 			return;
 		}
 		$term_id = absint( $raw );

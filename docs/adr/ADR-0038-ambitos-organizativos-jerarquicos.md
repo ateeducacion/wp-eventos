@@ -36,3 +36,11 @@ El correo y la imagen del término se guardan como term meta nativa, sin depende
 ## Consecuencias
 
 Un Editor situado en un ámbito puede editar contenidos asociados a ese nodo o sus descendientes, nunca por una rama hermana o superior. Un Editor sin ámbito no ve ni edita contenidos acotados. Los perfiles `evt_organiser` existentes conservan sus capacidades, sujetos a la misma cardinalidad de perfil. La auditoría de perfiles históricos con varios ámbitos y capacidades añadidas manualmente es necesaria antes del despliegue real. Esta ADR complementa la ADR-0006; prevalece solo en la elección del actor Editor y en las reglas posteriores de jerarquía, cardinalidad y guardado.
+
+## Adenda — 2026-09-20
+
+La frase «No se publica contenido sin ámbito» de la decisión inicial no describe una invariante global implementable sin interceptar también las escrituras programáticas de administración. Administración conserva la posibilidad explícita de publicar o reparar un evento sin ámbito; una persona editora acotada no puede crear ni dejar un evento sin ámbitos organizadores. La demo crea primero el borrador, asigna los términos y solo entonces publica, para no disparar hooks públicos con un evento huérfano.
+
+La asignación compartida se resuelve en `EventAccess::resolve_area_assignment()`: un Editor solo cambia términos de su subárbol, conserva los ajenos y puede retirar todos los propios si queda otro organizador. En tal caso pierde acceso al guardar y el taller lo comunica. Si el conjunto final queda vacío, se rechaza. Los organizadores ajenos existentes son visibles en solo lectura en el taller y en wp-admin.
+
+El perfil interpreta de forma centralizada meta escalar, cadena separada por comas o lista. Un único ID válido resuelve el ámbito; varios válidos son ambiguos, y la mezcla de un ID válido con otro inexistente es inválida. Ambos estados bloquean acceso. Abrir y guardar otros campos del perfil preserva literalmente esa meta hasta que administración elige explícitamente un único ámbito o «Sin ámbito». Como aún no hay cuentas reales, no hace falta una migración masiva; Ajustes y diagnóstico enumera perfiles problemáticos antes del despliegue.

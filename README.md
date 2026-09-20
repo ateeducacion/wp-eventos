@@ -23,7 +23,7 @@ viene a ver.
 
 Lleva también el mu-plugin de desarrollo, así que desde la barra superior se
 puede **cambiar de cuenta** —`organizacion`, `organizacion2`, `organizacion3`,
-`coordinacion`— y ver el aplicativo con cada rol y cada área, que es la mitad de
+`coordinacion`— y ver el aplicativo con cada rol y cada ámbito, que es la mitad de
 lo que hay que probar aquí. Volver a la propia cuenta se hace desde la misma
 barra.
 
@@ -179,13 +179,16 @@ contraseña es `password` en todos.
 | `editor-subambito` | `editor` | Subámbito 1: no puede editar Subámbito 2 |
 
 La cuenta `coordinacion` conserva el nombre de cuando existía un rol de
-coordinación (`evt_coordinator`, retirado el 2026-09-13); hoy sirve para probar
-el caso de una persona que pertenece a **dos** áreas. Quien necesite el ámbito
-completo entra como `admin`.
+coordinación (`evt_coordinator`, retirado el 2026-09-13); hoy permite comprobar
+la compatibilidad de `evt_organiser` con un único ámbito. Quien necesite acceso
+global entra como `admin`.
 
-Flujo sugerido: entra como `organizacion`, crea un evento y una página
-satélite; entra como `organizacion3` y comprueba que el evento del área ajena
-no aparece en el listado **ni se abre por enlace directo**.
+Flujo sugerido: entra como `editor-ambito` y comprueba que puede editar los
+eventos de Subámbito 1 y Subámbito 2. Con `editor-subambito`, el de Subámbito 1
+se abre y el de Subámbito 2 no aparece ni se abre por enlace directo. El
+«Evento compartido de demostración» lo organizan Subámbito 1 y Ámbito 2: cada
+editor de esas ramas puede modificar su propia participación sin quitar la
+ajena.
 
 Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
 «Switch To» en Usuarios), igual que en producción.

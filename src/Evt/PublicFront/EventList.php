@@ -483,7 +483,7 @@ final class EventList {
 		// Falta el permiso, o falta el área: no es lo mismo y no se arregla en
 		// el mismo sitio.
 		return user_can( $user_id, 'edit_evt_events' ) || EventAccess::is_manager( $user_id )
-			? 'No tiene ningún ámbito asignado en su perfil, así que todavía no puede gestionar eventos. El ámbito lo pone quien administra el aplicativo.'
+			? EventAccess::scope_assignment_message( $user_id )
 			: 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.';
 	}
 
@@ -959,6 +959,7 @@ final class EventList {
 		$avisos = array(
 			'creado'       => array( 'ok', 'Evento creado. Ya puede añadirle secciones.' ),
 			'guardado'     => array( 'ok', 'Cambios guardados.' ),
+			'retirado'     => array( 'ok', 'El evento se ha guardado. Su ámbito ya no lo organiza y dejará de tener acceso a su edición.' ),
 			'borrado'      => array( 'ok', 'Evento enviado a la papelera. Nada se ha perdido: está en «Papelera» y se restaura desde ahí.' ),
 			'restaurado'   => array( 'ok', 'Evento restaurado, en borrador: revíselo y publíquelo cuando esté listo.' ),
 			'publicado'    => array( 'ok', 'Evento publicado: ya se ve en la web. Sus páginas se publican cada una desde el taller.' ),

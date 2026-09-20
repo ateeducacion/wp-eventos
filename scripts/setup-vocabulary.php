@@ -1,13 +1,13 @@
 <?php
 /**
  * Snippet Name: EVT — Vocabulario base del aplicativo (una sola vez)
- * Description: Deja creados los términos de las tres taxonomías del aplicativo: áreas organizadoras, tipologías y cursos escolares. Idempotente: crea el término que falta por su slug y no toca el que ya está. En producción se pega en Code Snippets como snippet de ejecución única; en local lo llama `make provision`.
+ * Description: Deja creados los términos de las tres taxonomías del aplicativo: ámbitos organizativos, tipologías y cursos escolares. Idempotente: crea el término que falta por su slug y no toca el que ya está. En producción se pega en Code Snippets como snippet de ejecución única; en local lo llama `make provision`.
  *
  * Aquí las páginas del aplicativo son los propios eventos: `evt_event` es
  * jerárquico y cada evento se crea con sus hijas (programa, ponentes,
  * inscripción…). Lo que sí tiene que existir antes de que nadie cree el primer
  * evento es el vocabulario que lo clasifica, y sobre todo `evt_area`: es el eje
- * de permisos, y sin términos nadie puede tener área en su perfil, así que
+ * de permisos, y sin términos nadie puede tener ámbito en su perfil, así que
  * `EventAccess` cierra la puerta a todo el mundo (fail-closed).
  *
  * Los términos de aquí son **de ejemplo**: sirven para que el entorno local

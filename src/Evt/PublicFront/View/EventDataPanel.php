@@ -43,6 +43,7 @@ final class EventDataPanel {
 			'Ámbitos organizativos',
 			(array) ( $listas['area'] ?? array() ),
 			(string) $v[ EventWorkspace::FIELD_AREA ],
+			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
 				: 'Seleccione solo ámbitos dentro de su subárbol.'
@@ -211,17 +212,28 @@ final class EventDataPanel {
 	 * @param string             $rotulo  Label.
 	 * @param array<int, string> $terminos term_id => nombre.
 	 * @param string             $elegidos Comma-separated selected term IDs.
+	 * @param string[]           $foreign Read-only organiser labels.
 	 * @param string             $ayuda   Help text.
 	 * @return string
 	 */
-	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, string $ayuda ): string {
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
 		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
+			<input type="hidden" name="evt_area_present" value="1" />
 			<?php foreach ( $terminos as $term_id => $texto ) : ?>
 				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
 			<?php endforeach; ?>
+			<?php if ( $foreign ) : ?>
+				<p>Otros ámbitos organizadores (solo lectura):</p>
+				<ul>
+				<?php
+				foreach ( $foreign as $label ) :
+					?>
+					<li><?php echo esc_html( $label ); ?></li><?php endforeach; ?></ul>
+				<small>Se conservarán al guardar. Solo administración o una persona de ese ámbito puede modificar su participación.</small><br />
+			<?php endif; ?>
 			<small><?php echo esc_html( $ayuda ); ?></small>
 		</fieldset>
 		<?php

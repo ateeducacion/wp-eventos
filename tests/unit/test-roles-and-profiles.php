@@ -98,6 +98,52 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$this->assertSame( array( $other ), get_user_meta( $editor, 'evt_area', true ) );
 	}
 
+	/** Updating unrelated profile fields must preserve unresolved historical values. */
+	public function test_historical_profile_values_need_explicit_resolution() {
+		$first  = (int) self::factory()->term->create(
+			array(
+				'taxonomy' => 'evt_area',
+				'name'     => 'Ámbito 1',
+			)
+		);
+		$second = (int) self::factory()->term->create(
+			array(
+				'taxonomy' => 'evt_area',
+				'name'     => 'Ámbito 2',
+			)
+		);
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin  = (int) self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin );
+		$_POST = array(
+			'evt_area_present'        => '1',
+			'evt_profile_scope_nonce' => wp_create_nonce( 'evt_profile_scope_' . $editor ),
+			'evt_area'                => '__keep_unresolved__',
+		);
+		update_user_meta( $editor, 'evt_area', (string) $first );
+		ob_start();
+		evt_render_profile_fields( get_user_by( 'id', $editor ) );
+		$html = ob_get_clean();
+		$this->assertStringContainsString( 'value="' . $first . '" selected=', $html );
+		evt_save_profile_fields( $editor );
+		$this->assertSame( (string) $first, get_user_meta( $editor, 'evt_area', true ) );
+		foreach ( array( array( $first, $second ), $first . ',' . $second, array( $first, 99999999 ) ) as $raw ) {
+			update_user_meta( $editor, 'evt_area', $raw );
+			ob_start();
+			evt_render_profile_fields( get_user_by( 'id', $editor ) );
+			$html = ob_get_clean();
+			$this->assertStringContainsString( '__keep_unresolved__', $html );
+			evt_save_profile_fields( $editor );
+			$this->assertSame( $raw, get_user_meta( $editor, 'evt_area', true ) );
+		}
+		$_POST['evt_area'] = (string) $first;
+		evt_save_profile_fields( $editor );
+		$this->assertSame( array( $first ), get_user_meta( $editor, 'evt_area', true ) );
+		$_POST['evt_area'] = '';
+		evt_save_profile_fields( $editor );
+		$this->assertSame( array(), get_user_meta( $editor, 'evt_area', true ) );
+	}
+
 	/**
 	 * Registrar dos veces no añade nada: se llama en cada carga de `init`.
 	 */

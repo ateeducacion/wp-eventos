@@ -600,6 +600,20 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $event;
 		$model                             = EventWorkspace::model();
 		$this->assertEqualsCanonicalizing( array( $mine, $foreign ), array_map( 'intval', explode( ',', $model['values'][ EventWorkspace::FIELD_AREA ] ) ) );
+		$this->assertContains( 'Ámbito 2', $model['foreign_areas'] );
+		$destination = $this->submit(
+			$editor,
+			EventWorkspace::PANEL_SETTINGS,
+			$event,
+			0,
+			array(
+				EventWorkspace::FIELD_TITLE => 'Evento compartido',
+				'evt_area_present'          => '1',
+				EventMetaKeys::START_DATE   => '2026-10-01',
+			)
+		);
+		$this->assertSame( array( $foreign ), EventAccess::post_areas( $event ) );
+		$this->assertStringContainsString( 'retirado', (string) $destination );
 	}
 
 	// ─── el panel de apariencia ────────────────────────────────────────────

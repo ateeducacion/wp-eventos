@@ -181,7 +181,7 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 					EventAccess::validate_admin_areas();
 					$this->fail( 'The foreign term must be rejected before the post is saved.' );
 				} catch ( WPDieException $exception ) {
-					$this->assertStringContainsString( 'No puede asignar este ámbito', $exception->getMessage() );
+					$this->assertStringContainsString( 'No puede asignar un ámbito de otra rama', $exception->getMessage() );
 				}
 				$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
 			}
