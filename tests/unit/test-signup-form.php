@@ -63,7 +63,10 @@ class Test_Signup_Form extends WP_UnitTestCase {
 		add_filter(
 			'evt_centres',
 			static function (): array {
-				return array( 'CEIP El Molino', 'IES El Mirador' );
+				return array(
+					'38000001' => 'CEIP El Molino',
+					'38000002' => 'IES El Mirador',
+				);
 			}
 		);
 
@@ -121,7 +124,7 @@ class Test_Signup_Form extends WP_UnitTestCase {
 				'surname' => 'Martín Cabrera',
 				'email'   => 'ana@example.org',
 				'phone'   => '600000000',
-				'centre'  => 'CEIP El Molino',
+				'centre'  => '38000001',
 				'consent' => '1',
 			),
 			$cambios

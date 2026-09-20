@@ -88,6 +88,12 @@ parte de la fase 1.
 | `evt_speaker` | Ponente o persona comunicadora | Entradas de un formulario |
 | `evt_activity` | Actividad del programa: ponencia, mesa redonda, comunicación, taller | Entradas de otro formulario |
 
+El catálogo de centros educativos no es un CPT: es un dato maestro externo
+que se mantiene en una copia local cacheada (`evt_centres_catalogue`, `autoload = false`),
+sincronizada periódicamente desde `manifest.json` y `centros.min.json`. Las inscripciones
+guardan el código oficial en `evt_reg_centre_code` y la denominación como snapshot
+histórico en `evt_reg_centre` (ADR-0037).
+
 | Taxonomía | Eje | Ejemplos |
 |---|---|---|
 | `evt_area` | Área organizadora. **Es el eje de permisos** | `innovacion`, `salud`, `steam` |

@@ -65,6 +65,10 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
+			RegistrationMetaKeys::REG_CENTRE_CODE     => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_text_field',
+			),
 			RegistrationMetaKeys::REG_CONSENT_VERSION => array(
 				'type'     => 'integer',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),

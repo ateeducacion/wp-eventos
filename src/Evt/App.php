@@ -10,6 +10,8 @@ namespace Evt;
 use Evt\Access\EventAccess;
 use Evt\Admin\EventAdmin;
 use Evt\Admin\Settings;
+use Evt\Centre\CentreCatalog;
+use Evt\Centre\CentreCatalogueSync;
 use Evt\Meta\EventMetaRegistration;
 use Evt\Meta\ProgrammeMetaRegistration;
 use Evt\Meta\RegistrationMetaRegistration;
@@ -109,6 +111,8 @@ final class App {
 		CustomCode::register();
 
 		EventAdmin::register();
+		CentreCatalog::register();
+		CentreCatalogueSync::register_cron();
 		Settings::register();
 	}
 

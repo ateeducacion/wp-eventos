@@ -1137,12 +1137,13 @@ final class RegistrationMetaKeys {
 
 
 
-	public const REG_TAX_ID  = 'evt_reg_tax_id';
-	public const REG_NAME    = 'evt_reg_name';
-	public const REG_SURNAME = 'evt_reg_surname';
-	public const REG_EMAIL   = 'evt_reg_email';
-	public const REG_PHONE   = 'evt_reg_phone';
-	public const REG_CENTRE  = 'evt_reg_centre';
+	public const REG_TAX_ID      = 'evt_reg_tax_id';
+	public const REG_NAME        = 'evt_reg_name';
+	public const REG_SURNAME     = 'evt_reg_surname';
+	public const REG_EMAIL       = 'evt_reg_email';
+	public const REG_PHONE       = 'evt_reg_phone';
+	public const REG_CENTRE      = 'evt_reg_centre';
+	public const REG_CENTRE_CODE = 'evt_reg_centre_code';
 
 
 
@@ -1232,6 +1233,7 @@ final class RegistrationMetaKeys {
 			self::REG_EMAIL,
 			self::REG_PHONE,
 			self::REG_CENTRE,
+			self::REG_CENTRE_CODE,
 			self::REG_CONSENT_VERSION,
 			self::REG_CONSENT_AT,
 			self::REG_WORKSHOP,
@@ -1955,13 +1957,15 @@ final class RegistrationInput {
 	public static function core( array $raw, array $centres = array() ): array {
 		$errors = array();
 
-		$tax_id  = self::tax_id( self::text( $raw, 'tax_id' ) );
-		$name    = self::text( $raw, 'name' );
-		$surname = self::text( $raw, 'surname' );
-		$email   = strtolower( self::text( $raw, 'email' ) );
-		$phone   = self::phone( self::text( $raw, 'phone' ) );
-		$centre  = self::text( $raw, 'centre' );
-		$consent = ! empty( $raw['consent'] );
+		$tax_id      = self::tax_id( self::text( $raw, 'tax_id' ) );
+		$name        = self::text( $raw, 'name' );
+		$surname     = self::text( $raw, 'surname' );
+		$email       = strtolower( self::text( $raw, 'email' ) );
+		$phone       = self::phone( self::text( $raw, 'phone' ) );
+		$centre      = self::text( $raw, 'centre' );
+		$centre_code = '';
+		$centre_name = '';
+		$consent     = ! empty( $raw['consent'] );
 
 		if ( ! self::is_tax_id( $tax_id ) ) {
 			$errors[] = 'tax_id';
@@ -1978,8 +1982,15 @@ final class RegistrationInput {
 
 
 
-
-		if ( '' === $centre || ( array() !== $centres && ! in_array( $centre, $centres, true ) ) ) {
+		if (
+			'' !== $centre &&
+			self::is_centre_code( $centre ) &&
+			! empty( $centres ) &&
+			isset( $centres[ $centre ] )
+		) {
+			$centre_code = $centre;
+			$centre_name = (string) $centres[ $centre ];
+		} else {
 			$errors[] = 'centre';
 		}
 		if ( ! $consent ) {
@@ -1990,13 +2001,14 @@ final class RegistrationInput {
 			'ok'     => array() === $errors,
 			'errors' => $errors,
 			'data'   => array(
-				'tax_id'  => $tax_id,
-				'name'    => $name,
-				'surname' => $surname,
-				'email'   => $email,
-				'phone'   => $phone,
-				'centre'  => $centre,
-				'consent' => $consent,
+				'tax_id'      => $tax_id,
+				'name'        => $name,
+				'surname'     => $surname,
+				'email'       => $email,
+				'phone'       => $phone,
+				'centre'      => $centre_name,
+				'centre_code' => $centre_code,
+				'consent'     => $consent,
 			),
 		);
 	}
@@ -2062,6 +2074,18 @@ final class RegistrationInput {
 
 	public static function is_tax_id( string $value ): bool {
 		return (bool) preg_match( '/^[A-Z0-9]{6,15}$/', $value );
+	}
+
+
+
+
+
+
+
+
+
+	public static function is_centre_code( string $value ): bool {
+		return (bool) preg_match( '/^\d{8}$/', trim( $value ) );
 	}
 
 
@@ -3398,6 +3422,641 @@ final class RegistrationPostType {
 
 
 
+namespace Evt\PublicFront;
+
+
+
+
+
+
+final class ExitSignal extends \RuntimeException {
+
+
+
+
+
+
+	public $url = '';
+
+
+
+
+
+
+	public function __construct( string $url = '' ) {
+		parent::__construct( '' === $url ? 'Salida sin redirección' : 'Redirección a ' . $url );
+		$this->url = $url;
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\Centre;
+
+
+
+
+
+
+
+
+final class CentreCatalogue {
+
+	public const OPTION_CATALOGUE = 'evt_centres_catalogue';
+
+	public const OPTION_STATUS = 'evt_centres_catalogue_status';
+
+
+
+
+
+
+	public static function all(): array {
+		$raw = get_option( self::OPTION_CATALOGUE, array() );
+		return is_array( $raw ) ? $raw : array();
+	}
+
+
+
+
+
+
+	public static function all_active(): array {
+		$all = self::all();
+		$out = array();
+		foreach ( $all as $code => $centre ) {
+			if ( ! empty( $centre['active'] ) ) {
+				$out[ $code ] = $centre;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+	public static function active_options(): array {
+		$active = self::all_active();
+		$out    = array();
+		foreach ( $active as $code => $centre ) {
+			$name = isset( $centre['name'] ) ? trim( (string) $centre['name'] ) : '';
+			if ( '' !== $name ) {
+				$out[ (string) $code ] = $name;
+			}
+		}
+
+		uasort(
+			$out,
+			static function ( string $a, string $b ): int {
+				return strcoll( $a, $b );
+			}
+		);
+
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function find( string $code ): ?array {
+		$code = trim( $code );
+		if ( '' === $code ) {
+			return null;
+		}
+		$all = self::all();
+		return isset( $all[ $code ] ) && is_array( $all[ $code ] ) ? $all[ $code ] : null;
+	}
+
+
+
+
+
+
+
+	public static function is_active( string $code ): bool {
+		$centre = self::find( $code );
+		return null !== $centre && ! empty( $centre['active'] );
+	}
+
+
+
+
+
+
+	public static function status(): array {
+		$defaults = array(
+			'schema_version'       => 0,
+			'sha256'               => '',
+			'catalogue_updated_at' => '',
+			'last_checked_at'      => '',
+			'last_success_at'      => '',
+			'last_error'           => '',
+			'record_count'         => 0,
+			'active_count'         => 0,
+		);
+
+		$raw = get_option( self::OPTION_STATUS, array() );
+		if ( ! is_array( $raw ) ) {
+			return $defaults;
+		}
+
+		return array_merge( $defaults, $raw );
+	}
+
+
+
+
+
+
+	public static function count(): int {
+		return count( self::all() );
+	}
+
+
+
+
+
+
+	public static function active_count(): int {
+		return count( self::all_active() );
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\Centre;
+
+use RuntimeException;
+
+
+
+
+
+
+
+
+final class CentreCatalogueSync {
+
+	public const OPTION_MANIFEST_URL = 'evt_centres_manifest_url';
+
+	public const OPTION_CATALOGUE_URL = 'evt_centres_catalogue_url';
+
+	public const OPTION_LOCK = 'evt_centres_sync_lock';
+
+	public const LOCK_TTL = 300;
+
+	public const CRON_HOOK = 'evt_centres_cron_sync';
+
+	public const HTTP_TIMEOUT = 30;
+
+
+
+
+
+
+	public static function register_cron(): void {
+		add_action( self::CRON_HOOK, array( self::class, 'cron_sync' ) );
+
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_schedule_event( time() + 3600, 'daily', self::CRON_HOOK );
+		}
+	}
+
+
+
+
+
+
+	public static function cron_sync(): void {
+		try {
+			self::sync( false );
+		} catch ( RuntimeException $e ) {
+
+			unset( $e );
+		}
+	}
+
+
+
+
+
+
+
+	public static function is_valid_https_url( string $url ): bool {
+		$url = trim( $url );
+		if ( '' === $url ) {
+			return false;
+		}
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$host   = wp_parse_url( $url, PHP_URL_HOST );
+		return 'https' === strtolower( (string) $scheme ) && '' !== trim( (string) $host );
+	}
+
+
+
+
+
+
+	public static function manifest_url(): string {
+		$url = '';
+		if ( defined( 'EVT_CENTRES_MANIFEST_URL' ) ) {
+			$url = (string) EVT_CENTRES_MANIFEST_URL;
+		}
+		if ( '' === $url ) {
+			$url = (string) get_option( self::OPTION_MANIFEST_URL, '' );
+		}
+
+
+
+
+
+		$filtered = apply_filters( 'evt_centres_manifest_url', $url );
+		return is_string( $filtered ) ? trim( $filtered ) : '';
+	}
+
+
+
+
+
+
+
+	public static function catalogue_url( string $manifest_url = '' ): string {
+		$url = '';
+		if ( defined( 'EVT_CENTRES_CATALOGUE_URL' ) ) {
+			$url = (string) EVT_CENTRES_CATALOGUE_URL;
+		}
+		if ( '' === $url ) {
+			$url = (string) get_option( self::OPTION_CATALOGUE_URL, '' );
+		}
+		if ( '' === $url && '' !== $manifest_url ) {
+			$dir = dirname( $manifest_url );
+			if ( 'http:' === $dir || 'https:' === $dir ) {
+				$dir = $manifest_url;
+			}
+			$url = trailingslashit( $dir ) . 'centros.min.json';
+		}
+
+
+
+
+
+		$filtered = apply_filters( 'evt_centres_catalogue_url', $url );
+		return is_string( $filtered ) ? trim( $filtered ) : '';
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function acquire_lock() {
+		$token   = wp_generate_password( 32, false );
+		$payload = array(
+			'token' => $token,
+			'time'  => time(),
+		);
+
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+			return $token;
+		}
+
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['time'] ) ) {
+			$elapsed = time() - (int) $current['time'];
+			if ( $elapsed > self::LOCK_TTL ) {
+				global $wpdb;
+
+				$deleted = $wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+						self::OPTION_LOCK,
+						maybe_serialize( $current )
+					)
+				);
+
+				if ( $deleted ) {
+					wp_cache_delete( self::OPTION_LOCK, 'options' );
+					wp_cache_delete( 'notoptions', 'options' );
+
+					if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+						return $token;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+
+
+
+
+
+
+	public static function release_lock( string $token ): bool {
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['token'] ) && hash_equals( (string) $current['token'], $token ) ) {
+			global $wpdb;
+
+			$deleted = $wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
+					self::OPTION_LOCK,
+					maybe_serialize( $current )
+				)
+			);
+			if ( $deleted ) {
+				wp_cache_delete( self::OPTION_LOCK, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+
+
+
+
+
+
+	public static function sync( bool $force = false ): array {
+		$token = self::acquire_lock();
+		if ( false === $token ) {
+			throw new RuntimeException( 'Hay otra sincronización de centros en curso. Espere a que finalice.' );
+		}
+
+		$status = CentreCatalogue::status();
+
+		try {
+			$manifest_url = self::manifest_url();
+			if ( ! self::is_valid_https_url( $manifest_url ) ) {
+				throw new RuntimeException( 'URL de manifest de centros inválida o no utiliza HTTPS.' );
+			}
+
+
+			$manifest_response = wp_safe_remote_get(
+				$manifest_url,
+				array(
+					'timeout'    => self::HTTP_TIMEOUT,
+					'sslverify'  => true,
+					'user-agent' => 'WordPress/Evt',
+				)
+			);
+
+			if ( is_wp_error( $manifest_response ) ) {
+
+				throw new RuntimeException( 'Error al descargar manifest.json: ' . $manifest_response->get_error_message() );
+			}
+
+			$code = wp_remote_retrieve_response_code( $manifest_response );
+			if ( 200 !== $code ) {
+
+				throw new RuntimeException( sprintf( 'El servidor devolvió HTTP %d al solicitar manifest.json.', $code ) );
+			}
+
+			$manifest_body = wp_remote_retrieve_body( $manifest_response );
+			$manifest      = json_decode( $manifest_body, true );
+
+			if ( ! is_array( $manifest ) ) {
+				throw new RuntimeException( 'El archivo manifest.json no contiene un JSON válido.' );
+			}
+
+
+			if ( empty( $manifest['schema_version'] ) || 1 !== (int) $manifest['schema_version'] ) {
+				throw new RuntimeException( 'Versión de esquema incompatible en manifest.json.' );
+			}
+
+			if ( empty( $manifest['files']['centros.min.json']['sha256'] ) ) {
+				throw new RuntimeException( 'El manifest.json no declara la entrada de centros.min.json con su sha256.' );
+			}
+
+			$remote_sha256 = trim( (string) $manifest['files']['centros.min.json']['sha256'] );
+			$remote_count  = isset( $manifest['files']['centros.min.json']['records'] )
+				? (int) $manifest['files']['centros.min.json']['records']
+				: 0;
+			$updated_at    = isset( $manifest['catalogue_updated_at'] ) && is_scalar( $manifest['catalogue_updated_at'] )
+				? trim( (string) $manifest['catalogue_updated_at'] )
+				: '';
+
+
+			if ( ! $force && $remote_sha256 === $status['sha256'] && ! empty( $status['sha256'] ) && CentreCatalogue::count() > 0 ) {
+				$status['last_checked_at'] = current_time( 'mysql' );
+				$status['last_error']      = '';
+				update_option( CentreCatalogue::OPTION_STATUS, $status, false );
+
+				return array(
+					'status'  => 'unchanged',
+					'sha256'  => $remote_sha256,
+					'records' => $status['record_count'],
+					'active'  => $status['active_count'],
+				);
+			}
+
+
+			$catalogue_url = self::catalogue_url( $manifest_url );
+			if ( ! self::is_valid_https_url( $catalogue_url ) ) {
+				throw new RuntimeException( 'URL del catálogo de centros inválida o no utiliza HTTPS.' );
+			}
+
+			$cat_response = wp_safe_remote_get(
+				$catalogue_url,
+				array(
+					'timeout'    => 45,
+					'sslverify'  => true,
+					'user-agent' => 'WordPress/Evt',
+				)
+			);
+
+			if ( is_wp_error( $cat_response ) ) {
+
+				throw new RuntimeException( 'Error al descargar centros.min.json: ' . $cat_response->get_error_message() );
+			}
+
+			$cat_code = wp_remote_retrieve_response_code( $cat_response );
+			if ( 200 !== $cat_code ) {
+
+				throw new RuntimeException( sprintf( 'El servidor devolvió HTTP %d al solicitar centros.min.json.', $cat_code ) );
+			}
+
+			$cat_body = wp_remote_retrieve_body( $cat_response );
+
+
+			$computed_sha256 = hash( 'sha256', $cat_body );
+			if ( ! hash_equals( $remote_sha256, $computed_sha256 ) ) {
+				throw new RuntimeException( 'El hash SHA-256 del archivo descargado no coincide con el declarado en manifest.json.' );
+			}
+
+
+			$items = json_decode( $cat_body, true );
+			if ( ! is_array( $items ) ) {
+				throw new RuntimeException( 'El archivo centros.min.json no contiene un array JSON válido.' );
+			}
+
+			if ( $remote_count > 0 && count( $items ) !== $remote_count ) {
+				$msg = sprintf( 'El número de registros (%d) no coincide con el declarado en el manifest (%d).', count( $items ), $remote_count );
+
+				throw new RuntimeException( $msg );
+			}
+
+			$indexed      = array();
+			$active_count = 0;
+
+			foreach ( $items as $idx => $item ) {
+				if ( ! is_array( $item ) ) {
+					$msg = sprintf( 'Registro en posición %d no es un objeto válido.', $idx );
+
+					throw new RuntimeException( $msg );
+				}
+
+				$code = isset( $item['code'] ) && is_scalar( $item['code'] ) ? trim( (string) $item['code'] ) : '';
+				if ( 1 !== preg_match( '/^\d{8}$/', $code ) ) {
+					$msg = sprintf( 'Código de centro inválido en registro %d (debe tener exactamente 8 dígitos): "%s".', $idx, $code );
+
+					throw new RuntimeException( $msg );
+				}
+
+				if ( isset( $indexed[ $code ] ) ) {
+					$msg = sprintf( 'Código oficial duplicado en centros.min.json: "%s".', $code );
+
+					throw new RuntimeException( $msg );
+				}
+
+				$name = isset( $item['name'] ) && is_scalar( $item['name'] ) ? trim( (string) $item['name'] ) : '';
+				if ( '' === $name ) {
+					$msg = sprintf( 'Denominación vacía para el centro con código "%s".', $code );
+
+					throw new RuntimeException( $msg );
+				}
+
+				if ( ! isset( $item['active'] ) || ! is_bool( $item['active'] ) ) {
+					$msg = sprintf( 'El campo "active" debe ser booleano para el centro con código "%s".', $code );
+
+					throw new RuntimeException( $msg );
+				}
+
+				$is_active = (bool) $item['active'];
+				if ( $is_active ) {
+					++$active_count;
+				}
+
+				$indexed[ $code ] = array(
+					'code'         => $code,
+					'name'         => $name,
+					'island'       => isset( $item['island'] ) && is_scalar( $item['island'] ) ? trim( (string) $item['island'] ) : '',
+					'municipality' => isset( $item['municipality'] ) && is_scalar( $item['municipality'] ) ? trim( (string) $item['municipality'] ) : '',
+					'type'         => isset( $item['type'] ) && is_scalar( $item['type'] ) ? trim( (string) $item['type'] ) : '',
+					'active'       => $is_active,
+				);
+			}
+
+
+			update_option( CentreCatalogue::OPTION_CATALOGUE, $indexed, false );
+
+			$status = array(
+				'schema_version'       => 1,
+				'sha256'               => $remote_sha256,
+				'catalogue_updated_at' => $updated_at,
+				'last_checked_at'      => current_time( 'mysql' ),
+				'last_success_at'      => current_time( 'mysql' ),
+				'last_error'           => '',
+				'record_count'         => count( $indexed ),
+				'active_count'         => $active_count,
+			);
+			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
+
+			return array(
+				'status'  => 'updated',
+				'sha256'  => $remote_sha256,
+				'records' => count( $indexed ),
+				'active'  => $active_count,
+			);
+		} catch ( RuntimeException $e ) {
+			$status['last_checked_at'] = current_time( 'mysql' );
+			$status['last_error']      = $e->getMessage();
+			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
+
+			throw $e;
+		} finally {
+			self::release_lock( $token );
+		}
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\Centre;
+
+
+
+
+
+
+
+
+final class CentreCatalog {
+
+
+
+
+
+
+	public static function register(): void {
+		add_filter( 'evt_centres', array( self::class, 'provide_centres' ), 5, 1 );
+	}
+
+
+
+
+
+
+
+	public static function provide_centres( array $centres ): array {
+		if ( array() !== $centres ) {
+			return $centres;
+		}
+
+		return CentreCatalogue::active_options();
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\Meta;
 
 use Evt\Domain\SignupQuestions;
@@ -3455,6 +4114,10 @@ final class RegistrationMetaRegistration {
 				'sanitize' => 'sanitize_text_field',
 			),
 			RegistrationMetaKeys::REG_CENTRE          => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_text_field',
+			),
+			RegistrationMetaKeys::REG_CENTRE_CODE     => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
@@ -3991,40 +4654,6 @@ final class Assets {
 
 
 		return (string) file_get_contents( $path );
-	}
-}
-
-
-
-
-
-
-
-
-namespace Evt\PublicFront;
-
-
-
-
-
-
-final class ExitSignal extends \RuntimeException {
-
-
-
-
-
-
-	public $url = '';
-
-
-
-
-
-
-	public function __construct( string $url = '' ) {
-		parent::__construct( '' === $url ? 'Salida sin redirección' : 'Redirección a ' . $url );
-		$this->url = $url;
 	}
 }
 
@@ -7494,13 +8123,14 @@ final class Participants {
 
 	public static function columns(): array {
 		return array(
-			'name'     => 'Nombre',
-			'email'    => 'Correo',
-			'centre'   => 'Centro',
-			'workshop' => 'Taller',
-			'date'     => 'Fecha de inscripción',
-			'consent'  => 'Consentimiento',
-			'files'    => 'Documentos',
+			'name'        => 'Nombre',
+			'email'       => 'Correo',
+			'centre_code' => 'Código de centro',
+			'centre'      => 'Centro',
+			'workshop'    => 'Taller',
+			'date'        => 'Fecha de inscripción',
+			'consent'     => 'Consentimiento',
+			'files'       => 'Documentos',
 		);
 	}
 
@@ -7840,13 +8470,14 @@ final class Registrations {
 			}
 
 			$fila                            = array(
-				'name'     => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
-				'email'    => $meta[ RegistrationMetaKeys::REG_EMAIL ],
-				'centre'   => $meta[ RegistrationMetaKeys::REG_CENTRE ],
-				'workshop' => $talleres[ $taller ] ?? '',
-				'date'     => get_the_date( 'Y-m-d H:i', $inscripcion ),
-				'consent'  => self::consent_text( $meta ),
-				'files'    => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
+				'name'        => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
+				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
+				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ] ?? '',
+				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
+				'workshop'    => $talleres[ $taller ] ?? '',
+				'date'        => get_the_date( 'Y-m-d H:i', $inscripcion ),
+				'consent'     => self::consent_text( $meta ),
+				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
 			$fila[ Participants::KEY_FILES ] = $documentos;
 
@@ -8005,6 +8636,7 @@ final class Registrations {
 			RegistrationMetaKeys::REG_EMAIL           => $core['email'] ?? '',
 			RegistrationMetaKeys::REG_PHONE           => $core['phone'] ?? '',
 			RegistrationMetaKeys::REG_CENTRE          => $core['centre'] ?? '',
+			RegistrationMetaKeys::REG_CENTRE_CODE     => $core['centre_code'] ?? '',
 			RegistrationMetaKeys::REG_CONSENT_VERSION => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
 			RegistrationMetaKeys::REG_CONSENT_AT      => current_time( 'mysql' ),
 
@@ -8287,15 +8919,28 @@ final class Registrations {
 
 
 
-
 	public static function centres(): array {
 
 
 
 
 
+
+
 		$centros = apply_filters( 'evt_centres', array() );
-		return is_array( $centros ) ? array_values( array_filter( array_map( 'strval', $centros ) ) ) : array();
+		if ( ! is_array( $centros ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $centros as $codigo => $denominacion ) {
+			$codigo       = trim( (string) $codigo );
+			$denominacion = trim( (string) $denominacion );
+			if ( 1 === preg_match( '/^\d{8}$/', $codigo ) && '' !== $denominacion ) {
+				$out[ $codigo ] = $denominacion;
+			}
+		}
+		return $out;
 	}
 }
 
@@ -16023,8 +16668,12 @@ final class SignupBlock {
 
 		$html = '<p class="evt-campo"><label for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'
 			. '<select id="evt-ins-centre" name="centre" required><option value="">Elija su centro</option>';
-		foreach ( $centros as $centro ) {
-			$html .= sprintf( '<option value="%1$s">%1$s</option>', esc_attr( $centro ) );
+		foreach ( $centros as $codigo => $denominacion ) {
+			$html .= sprintf(
+				'<option value="%1$s">%2$s</option>',
+				esc_attr( (string) $codigo ),
+				esc_html( (string) $denominacion )
+			);
 		}
 		return $html . '</select></p>';
 	}
@@ -18102,11 +18751,14 @@ final class EventAdmin {
 namespace Evt\Admin;
 
 use Evt\Access\EventAccess;
+use Evt\Centre\CentreCatalogue;
+use Evt\Centre\CentreCatalogueSync;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\ExitSignal;
 use Evt\Taxonomy\EventTaxonomies;
-
+use RuntimeException;
 
 
 
@@ -18124,10 +18776,16 @@ final class Settings {
 
 
 
+	public const NONCE_SYNC_CENTRES = 'evt_centres_manual_sync';
+
+
+
+
 
 
 	public static function register(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
+		add_action( 'admin_init', array( self::class, 'handle_actions' ) );
 	}
 
 
@@ -18144,6 +18802,61 @@ final class Settings {
 			self::PAGE,
 			array( self::class, 'render' )
 		);
+	}
+
+
+
+
+
+
+	public static function handle_actions(): void {
+		if ( ! is_admin() || ! EventAccess::is_manager() ) {
+			return;
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
+			'sync_centres' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
+		) {
+			$redirect_args = array(
+				'post_type' => EventPostType::POST_TYPE,
+				'page'      => self::PAGE,
+			);
+
+			try {
+				$result = CentreCatalogueSync::sync( true );
+				$msg    = sprintf(
+					'Catálogo actualizado correctamente (%d centros, %d activos). SHA-256: %s',
+					$result['records'],
+					$result['active'],
+					substr( $result['sha256'], 0, 12 ) . '…'
+				);
+
+				$redirect_args['updated'] = 'synced';
+				$redirect_args['msg']     = rawurlencode( $msg );
+			} catch ( RuntimeException $e ) {
+				$redirect_args['error'] = rawurlencode( $e->getMessage() );
+			}
+
+			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
+		}
+	}
+
+
+
+
+
+
+
+
+	private static function leave( string $url ): void {
+		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
+
+			throw new ExitSignal( $url );
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 
@@ -18170,10 +18883,15 @@ final class Settings {
 		<div class="wrap">
 			<h1>Ajustes y diagnóstico de eventos</h1>
 			<p class="description" style="max-width:46rem">
-				Esta pantalla no guarda nada todavía: cuenta lo que el aplicativo tiene montado
-				en este sitio. Si algo sale «sin registrar», es que el snippet correspondiente
-				no está activo.
+				Esta pantalla cuenta lo que el aplicativo tiene montado en este sitio.
+				Si algo sale «sin registrar», es que el snippet correspondiente no está activo.
 			</p>
+
+			<?php if ( isset( $_GET['updated'] ) && 'synced' === $_GET['updated'] && ! empty( $_GET['msg'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['msg'] ) ) ); ?></p></div>
+			<?php elseif ( isset( $_GET['error'] ) && ! empty( $_GET['error'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); ?></p></div>
+			<?php endif; ?>
 
 			<h2>Tipos de contenido</h2>
 			<table class="widefat striped" style="max-width:46rem">
@@ -18239,6 +18957,83 @@ final class Settings {
 				</table>
 			<?php endif; ?>
 
+			<h2>Catálogo de centros educativos</h2>
+			<?php
+			$status       = CentreCatalogue::status();
+			$total_count  = CentreCatalogue::count();
+			$active_count = CentreCatalogue::active_count();
+			$is_ready     = $total_count > 0;
+			$has_source   = '' !== CentreCatalogueSync::manifest_url();
+			?>
+			<table class="widefat striped" style="max-width:46rem">
+				<tbody>
+					<tr>
+						<th style="width:40%;">Estado</th>
+						<td>
+							<?php if ( $is_ready ) : ?>
+								<span class="dashicons dashicons-yes-alt" style="color:#46b450;" aria-hidden="true"></span> Disponible
+							<?php else : ?>
+								<span class="dashicons dashicons-warning" style="color:#dc3232;" aria-hidden="true"></span> No disponible (catálogo vacío)
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th>Fuente configurada</th>
+						<td><?php echo $has_source ? 'Sí' : 'No'; ?></td>
+					</tr>
+					<tr>
+						<th>Registros totales</th>
+						<td><strong><?php echo esc_html( (string) $total_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros activos</th>
+						<td><strong style="color:#46b450;"><?php echo esc_html( (string) $active_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros inactivos</th>
+						<td><?php echo esc_html( (string) ( $total_count - $active_count ) ); ?></td>
+					</tr>
+					<tr>
+						<th>Fecha del catálogo</th>
+						<td><?php echo esc_html( '' !== $status['catalogue_updated_at'] ? $status['catalogue_updated_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última comprobación</th>
+						<td><?php echo esc_html( '' !== $status['last_checked_at'] ? $status['last_checked_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última actualización correcta</th>
+						<td><?php echo esc_html( '' !== $status['last_success_at'] ? $status['last_success_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>SHA-256 actual</th>
+						<td>
+							<?php if ( '' !== $status['sha256'] ) : ?>
+								<code style="font-size:0.85em;"><?php echo esc_html( $status['sha256'] ); ?></code>
+							<?php else : ?>
+								<em>Ninguno</em>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php if ( '' !== $status['last_error'] ) : ?>
+						<tr>
+							<th style="color:#dc3232;">Último error</th>
+							<td style="color:#dc3232;"><code><?php echo esc_html( $status['last_error'] ); ?></code></td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+
+			<div style="margin-top:1rem;">
+				<form method="post" action="">
+					<?php wp_nonce_field( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' ); ?>
+					<input type="hidden" name="evt_action" value="sync_centres" />
+					<button type="submit" class="button button-secondary">
+						Actualizar catálogo ahora
+					</button>
+				</form>
+			</div>
+
 			<h2>Su acotado por área</h2>
 			<?php
 			$areas = EventAccess::user_areas();
@@ -18276,6 +19071,8 @@ namespace Evt;
 use Evt\Access\EventAccess;
 use Evt\Admin\EventAdmin;
 use Evt\Admin\Settings;
+use Evt\Centre\CentreCatalog;
+use Evt\Centre\CentreCatalogueSync;
 use Evt\Meta\EventMetaRegistration;
 use Evt\Meta\ProgrammeMetaRegistration;
 use Evt\Meta\RegistrationMetaRegistration;
@@ -18375,6 +19172,8 @@ final class App {
 		CustomCode::register();
 
 		EventAdmin::register();
+		CentreCatalog::register();
+		CentreCatalogueSync::register_cron();
 		Settings::register();
 	}
 

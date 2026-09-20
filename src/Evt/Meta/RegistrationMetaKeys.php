@@ -26,12 +26,13 @@ final class RegistrationMetaKeys {
 
 	// ─── El núcleo de la inscripción (ADR-0031) ────────────────────────────
 
-	public const REG_TAX_ID  = 'evt_reg_tax_id';
-	public const REG_NAME    = 'evt_reg_name';
-	public const REG_SURNAME = 'evt_reg_surname';
-	public const REG_EMAIL   = 'evt_reg_email';
-	public const REG_PHONE   = 'evt_reg_phone';
-	public const REG_CENTRE  = 'evt_reg_centre';
+	public const REG_TAX_ID      = 'evt_reg_tax_id';
+	public const REG_NAME        = 'evt_reg_name';
+	public const REG_SURNAME     = 'evt_reg_surname';
+	public const REG_EMAIL       = 'evt_reg_email';
+	public const REG_PHONE       = 'evt_reg_phone';
+	public const REG_CENTRE      = 'evt_reg_centre';
+	public const REG_CENTRE_CODE = 'evt_reg_centre_code';
 
 	/**
 	 * Which version of the consent texts this person accepted, and when.
@@ -121,6 +122,7 @@ final class RegistrationMetaKeys {
 			self::REG_EMAIL,
 			self::REG_PHONE,
 			self::REG_CENTRE,
+			self::REG_CENTRE_CODE,
 			self::REG_CONSENT_VERSION,
 			self::REG_CONSENT_AT,
 			self::REG_WORKSHOP,

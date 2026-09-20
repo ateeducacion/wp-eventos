@@ -31,6 +31,34 @@ class Test_Registrations extends WP_UnitTestCase {
 	use Evt_Fixtures;
 
 	/**
+	 * Set up test environment before each test.
+	 *
+	 * @return void
+	 */
+	public function set_up(): void {
+		parent::set_up();
+		add_filter(
+			'evt_centres',
+			static function (): array {
+				return array(
+					'38000001' => 'CEIP El Molino',
+					'38000002' => 'IES El Mirador',
+				);
+			}
+		);
+	}
+
+	/**
+	 * Clean up test environment after each test.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		remove_all_filters( 'evt_centres' );
+		parent::tear_down();
+	}
+
+	/**
 	 * Un evento con el aplicativo arrancado.
 	 *
 	 * @return int
@@ -86,7 +114,7 @@ class Test_Registrations extends WP_UnitTestCase {
 				'surname' => 'Martín Cabrera',
 				'email'   => 'ana@example.org',
 				'phone'   => '600 000 000',
-				'centre'  => 'CEIP El Molino',
+				'centre'  => '38000001',
 				'consent' => '1',
 			),
 			$cambios
@@ -119,7 +147,8 @@ class Test_Registrations extends WP_UnitTestCase {
 			$this->assertContains( $campo, $vacio['errors'], $campo . ' tenía que ser obligatorio' );
 		}
 
-		$sin_telefono = RegistrationInput::core( $this->nucleo( array( 'phone' => '' ) ) );
+		$catalogo     = array( '38000001' => 'CEIP El Molino' );
+		$sin_telefono = RegistrationInput::core( $this->nucleo( array( 'phone' => '' ) ), $catalogo );
 		$this->assertTrue( $sin_telefono['ok'], 'el teléfono no se exige: exigirlo fabrica teléfonos falsos' );
 	}
 
@@ -141,7 +170,10 @@ class Test_Registrations extends WP_UnitTestCase {
 	 * El centro se elige del catálogo y nunca se teclea (ADR-0031).
 	 */
 	public function test_the_centre_has_to_be_one_of_the_catalogue() {
-		$catalogo = array( 'CEIP El Molino', 'IES El Mirador' );
+		$catalogo = array(
+			'38000001' => 'CEIP El Molino',
+			'38000002' => 'IES El Mirador',
+		);
 
 		$bueno = RegistrationInput::core( $this->nucleo(), $catalogo );
 		$this->assertTrue( $bueno['ok'] );
@@ -155,7 +187,8 @@ class Test_Registrations extends WP_UnitTestCase {
 	 * Sin consentimiento no hay inscripción, y la comprobación es del servidor.
 	 */
 	public function test_without_consent_there_is_no_signup() {
-		$sin = RegistrationInput::core( $this->nucleo( array( 'consent' => '' ) ) );
+		$catalogo = array( '38000001' => 'CEIP El Molino' );
+		$sin      = RegistrationInput::core( $this->nucleo( array( 'consent' => '' ) ), $catalogo );
 		$this->assertFalse( $sin['ok'] );
 		$this->assertContains( 'consent', $sin['errors'] );
 		$this->assertStringContainsString( 'tratamiento de datos', RegistrationInput::why( $sin['errors'] ) );
