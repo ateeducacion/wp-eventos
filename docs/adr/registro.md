@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -272,6 +272,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md) | Sincronización de snippets por contenido | Aceptada | 2026-09-19 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) | Los ficheros aportados en una inscripción no son adjuntos de WordPress | Propuesta | 2026-09-19 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) |
 | [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) | El catálogo de centros educativos es un dato maestro externo y se cachea localmente | Aceptada | 2026-09-20 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md) |
+| [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md) | Ámbitos organizativos jerárquicos para la edición | Propuesta | 2026-09-20 | [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**

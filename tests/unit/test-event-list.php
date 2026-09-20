@@ -88,7 +88,7 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertFalse( $m['can_use'] );
 		$this->assertSame( array(), $m['rows'] );
 		$this->assertSame( 0, $m['total'] );
-		$this->assertStringContainsString( 'ningún área asignada', $m['reason'] );
+		$this->assertStringContainsString( 'ningún ámbito asignado', $m['reason'] );
 
 		// Y sin el rol, el motivo es otro: no se arregla en el mismo sitio.
 		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
@@ -96,7 +96,7 @@ class Test_Event_List extends WP_UnitTestCase {
 	}
 
 	/**
-	 * El listado se acota por área: lo de otra área no se enumera.
+	 * El listado se acota por área: lo de otro ámbito no se enumera.
 	 */
 	public function test_the_list_is_scoped_by_area() {
 		$mia   = $this->area( 'Formación del Profesorado' );
@@ -113,7 +113,7 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertTrue( $m['scoped'] );
 		$this->assertSame( array( $mio ), $this->ids( $m ) );
 		$this->assertNotContains( $suyo, $this->ids( $m ) );
-		$this->assertStringContainsString( 'Solo los eventos de su área', $m['subtitle'] );
+		$this->assertStringContainsString( 'Solo los eventos de su ámbito', $m['subtitle'] );
 
 		// La administración ve las dos.
 		$this->acting_as( $this->administrator() );
@@ -134,7 +134,7 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->acting_as( $yo );
 		$this->assertSame( array( $recien ), $this->ids( EventList::model() ) );
 
-		// Pero no la organización de otra área.
+		// Pero no la organización de otro ámbito.
 		$this->acting_as( $this->organiser( array( $this->area( 'Innovación' ) ) ) );
 		$this->assertSame( array(), $this->ids( EventList::model() ) );
 	}
@@ -395,7 +395,7 @@ class Test_Event_List extends WP_UnitTestCase {
 		$m = EventList::model();
 		$this->assertTrue( $m['can_create'] );
 		$this->assertSame( Shell::url( 'event' ), $m['create_url'] );
-		$this->assertStringContainsString( 'Todavía no hay ningún evento de su área', $m['empty_text'] );
+		$this->assertStringContainsString( 'Todavía no hay ningún evento de su ámbito', $m['empty_text'] );
 		$this->assertSame( '', $m['reset_url'], 'sin filtros no hay nada que quitar' );
 
 		$_GET[ EventList::VAR_NOTICE ] = 'creado';
@@ -411,7 +411,7 @@ class Test_Event_List extends WP_UnitTestCase {
 	}
 
 	/**
-	 * La pantalla pintada enseña las filas y el botón, y nada de otra área.
+	 * La pantalla pintada enseña las filas y el botón, y nada de otro ámbito.
 	 */
 	public function test_the_screen_is_painted_from_its_model() {
 		$mia  = $this->area( 'Formación del Profesorado' );

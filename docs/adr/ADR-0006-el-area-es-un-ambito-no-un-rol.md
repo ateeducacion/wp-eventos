@@ -9,7 +9,7 @@ related:
   sdds: [SDD-0001, SDD-0002]
   adrs: [ADR-0003, ADR-0004, ADR-0009, ADR-0012]
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0038]
 ai_assistance:
   tool: "Claude Code"
   model: "claude-opus-5"

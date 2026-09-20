@@ -55,7 +55,7 @@ class Test_Admin_Screens extends WP_UnitTestCase {
 			array( 'cb', 'title', 'evt_area', 'evt_state', 'author', 'date' ),
 			array_keys( $columnas )
 		);
-		$this->assertSame( 'Área', $columnas['evt_area'] );
+		$this->assertSame( 'Ámbito', $columnas['evt_area'] );
 		$this->assertSame( 'Estado', $columnas['evt_state'] );
 	}
 
@@ -145,7 +145,7 @@ class Test_Admin_Screens extends WP_UnitTestCase {
 		foreach ( array( 'Eventos y sus páginas', 'Ponentes', 'Actividades' ) as $rotulo ) {
 			$this->assertStringContainsString( $rotulo, $html );
 		}
-		foreach ( array( 'Área organizadora', 'Tipología', 'Curso escolar' ) as $rotulo ) {
+		foreach ( array( 'Ámbito organizativo', 'Tipología', 'Curso escolar' ) as $rotulo ) {
 			$this->assertStringContainsString( $rotulo, $html );
 		}
 		// Los tres tipos están registrados de verdad en este entorno, así que

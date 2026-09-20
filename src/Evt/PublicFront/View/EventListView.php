@@ -115,8 +115,8 @@ final class EventListView {
 		$listas = array(
 			'area'   => array(
 				'var'     => EventList::VAR_AREA,
-				'label'   => 'Área',
-				'any'     => 'Todas las áreas',
+				'label'   => 'Ámbito',
+				'any'     => 'Todos los ámbitos',
 				'choices' => $m['options']['area'],
 			),
 			'type'   => array(
@@ -200,7 +200,7 @@ final class EventListView {
 					<thead>
 						<tr>
 							<th scope="col">Evento</th>
-							<th scope="col">Área</th>
+							<th scope="col">Ámbito</th>
 							<th scope="col">Tipología</th>
 							<th scope="col">Curso</th>
 							<th scope="col">Fechas</th>
@@ -220,7 +220,7 @@ final class EventListView {
 										<?php echo esc_html( (string) $row['title'] ); ?>
 									<?php endif; ?>
 								</td>
-								<td data-rotulo="Área"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
+								<td data-rotulo="Ámbito"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
 								<td data-rotulo="Tipología"><?php echo esc_html( self::names( $row['types'] ) ); ?></td>
 								<td data-rotulo="Curso"><?php echo esc_html( self::names( $row['courses'] ) ); ?></td>
 								<td data-rotulo="Fechas"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></td>

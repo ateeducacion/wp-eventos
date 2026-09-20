@@ -40,15 +40,115 @@ final class EventTaxonomies {
 	 */
 	public const COURSE = 'evt_course';
 
+	/** Term meta keys for scope contact details. */
+	public const EMAIL    = 'evt_scope_email';
+	public const IMAGE_ID = 'evt_scope_image_id';
+
 	/**
 	 * Hook registration.
 	 *
 	 * @return void
 	 */
 	public static function register(): void {
-		register_taxonomy( self::AREA, EventPostType::POST_TYPE, self::args( 'Áreas organizadoras', 'Área organizadora' ) );
+		register_taxonomy( self::AREA, EventPostType::POST_TYPE, self::args( 'Ámbitos organizativos', 'Ámbito organizativo' ) );
 		register_taxonomy( self::TYPE, EventPostType::POST_TYPE, self::args( 'Tipologías', 'Tipología' ) );
 		register_taxonomy( self::COURSE, EventPostType::POST_TYPE, self::args( 'Cursos escolares', 'Curso escolar' ) );
+		register_term_meta(
+			self::AREA,
+			self::EMAIL,
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_email',
+				'auth_callback'     => array( self::class, 'can_edit_meta' ),
+			)
+		);
+		register_term_meta(
+			self::AREA,
+			self::IMAGE_ID,
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+				'auth_callback'     => array( self::class, 'can_edit_meta' ),
+			)
+		);
+		add_action( self::AREA . '_add_form_fields', array( self::class, 'add_fields' ) );
+		add_action( self::AREA . '_edit_form_fields', array( self::class, 'edit_fields' ) );
+		add_action( 'created_' . self::AREA, array( self::class, 'save_fields' ) );
+		add_action( 'edited_' . self::AREA, array( self::class, 'save_fields' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_media' ) );
+	}
+
+	/**
+	 * Whether the current user may edit scope metadata.
+	 *
+	 * @return bool
+	 */
+	public static function can_edit_meta(): bool {
+		return current_user_can( EventAccess::CAP_MANAGE ) || current_user_can( 'manage_options' );
+	}
+
+	/** Render fields on the new-term form. */
+	public static function add_fields(): void {
+		wp_nonce_field( 'evt_scope_meta', 'evt_scope_meta_nonce' );
+		echo '<div class="form-field"><label for="evt_scope_email">Correo del ámbito</label><input type="email" id="evt_scope_email" name="evt_scope_email" value="" /></div>';
+		echo '<div class="form-field"><label for="evt_scope_image_id">Imagen del ámbito</label><input type="hidden" id="evt_scope_image_id" name="evt_scope_image_id" value="0" /><button type="button" class="button evt-scope-choose-image">Elegir imagen</button> <button type="button" class="button evt-scope-remove-image">Quitar imagen</button><span class="evt-scope-image-name"></span></div>';
+	}
+
+	/**
+	 * Render fields on the edit-term form.
+	 *
+	 * @param \WP_Term $term Edited term.
+	 */
+	public static function edit_fields( $term ): void {
+		if ( ! ( $term instanceof \WP_Term ) || self::AREA !== $term->taxonomy ) {
+			return;
+		}
+		wp_nonce_field( 'evt_scope_meta', 'evt_scope_meta_nonce' );
+		printf( '<tr class="form-field"><th><label for="evt_scope_email">Correo del ámbito</label></th><td><input type="email" id="evt_scope_email" name="evt_scope_email" value="%s" /></td></tr>', esc_attr( (string) get_term_meta( $term->term_id, self::EMAIL, true ) ) );
+		printf( '<tr class="form-field"><th><label for="evt_scope_image_id">Imagen del ámbito</label></th><td><input type="hidden" id="evt_scope_image_id" name="evt_scope_image_id" value="%d" /><button type="button" class="button evt-scope-choose-image">Elegir imagen</button> <button type="button" class="button evt-scope-remove-image">Quitar imagen</button><span class="evt-scope-image-name"></span></td></tr>', absint( get_term_meta( $term->term_id, self::IMAGE_ID, true ) ) );
+	}
+
+	/** Load the native media picker only on the scope taxonomy screen. */
+	public static function enqueue_media(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || self::AREA !== $screen->taxonomy ) {
+			return;
+		}
+		wp_enqueue_media();
+		wp_add_inline_script(
+			'media-views',
+			'document.addEventListener("click", function (event) { const choose = event.target.closest(".evt-scope-choose-image"); const remove = event.target.closest(".evt-scope-remove-image"); if (!choose && !remove) return; const field = document.getElementById("evt_scope_image_id"); const name = document.querySelector(".evt-scope-image-name"); if (remove) { field.value = "0"; name.textContent = ""; return; } const frame = wp.media({ title: "Imagen del ámbito", library: { type: "image" }, multiple: false }); frame.on("select", function () { const attachment = frame.state().get("selection").first().toJSON(); field.value = attachment.id; name.textContent = attachment.filename; }); frame.open(); });'
+		);
+	}
+
+	/**
+	 * Save validated scope metadata. Empty values delete existing metadata.
+	 *
+	 * @param int $term_id Edited term ID.
+	 */
+	public static function save_fields( int $term_id ): void {
+		$term = get_term( $term_id, self::AREA );
+		if ( ! ( $term instanceof \WP_Term ) || ! self::can_edit_meta() || ! isset( $_POST['evt_scope_meta_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_scope_meta_nonce'] ) ), 'evt_scope_meta' ) ) {
+			return;
+		}
+		if ( isset( $_POST[ self::EMAIL ] ) ) {
+			$email = sanitize_email( wp_unslash( $_POST[ self::EMAIL ] ) );
+			if ( '' === $email ) {
+				delete_term_meta( $term_id, self::EMAIL );
+			} elseif ( is_email( $email ) ) {
+				update_term_meta( $term_id, self::EMAIL, $email );
+			}
+		}
+		if ( isset( $_POST[ self::IMAGE_ID ] ) ) {
+			$image_id = absint( wp_unslash( $_POST[ self::IMAGE_ID ] ) );
+			if ( 0 === $image_id ) {
+				delete_term_meta( $term_id, self::IMAGE_ID );
+			} elseif ( wp_attachment_is_image( $image_id ) ) {
+				update_term_meta( $term_id, self::IMAGE_ID, $image_id );
+			}
+		}
 	}
 
 	/**

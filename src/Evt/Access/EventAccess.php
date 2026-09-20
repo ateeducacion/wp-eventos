@@ -63,6 +63,9 @@ final class EventAccess {
 	 */
 	public static function register(): void {
 		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
+		add_filter( 'rest_pre_insert_evt_event', array( self::class, 'validate_rest_areas' ), 10, 2 );
+		add_filter( 'wp_insert_post_empty_content', array( self::class, 'validate_classic_areas' ), 10, 2 );
+		add_action( 'save_post_' . EventPostType::POST_TYPE, array( self::class, 'stamp_area' ), 20 );
 		add_action( 'save_post_' . SpeakerPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 		add_action( 'save_post_' . ActivityPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 	}
@@ -127,7 +130,97 @@ final class EventAccess {
 		if ( ! is_array( $raw ) ) {
 			$raw = '' === trim( (string) $raw ) ? array() : explode( ',', (string) $raw );
 		}
-		return self::clean_ids( $raw );
+		$ids = array();
+		foreach ( self::clean_ids( $raw ) as $id ) {
+			if ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) {
+				$ids[] = $id;
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * Assigned scope terms and all their descendants. An invalid tree grants nothing.
+	 *
+	 * @param int $user_id User ID (0 = current).
+	 * @return int[] Effective term IDs.
+	 */
+	public static function scope_areas( int $user_id = 0 ): array {
+		if ( $user_id <= 0 ) {
+			$user_id = get_current_user_id();
+		}
+		static $cache = array();
+		$assigned     = self::user_areas( $user_id );
+		$key          = $user_id . ':' . implode( ',', $assigned ) . ':' . wp_cache_get_last_changed( 'terms' );
+		if ( isset( $cache[ $key ] ) ) {
+			return $cache[ $key ];
+		}
+		$areas = array();
+		foreach ( $assigned as $id ) {
+			$children = get_term_children( $id, EventTaxonomies::AREA );
+			if ( is_wp_error( $children ) ) {
+				return array();
+			}
+			$areas = array_merge( $areas, array( $id ), $children );
+		}
+		$cache[ $key ] = self::clean_ids( $areas );
+		return $cache[ $key ];
+	}
+
+	/**
+	 * Reject REST assignments outside the editor's effective scope before saving.
+	 *
+	 * @param mixed            $prepared Prepared post or prior error.
+	 * @param \WP_REST_Request $request REST request.
+	 * @return mixed
+	 */
+	public static function validate_rest_areas( $prepared, $request ) {
+		if ( is_wp_error( $prepared ) || ! $request->has_param( EventTaxonomies::AREA ) || self::can_edit_all_areas() ) {
+			return $prepared;
+		}
+		if ( ! self::may_assign_areas( (array) $request->get_param( EventTaxonomies::AREA ) ) ) {
+			return new \WP_Error( 'evt_area_forbidden', 'Ámbito no permitido.', array( 'status' => 403 ) );
+		}
+		return $prepared;
+	}
+
+	/**
+	 * Check a requested set of scope terms before any assignment path writes it.
+	 *
+	 * @param array<int, mixed> $requested Requested term IDs.
+	 * @param int               $user_id User ID (0 = current).
+	 * @return bool
+	 */
+	public static function may_assign_areas( array $requested, int $user_id = 0 ): bool {
+		if ( self::can_edit_all_areas( $user_id ) ) {
+			return true;
+		}
+		$allowed = self::scope_areas( $user_id );
+		if ( array() === $requested || array() === $allowed ) {
+			return false;
+		}
+		foreach ( $requested as $term_id ) {
+			$id = absint( $term_id );
+			if ( ! in_array( $id, $allowed, true ) || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Block classic-editor tax_input before wp_insert_post writes any terms.
+	 *
+	 * @param bool  $is_empty Existing core decision.
+	 * @param array $postarr Raw post data.
+	 * @return bool
+	 */
+	public static function validate_classic_areas( bool $is_empty, array $postarr ): bool {
+		if ( EventPostType::POST_TYPE !== ( $postarr['post_type'] ?? '' ) || ! isset( $postarr['tax_input'][ EventTaxonomies::AREA ] ) ) {
+			return $is_empty;
+		}
+		$requested = $postarr['tax_input'][ EventTaxonomies::AREA ];
+		return ! self::may_assign_areas( is_array( $requested ) ? $requested : explode( ',', (string) $requested ) ) || $is_empty;
 	}
 
 	/**
@@ -277,7 +370,7 @@ final class EventAccess {
 			return false;
 		}
 
-		$mine = self::user_areas( $user_id );
+		$mine = self::scope_areas( $user_id );
 		if ( array() === $mine ) {
 			return false;
 		}
@@ -290,7 +383,8 @@ final class EventAccess {
 			// guardar; se queda abierta cuando quien lo crea no tiene área
 			// propia —la administración—, y entonces solo lo
 			// toca esa persona hasta que alguien le asigne un área.
-			return (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
+			return 'auto-draft' === get_post_status( self::root_id( $post_id ) )
+				&& (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
 		}
 
 		return array() !== array_intersect( $mine, $theirs );
@@ -469,7 +563,7 @@ final class EventAccess {
 			return 'Su perfil no organiza eventos. Si debería hacerlo, pídalo a quien administre el aplicativo.';
 		}
 		if ( array() === self::user_areas( $user_id ) ) {
-			return 'No tiene ningún área asignada en su perfil, así que no puede editar eventos. El área la pone quien administra el aplicativo.';
+			return 'No tiene ningún ámbito asignado en su perfil, así que no puede editar eventos. El ámbito lo pone quien administra el aplicativo.';
 		}
 		$nombres = array(
 			EventPostType::POST_TYPE    => 'Este evento',
@@ -477,7 +571,7 @@ final class EventAccess {
 			ActivityPostType::POST_TYPE => 'Esta actividad',
 		);
 		$que     = $nombres[ (string) get_post_type( $post_id ) ] ?? 'Esto';
-		return $que . ' es de otra área. Solo lo edita el área que lo organiza o quien administra el aplicativo.';
+		return $que . ' es de otro ámbito. Solo lo edita el ámbito que lo organiza o quien administra el aplicativo.';
 	}
 
 	/**
@@ -499,6 +593,13 @@ final class EventAccess {
 	 * @return string[]
 	 */
 	public static function map_meta_cap( array $caps, string $cap, int $user_id, array $args ): array {
+		if ( 'assign_term' === $cap ) {
+			$term = isset( $args[0] ) ? get_term( (int) $args[0] ) : null;
+			if ( $term instanceof \WP_Term && EventTaxonomies::AREA === $term->taxonomy && ! self::may_assign_areas( array( (int) $term->term_id ), $user_id ) ) {
+				return array( 'do_not_allow' );
+			}
+			return $caps;
+		}
 		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post', 'read_post' ), true ) ) {
 			return $caps;
 		}

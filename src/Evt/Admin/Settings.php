@@ -132,7 +132,7 @@ final class Settings {
 			ActivityPostType::POST_TYPE => 'Actividades',
 		);
 		$taxonomies = array(
-			EventTaxonomies::AREA   => 'Área organizadora',
+			EventTaxonomies::AREA   => 'Ámbito organizativo',
 			EventTaxonomies::TYPE   => 'Tipología',
 			EventTaxonomies::COURSE => 'Curso escolar',
 		);
@@ -291,7 +291,7 @@ final class Settings {
 				</form>
 			</div>
 
-			<h2>Su acotado por área</h2>
+			<h2>Su ámbito organizativo</h2>
 			<?php
 			$areas = EventAccess::user_areas();
 			$names = array();
@@ -304,9 +304,9 @@ final class Settings {
 			?>
 			<p>
 				<?php if ( EventAccess::can_edit_all_areas() ) : ?>
-					Ve y edita los eventos de todas las áreas.
+					Ve y edita los eventos de todos los ámbitos.
 				<?php elseif ( array() === $names ) : ?>
-					No tiene ningún área asignada en su perfil, así que no ve ni edita ningún evento.
+					No tiene ningún ámbito asignado en su perfil, así que no ve ni edita ningún evento.
 				<?php else : ?>
 					<?php echo esc_html( 'Acotado a: ' . implode( ', ', $names ) ); ?>
 				<?php endif; ?>

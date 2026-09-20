@@ -242,7 +242,7 @@ if ( ! function_exists( 'evt_can_edit_admin_only_fields' ) ) {
 	 * @return bool
 	 */
 	function evt_can_edit_admin_only_fields(): bool {
-		return current_user_can( 'evt_manage_app' ) || current_user_can( 'edit_users' );
+		return current_user_can( 'manage_options' );
 	}
 }
 
@@ -254,7 +254,7 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 	 * @return void
 	 */
 	function evt_render_profile_fields( $user ): void {
-		if ( ! ( $user instanceof WP_User ) || ! taxonomy_exists( 'evt_area' ) ) {
+		if ( ! ( $user instanceof WP_User ) || ! taxonomy_exists( 'evt_area' ) || ! evt_can_edit_admin_only_fields() || array() === array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) ) {
 			return;
 		}
 
@@ -273,20 +273,8 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 
 		echo '<h2>Eventos</h2>';
 		echo '<table class="form-table" role="presentation"><tr>';
-		echo '<th><label for="evt_area">Área organizadora</label></th><td>';
-
-		if ( ! evt_can_edit_admin_only_fields() ) {
-			$names = array();
-			foreach ( $terms as $term ) {
-				if ( in_array( (int) $term->term_id, $mine, true ) ) {
-					$names[] = $term->name;
-				}
-			}
-			echo esc_html( array() === $names ? 'Sin área asignada.' : implode( ', ', $names ) );
-			echo '<p class="description">El área la asigna quien administra el aplicativo: es la que decide qué eventos ve y edita.</p>';
-			echo '</td></tr></table>';
-			return;
-		}
+		echo '<th><label for="evt_area">Ámbito organizativo</label></th><td>';
+		wp_nonce_field( 'evt_profile_scope_' . $user->ID, 'evt_profile_scope_nonce' );
 
 		echo '<input type="hidden" name="evt_area_present" value="1" />';
 		echo '<select name="evt_area[]" id="evt_area" multiple size="8" class="regular-text">';
@@ -299,7 +287,7 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 			);
 		}
 		echo '</select>';
-		echo '<p class="description">Una o varias áreas. Sin ninguna, esta persona no ve ni edita ningún evento.</p>';
+		echo '<p class="description">Uno o varios ámbitos. Sin ninguno, esta persona no ve ni edita ningún evento.</p>';
 		echo '</td></tr></table>';
 	}
 }
@@ -316,10 +304,13 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 	 * @return void
 	 */
 	function evt_save_profile_fields( int $user_id ): void {
-		if ( ! current_user_can( 'edit_user', $user_id ) || ! evt_can_edit_admin_only_fields() ) {
+		$user = get_user_by( 'id', $user_id );
+		if ( ! ( $user instanceof WP_User ) || array() === array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) || ! current_user_can( 'edit_user', $user_id ) || ! evt_can_edit_admin_only_fields() ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el formulario de perfil usa el nonce del núcleo.
+		if ( ! isset( $_POST['evt_profile_scope_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_profile_scope_nonce'] ) ), 'evt_profile_scope_' . $user_id ) ) {
+			return;
+		}
 		$post = wp_unslash( $_POST );
 		if ( empty( $post['evt_area_present'] ) ) {
 			return;

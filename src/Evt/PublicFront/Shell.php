@@ -451,7 +451,7 @@ final class Shell {
 		if ( EventAccess::is_manager( $user_id ) ) {
 			return array(
 				'cargo' => 'Administración',
-				'area'  => 'Todas las áreas',
+				'area'  => 'Todos los ámbitos',
 			);
 		}
 		if ( user_can( $user_id, 'edit_evt_events' ) ) {
@@ -480,7 +480,7 @@ final class Shell {
 				$nombres[] = $term->name;
 			}
 		}
-		return array() === $nombres ? 'Sin área asignada' : implode( ' · ', $nombres );
+		return array() === $nombres ? 'Sin ámbito asignado' : implode( ' · ', $nombres );
 	}
 
 	/**

@@ -98,7 +98,7 @@ final class EventAdmin {
 			return;
 		}
 
-		$areas = EventAccess::user_areas();
+		$areas = EventAccess::scope_areas();
 		if ( array() === $areas ) {
 			// Falla en cerrado: sin área en el perfil, ni una fila. Un listado
 			// completo por un campo sin rellenar es como un área lee la de otra.
@@ -111,7 +111,7 @@ final class EventAdmin {
 			'taxonomy'         => EventTaxonomies::AREA,
 			'field'            => 'term_id',
 			'terms'            => $areas,
-			'include_children' => true,
+			'include_children' => false,
 		);
 		$query->set( 'tax_query', $tax_query );
 	}
@@ -127,7 +127,7 @@ final class EventAdmin {
 		foreach ( $columns as $key => $label ) {
 			$new[ $key ] = $label;
 			if ( 'title' === $key ) {
-				$new['evt_area']  = 'Área';
+				$new['evt_area']  = 'Ámbito';
 				$new['evt_state'] = 'Estado';
 			}
 		}

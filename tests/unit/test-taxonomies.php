@@ -96,4 +96,36 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertIsArray( $terminos );
 		$this->assertSame( array( $area ), array_map( 'intval', wp_list_pluck( $terminos, 'term_id' ) ) );
 	}
+
+	/**
+	 * Only administration can write validated contact details on a scope.
+	 */
+	public function test_scope_email_and_image_metadata() {
+		$area  = $this->area( 'Ámbito con contacto' );
+		$admin = $this->administrator();
+		$image = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		$this->assertTrue( wp_attachment_is_image( $image ) );
+		$this->acting_as( $admin );
+		$_POST = array(
+			'evt_scope_meta_nonce'    => wp_create_nonce( 'evt_scope_meta' ),
+			EventTaxonomies::EMAIL    => ' Contacto@Example.org ',
+			EventTaxonomies::IMAGE_ID => (string) $image,
+		);
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+		$this->assertSame( $image, (int) get_term_meta( $area, EventTaxonomies::IMAGE_ID, true ) );
+
+		$this->acting_as( $this->organiser() );
+		$_POST[ EventTaxonomies::EMAIL ] = 'attacker@example.org';
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+
+		$this->acting_as( $admin );
+		$_POST[ EventTaxonomies::EMAIL ]    = '';
+		$_POST[ EventTaxonomies::IMAGE_ID ] = '0';
+		EventTaxonomies::save_fields( $area );
+		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::EMAIL ) );
+		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::IMAGE_ID ) );
+		$_POST = array();
+	}
 }

@@ -598,7 +598,7 @@ final class EventWorkspace {
 			self::set_flash(
 				'error',
 				$marcar
-					? 'Este evento no es suyo: solo lo marca como histórico el área que lo organiza.'
+					? 'Este evento no es suyo: solo lo marca como histórico el ámbito que lo organiza.'
 					: 'Volver a abrir un evento histórico solo lo hace quien administra el aplicativo.'
 			);
 			Shell::leave( $destino );
@@ -624,7 +624,7 @@ final class EventWorkspace {
 			'ok',
 			$marcar
 				? 'Evento marcado como histórico. Ya no se edita, ni él ni sus secciones; la página pública se sigue viendo igual. Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.'
-				: 'Evento desmarcado: su área vuelve a poder editarlo.'
+				: 'Evento desmarcado: su ámbito vuelve a poder editarlo.'
 		);
 		Shell::leave( $destino );
 	}
@@ -1101,8 +1101,7 @@ final class EventWorkspace {
 	 * @return bool
 	 */
 	public static function may_set_area( int $user_id, int $area_id ): bool {
-		return EventAccess::can_edit_all_areas( $user_id )
-			|| ( $area_id > 0 && in_array( $area_id, EventAccess::user_areas( $user_id ), true ) );
+		return EventAccess::may_assign_areas( array( $area_id ), $user_id );
 	}
 
 	/**
@@ -1728,7 +1727,7 @@ final class EventWorkspace {
 		$m['status']       = 'draft';
 		$m['status_label'] = self::status_label( 'draft' );
 		$m['values']       = self::values( 0, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
+		$m['terms']        = self::term_lists( $user_id );
 
 		return $m;
 	}
@@ -1866,7 +1865,7 @@ final class EventWorkspace {
 		$m['sections']     = self::section_rows( $event_id );
 		$m['trashed']      = self::section_rows( $event_id, true );
 		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
+		$m['terms']        = self::term_lists( $user_id );
 		$m['media']        = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
@@ -2075,13 +2074,12 @@ final class EventWorkspace {
 	 * The three dropdowns of the classification card.
 	 *
 	 * @param int $user_id  Who is looking.
-	 * @param int $area_now Área the event has now, so it never disappears.
 	 * @return array<string, array<int, string>>
 	 */
-	private static function term_lists( int $user_id, int $area_now ): array {
+	private static function term_lists( int $user_id ): array {
 		$solo = EventAccess::can_edit_all_areas( $user_id )
 			? array()
-			: array_merge( EventAccess::user_areas( $user_id ), array( $area_now ) );
+			: EventAccess::scope_areas( $user_id );
 
 		return array(
 			'area'   => self::term_options( EventTaxonomies::AREA, $solo ),

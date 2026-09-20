@@ -40,12 +40,12 @@ final class EventDataPanel {
 		$sel_area    = self::term_select(
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
-			'Área organizadora',
+			'Ámbito organizativo',
 			(array) ( $listas['area'] ?? array() ),
 			(int) $v[ EventWorkspace::FIELD_AREA ],
 			(bool) $m['can_set_area']
-				? 'El área que organiza. Cambiarla cambia también quién puede editar el evento.'
-				: 'El área que organiza. Solo puede elegir entre las suyas: para pasarlo a otra, pídalo a quien administra el aplicativo.'
+				? 'El ámbito que organiza. Cambiarlo cambia también quién puede editar el evento.'
+				: 'El ámbito que organiza. Solo puede elegir dentro de su subárbol: para pasarlo a otro, pídalo a quien administra el aplicativo.'
 		);
 		$sel_tipo    = self::term_select(
 			'evt-type',

@@ -49,6 +49,34 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$admin = get_role( 'administrator' );
 		$this->assertTrue( $admin->has_cap( 'evt_manage_app' ) );
 		$this->assertTrue( $admin->has_cap( 'evt_edit_all_areas' ) );
+		$editor = get_role( 'editor' );
+		$this->assertTrue( $editor->has_cap( 'edit_evt_events' ) );
+		$this->assertFalse( $editor->has_cap( 'evt_manage_app' ) );
+		$this->assertFalse( $editor->has_cap( 'evt_edit_all_areas' ) );
+	}
+
+	/** Editors cannot see or change their own authorization scope. */
+	public function test_editor_scope_field_is_admin_only() {
+		$area   = (int) self::factory()->term->create( array( 'taxonomy' => 'evt_area' ) );
+		$other  = (int) self::factory()->term->create( array( 'taxonomy' => 'evt_area' ) );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, 'evt_area', array( $area ) );
+		wp_set_current_user( $editor );
+		ob_start();
+		evt_render_profile_fields( get_user_by( 'id', $editor ) );
+		$this->assertSame( '', ob_get_clean() );
+		$_POST = array(
+			'evt_area_present'        => '1',
+			'evt_profile_scope_nonce' => wp_create_nonce( 'evt_profile_scope_' . $editor ),
+			'evt_area'                => array( $other ),
+		);
+		evt_save_profile_fields( $editor );
+		$this->assertSame( array( $area ), get_user_meta( $editor, 'evt_area', true ) );
+		$admin = (int) self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin );
+		ob_start();
+		evt_render_profile_fields( get_user_by( 'id', $editor ) );
+		$this->assertStringContainsString( 'id="evt_area"', ob_get_clean() );
 	}
 
 	/**

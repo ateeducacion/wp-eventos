@@ -112,7 +112,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'desde el evento al que pertenece', PageForm::model()['aviso'] );
 
 		$_GET['evento'] = (string) $ajeno;
-		$this->assertStringContainsString( 'de otra área', PageForm::model()['aviso'] );
+		$this->assertStringContainsString( 'de otro ámbito', PageForm::model()['aviso'] );
 
 		// La portada del evento no se edita aquí: se edita en su taller.
 		$_GET['evento']  = '';
@@ -407,11 +407,11 @@ class Test_Page_Form extends WP_UnitTestCase {
 
 		$this->acting_as( $ajena );
 		$_GET['evento'] = (string) $evento;
-		$this->assertStringContainsString( 'de otra área', PageForm::model()['error'] );
+		$this->assertStringContainsString( 'de otro ámbito', PageForm::model()['error'] );
 	}
 
 	/**
-	 * Y tampoco se edita una sección de otra área.
+	 * Y tampoco se edita una sección de otro ámbito.
 	 */
 	public function test_a_section_of_another_area_is_not_edited() {
 		$mia     = $this->area( 'Formación del Profesorado' );

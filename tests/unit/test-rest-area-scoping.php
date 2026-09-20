@@ -109,6 +109,32 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A scoped editor cannot move an event to a foreign branch via REST.
+	 */
+	public function test_rest_rejects_foreign_scope_without_changing_terms() {
+		$event = $this->event( $this->owner, array( $this->area_owner ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $event, array( 'evt_area' => array( $this->area_other ) ) );
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Classic-editor tax_input cannot move an event to another scope. */
+	public function test_classic_post_rejects_foreign_scope_without_changing_terms() {
+		$event = $this->event( $this->owner, array( $this->area_owner ) );
+		$this->acting_as( $this->owner );
+		$result = wp_update_post(
+			array(
+				'ID'        => $event,
+				'tax_input' => array( 'evt_area' => array( $this->area_other ) ),
+			),
+			true
+		);
+		$this->assertWPError( $result );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/**
 	 * A post of one of the two satellite types, in the owning área.
 	 *
 	 * @param string $post_type Speaker or activity.

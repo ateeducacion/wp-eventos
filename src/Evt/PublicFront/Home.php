@@ -93,7 +93,7 @@ final class Home {
 		if ( array() === $secciones ) {
 			$motivo = ! user_can( $user_id, 'edit_evt_events' ) && ! EventAccess::is_manager( $user_id )
 				? 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.'
-				: 'No tiene ningún área asignada en su perfil, así que todavía no puede gestionar eventos. El área la pone quien administra el aplicativo.';
+				: 'No tiene ningún ámbito asignado en su perfil, así que todavía no puede gestionar eventos. El ámbito lo pone quien administra el aplicativo.';
 		}
 
 		return array(
