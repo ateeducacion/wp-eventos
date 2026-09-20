@@ -119,13 +119,14 @@ final class Registrations {
 			}
 
 			$fila                            = array(
-				'name'     => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
-				'email'    => $meta[ RegistrationMetaKeys::REG_EMAIL ],
-				'centre'   => $meta[ RegistrationMetaKeys::REG_CENTRE ],
-				'workshop' => $talleres[ $taller ] ?? '',
-				'date'     => get_the_date( 'Y-m-d H:i', $inscripcion ),
-				'consent'  => self::consent_text( $meta ),
-				'files'    => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
+				'name'        => trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] ),
+				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
+				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ] ?? '',
+				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
+				'workshop'    => $talleres[ $taller ] ?? '',
+				'date'        => get_the_date( 'Y-m-d H:i', $inscripcion ),
+				'consent'     => self::consent_text( $meta ),
+				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
 			$fila[ Participants::KEY_FILES ] = $documentos;
 
@@ -284,6 +285,7 @@ final class Registrations {
 			RegistrationMetaKeys::REG_EMAIL           => $core['email'] ?? '',
 			RegistrationMetaKeys::REG_PHONE           => $core['phone'] ?? '',
 			RegistrationMetaKeys::REG_CENTRE          => $core['centre'] ?? '',
+			RegistrationMetaKeys::REG_CENTRE_CODE     => $core['centre_code'] ?? '',
 			RegistrationMetaKeys::REG_CONSENT_VERSION => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
 			RegistrationMetaKeys::REG_CONSENT_AT      => current_time( 'mysql' ),
 			// `wp_slash()` y no el JSON a pelo: `update_post_meta()` desescapa lo
@@ -560,20 +562,44 @@ final class Registrations {
 	/**
 	 * The catalogue of centres a person may pick from.
 	 *
-	 * El centro **nunca se teclea** (ADR-0031). El catálogo maestro no es de
-	 * este aplicativo: se pregunta por un filtro, como los participantes, y
-	 * quien lo tenga lo contesta. Sin nadie que conteste no hay catálogo y la
-	 * pantalla lo dice, en vez de dejar teclear y fabricar variantes.
+	 * El centro **nunca se teclea** (ADR-0031). El catálogo maestro se consulta
+	 * mediante el filtro `evt_centres`.
 	 *
-	 * @return string[]
+	 * Acepta preferentemente un array asociativo `codigo => denominacion`,
+	 * pero conserva compatibilidad con proveedores antiguos que devuelvan una
+	 * lista simple de strings `[ 'IES X', 'CEIP Y' ]`, normalizándola a
+	 * `[ 'IES X' => 'IES X', 'CEIP Y' => 'CEIP Y' ]`.
+	 *
+	 * @return array<string, string> Map of code => name.
 	 */
 	public static function centres(): array {
 		/**
 		 * Filter the catalogue of centres.
 		 *
-		 * @param string[] $centres Centre names.
+		 * @param array<string|int, string>|string[] $centres Map of code => name, or list of names.
 		 */
 		$centros = apply_filters( 'evt_centres', array() );
-		return is_array( $centros ) ? array_values( array_filter( array_map( 'strval', $centros ) ) ) : array();
+		if ( ! is_array( $centros ) ) {
+			return array();
+		}
+
+		$out = array();
+		if ( array_is_list( $centros ) ) {
+			foreach ( $centros as $nombre ) {
+				$nombre = trim( (string) $nombre );
+				if ( '' !== $nombre ) {
+					$out[ $nombre ] = $nombre;
+				}
+			}
+		} else {
+			foreach ( $centros as $codigo => $denominacion ) {
+				$codigo       = trim( (string) $codigo );
+				$denominacion = trim( (string) $denominacion );
+				if ( '' !== $codigo && '' !== $denominacion ) {
+					$out[ $codigo ] = $denominacion;
+				}
+			}
+		}
+		return $out;
 	}
 }

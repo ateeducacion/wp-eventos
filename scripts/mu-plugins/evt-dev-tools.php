@@ -581,16 +581,16 @@ if ( ! function_exists( 'evt_dev_centres' ) ) {
 	 * @return string[]
 	 */
 	function evt_dev_centres( array $centros ): array {
-		return array_merge(
-			$centros,
-			array(
-				'CEIP El Molino',
-				'CEIP La Vega',
-				'CEIP El Roque',
-				'CEO Las Dunas',
-				'IES El Mirador',
-				'Instituto Sur',
-			)
+		if ( array() !== $centros ) {
+			return $centros;
+		}
+		return array(
+			'CEIP El Molino',
+			'CEIP La Vega',
+			'CEIP El Roque',
+			'CEO Las Dunas',
+			'IES El Mirador',
+			'Instituto Sur',
 		);
 	}
 }

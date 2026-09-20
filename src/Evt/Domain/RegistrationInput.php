@@ -31,16 +31,18 @@ final class RegistrationInput {
 	 * @param string[]             $centres Valid centre codes; empty means «no catalogue loaded».
 	 * @return array{ok:bool, errors:string[], data:array<string, mixed>}
 	 */
-	public static function core( array $raw, array $centres = array() ): array {
+	public static function core( array $raw, ?array $centres = null ): array {
 		$errors = array();
 
-		$tax_id  = self::tax_id( self::text( $raw, 'tax_id' ) );
-		$name    = self::text( $raw, 'name' );
-		$surname = self::text( $raw, 'surname' );
-		$email   = strtolower( self::text( $raw, 'email' ) );
-		$phone   = self::phone( self::text( $raw, 'phone' ) );
-		$centre  = self::text( $raw, 'centre' );
-		$consent = ! empty( $raw['consent'] );
+		$tax_id      = self::tax_id( self::text( $raw, 'tax_id' ) );
+		$name        = self::text( $raw, 'name' );
+		$surname     = self::text( $raw, 'surname' );
+		$email       = strtolower( self::text( $raw, 'email' ) );
+		$phone       = self::phone( self::text( $raw, 'phone' ) );
+		$centre      = self::text( $raw, 'centre' );
+		$centre_code = self::text( $raw, 'centre_code' );
+		$centre_name = $centre;
+		$consent     = ! empty( $raw['consent'] );
 
 		if ( ! self::is_tax_id( $tax_id ) ) {
 			$errors[] = 'tax_id';
@@ -55,11 +57,32 @@ final class RegistrationInput {
 			$errors[] = 'email';
 		}
 		// El centro se elige de un catálogo y **nunca se teclea** (ADR-0031):
-		// si hay catálogo, lo que llegue tiene que estar en él. Sin catálogo
-		// cargado no se inventa una validación: se exige que venga algo y el
-		// aviso lo da la pantalla.
-		if ( '' === $centre || ( array() !== $centres && ! in_array( $centre, $centres, true ) ) ) {
+		// si se pasa catálogo, lo que llegue tiene que estar en él. Un catálogo
+		// vacío falla en cerrado (ADR-0037).
+		if ( '' === $centre ) {
 			$errors[] = 'centre';
+		} elseif ( is_array( $centres ) ) {
+			if ( array() === $centres ) {
+				$errors[] = 'centre';
+			} elseif ( isset( $centres[ $centre ] ) ) {
+				$matched_val = (string) $centres[ $centre ];
+				if ( self::is_centre_code( $centre ) ) {
+					$centre_code = $centre;
+					$centre_name = $matched_val;
+				} else {
+					$centre_name = $matched_val;
+				}
+			} elseif ( in_array( $centre, $centres, true ) ) {
+				$key = array_search( $centre, $centres, true );
+				if ( false !== $key && self::is_centre_code( (string) $key ) ) {
+					$centre_code = (string) $key;
+				}
+				$centre_name = $centre;
+			} else {
+				$errors[] = 'centre';
+			}
+		} elseif ( '' === $centre_code && self::is_centre_code( $centre ) ) {
+			$centre_code = $centre;
 		}
 		if ( ! $consent ) {
 			$errors[] = 'consent';
@@ -69,13 +92,14 @@ final class RegistrationInput {
 			'ok'     => array() === $errors,
 			'errors' => $errors,
 			'data'   => array(
-				'tax_id'  => $tax_id,
-				'name'    => $name,
-				'surname' => $surname,
-				'email'   => $email,
-				'phone'   => $phone,
-				'centre'  => $centre,
-				'consent' => $consent,
+				'tax_id'      => $tax_id,
+				'name'        => $name,
+				'surname'     => $surname,
+				'email'       => $email,
+				'phone'       => $phone,
+				'centre'      => $centre_name,
+				'centre_code' => $centre_code,
+				'consent'     => $consent,
 			),
 		);
 	}
@@ -141,6 +165,18 @@ final class RegistrationInput {
 	 */
 	public static function is_tax_id( string $value ): bool {
 		return (bool) preg_match( '/^[A-Z0-9]{6,15}$/', $value );
+	}
+
+	/**
+	 * Whether a string has the shape of an official centre code.
+	 *
+	 * Solo dígitos, longitud de 7 u 8 caracteres.
+	 *
+	 * @param string $value Raw value.
+	 * @return bool
+	 */
+	public static function is_centre_code( string $value ): bool {
+		return (bool) preg_match( '/^\d{7,8}$/', trim( $value ) );
 	}
 
 	/**

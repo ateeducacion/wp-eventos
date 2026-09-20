@@ -55,13 +55,14 @@ final class Participants {
 	 */
 	public static function columns(): array {
 		return array(
-			'name'     => 'Nombre',
-			'email'    => 'Correo',
-			'centre'   => 'Centro',
-			'workshop' => 'Taller',
-			'date'     => 'Fecha de inscripción',
-			'consent'  => 'Consentimiento',
-			'files'    => 'Documentos',
+			'name'        => 'Nombre',
+			'email'       => 'Correo',
+			'centre_code' => 'Código de centro',
+			'centre'      => 'Centro',
+			'workshop'    => 'Taller',
+			'date'        => 'Fecha de inscripción',
+			'consent'     => 'Consentimiento',
+			'files'       => 'Documentos',
 		);
 	}
 

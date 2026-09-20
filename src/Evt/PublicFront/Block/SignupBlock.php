@@ -246,8 +246,12 @@ final class SignupBlock {
 
 		$html = '<p class="evt-campo"><label for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'
 			. '<select id="evt-ins-centre" name="centre" required><option value="">Elija su centro</option>';
-		foreach ( $centros as $centro ) {
-			$html .= sprintf( '<option value="%1$s">%1$s</option>', esc_attr( $centro ) );
+		foreach ( $centros as $codigo => $denominacion ) {
+			$html .= sprintf(
+				'<option value="%1$s">%2$s</option>',
+				esc_attr( (string) $codigo ),
+				esc_html( (string) $denominacion )
+			);
 		}
 		return $html . '</select></p>';
 	}
