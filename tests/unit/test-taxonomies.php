@@ -96,4 +96,105 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertIsArray( $terminos );
 		$this->assertSame( array( $area ), array_map( 'intval', wp_list_pluck( $terminos, 'term_id' ) ) );
 	}
+
+	/**
+	 * Only administration can write validated contact details on a scope.
+	 */
+	public function test_scope_email_and_image_metadata() {
+		$area  = $this->area( 'Ámbito con contacto' );
+		$admin = $this->administrator();
+		$image = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		$this->assertTrue( wp_attachment_is_image( $image ) );
+		$this->acting_as( $admin );
+		$_POST = array(
+			'evt_scope_meta_nonce'    => wp_create_nonce( 'evt_scope_meta' ),
+			EventTaxonomies::EMAIL    => ' Contacto@Example.org ',
+			EventTaxonomies::IMAGE_ID => (string) $image,
+		);
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+		$this->assertSame( $image, (int) get_term_meta( $area, EventTaxonomies::IMAGE_ID, true ) );
+		$_POST[ EventTaxonomies::EMAIL ]    = '@@@';
+		$_POST[ EventTaxonomies::IMAGE_ID ] = 'not-an-image';
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+		$this->assertSame( $image, (int) get_term_meta( $area, EventTaxonomies::IMAGE_ID, true ) );
+
+		$this->acting_as( $this->organiser() );
+		$_POST[ EventTaxonomies::EMAIL ] = 'attacker@example.org';
+		EventTaxonomies::save_fields( $area );
+		$this->assertSame( 'Contacto@Example.org', get_term_meta( $area, EventTaxonomies::EMAIL, true ) );
+
+		$this->acting_as( $admin );
+		$_POST[ EventTaxonomies::EMAIL ]    = '';
+		$_POST[ EventTaxonomies::IMAGE_ID ] = '0';
+		EventTaxonomies::save_fields( $area );
+		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::EMAIL ) );
+		$this->assertFalse( metadata_exists( 'term', $area, EventTaxonomies::IMAGE_ID ) );
+		$_POST = array();
+	}
+
+	/** Native selectors expose only effective descendants with unambiguous paths. */
+	public function test_scope_options_follow_the_tree() {
+		$root    = $this->area( 'Ámbito general' );
+		$service = $this->area( 'Ámbito 1' );
+		$child   = $this->area( 'Subámbito' );
+		$other   = $this->area( 'Ámbito 2' );
+		wp_update_term( $service, EventTaxonomies::AREA, array( 'parent' => $root ) );
+		wp_update_term( $child, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $other, EventTaxonomies::AREA, array( 'parent' => $root ) );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
+		$this->assertEqualsCanonicalizing( array( $service, $child ), array_keys( EventTaxonomies::area_options( $editor ) ) );
+		$this->assertSame( 'Ámbito general › Ámbito 1 › Subámbito', EventTaxonomies::area_options( $editor )[ $child ] );
+		$this->assertArrayNotHasKey( $other, EventTaxonomies::area_options( $editor ) );
+		$this->acting_as( $editor );
+		$this->assertEqualsCanonicalizing( array( $service, $child ), EventTaxonomies::rest_area_query( array() )['include'] );
+	}
+
+	/** The native editor shows foreign organisers read-only on shared events. */
+	public function test_native_scope_box_shows_foreign_terms_read_only() {
+		$own   = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $user, EventAccess::USER_AREA_META, array( $own ) );
+		$event = $this->event( $user, array( $own, $other ) );
+		$this->acting_as( $user );
+		ob_start();
+		EventTaxonomies::area_meta_box( get_post( $event ) );
+		$html = ob_get_clean();
+		$this->assertStringContainsString( 'value="' . $own . '" checked="checked"', $html );
+		$this->assertStringNotContainsString( 'value="' . $other . '"', $html );
+		$this->assertStringContainsString( 'Otros ámbitos organizadores', $html );
+		$this->assertStringContainsString( 'Ámbito 2', $html );
+	}
+
+	/** Term forms display the saved image and a validation notice without altering metadata. */
+	public function test_scope_forms_and_validation_notice() {
+		$area  = $this->area( 'Ámbito 1' );
+		$admin = $this->administrator();
+		$image = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		update_term_meta( $area, EventTaxonomies::EMAIL, 'contact@example.org' );
+		update_term_meta( $area, EventTaxonomies::IMAGE_ID, $image );
+		$this->acting_as( $admin );
+		ob_start();
+		EventTaxonomies::add_fields();
+		$add_html = ob_get_clean();
+		$this->assertStringContainsString( 'evt_scope_meta_nonce', $add_html );
+		ob_start();
+		EventTaxonomies::edit_fields( get_term( $area, EventTaxonomies::AREA ) );
+		$edit_html = ob_get_clean();
+		$this->assertStringContainsString( 'contact@example.org', $edit_html );
+		$this->assertStringContainsString( 'ID ' . $image, $edit_html );
+		set_current_screen( 'edit-evt_area' );
+		EventTaxonomies::enqueue_media();
+		$this->assertTrue( wp_script_is( 'media-views', 'enqueued' ) );
+		$this->assertStringContainsString( 'evt-scope-choose-image', implode( '\n', (array) wp_scripts()->get_data( 'media-views', 'after' ) ) );
+		set_transient( 'evt_scope_error_' . $admin, 'Correo no válido', 60 );
+		ob_start();
+		EventTaxonomies::scope_notice();
+		$notice = ob_get_clean();
+		$this->assertStringContainsString( 'Correo no válido', $notice );
+		$this->assertFalse( get_transient( 'evt_scope_error_' . $admin ) );
+	}
 }

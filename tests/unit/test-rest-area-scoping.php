@@ -11,6 +11,7 @@
  * @package Evt
  */
 
+use Evt\Access\EventAccess;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
@@ -106,6 +107,218 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 				$args
 			)
 		);
+	}
+
+	/** REST creation defaults to the editor's direct scope and rejects unresolved profiles. */
+	public function test_rest_creation_without_scope_is_fail_closed() {
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin  = $this->administrator();
+		$this->acting_as( $admin );
+		$before = count(
+			get_posts(
+				array(
+					'post_type'   => EventPostType::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+				)
+			)
+		);
+		foreach ( array( array(), array( $this->area_owner, $this->area_other ), array( 99999999 ) ) as $raw ) {
+			update_user_meta( $editor, EventAccess::USER_AREA_META, $raw );
+			$this->acting_as( $editor );
+			foreach ( array( 'draft', 'publish' ) as $status ) {
+				$this->acting_as( $editor );
+				$response = $this->rest(
+					'POST',
+					'/wp/v2/evt_event',
+					array(
+						'title'  => 'Sin ámbito',
+						'status' => $status,
+					)
+				);
+				$this->assertSame( 403, $response->get_status() );
+				$this->acting_as( $admin );
+				$this->assertSame(
+					$before,
+					count(
+						get_posts(
+							array(
+								'post_type'   => EventPostType::POST_TYPE,
+								'post_status' => 'any',
+								'numberposts' => -1,
+							)
+						)
+					)
+				);
+			}
+		}
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $this->area_owner ) );
+		$this->acting_as( $editor );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Con ámbito',
+				'status' => 'draft',
+			)
+		);
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $response->get_data()['id'], EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Directo a publicación',
+				'status' => 'publish',
+			)
+		);
+		$this->assertSame( 400, $response->get_status() );
+		$this->acting_as( $this->administrator() );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'  => 'Reparación',
+				'status' => 'publish',
+			)
+		);
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( array(), wp_get_post_terms( $response->get_data()['id'], EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Publication hooks must never observe a scoped editor's event as orphaned. */
+	public function test_rest_publish_transition_has_scope() {
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $this->area_owner ) );
+		$seen  = array();
+		$watch = static function ( $new_status, $old_status, $post ) use ( &$seen ) {
+			if ( EventPostType::POST_TYPE === $post->post_type && 'publish' === $new_status ) {
+				$seen[] = wp_get_post_terms( $post->ID, EventTaxonomies::AREA, array( 'fields' => 'ids' ) );
+			}
+		};
+		add_action( 'transition_post_status', $watch, 10, 3 );
+		$this->acting_as( $editor );
+		$direct = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'    => 'Publicación',
+				'status'   => 'publish',
+				'evt_area' => array( $this->area_owner ),
+			)
+		);
+		$this->assertSame( 400, $direct->get_status() );
+		$this->assertSame( array(), $seen );
+		$draft = $this->rest(
+			'POST',
+			'/wp/v2/evt_event',
+			array(
+				'title'    => 'Publicación',
+				'status'   => 'draft',
+				'evt_area' => array( $this->area_owner ),
+			)
+		);
+		$this->assertSame( 201, $draft->get_status() );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $draft->get_data()['id'], array( 'status' => 'publish' ) );
+		remove_action( 'transition_post_status', $watch, 10 );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( array( $this->area_owner ) ), $seen );
+	}
+
+	/**
+	 * A scoped editor cannot move an event to a foreign branch via REST.
+	 */
+	public function test_rest_rejects_foreign_scope_without_changing_terms() {
+		$event = $this->event( $this->owner, array( $this->area_owner ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $event, array( 'evt_area' => array( $this->area_other ) ) );
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Saving one branch of a shared event must not remove the other branch. */
+	public function test_rest_preserves_foreign_scope_on_shared_event() {
+		$event = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $event, array( 'evt_area' => array( $this->area_owner ) ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/** REST may remove an editor's own organiser only when another remains. */
+	public function test_rest_can_withdraw_own_scope_from_shared_event() {
+		$shared = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $shared, array( 'evt_area' => array() ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( $this->area_other ), wp_get_post_terms( $shared, 'evt_area', array( 'fields' => 'ids' ) ) );
+		$own      = $this->event( $this->owner, array( $this->area_owner ) );
+		$response = $this->rest( 'POST', '/wp/v2/evt_event/' . $own, array( 'evt_area' => array() ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $own, 'evt_area', array( 'fields' => 'ids' ) ) );
+	}
+
+	/** Admin form rejects a foreign term before saving; programmatic writes are not given a false empty-content error. */
+	public function test_classic_post_rejects_foreign_scope_without_changing_terms() {
+		$event = $this->event( $this->owner, array( $this->area_owner ) );
+		$this->acting_as( $this->owner );
+		$result = EventAccess::admin_area_error(
+			array(
+				'post_type' => 'evt_event',
+				'tax_input' => array( 'evt_area' => array( $this->area_other ) ),
+			)
+		);
+		$this->assertWPError( $result );
+		$this->assertSame( array( $this->area_owner ), wp_get_post_terms( $event, 'evt_area', array( 'fields' => 'ids' ) ) );
+		$this->assertFalse( has_filter( 'wp_insert_post_empty_content', array( EventAccess::class, 'validate_classic_areas' ) ) );
+		$updated = wp_update_post(
+			array(
+				'ID'        => $event,
+				'tax_input' => array( 'evt_area' => array( $this->area_owner ) ),
+			),
+			true
+		);
+		$this->assertSame( $event, $updated );
+	}
+
+	/** Interactive admin saves preserve another organiser and reject foreign assignments before core writes. */
+	public function test_admin_request_guard_covers_classic_quick_and_bulk_paths() {
+		$event = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		global $pagenow;
+		$previous_page = $pagenow;
+		// This test deliberately builds and inspects a forged admin POST.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$previous_post = $_POST;
+		try {
+			foreach ( array(
+				'post.php'       => 'editpost',
+				'admin-ajax.php' => 'inline-save',
+				'edit.php'       => 'bulk_edit',
+			) as $page => $action ) {
+				$pagenow = $page;
+				$_POST   = array(
+					'action'    => $action,
+					'post_type' => EventPostType::POST_TYPE,
+					'post_ID'   => $event,
+					'tax_input' => array( EventTaxonomies::AREA => array( $this->area_owner ) ),
+				);
+				EventAccess::validate_admin_areas();
+				$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), $_POST['tax_input'][ EventTaxonomies::AREA ] );
+				$_POST['tax_input'][ EventTaxonomies::AREA ] = array( $this->area_other );
+				try {
+					EventAccess::validate_admin_areas();
+					$this->fail( 'The foreign term must be rejected before the post is saved.' );
+				} catch ( WPDieException $exception ) {
+					$this->assertStringContainsString( 'No puede asignar un ámbito de otra rama', $exception->getMessage() );
+				}
+				$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+			}
+		} finally {
+			$pagenow = $previous_page;
+			$_POST   = $previous_post;
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	}
 
 	/**

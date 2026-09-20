@@ -1,7 +1,7 @@
 <?php
 /**
  * Snippet Name: EVT — Roles y perfiles
- * Description: Registra el rol del aplicativo de eventos (evt_organiser), sus capacidades propias y el campo de perfil «Área» que acota lo que cada persona ve y edita. La administración es el rol nativo de WordPress y solo recibe capacidades. Las capacidades de los tipos de contenido las reparte el aplicativo, no este snippet. Los roles se revisan en WPFront User Role Editor.
+ * Description: Registra el rol de compatibilidad evt_organiser y el selector de Ámbito organizativo del perfil, reservado a administración. El Editor nativo es el actor recomendado. Las capacidades de los tipos de contenido las reparte el aplicativo.
  * Scope: global
  * Priority: 5
  *
@@ -79,7 +79,22 @@ if ( ! function_exists( 'evt_forbidden_role_caps' ) ) {
 	 * @return string[]
 	 */
 	function evt_forbidden_role_caps(): array {
-		return array( 'evt_edit_custom_js', 'evt_manage_app', 'unfiltered_html' );
+		return array( 'evt_edit_custom_js', 'evt_manage_app', 'evt_edit_all_areas', 'unfiltered_html' );
+	}
+}
+
+if ( ! function_exists( 'evt_audited_role_definitions' ) ) {
+	/** Product-owned roles plus the native editor that the product uses. */
+	function evt_audited_role_definitions(): array {
+		return array_merge(
+			evt_role_definitions(),
+			array(
+				'editor' => array(
+					'label' => 'Editor de eventos',
+					'caps'  => array( 'edit_evt_events', 'publish_evt_events', 'edit_evt_speakers', 'edit_evt_activities', 'edit_evt_registrations', 'evt_edit_custom_css' ),
+				),
+			)
+		);
 	}
 }
 
@@ -209,7 +224,7 @@ if ( ! function_exists( 'evt_roles_status' ) ) {
 	 */
 	function evt_roles_status(): array {
 		$out = array();
-		foreach ( evt_role_definitions() as $slug => $def ) {
+		foreach ( evt_audited_role_definitions() as $slug => $def ) {
 			$exists  = evt_role_exists( $slug );
 			$role    = $exists ? get_role( $slug ) : null;
 			$missing = array();
@@ -218,8 +233,9 @@ if ( ! function_exists( 'evt_roles_status' ) ) {
 					$missing[] = $cap;
 				}
 			}
-			$sobran = array();
-			foreach ( evt_forbidden_role_caps() as $cap ) {
+			$sobran    = array();
+			$forbidden = 'editor' === $slug ? array_diff( evt_forbidden_role_caps(), array( 'unfiltered_html' ) ) : evt_forbidden_role_caps();
+			foreach ( $forbidden as $cap ) {
 				if ( $role && $role->has_cap( $cap ) ) {
 					$sobran[] = $cap;
 				}
@@ -242,7 +258,7 @@ if ( ! function_exists( 'evt_can_edit_admin_only_fields' ) ) {
 	 * @return bool
 	 */
 	function evt_can_edit_admin_only_fields(): bool {
-		return current_user_can( 'evt_manage_app' ) || current_user_can( 'edit_users' );
+		return current_user_can( 'manage_options' );
 	}
 }
 
@@ -254,52 +270,53 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 	 * @return void
 	 */
 	function evt_render_profile_fields( $user ): void {
-		if ( ! ( $user instanceof WP_User ) || ! taxonomy_exists( 'evt_area' ) ) {
+		if ( ! ( $user instanceof WP_User ) || ! taxonomy_exists( 'evt_area' ) || ! evt_can_edit_admin_only_fields() || array() === array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) ) {
 			return;
 		}
 
-		$terms = get_terms(
-			array(
-				'taxonomy'   => 'evt_area',
-				'hide_empty' => false,
-			)
-		);
-		if ( is_wp_error( $terms ) ) {
+		if ( ! class_exists( '\Evt\Taxonomy\EventTaxonomies' ) ) {
 			return;
 		}
+		$terms = \Evt\Taxonomy\EventTaxonomies::area_options();
 
-		$mine = get_user_meta( $user->ID, 'evt_area', true );
-		$mine = is_array( $mine ) ? array_map( 'intval', $mine ) : array();
+		$assignment = \Evt\Access\EventAccess::scope_assignment_state( $user->ID );
+		$mine       = 'resolved' === $assignment['state'] ? $assignment['ids'][0] : 0;
+		$unresolved = in_array( $assignment['state'], array( 'ambiguous', 'invalid' ), true );
 
 		echo '<h2>Eventos</h2>';
 		echo '<table class="form-table" role="presentation"><tr>';
-		echo '<th><label for="evt_area">Área organizadora</label></th><td>';
-
-		if ( ! evt_can_edit_admin_only_fields() ) {
-			$names = array();
-			foreach ( $terms as $term ) {
-				if ( in_array( (int) $term->term_id, $mine, true ) ) {
-					$names[] = $term->name;
-				}
-			}
-			echo esc_html( array() === $names ? 'Sin área asignada.' : implode( ', ', $names ) );
-			echo '<p class="description">El área la asigna quien administra el aplicativo: es la que decide qué eventos ve y edita.</p>';
-			echo '</td></tr></table>';
-			return;
-		}
+		echo '<th><label for="evt_area">Ámbito organizativo</label></th><td>';
+		wp_nonce_field( 'evt_profile_scope_' . $user->ID, 'evt_profile_scope_nonce' );
 
 		echo '<input type="hidden" name="evt_area_present" value="1" />';
-		echo '<select name="evt_area[]" id="evt_area" multiple size="8" class="regular-text">';
-		foreach ( $terms as $term ) {
+		echo '<select name="evt_area" id="evt_area" class="regular-text">';
+		if ( $unresolved ) {
+			echo '<option value="__keep_unresolved__" selected="selected">Pendiente de resolver (conservar datos)</option>';
+		}
+		printf( '<option value=""%s>Sin ámbito</option>', 'empty' === $assignment['state'] ? ' selected="selected"' : '' );
+		foreach ( $terms as $term_id => $label ) {
 			printf(
 				'<option value="%1$d"%2$s>%3$s</option>',
-				(int) $term->term_id,
-				in_array( (int) $term->term_id, $mine, true ) ? ' selected="selected"' : '',
-				esc_html( str_repeat( '— ', max( 0, count( get_ancestors( (int) $term->term_id, 'evt_area', 'taxonomy' ) ) ) ) . $term->name )
+				(int) $term_id,
+				(int) $term_id === $mine ? ' selected="selected"' : '',
+				esc_html( $label )
 			);
 		}
 		echo '</select>';
-		echo '<p class="description">Una o varias áreas. Sin ninguna, esta persona no ve ni edita ningún evento.</p>';
+		if ( $unresolved ) {
+			$labels = \Evt\Taxonomy\EventTaxonomies::area_options( 0, true );
+			$names  = array_map(
+				static function ( $id ) use ( $labels ) {
+					return $labels[ $id ] ?? (string) $id;
+				},
+				$assignment['ids']
+			);
+			if ( $assignment['invalid'] ) {
+				$names[] = 'IDs inválidos: ' . implode( ', ', $assignment['invalid'] );
+			}
+			printf( '<p class="notice notice-warning">Este perfil conserva ámbitos históricos: %s. Debe elegir uno para recuperar el acceso; mientras tanto, el usuario no accede a contenidos acotados. Si guarda sin elegir, se conservarán los datos.</p>', esc_html( implode( ', ', $names ) ) );
+		}
+		echo '<p class="description">Un ámbito incluye sus descendientes. Sin ámbito, esta persona no ve ni edita ningún evento.</p>';
 		echo '</td></tr></table>';
 	}
 }
@@ -316,26 +333,38 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 	 * @return void
 	 */
 	function evt_save_profile_fields( int $user_id ): void {
-		if ( ! current_user_can( 'edit_user', $user_id ) || ! evt_can_edit_admin_only_fields() ) {
+		$user = get_user_by( 'id', $user_id );
+		if ( ! ( $user instanceof WP_User ) || array() === array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) || ! current_user_can( 'edit_user', $user_id ) || ! evt_can_edit_admin_only_fields() ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el formulario de perfil usa el nonce del núcleo.
+		if ( ! isset( $_POST['evt_profile_scope_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_profile_scope_nonce'] ) ), 'evt_profile_scope_' . $user_id ) ) {
+			return;
+		}
 		$post = wp_unslash( $_POST );
 		if ( empty( $post['evt_area_present'] ) ) {
 			return;
 		}
 
-		$raw   = isset( $post['evt_area'] ) ? (array) $post['evt_area'] : array();
-		$areas = array();
-		foreach ( $raw as $term_id ) {
-			$term_id = (int) $term_id;
-			$term    = $term_id > 0 ? get_term( $term_id, 'evt_area' ) : null;
-			if ( $term instanceof WP_Term ) {
-				$areas[] = $term_id;
-			}
+		if ( ! array_key_exists( 'evt_area', $post ) ) {
+			return;
 		}
-
-		update_user_meta( $user_id, 'evt_area', array_values( array_unique( $areas ) ) );
+		$raw = $post['evt_area'];
+		if ( is_array( $raw ) ) {
+			return;
+		}
+		$raw = sanitize_text_field( (string) $raw );
+		if ( '__keep_unresolved__' === $raw ) {
+			return;
+		}
+		if ( '' !== $raw && ! ctype_digit( $raw ) ) {
+			return;
+		}
+		$term_id = absint( $raw );
+		$term    = $term_id > 0 ? get_term( $term_id, 'evt_area' ) : null;
+		if ( $term_id > 0 && ! ( $term instanceof WP_Term ) ) {
+			return;
+		}
+		update_user_meta( $user_id, 'evt_area', $term_id > 0 ? array( $term_id ) : array() );
 	}
 }
 

@@ -318,12 +318,12 @@ class Test_Shell extends WP_UnitTestCase {
 		$this->assertSame( 'Innovación', Shell::profile()['area'] );
 
 		$this->acting_as( $this->organiser() );
-		$this->assertSame( 'Sin área asignada', Shell::profile()['area'] );
+		$this->assertSame( 'Sin ámbito asignado', Shell::profile()['area'] );
 
 		$this->app();
 		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$this->assertSame( 'Administración', Shell::profile()['cargo'] );
-		$this->assertSame( 'Todas las áreas', Shell::profile()['area'] );
+		$this->assertSame( 'Todos los ámbitos', Shell::profile()['area'] );
 	}
 
 	/**

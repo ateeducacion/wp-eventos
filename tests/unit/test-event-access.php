@@ -6,6 +6,7 @@
  */
 
 use Evt\Access\EventAccess;
+use Evt\Taxonomy\EventTaxonomies;
 
 /**
  * El acotado por área, que es el eje de permisos del aplicativo.
@@ -37,7 +38,7 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertSame( array(), EventAccess::user_areas( $huerfano ) );
 		$this->assertFalse( EventAccess::can_edit( $huerfano, $evento ) );
 		$this->assertFalse( user_can( $huerfano, 'edit_post', $evento ) );
-		$this->assertStringContainsString( 'No tiene ningún área asignada', EventAccess::why_not_editable( $huerfano, $evento ) );
+		$this->assertStringContainsString( 'No tiene ningún ámbito asignado', EventAccess::why_not_editable( $huerfano, $evento ) );
 	}
 
 	/**
@@ -60,7 +61,7 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertFalse( EventAccess::can_edit( $yo, $evento_otro ) );
 		$this->assertFalse( user_can( $yo, 'edit_post', $evento_otro ) );
 		$this->assertFalse( user_can( $yo, 'delete_post', $evento_otro ) );
-		$this->assertStringContainsString( 'de otra área', EventAccess::why_not_editable( $yo, $evento_otro ) );
+		$this->assertStringContainsString( 'de otro ámbito', EventAccess::why_not_editable( $yo, $evento_otro ) );
 	}
 
 	/**
@@ -115,8 +116,7 @@ class Test_Event_Access extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Un evento recién creado todavía no tiene área: lo edita quien lo creó,
-	 * que es justo quien tiene que ponérsela.
+	 * A new event inherits the creator's assigned scope immediately.
 	 */
 	public function test_a_brand_new_event_belongs_to_whoever_created_it() {
 		$mia    = $this->area( 'Formación del Profesorado' );
@@ -124,7 +124,7 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$ajena  = $this->organiser( array( $this->area( 'Innovación' ) ) );
 		$evento = $this->event( $yo );
 
-		$this->assertSame( array(), EventAccess::post_areas( $evento ) );
+		$this->assertSame( array( $mia ), EventAccess::post_areas( $evento ) );
 		$this->assertTrue( EventAccess::can_edit( $yo, $evento ) );
 		$this->assertFalse( EventAccess::can_edit( $ajena, $evento ) );
 	}
@@ -171,14 +171,66 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$uid = $this->organiser();
 		$this->assertSame( array(), EventAccess::user_areas( $uid ) );
 
-		update_user_meta( $uid, EventAccess::USER_AREA_META, array( 7, '7', '9', 0, 'x' ) );
-		$this->assertSame( array( 7, 9 ), EventAccess::user_areas( $uid ) );
+		$first  = $this->area( 'Primer ámbito' );
+		$second = $this->area( 'Segundo ámbito' );
+		update_user_meta( $uid, EventAccess::USER_AREA_META, array( $first, (string) $first, $second, 0, 'x' ) );
+		$this->assertSame( array(), EventAccess::user_areas( $uid ), 'dos ámbitos históricos no eligen uno por su cuenta' );
 
-		update_user_meta( $uid, EventAccess::USER_AREA_META, '4,5' );
-		$this->assertSame( array( 4, 5 ), EventAccess::user_areas( $uid ) );
+		update_user_meta( $uid, EventAccess::USER_AREA_META, $first . ',' . $second );
+		$this->assertSame( array(), EventAccess::user_areas( $uid ) );
+
+		update_user_meta( $uid, EventAccess::USER_AREA_META, array( $first ) );
+		$this->assertSame( array( $first ), EventAccess::user_areas( $uid ) );
 
 		update_user_meta( $uid, EventAccess::USER_AREA_META, '   ' );
 		$this->assertSame( array(), EventAccess::user_areas( $uid ) );
+	}
+
+	/**
+	 * An editor reaches descendants, never ancestors or a sibling branch.
+	 */
+	public function test_editor_scope_includes_only_assigned_subtrees() {
+		$dg      = $this->area( 'Dirección general' );
+		$service = $this->area( 'Servicio A' );
+		$area    = $this->area( 'Área A1' );
+		$team    = $this->area( 'Equipo A1.1' );
+		$sibling = $this->area( 'Área A2' );
+		$other   = $this->area( 'Servicio B' );
+		wp_update_term( $service, EventTaxonomies::AREA, array( 'parent' => $dg ) );
+		wp_update_term( $area, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $team, EventTaxonomies::AREA, array( 'parent' => $area ) );
+		wp_update_term( $sibling, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $other, EventTaxonomies::AREA, array( 'parent' => $dg ) );
+
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
+		$this->assertEqualsCanonicalizing( array( $service, $area, $team, $sibling ), EventAccess::scope_areas( $editor ) );
+		foreach ( array( $service, $area, $team, $sibling ) as $term ) {
+			$this->assertTrue( EventAccess::may_assign_areas( array( $term ), $editor ) );
+			$this->assertTrue( user_can( $editor, 'assign_term', $term ) );
+		}
+		foreach ( array( $dg, $other ) as $term ) {
+			$this->assertFalse( EventAccess::may_assign_areas( array( $term ), $editor ) );
+			$this->assertFalse( user_can( $editor, 'assign_term', $term ) );
+		}
+		$new_child = $this->area( 'Nueva área' );
+		wp_update_term( $new_child, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		$this->assertContains( $new_child, EventAccess::scope_areas( $editor ) );
+		wp_update_term( $new_child, EventTaxonomies::AREA, array( 'parent' => $other ) );
+		$this->assertNotContains( $new_child, EventAccess::scope_areas( $editor ) );
+		foreach ( array( $service, $area, $team, $sibling ) as $term ) {
+			$this->assertTrue( EventAccess::can_edit( $editor, $this->event( $this->administrator(), array( $term ) ) ) );
+		}
+		foreach ( array( $dg, $other ) as $term ) {
+			$foreign = $this->event( $this->administrator(), array( $term ) );
+			$this->assertFalse( EventAccess::can_edit( $editor, $foreign ) );
+			$this->acting_as( $editor );
+			$this->assertFalse( current_user_can( 'edit_post', $foreign ) );
+		}
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $area ) );
+		$this->assertEqualsCanonicalizing( array( $area, $team ), EventAccess::scope_areas( $editor ) );
+		wp_delete_term( $area, EventTaxonomies::AREA );
+		$this->assertSame( array(), EventAccess::scope_areas( $editor ) );
 	}
 
 	/**
@@ -192,5 +244,75 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertTrue( EventAccess::is_manager( $admin ) );
 		$this->assertTrue( EventAccess::can_edit( $admin, $evento ) );
 		$this->assertFalse( EventAccess::is_manager( $this->organiser( array( $otra ) ) ) );
+	}
+
+	/** A scoped editor may withdraw only their own organiser terms. */
+	public function test_resolve_shared_area_assignment() {
+		$service = $this->area( 'Ámbito 1' );
+		$a1      = $this->area( 'Subámbito 1' );
+		$a2      = $this->area( 'Subámbito 2' );
+		$foreign = $this->area( 'Ámbito 2' );
+		wp_update_term( $a1, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		wp_update_term( $a2, EventTaxonomies::AREA, array( 'parent' => $service ) );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $service ) );
+		$event = $this->event( $this->administrator(), array( $a1, $foreign ) );
+		$this->assertEqualsCanonicalizing( array( $a1, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a1 ), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a2 ), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a1, $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a1, $a2 ), $editor ) );
+		$this->assertSame( array( $foreign ), EventAccess::resolve_area_assignment( $event, array(), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $foreign ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( 99999999 ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( $a1, 99999999 ), $editor ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array( array( $a1 ) ), $editor ) );
+		$own = $this->event( $this->administrator(), array( $a1 ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $own, array(), $editor ) );
+		$this->assertEqualsCanonicalizing( array( $a2, $foreign ), EventAccess::resolve_area_assignment( $event, array( $a2, $foreign ), $this->administrator() ) );
+	}
+
+	/** A historical profile is classified once and never widens runtime access. */
+	public function test_historical_scope_states() {
+		$first = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = $this->organiser();
+		foreach ( array( (string) $first, array( $first ) ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'resolved', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array( $first ), EventAccess::user_areas( $user ) );
+		}
+		foreach ( array( array( $first, $other ), $first . ',' . $other ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'ambiguous', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array(), EventAccess::user_areas( $user ) );
+		}
+		foreach ( array( array( $first, 99999999 ), '99999999' ) as $raw ) {
+			update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+			$this->assertSame( 'invalid', EventAccess::scope_assignment_state( $user )['state'] );
+			$this->assertSame( array(), EventAccess::user_areas( $user ) );
+		}
+	}
+
+	/** Administrators retain the explicit orphan repair path; editors do not. */
+	public function test_admin_can_repair_an_unscoped_event() {
+		$admin  = $this->administrator();
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$area   = $this->area( 'Ámbito 1' );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $area ) );
+		$event = $this->event( $admin, array( $area ) );
+		$this->assertSame( array(), EventAccess::resolve_area_assignment( $event, array(), $admin ) );
+		$this->assertWPError( EventAccess::resolve_area_assignment( $event, array(), $editor ) );
+	}
+
+	/** The deployment report classifies editorial accounts without changing them. */
+	public function test_scope_diagnostics_classifies_without_migrating() {
+		$area  = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$raw   = $area . ',' . $other;
+		update_user_meta( $user, EventAccess::USER_AREA_META, $raw );
+		$rows = array_column( EventAccess::scope_diagnostics(), null, 'user_id' );
+		$this->assertSame( 'ambiguous', $rows[ $user ]['state'] );
+		$this->assertTrue( $rows[ $user ]['legacy'] );
+		$this->assertSame( $raw, get_user_meta( $user, EventAccess::USER_AREA_META, true ) );
 	}
 }

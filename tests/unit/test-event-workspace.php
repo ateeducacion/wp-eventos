@@ -84,7 +84,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	// ─── el modelo ─────────────────────────────────────────────────────────
 
 	/**
-	 * Sin sesión, sin evento o con un evento de otra área, no se abre el taller.
+	 * Sin sesión, sin evento o con un evento de otro ámbito, no se abre el taller.
 	 */
 	public function test_the_workshop_does_not_open_without_permission() {
 		$mia    = $this->area( 'Formación del Profesorado' );
@@ -104,7 +104,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 
 		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $evento;
 		$m                                 = EventWorkspace::model();
-		$this->assertStringContainsString( 'de otra área', $m['aviso'] );
+		$this->assertStringContainsString( 'de otro ámbito', $m['aviso'] );
 		$this->assertSame( 'error', $m['aviso_tipo'] );
 		$this->assertSame( array(), $m['sections'], 'ni se enumeran sus secciones' );
 	}
@@ -392,7 +392,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$this->assertSame( array( $primera, $segunda ), $this->orden( $evento ) );
 		$this->assertSame( 'Jornadas de mi área', get_the_title( $evento ) );
 		$this->assertSame( '', (string) get_post_meta( $evento, EventMetaKeys::HEADER_BG, true ) );
-		$this->assertStringContainsString( 'de otra área', (string) $this->flash( $ajena )['texto'] );
+		$this->assertStringContainsString( 'de otro ámbito', (string) $this->flash( $ajena )['texto'] );
 	}
 
 	/**
@@ -575,6 +575,45 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 			array( $mia ),
 			wp_get_post_terms( $evento, EventTaxonomies::AREA, array( 'fields' => 'ids' ) )
 		);
+	}
+
+	/** An editor can update a shared event without removing another branch. */
+	public function test_shared_event_keeps_all_organising_scopes() {
+		$mine    = $this->area( 'Ámbito 1' );
+		$foreign = $this->area( 'Ámbito 2' );
+		$editor  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $mine ) );
+		$event = $this->event( $editor, array( $mine, $foreign ) );
+		$this->submit(
+			$editor,
+			EventWorkspace::PANEL_SETTINGS,
+			$event,
+			0,
+			array(
+				EventWorkspace::FIELD_TITLE => 'Evento compartido',
+				EventWorkspace::FIELD_AREA  => array( $mine ),
+				EventMetaKeys::START_DATE   => '2026-10-01',
+			)
+		);
+		$this->assertEqualsCanonicalizing( array( $mine, $foreign ), EventAccess::post_areas( $event ) );
+		$this->acting_as( $editor );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $event;
+		$model                             = EventWorkspace::model();
+		$this->assertEqualsCanonicalizing( array( $mine, $foreign ), array_map( 'intval', explode( ',', $model['values'][ EventWorkspace::FIELD_AREA ] ) ) );
+		$this->assertContains( 'Ámbito 2', $model['foreign_areas'] );
+		$destination = $this->submit(
+			$editor,
+			EventWorkspace::PANEL_SETTINGS,
+			$event,
+			0,
+			array(
+				EventWorkspace::FIELD_TITLE => 'Evento compartido',
+				'evt_area_present'          => '1',
+				EventMetaKeys::START_DATE   => '2026-10-01',
+			)
+		);
+		$this->assertSame( array( $foreign ), EventAccess::post_areas( $event ) );
+		$this->assertStringContainsString( 'retirado', (string) $destination );
 	}
 
 	// ─── el panel de apariencia ────────────────────────────────────────────

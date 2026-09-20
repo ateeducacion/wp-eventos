@@ -263,6 +263,12 @@ final class EventPostType {
 		);
 
 		$by_role = array(
+			'editor'        => array(
+				self::POST_TYPE                 => $organiser_events,
+				SpeakerPostType::POST_TYPE      => $every,
+				ActivityPostType::POST_TYPE     => $every,
+				RegistrationPostType::POST_TYPE => $organiser_registrations,
+			),
 			'evt_organiser' => array(
 				self::POST_TYPE                 => $organiser_events,
 				SpeakerPostType::POST_TYPE      => $every,
@@ -311,6 +317,7 @@ final class EventPostType {
 	 */
 	public static function grant_code_caps(): void {
 		$por_rol = array(
+			'editor'        => array( EventAccess::CAP_CUSTOM_CSS ),
 			'evt_organiser' => array( EventAccess::CAP_CUSTOM_CSS ),
 			'administrator' => self::code_caps(),
 		);

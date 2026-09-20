@@ -23,7 +23,7 @@ viene a ver.
 
 Lleva también el mu-plugin de desarrollo, así que desde la barra superior se
 puede **cambiar de cuenta** —`organizacion`, `organizacion2`, `organizacion3`,
-`coordinacion`— y ver el aplicativo con cada rol y cada área, que es la mitad de
+`coordinacion`— y ver el aplicativo con cada rol y cada ámbito, que es la mitad de
 lo que hay que probar aquí. Volver a la propia cuenta se hace desde la misma
 barra.
 
@@ -96,7 +96,7 @@ histórico en `evt_reg_centre` (ADR-0037).
 
 | Taxonomía | Eje | Ejemplos |
 |---|---|---|
-| `evt_area` | Área organizadora. **Es el eje de permisos** | `innovacion`, `salud`, `steam` |
+| `evt_area` | Ámbito organizativo jerárquico. **Es el eje de permisos**; el slug persiste por compatibilidad | `ambito-1`, `subambito-1`, `ambito-2` |
 | `evt_type` | Tipología | `jornadas`, `encuentro`, `congreso`, `taller` |
 | `evt_course` | Curso escolar | `2025-2026` |
 
@@ -105,12 +105,13 @@ Que `evt_event` sea jerárquico y sustituya 1:1 a la `page` de hoy es lo que
 
 ## Roles
 
-Son **dos**, y solo uno lo crea el aplicativo:
+El actor recomendado es el Editor nativo; el aplicativo solo crea el rol de compatibilidad:
 
 | Rol | Etiqueta | Quién |
 |---|---|---|
-| `evt_organiser` | Organización de eventos | Personal de un área: **todo** lo de su área —eventos, secciones, ponentes, actividades, apariencia y el CSS a medida—, y marcar sus eventos como históricos |
-| `administrator` | Administrador | Todo, en todas las áreas. Y lo único reservado: el **JavaScript** a medida, los ajustes del aplicativo y **desarchivar** |
+| `editor` | Editor | Edita eventos, secciones y contenidos relacionados de su ámbito y descendientes; puede compartir un evento con otros ámbitos |
+| `evt_organiser` | Organización de eventos | Rol anterior, conservado temporalmente para cuentas existentes con el mismo acotado |
+| `administrator` | Administrador | Todo, en todos los ámbitos; asigna el ámbito de cada persona y gestiona el árbol |
 
 **Por qué el CSS sí y el JavaScript no.** Porque el CSS cambia cómo se ve una
 página y el JavaScript ejecuta código en el navegador de cada visitante. No son
@@ -118,13 +119,22 @@ el mismo riesgo, y por eso son dos capacidades distintas —`evt_edit_custom_css
 y `evt_edit_custom_js`— y no una
 ([ADR-0014](docs/adr/ADR-0014-css-del-area-javascript-de-administracion.md)).
 
-El acotado por área es la user meta `evt_area` (uno o varios términos). Es
-**fail-closed**: sin área asignada y sin `evt_edit_all_areas`, no se edita
-nada. `evt_organiser` lo crea el snippet suelto
+El ámbito del usuario es la meta `evt_area`: un único término asignado por
+administración, más todos sus descendientes. El formato persistente sigue siendo
+una lista de IDs; una lista histórica con varios ámbitos no otorga acceso hasta
+que administración la resuelva. Un evento sí puede llevar varios ámbitos:
+cualquiera de ellos puede editarlo. Es **fail-closed**: sin ámbito válido y sin
+`evt_edit_all_areas`, no se edita nada. `evt_organiser` lo crea el snippet suelto
 `snippets/roles-and-profiles.php`; `administrator` es el de siempre de
 WordPress y solo se le cuelgan las capacidades del aplicativo. El detalle
 completo, capacidad a capacidad, está en
 [docs/roles-y-permisos.md](docs/roles-y-permisos.md).
+
+En REST, un Editor crea primero el evento en borrador y después lo publica:
+así los hooks de publicación ya encuentran su ámbito. Si omite `evt_area` al
+crear, recibe su ámbito directo; si lo omite al actualizar, conserva los
+organizadores actuales. Administración puede crear contenido huérfano para
+repararlo.
 
 ## Requisitos
 
@@ -164,22 +174,28 @@ Los crea `scripts/seed-demo.php` (que es la fuente de verdad de esta tabla) en
 `make provision`, `make up` y en los dos blueprints de Playground. La
 contraseña es `password` en todos.
 
-| Usuario | Rol | Área en el perfil |
+| Usuario | Rol | Ámbito en el perfil |
 |---------|-----|-------------------|
 | `admin` | administrator | — (ve todo) |
-| `coordinacion` | `evt_organiser` | Innovación **y** Convivencia escolar (dos áreas a la vez) |
-| `organizacion` | `evt_organiser` | Innovación |
-| `organizacion2` | `evt_organiser` | Innovación (segunda persona de la misma área) |
-| `organizacion3` | `evt_organiser` | Convivencia escolar (otra área: sirve para ver el acotado) |
+| `coordinacion` | `evt_organiser` | Ámbito 1 (compatibilidad) |
+| `organizacion` | `evt_organiser` | Ámbito 1 |
+| `organizacion2` | `evt_organiser` | Ámbito 1 |
+| `organizacion3` | `evt_organiser` | Ámbito 2 |
+| `editor-ambito` | `editor` | Ámbito 1: puede editar eventos de Subámbito 1 y Subámbito 2 |
+| `editor-ambito2` | `editor` | Ámbito 2: puede editar el evento compartido, sin acceder a los demás del Ámbito 1 |
+| `editor-subambito` | `editor` | Subámbito 1: no puede editar Subámbito 2 |
 
 La cuenta `coordinacion` conserva el nombre de cuando existía un rol de
-coordinación (`evt_coordinator`, retirado el 2026-09-13); hoy sirve para probar
-el caso de una persona que pertenece a **dos** áreas. Quien necesite el ámbito
-completo entra como `admin`.
+coordinación (`evt_coordinator`, retirado el 2026-09-13); hoy permite comprobar
+la compatibilidad de `evt_organiser` con un único ámbito. Quien necesite acceso
+global entra como `admin`.
 
-Flujo sugerido: entra como `organizacion`, crea un evento y una página
-satélite; entra como `organizacion3` y comprueba que el evento del área ajena
-no aparece en el listado **ni se abre por enlace directo**.
+Flujo sugerido: entra como `editor-ambito` y comprueba que puede editar los
+eventos de Subámbito 1 y Subámbito 2. Con `editor-subambito`, el de Subámbito 1
+se abre y el de Subámbito 2 no aparece ni se abre por enlace directo. El
+«Evento compartido de demostración» lo organizan Subámbito 1 y Ámbito 2:
+`editor-subambito` y `editor-ambito2` pueden modificar su propia participación
+sin quitar la ajena.
 
 Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
 «Switch To» en Usuarios), igual que en producción.

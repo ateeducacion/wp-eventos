@@ -84,12 +84,8 @@ class Test_Demo_Accounts extends WP_UnitTestCase {
 		);
 	}
 
-	/**
-	 * Sigue habiendo una cuenta con dos áreas: es el único caso que enseña el
-	 * filtro por área del listado, y se perdió una vez al retirar el rol de
-	 * coordinación.
-	 */
-	public function test_one_demo_account_belongs_to_two_areas() {
+	/** Every demo editor has exactly one assigned scope. */
+	public function test_demo_editors_have_one_scope() {
 		$trozo = strstr( $this->accounts_block(), 'function evt_demo_accounts' );
 		$trozo = is_string( $trozo ) ? substr( $trozo, 0, 1200 ) : '';
 
@@ -102,7 +98,6 @@ class Test_Demo_Accounts extends WP_UnitTestCase {
 		);
 
 		$this->assertNotEmpty( $cuantas, 'las cuentas declaran sus áreas' );
-		$this->assertContains( 2, $cuantas, 'ninguna cuenta de demostración pertenece a dos áreas' );
-		$this->assertContains( 1, $cuantas, 'ninguna cuenta de demostración está acotada a una sola área' );
+		$this->assertSame( array( 1 ), array_values( array_unique( $cuantas ) ) );
 	}
 }

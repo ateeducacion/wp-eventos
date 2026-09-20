@@ -483,7 +483,7 @@ final class EventList {
 		// Falta el permiso, o falta el área: no es lo mismo y no se arregla en
 		// el mismo sitio.
 		return user_can( $user_id, 'edit_evt_events' ) || EventAccess::is_manager( $user_id )
-			? 'No tiene ningún área asignada en su perfil, así que todavía no puede gestionar eventos. El área la pone quien administra el aplicativo.'
+			? EventAccess::scope_assignment_message( $user_id )
 			: 'Su usuario todavía no organiza eventos. Pídalo a quien administre el aplicativo.';
 	}
 
@@ -502,11 +502,10 @@ final class EventList {
 			'notice'      => self::flash(),
 			'page_id'     => self::hidden_page_id(),
 			'scoped'      => ! $all_areas,
-			// Con una sola área el desplegable no elige nada: siempre la misma.
-			'area_filter' => $all_areas || count( EventAccess::user_areas( $user_id ) ) > 1,
+			'area_filter' => $all_areas || count( EventAccess::scope_areas( $user_id ) ) > 1,
 			'subtitle'    => $all_areas
-				? 'Todos los eventos, de todas las áreas.'
-				: 'Solo los eventos de su área: los que organizan otras áreas no salen aquí.',
+				? 'Todos los eventos, de todos los ámbitos.'
+				: 'Solo los eventos de su ámbito y sus descendientes.',
 			'can_create'  => '' !== $crear,
 			'create_url'  => $crear,
 		);
@@ -685,37 +684,26 @@ final class EventList {
 			return get_posts( $base );
 		}
 
-		$areas = EventAccess::user_areas( $user_id );
+		$areas = EventAccess::scope_areas( $user_id );
 		if ( array() === $areas ) {
 			return array();
 		}
 
-		$del_area = get_posts(
+		return get_posts(
 			array_merge(
 				$base,
 				array(
 					'tax_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- acotar por área es el requisito, no una mejora opcional.
 						array(
-							'taxonomy' => EventTaxonomies::AREA,
-							'field'    => 'term_id',
-							'terms'    => $areas,
+							'taxonomy'         => EventTaxonomies::AREA,
+							'field'            => 'term_id',
+							'terms'            => $areas,
+							'include_children' => false,
 						),
 					),
 				)
 			)
 		);
-
-		// Un evento recién creado todavía no tiene área, y quien lo creó es
-		// justo quien tiene que ponérsela: sin esta segunda consulta se pierde
-		// de vista en cuanto se guarda.
-		$mios = get_posts( array_merge( $base, array( 'author' => $user_id ) ) );
-
-		$unicos = array();
-		foreach ( array_merge( $del_area, $mios ) as $post ) {
-			$unicos[ (int) $post->ID ] = $post;
-		}
-
-		return array_values( $unicos );
 	}
 
 	/**
@@ -959,7 +947,7 @@ final class EventList {
 		}
 		return $all_areas
 			? 'Todavía no hay ningún evento. Cree el primero con «Crear evento».'
-			: 'Todavía no hay ningún evento de su área. Aquí solo salen los eventos del área que los organiza; cree el primero con «Crear evento».';
+			: 'Todavía no hay ningún evento de su ámbito. Cree el primero con «Crear evento».';
 	}
 
 	/**
@@ -971,11 +959,12 @@ final class EventList {
 		$avisos = array(
 			'creado'       => array( 'ok', 'Evento creado. Ya puede añadirle secciones.' ),
 			'guardado'     => array( 'ok', 'Cambios guardados.' ),
+			'retirado'     => array( 'ok', 'El evento se ha guardado. Su ámbito ya no lo organiza y dejará de tener acceso a su edición.' ),
 			'borrado'      => array( 'ok', 'Evento enviado a la papelera. Nada se ha perdido: está en «Papelera» y se restaura desde ahí.' ),
 			'restaurado'   => array( 'ok', 'Evento restaurado, en borrador: revíselo y publíquelo cuando esté listo.' ),
 			'publicado'    => array( 'ok', 'Evento publicado: ya se ve en la web. Sus páginas se publican cada una desde el taller.' ),
 			'despublicado' => array( 'ok', 'Evento devuelto a borrador: deja de verse en la web y no se pierde nada.' ),
-			'permiso'      => array( 'error', 'Ese evento es de otra área: solo lo edita el área que lo organiza o quien administra el aplicativo.' ),
+			'permiso'      => array( 'error', 'Ese evento es de otro ámbito: solo lo edita su ámbito o quien administra el aplicativo.' ),
 		);
 
 		$aviso = $avisos[ self::input( self::VAR_NOTICE ) ] ?? array( '', '' );

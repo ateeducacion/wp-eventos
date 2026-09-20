@@ -126,7 +126,7 @@ class Test_Home extends WP_UnitTestCase {
 
 		// Falta el área: se arregla en el perfil, y no es lo mismo.
 		$this->acting_as( $this->organiser() );
-		$this->assertStringContainsString( 'ningún área asignada', Home::model()['reason'] );
+		$this->assertStringContainsString( 'ningún ámbito asignado', Home::model()['reason'] );
 
 		$this->acting_as( $this->organiser( array( $this->area( 'Innovación' ) ) ) );
 		$m = Home::model();
@@ -144,7 +144,7 @@ class Test_Home extends WP_UnitTestCase {
 
 		$this->acting_as( $this->organiser() );
 		$html = Home::render();
-		$this->assertStringContainsString( 'ningún área asignada', $html );
+		$this->assertStringContainsString( 'ningún ámbito asignado', $html );
 		$this->assertStringNotContainsString( 'evt-inicio-acceso', $html, 'sin nada que abrir, no hay tarjetas' );
 
 		$uid = $this->organiser( array( $this->area( 'Innovación' ) ) );

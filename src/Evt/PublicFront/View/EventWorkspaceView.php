@@ -145,7 +145,7 @@ final class EventWorkspaceView {
 			return '';
 		}
 		$texto = true === $m['can_edit']
-			? 'Este evento está marcado como histórico: su área ya no puede editarlo. Usted sí, porque administra el aplicativo.'
+			? 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.'
 			: 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.';
 
 		return Shell::notice( 'aviso', $texto );
@@ -169,7 +169,7 @@ final class EventWorkspaceView {
 			return Shell::admin_box(
 				'Volver a abrir el evento',
 				self::archive_form( $m, false ),
-				'Cerrar un evento lo hace su área; volver a abrirlo, solo quien administra el aplicativo.'
+				'Cerrar un evento lo hace su ámbito; volver a abrirlo, solo quien administra el aplicativo.'
 			);
 		}
 		if ( true !== $m['can_archive'] ) {
@@ -203,12 +203,12 @@ final class EventWorkspaceView {
 		$rotulo   = $marcar ? 'Marcar como histórico' : 'Volver a abrir el evento';
 		$pregunta = $marcar
 			? sprintf( '¿Marcar «%s» como histórico? Dejará de poder editarlo, a él y a todas sus secciones, y no hay vuelta atrás: solo quien administre el aplicativo puede volver a abrirlo. La página pública no cambia.', (string) $m['title'] )
-			: '¿Volver a abrir este evento? Su área podrá editarlo otra vez.';
+			: '¿Volver a abrir este evento? Su ámbito podrá editarlo otra vez.';
 
 		ob_start();
 		?>
 		<?php if ( ! $marcar ) : ?>
-			<p><?php echo esc_html( 'Ahora mismo está cerrado a edición: el área que lo organizó puede entrar, consultarlo y exportarlo, pero no cambiar nada. La página pública se ve igual que siempre.' ); ?></p>
+			<p><?php echo esc_html( 'Ahora mismo está cerrado a edición: el ámbito que lo organizó puede entrar, consultarlo y exportarlo, pero no cambiar nada. La página pública se ve igual que siempre.' ); ?></p>
 		<?php endif; ?>
 		<form class="evt-accion" method="post" action=""
 			data-evt-confirm="<?php echo esc_attr( $pregunta ); ?>"
@@ -242,7 +242,7 @@ final class EventWorkspaceView {
 				<?php endif; ?>
 			</span>
 		</div>
-		<p class="evt-sub"><?php echo esc_html( 'Área: ' . self::area_names( (array) $m['area_ids'] ) ); ?></p>
+		<p class="evt-sub"><?php echo esc_html( 'Ámbito: ' . self::area_names( (array) $m['area_ids'] ) ); ?></p>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -292,7 +292,7 @@ final class EventWorkspaceView {
 				$nombres[] = $term->name;
 			}
 		}
-		return array() === $nombres ? 'Sin área' : implode( ' · ', $nombres );
+		return array() === $nombres ? 'Sin ámbito' : implode( ' · ', $nombres );
 	}
 
 	/**

@@ -1,13 +1,13 @@
 <?php
 /**
  * Snippet Name: EVT — Vocabulario base del aplicativo (una sola vez)
- * Description: Deja creados los términos de las tres taxonomías del aplicativo: áreas organizadoras, tipologías y cursos escolares. Idempotente: crea el término que falta por su slug y no toca el que ya está. En producción se pega en Code Snippets como snippet de ejecución única; en local lo llama `make provision`.
+ * Description: Deja creados los términos de las tres taxonomías del aplicativo: ámbitos organizativos, tipologías y cursos escolares. Idempotente: crea el término que falta por su slug y no toca el que ya está. En producción se pega en Code Snippets como snippet de ejecución única; en local lo llama `make provision`.
  *
  * Aquí las páginas del aplicativo son los propios eventos: `evt_event` es
  * jerárquico y cada evento se crea con sus hijas (programa, ponentes,
  * inscripción…). Lo que sí tiene que existir antes de que nadie cree el primer
  * evento es el vocabulario que lo clasifica, y sobre todo `evt_area`: es el eje
- * de permisos, y sin términos nadie puede tener área en su perfil, así que
+ * de permisos, y sin términos nadie puede tener ámbito en su perfil, así que
  * `EventAccess` cierra la puerta a todo el mundo (fail-closed).
  *
  * Los términos de aquí son **de ejemplo**: sirven para que el entorno local
@@ -29,15 +29,25 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function evt_base_vocabulary(): array {
 	return array(
-		// Áreas, servicios y direcciones generales que organizan eventos.
+		// Árbol ficticio; los nombres reales se configuran fuera del código.
 		'evt_area'   => array(
-			'innovacion'             => 'Innovación',
-			'lenguas-extranjeras'    => 'Lenguas Extranjeras',
-			'comunicacion'           => 'Comunicación',
-			'convivencia-escolar'    => 'Convivencia escolar',
-			'competencia-matematica' => 'Fomento de la competencia matemática',
-			'salud'                  => 'Salud',
-			'steam'                  => 'STEAM',
+			'ambito-general' => 'Ámbito general',
+			'ambito-1'       => array(
+				'name'   => 'Ámbito 1',
+				'parent' => 'ambito-general',
+			),
+			'subambito-1'    => array(
+				'name'   => 'Subámbito 1',
+				'parent' => 'ambito-1',
+			),
+			'subambito-2'    => array(
+				'name'   => 'Subámbito 2',
+				'parent' => 'ambito-1',
+			),
+			'ambito-2'       => array(
+				'name'   => 'Ámbito 2',
+				'parent' => 'ambito-general',
+			),
 		),
 		// Tipología del evento: los cuatro términos que existen hoy.
 		'evt_type'   => array(
@@ -71,14 +81,26 @@ function evt_setup_vocabulary(): void {
 			throw new RuntimeException( esc_html( "La taxonomía «{$evt_taxonomy}» no está registrada: el aplicativo no está cargado. Ejecute antes `make bundle && make sync-snippets`." ) );
 		}
 
-		foreach ( $evt_terms as $evt_slug => $evt_name ) {
+		foreach ( $evt_terms as $evt_slug => $evt_data ) {
+			$evt_name   = is_array( $evt_data ) ? $evt_data['name'] : $evt_data;
+			$evt_parent = is_array( $evt_data ) ? get_term_by( 'slug', $evt_data['parent'], $evt_taxonomy ) : false;
+			if ( is_array( $evt_data ) && ! ( $evt_parent instanceof WP_Term ) ) {
+				throw new RuntimeException( esc_html( "Falta el ámbito padre de «{$evt_name}»." ) );
+			}
 			$evt_term = get_term_by( 'slug', $evt_slug, $evt_taxonomy );
 			if ( $evt_term instanceof WP_Term ) {
 				++$evt_habia;
 				continue;
 			}
 
-			$evt_created = wp_insert_term( $evt_name, $evt_taxonomy, array( 'slug' => $evt_slug ) );
+			$evt_created = wp_insert_term(
+				$evt_name,
+				$evt_taxonomy,
+				array(
+					'slug'   => $evt_slug,
+					'parent' => $evt_parent instanceof WP_Term ? $evt_parent->term_id : 0,
+				)
+			);
 			if ( is_wp_error( $evt_created ) ) {
 				throw new RuntimeException( esc_html( "No se pudo crear «{$evt_name}» en {$evt_taxonomy}: " . $evt_created->get_error_message() ) );
 			}

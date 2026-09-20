@@ -598,7 +598,7 @@ final class EventWorkspace {
 			self::set_flash(
 				'error',
 				$marcar
-					? 'Este evento no es suyo: solo lo marca como histórico el área que lo organiza.'
+					? 'Este evento no es suyo: solo lo marca como histórico el ámbito que lo organiza.'
 					: 'Volver a abrir un evento histórico solo lo hace quien administra el aplicativo.'
 			);
 			Shell::leave( $destino );
@@ -624,7 +624,7 @@ final class EventWorkspace {
 			'ok',
 			$marcar
 				? 'Evento marcado como histórico. Ya no se edita, ni él ni sus secciones; la página pública se sigue viendo igual. Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.'
-				: 'Evento desmarcado: su área vuelve a poder editarlo.'
+				: 'Evento desmarcado: su ámbito vuelve a poder editarlo.'
 		);
 		Shell::leave( $destino );
 	}
@@ -942,6 +942,17 @@ final class EventWorkspace {
 			return;
 		}
 
+		$valores = self::submitted_values( $crudo );
+		if ( '' === $valores[ self::FIELD_AREA ] ) {
+			$valores[ self::FIELD_AREA ] = implode( ',', EventAccess::user_areas( $user_id ) );
+		}
+		$area_ids = EventAccess::resolve_area_assignment( 0, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message(), $valores );
+			Shell::leave( self::url( 0, self::PANEL_SETTINGS ) );
+			return;
+		}
+
 		$id = wp_insert_post(
 			array(
 				'post_type'   => EventPostType::POST_TYPE,
@@ -957,10 +968,9 @@ final class EventWorkspace {
 			return;
 		}
 
-		$id      = (int) $id;
-		$valores = self::submitted_values( $crudo );
+		$id = (int) $id;
 		self::save_meta( $id, $valores, $revisado['data'] );
-		self::save_terms( $id, $user_id, $valores );
+		self::save_terms( $id, $area_ids, $valores );
 		EventAccess::stamp_area( $id );
 
 		self::set_flash( 'ok', 'Evento creado, en borrador. Añada sus páginas, sus ponentes y su programa, y publíquelo cuando esté listo.' );
@@ -981,7 +991,8 @@ final class EventWorkspace {
 
 		return array(
 			self::FIELD_TITLE             => (string) $crudo['title'],
-			self::FIELD_AREA              => (string) (int) self::field( self::FIELD_AREA ),
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
+			self::FIELD_AREA              => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
 			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
 			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
 			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
@@ -1014,7 +1025,12 @@ final class EventWorkspace {
 			'parent'     => 0,
 		);
 
-		$valores  = self::submitted_values( $crudo );
+		$valores = self::submitted_values( $crudo );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
+		if ( '' === $valores[ self::FIELD_AREA ] && ! isset( $_POST['evt_area_present'] ) ) {
+			$mine                        = EventAccess::can_edit_all_areas( $user_id ) ? EventAccess::post_areas( $event_id ) : array_intersect( EventAccess::post_areas( $event_id ), EventAccess::scope_areas( $user_id ) );
+			$valores[ self::FIELD_AREA ] = implode( ',', $mine );
+		}
 		$revisado = EventInput::validate( $crudo );
 		if ( ! $revisado['ok'] ) {
 			// Se devuelve lo tecleado junto al aviso: perder catorce campos
@@ -1024,6 +1040,13 @@ final class EventWorkspace {
 			Shell::leave( $destino );
 			return;
 		}
+		$area_ids = EventAccess::resolve_area_assignment( $event_id, '' === $valores[ self::FIELD_AREA ] ? array() : explode( ',', $valores[ self::FIELD_AREA ] ), $user_id );
+		if ( is_wp_error( $area_ids ) ) {
+			self::set_flash( 'error', $area_ids->get_error_message() . ' No se ha guardado ningún cambio.', $valores );
+			Shell::leave( $destino );
+			return;
+		}
+		$loses_access = ! EventAccess::can_edit_all_areas( $user_id ) && ! array_intersect( $area_ids, EventAccess::scope_areas( $user_id ) );
 
 		wp_update_post(
 			array(
@@ -1032,8 +1055,12 @@ final class EventWorkspace {
 			)
 		);
 		self::save_meta( $event_id, $valores, $revisado['data'] );
-		self::save_terms( $event_id, $user_id, $valores );
+		self::save_terms( $event_id, $area_ids, $valores );
 
+		if ( $loses_access ) {
+			Shell::leave( add_query_arg( EventList::VAR_NOTICE, 'retirado', Shell::url( 'events' ) ) );
+			return;
+		}
 		self::set_flash( 'ok', 'Datos del evento guardados.' );
 		Shell::leave( $destino );
 	}
@@ -1071,19 +1098,16 @@ final class EventWorkspace {
 	 * File the event under its área, its tipología and its curso escolar.
 	 *
 	 * @param int                   $event_id Event post ID.
-	 * @param int                   $user_id  Who is asking.
+	 * @param int[]                 $area_ids Final scope terms from EventAccess.
 	 * @param array<string, string> $valores  What the form submitted.
 	 * @return void
 	 */
-	private static function save_terms( int $event_id, int $user_id, array $valores ): void {
-		$area_id = (int) $valores[ self::FIELD_AREA ];
-		$mapa    = array(
+	private static function save_terms( int $event_id, array $area_ids, array $valores ): void {
+		$mapa = array(
 			EventTaxonomies::TYPE   => (int) $valores[ self::FIELD_TYPE ],
 			EventTaxonomies::COURSE => (int) $valores[ self::FIELD_COURSE ],
 		);
-		if ( self::may_set_area( $user_id, $area_id ) ) {
-			$mapa[ EventTaxonomies::AREA ] = $area_id;
-		}
+		wp_set_object_terms( $event_id, $area_ids, EventTaxonomies::AREA, false );
 		foreach ( $mapa as $taxonomia => $term_id ) {
 			wp_set_object_terms( $event_id, $term_id > 0 ? array( $term_id ) : array(), $taxonomia, false );
 		}
@@ -1101,8 +1125,7 @@ final class EventWorkspace {
 	 * @return bool
 	 */
 	public static function may_set_area( int $user_id, int $area_id ): bool {
-		return EventAccess::can_edit_all_areas( $user_id )
-			|| ( $area_id > 0 && in_array( $area_id, EventAccess::user_areas( $user_id ), true ) );
+		return EventAccess::may_assign_areas( array( $area_id ), $user_id );
 	}
 
 	/**
@@ -1728,7 +1751,7 @@ final class EventWorkspace {
 		$m['status']       = 'draft';
 		$m['status_label'] = self::status_label( 'draft' );
 		$m['values']       = self::values( 0, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
+		$m['terms']        = self::term_lists( $user_id );
 
 		return $m;
 	}
@@ -1771,6 +1794,7 @@ final class EventWorkspace {
 			'status'        => '',
 			'status_label'  => '',
 			'area_ids'      => array(),
+			'foreign_areas' => array(),
 			'view_url'      => '',
 			'events_url'    => Shell::url( 'events' ),
 			'section_url'   => Shell::url( 'section' ),
@@ -1850,24 +1874,27 @@ final class EventWorkspace {
 		$m['can_edit_js']   = $js_ok;
 		// Lo guardado solo se devuelve a quien puede escribirlo: el modelo no
 		// es un sitio donde el código se asome a quien no le corresponde.
-		$m['code']         = array(
+		$m['code']          = array(
 			'css' => $css_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_CSS ) : '',
 			'js'  => $js_ok ? self::meta( $event_id, EventMetaKeys::CUSTOM_JS ) : '',
 		);
-		$m['view_url']     = (string) get_permalink( $evento );
-		$m['status']       = (string) $evento->post_status;
-		$m['status_label'] = self::status_label( (string) $evento->post_status );
-		$m['state']        = EventState::of(
+		$m['view_url']      = (string) get_permalink( $evento );
+		$m['status']        = (string) $evento->post_status;
+		$m['status_label']  = self::status_label( (string) $evento->post_status );
+		$m['state']         = EventState::of(
 			self::meta( $event_id, EventMetaKeys::START_DATE ),
 			self::meta( $event_id, EventMetaKeys::END_DATE )
 		);
-		$m['state_label']  = EventState::label( (string) $m['state'] );
-		$m['area_ids']     = EventAccess::post_areas( $event_id );
-		$m['sections']     = self::section_rows( $event_id );
-		$m['trashed']      = self::section_rows( $event_id, true );
-		$m['values']       = self::values( $event_id, (array) $m['flash']['values'] );
-		$m['terms']        = self::term_lists( $user_id, (int) $m['values'][ self::FIELD_AREA ] );
-		$m['media']        = array(
+		$m['state_label']   = EventState::label( (string) $m['state'] );
+		$m['area_ids']      = EventAccess::post_areas( $event_id );
+		$foreign_ids        = EventAccess::can_edit_all_areas( $user_id ) ? array() : array_diff( $m['area_ids'], EventAccess::scope_areas( $user_id ) );
+		$all_labels         = EventTaxonomies::area_options( 0, true );
+		$m['foreign_areas'] = array_values( array_intersect_key( $all_labels, array_flip( $foreign_ids ) ) );
+		$m['sections']      = self::section_rows( $event_id );
+		$m['trashed']       = self::section_rows( $event_id, true );
+		$m['values']        = self::values( $event_id, (array) $m['flash']['values'] );
+		$m['terms']         = self::term_lists( $user_id );
+		$m['media']         = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
@@ -2033,7 +2060,7 @@ final class EventWorkspace {
 			// pantalla es la página «Evento» del aplicativo— y el alta abriría
 			// con el título ya escrito. Al crear, el título está vacío.
 			self::FIELD_TITLE             => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
-			self::FIELD_AREA              => (string) self::first_term( $event_id, EventTaxonomies::AREA ),
+			self::FIELD_AREA              => implode( ',', EventAccess::post_areas( $event_id ) ),
 			self::FIELD_TYPE              => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
 			self::FIELD_COURSE            => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
 			EventMetaKeys::TAGLINE        => self::meta( $event_id, EventMetaKeys::TAGLINE ),
@@ -2075,13 +2102,12 @@ final class EventWorkspace {
 	 * The three dropdowns of the classification card.
 	 *
 	 * @param int $user_id  Who is looking.
-	 * @param int $area_now Área the event has now, so it never disappears.
 	 * @return array<string, array<int, string>>
 	 */
-	private static function term_lists( int $user_id, int $area_now ): array {
+	private static function term_lists( int $user_id ): array {
 		$solo = EventAccess::can_edit_all_areas( $user_id )
 			? array()
-			: array_merge( EventAccess::user_areas( $user_id ), array( $area_now ) );
+			: EventAccess::scope_areas( $user_id );
 
 		return array(
 			'area'   => self::term_options( EventTaxonomies::AREA, $solo ),
@@ -2098,6 +2124,9 @@ final class EventWorkspace {
 	 * @return array<int, string> term_id => nombre.
 	 */
 	private static function term_options( string $taxonomy, array $solo = array() ): array {
+		if ( EventTaxonomies::AREA === $taxonomy ) {
+			return EventTaxonomies::area_options();
+		}
 		$terms = get_terms(
 			array(
 				'taxonomy'   => $taxonomy,

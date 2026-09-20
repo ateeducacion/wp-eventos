@@ -132,7 +132,7 @@ final class Settings {
 			ActivityPostType::POST_TYPE => 'Actividades',
 		);
 		$taxonomies = array(
-			EventTaxonomies::AREA   => 'Área organizadora',
+			EventTaxonomies::AREA   => 'Ámbito organizativo',
 			EventTaxonomies::TYPE   => 'Tipología',
 			EventTaxonomies::COURSE => 'Curso escolar',
 		);
@@ -188,7 +188,7 @@ final class Settings {
 				</tbody>
 			</table>
 
-			<h2>Roles del aplicativo</h2>
+			<h2>Roles del aplicativo y Editor nativo</h2>
 			<?php if ( ! function_exists( 'evt_roles_status' ) ) : ?>
 				<p>El snippet <code>EVT — Roles y perfiles</code> no está activo, así que no hay roles que revisar.</p>
 			<?php else : ?>
@@ -201,6 +201,8 @@ final class Settings {
 								<?php
 								if ( empty( $estado['exists'] ) ) {
 									echo 'Falta el rol';
+								} elseif ( ! empty( $estado['forbidden'] ) ) {
+									echo esc_html( 'Capacidades indebidas: ' . implode( ', ', (array) $estado['forbidden'] ) );
 								} elseif ( ! empty( $estado['missing'] ) ) {
 									echo esc_html( 'Sin ' . implode( ', ', (array) $estado['missing'] ) );
 								} else {
@@ -213,6 +215,23 @@ final class Settings {
 					</tbody>
 				</table>
 			<?php endif; ?>
+
+			<h2>Ámbitos de los perfiles editores</h2>
+			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil.</p>
+			<table class="widefat striped" style="max-width:46rem">
+				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th></tr></thead>
+				<tbody>
+				<?php foreach ( EventAccess::scope_diagnostics() as $row ) : ?>
+					<tr>
+						<td><a href="<?php echo esc_url( get_edit_user_link( $row['user_id'] ) ); ?>"><?php echo esc_html( $row['login'] ); ?></a></td>
+						<td><?php echo esc_html( $row['state'] ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['ids'] ) ); ?></td>
+						<td><?php echo esc_html( implode( ', ', $row['invalid'] ) ); ?></td>
+						<td><?php echo $row['legacy'] ? 'Sí' : 'No'; ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
 
 			<h2>Catálogo de centros educativos</h2>
 			<?php
@@ -291,7 +310,7 @@ final class Settings {
 				</form>
 			</div>
 
-			<h2>Su acotado por área</h2>
+			<h2>Su ámbito organizativo</h2>
 			<?php
 			$areas = EventAccess::user_areas();
 			$names = array();
@@ -304,9 +323,9 @@ final class Settings {
 			?>
 			<p>
 				<?php if ( EventAccess::can_edit_all_areas() ) : ?>
-					Ve y edita los eventos de todas las áreas.
+					Ve y edita los eventos de todos los ámbitos.
 				<?php elseif ( array() === $names ) : ?>
-					No tiene ningún área asignada en su perfil, así que no ve ni edita ningún evento.
+					No tiene ningún ámbito asignado en su perfil, así que no ve ni edita ningún evento.
 				<?php else : ?>
 					<?php echo esc_html( 'Acotado a: ' . implode( ', ', $names ) ); ?>
 				<?php endif; ?>

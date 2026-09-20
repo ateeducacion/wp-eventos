@@ -35,7 +35,7 @@ const EVENT = 'jornadas-tecnologia-educativa';
 
 /** Quién entra en cada escena del aplicativo. */
 const USERS = {
-	organizacion: { user: 'organizacion', pass: 'password' },
+	editor: { user: 'editor-ambito', pass: 'password' },
 	admin: { user: 'admin', pass: 'password' },
 };
 
@@ -55,8 +55,8 @@ const SCENES = [
 	{
 		chapter: 'El aplicativo',
 		title: 'Mis eventos',
-		note: 'El listado con el que se abre: cada evento con su área, su estado derivado de las fechas y el interruptor de publicación.',
-		who: 'organizacion',
+		note: 'El listado con el que se abre: cada evento con sus ámbitos, su estado derivado de las fechas y el interruptor de publicación.',
+		who: 'editor',
 		go: '/mis-eventos/',
 		screens: [ 'desktop' ],
 	},
@@ -64,15 +64,15 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Páginas',
 		note: 'Las páginas satélite del evento, con su orden y sus acciones de fila.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=secciones',
 		screens: [ 'desktop' ],
 	},
 	{
 		chapter: 'El taller del evento',
 		title: 'Ponentes',
-		note: 'Las fichas de quien habla, con los botones de icono y el orden que decide el área.',
-		who: 'organizacion',
+		note: 'Las fichas de quien habla, con los botones de icono y el orden que decide el ámbito.',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=ponentes',
 		screens: [ 'desktop' ],
 	},
@@ -80,7 +80,7 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Programa',
 		note: 'La parrilla agrupada por día y, dentro del día, por sede: un mismo día puede tener dos.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=programa',
 		screens: [ 'desktop' ],
 	},
@@ -88,7 +88,7 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Talleres',
 		note: 'Solo las actividades de tipo taller, con su aforo y cuántas plazas van ocupadas.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=talleres',
 		screens: [ 'desktop' ],
 	},
@@ -96,7 +96,7 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Inscripción',
 		note: 'Los dos plazos, los textos del consentimiento con su versión, y las preguntas propias del evento.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=inscripcion',
 		screens: [ 'desktop' ],
 	},
@@ -104,15 +104,15 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Participantes',
 		note: 'Quién se ha inscrito, el buscador que no distingue tildes y la exportación a CSV por POST.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=participantes',
 		screens: [ 'desktop' ],
 	},
 	{
 		chapter: 'El taller del evento',
 		title: 'Ajustes',
-		note: 'Título, fechas, área, tipología y curso: lo que define el evento.',
-		who: 'organizacion',
+		note: 'Título, fechas, ámbitos, tipología y curso: lo que define el evento.',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=ajustes',
 		screens: [ 'desktop' ],
 	},
@@ -120,14 +120,14 @@ const SCENES = [
 		chapter: 'El taller del evento',
 		title: 'Apariencia',
 		note: 'Los colores de la cabecera, las tipografías y las imágenes del evento.',
-		who: 'organizacion',
+		who: 'editor',
 		go: '/evento/?evento={ID}&panel=apariencia',
 		screens: [ 'desktop' ],
 	},
 	{
 		chapter: 'El escritorio',
 		title: 'Listado de eventos',
-		note: 'Las columnas propias, Área y Estado, justo detrás del título.',
+		note: 'Las columnas propias, Ámbito y Estado, justo detrás del título.',
 		who: 'admin',
 		go: '/wp-admin/edit.php?post_type=evt_event',
 		screens: [ 'desktop' ],
@@ -361,7 +361,7 @@ try {
 	// entran en el aplicativo y no podrían averiguarlo.
 	const context = await browser.newContext( SCREENS.desktop );
 	const page = await context.newPage();
-	await logIn( page, 'organizacion' );
+	await logIn( page, 'editor' );
 	const id = await eventId( page );
 	await context.close();
 

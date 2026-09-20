@@ -40,17 +40,27 @@ if ( ! function_exists( 'evt_dev_demo_accounts' ) ) {
 			array(
 				'login' => 'organizacion',
 				'pass'  => 'password',
-				'label' => 'Organización (Innovación)',
+				'label' => 'Organización (Ámbito 1)',
 			),
 			array(
 				'login' => 'organizacion2',
 				'pass'  => 'password',
-				'label' => 'Organización 2 (Innovación)',
+				'label' => 'Organización 2 (Ámbito 1)',
 			),
 			array(
 				'login' => 'organizacion3',
 				'pass'  => 'password',
-				'label' => 'Organización 3 (Convivencia escolar)',
+				'label' => 'Organización 3 (Ámbito 2)',
+			),
+			array(
+				'login' => 'editor-ambito',
+				'pass'  => 'password',
+				'label' => 'Editor (Ámbito 1)',
+			),
+			array(
+				'login' => 'editor-subambito',
+				'pass'  => 'password',
+				'label' => 'Editor (Subámbito 1)',
 			),
 		);
 	}

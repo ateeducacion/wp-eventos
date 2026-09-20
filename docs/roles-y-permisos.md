@@ -17,6 +17,36 @@ ai_assistance:
 
 # Roles y permisos del aplicativo de eventos
 
+## Modelo vigente desde ADR-0038
+
+El rol nativo `editor` es el actor recomendado. `evt_organiser` queda para
+compatibilidad con cuentas existentes; `administrator` conserva acceso global.
+Solo administración puede ver y cambiar el selector de ámbito del perfil.
+Cada Editor tiene **un** término de `evt_area` y alcanza ese nodo y todos sus
+descendientes. Los perfiles históricos con varios términos quedan sin acceso
+hasta que administración elija uno. Un evento puede tener **varios** ámbitos:
+cualquier Editor cuyo subárbol cruce uno de ellos puede editarlo. El guardián
+por objeto es `EventAccess::map_meta_cap`; los listados solo mejoran la interfaz.
+
+| Capacidad | `editor` | `evt_organiser` | `administrator` |
+|---|:---:|:---:|:---:|
+| Editar y publicar `evt_event` | ✓ acotado | ✓ acotado | ✓ |
+| Editar ponentes y actividades | ✓ acotado | ✓ acotado | ✓ |
+| Leer y gestionar inscripciones del evento | ✓ acotado | ✓ acotado | ✓ |
+| `evt_edit_custom_css` | ✓ acotado | ✓ acotado | ✓ |
+| `evt_edit_custom_js`, `evt_manage_app`, `evt_edit_all_areas` | — | — | ✓ |
+
+El diagnóstico audita también al `editor`, aunque el aplicativo no crea ese
+rol, y avisa de concesiones indebidas sin retirarlas en cada petición.
+`wp_cache_get_last_changed()` existe desde WordPress 4.7; la instalación
+objetivo documentada en ADR-0001 ejecuta una versión posterior.
+
+## Modelo anterior y decisiones históricas
+
+Las tablas y razonamientos siguientes describen la etapa en que
+`evt_organiser` era el único actor editorial explícito. Se conservan para
+entender las migraciones; donde difieran, rige el modelo vigente de ADR-0038.
+
 Qué rol necesita cada persona, qué capacidades lleva cada rol y qué campo del
 perfil hace falta para que vea y edite lo que le toca. Es la lista que hay que
 reproducir en **WPFront User Role Editor 4.2.4** en el sitio donde se despliega
@@ -107,7 +137,7 @@ indirectamente.
 
 ## Parte B — El modelo del aplicativo
 
-### Roles: son dos, y solo uno es nuestro
+### Roles de la etapa anterior: eran dos, y solo uno era nuestro
 
 | Rol (slug) | Etiqueta | Quién | Qué ve | Campo del perfil imprescindible |
 |---|---|---|---|---|

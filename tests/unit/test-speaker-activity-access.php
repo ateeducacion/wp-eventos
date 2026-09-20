@@ -112,7 +112,7 @@ class Test_Speaker_Activity_Access extends WP_UnitTestCase {
 			$this->assertFalse( EventAccess::can_edit( $yo, $suyo ), $tipo );
 			$this->assertFalse( user_can( $yo, 'edit_post', $suyo ), $tipo );
 			$this->assertFalse( user_can( $yo, 'delete_post', $suyo ), $tipo );
-			$this->assertStringContainsString( 'de otra área', EventAccess::why_not_editable( $yo, $suyo ), $tipo );
+			$this->assertStringContainsString( 'de otro ámbito', EventAccess::why_not_editable( $yo, $suyo ), $tipo );
 		}
 	}
 
@@ -190,7 +190,7 @@ class Test_Speaker_Activity_Access extends WP_UnitTestCase {
 
 		$this->assertFalse( EventAccess::can_edit( $huerfano, $ponente ) );
 		$this->assertFalse( user_can( $huerfano, 'edit_post', $ponente ) );
-		$this->assertStringContainsString( 'No tiene ningún área asignada', EventAccess::why_not_editable( $huerfano, $ponente ) );
+		$this->assertStringContainsString( 'No tiene ningún ámbito asignado', EventAccess::why_not_editable( $huerfano, $ponente ) );
 	}
 
 	/**

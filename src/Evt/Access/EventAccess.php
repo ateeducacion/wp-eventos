@@ -23,7 +23,7 @@ use Evt\Taxonomy\EventTaxonomies;
 final class EventAccess {
 
 	/**
-	 * User meta con uno o varios term_id de `evt_area`.
+	 * User meta containing one term ID; historical formats remain readable.
 	 */
 	public const USER_AREA_META = 'evt_area';
 
@@ -63,6 +63,9 @@ final class EventAccess {
 	 */
 	public static function register(): void {
 		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
+		add_filter( 'rest_pre_insert_evt_event', array( self::class, 'validate_rest_areas' ), 10, 2 );
+		add_action( 'admin_init', array( self::class, 'validate_admin_areas' ) );
+		add_action( 'save_post_' . EventPostType::POST_TYPE, array( self::class, 'stamp_area' ), 20 );
 		add_action( 'save_post_' . SpeakerPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 		add_action( 'save_post_' . ActivityPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 	}
@@ -117,17 +120,259 @@ final class EventAccess {
 	 * @return int[] Term IDs of evt_area; empty when the profile has none.
 	 */
 	public static function user_areas( int $user_id = 0 ): array {
+		$assignment = self::scope_assignment_state( $user_id );
+		return 'resolved' === $assignment['state'] ? $assignment['ids'] : array();
+	}
+
+	/**
+	 * Classify the stored profile without changing it or granting ambiguous access.
+	 *
+	 * @param int $user_id User ID (0 = current).
+	 * @return array{state:string,ids:int[],invalid:string[],legacy:bool}
+	 */
+	public static function scope_assignment_state( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
 		if ( $user_id <= 0 ) {
-			return array();
+			return array(
+				'state'   => 'empty',
+				'ids'     => array(),
+				'invalid' => array(),
+				'legacy'  => false,
+			);
 		}
-		$raw = get_user_meta( $user_id, self::USER_AREA_META, true );
-		if ( ! is_array( $raw ) ) {
-			$raw = '' === trim( (string) $raw ) ? array() : explode( ',', (string) $raw );
+		$raw     = get_user_meta( $user_id, self::USER_AREA_META, true );
+		$scalar  = is_scalar( $raw ) ? trim( (string) $raw ) : '';
+		$legacy  = ! is_array( $raw ) && '' !== $scalar;
+		$values  = is_array( $raw ) ? $raw : ( '' === $scalar ? array() : explode( ',', $scalar ) );
+		$ids     = array();
+		$invalid = array();
+		foreach ( $values as $value ) {
+			$value = is_scalar( $value ) ? trim( (string) $value ) : '';
+			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
+			if ( $id > 0 && get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) {
+				$ids[] = $id;
+			} else {
+				$invalid[] = $value;
+			}
 		}
-		return self::clean_ids( $raw );
+		$ids   = array_values( array_unique( $ids ) );
+		$state = $invalid ? 'invalid' : ( count( $ids ) > 1 ? 'ambiguous' : ( $ids ? 'resolved' : 'empty' ) );
+		return compact( 'state', 'ids', 'invalid', 'legacy' );
+	}
+
+	/**
+	 * Human explanation shared by lists and object-level denial messages.
+	 *
+	 * @param int $user_id User ID.
+	 * @return string Explanation.
+	 */
+	public static function scope_assignment_message( int $user_id ): string {
+		$state = self::scope_assignment_state( $user_id )['state'];
+		if ( 'ambiguous' === $state ) {
+			return 'Su perfil conserva varios ámbitos y necesita que administración elija uno.';
+		}
+		if ( 'invalid' === $state ) {
+			return 'Su perfil contiene un ámbito inválido y necesita que administración lo revise.';
+		}
+		return 'No tiene ningún ámbito asignado en su perfil. El ámbito lo pone quien administra el aplicativo.';
+	}
+
+	/**
+	 * Read-only inventory of editorial accounts for deployment preparation.
+	 *
+	 * @return array<int, array{user_id:int,login:string,state:string,ids:int[],invalid:string[],legacy:bool}>
+	 */
+	public static function scope_diagnostics(): array {
+		$rows = array();
+		foreach ( get_users() as $user ) {
+			if ( ! ( $user instanceof \WP_User ) || self::can_edit_all_areas( $user->ID ) ) {
+				continue;
+			}
+			if ( ! user_can( $user, 'edit_evt_events' ) && ! array_intersect( array( 'editor', 'evt_organiser' ), $user->roles ) ) {
+				continue;
+			}
+			$rows[] = array_merge(
+				array(
+					'user_id' => $user->ID,
+					'login'   => $user->user_login,
+				),
+				self::scope_assignment_state( $user->ID )
+			);
+		}
+		return $rows;
+	}
+
+	/**
+	 * Assigned scope terms and all their descendants. An invalid tree grants nothing.
+	 *
+	 * @param int $user_id User ID (0 = current).
+	 * @return int[] Effective term IDs.
+	 */
+	public static function scope_areas( int $user_id = 0 ): array {
+		if ( $user_id <= 0 ) {
+			$user_id = get_current_user_id();
+		}
+		static $cache = array();
+		$assigned     = self::user_areas( $user_id );
+		$key          = $user_id . ':' . implode( ',', $assigned ) . ':' . wp_cache_get_last_changed( 'terms' );
+		if ( isset( $cache[ $key ] ) ) {
+			return $cache[ $key ];
+		}
+		$areas = array();
+		foreach ( $assigned as $id ) {
+			$children = get_term_children( $id, EventTaxonomies::AREA );
+			if ( is_wp_error( $children ) ) {
+				return array();
+			}
+			$areas = array_merge( $areas, array( $id ), $children );
+		}
+		$cache[ $key ] = self::clean_ids( $areas );
+		return $cache[ $key ];
+	}
+
+	/**
+	 * Resolve REST creation and explicit assignment before saving the post.
+	 *
+	 * @param mixed            $prepared Prepared post or prior error.
+	 * @param \WP_REST_Request $request REST request.
+	 * @return mixed
+	 */
+	public static function validate_rest_areas( $prepared, $request ) {
+		if ( is_wp_error( $prepared ) ) {
+			return $prepared;
+		}
+		$post_id = absint( $request->get_url_params()['id'] ?? 0 );
+		if ( ! $request->has_param( EventTaxonomies::AREA ) ) {
+			if ( $post_id > 0 || self::can_edit_all_areas() ) {
+				return $prepared;
+			}
+			$assigned = self::user_areas();
+			if ( array() === $assigned ) {
+				return new \WP_Error( 'evt_area_forbidden', self::scope_assignment_message( get_current_user_id() ), array( 'status' => 403 ) );
+			}
+			$requested = $assigned;
+		} else {
+			$requested = (array) $request->get_param( EventTaxonomies::AREA );
+		}
+		$final = self::resolve_area_assignment( $post_id, $requested );
+		if ( is_wp_error( $final ) ) {
+			return $final;
+		}
+		if ( 0 === $post_id && ! self::can_edit_all_areas() && in_array( $request->get_param( 'status' ), array( 'publish', 'future', 'private' ), true ) ) {
+			return new \WP_Error( 'evt_scope_draft_first', 'Cree el evento como borrador antes de publicarlo, para que tenga ámbito desde el principio.', array( 'status' => 400 ) );
+		}
+		$request->set_param( EventTaxonomies::AREA, $final );
+		return $prepared;
+	}
+
+	/**
+	 * Resolve selected terms while preserving organisers outside the editor's scope.
+	 *
+	 * @param int               $post_id   Existing post ID, or zero for a new post.
+	 * @param array<int, mixed> $requested Terms explicitly selected by this actor.
+	 * @param int               $user_id   User ID (0 = current).
+	 * @return int[]|\WP_Error Final term IDs or a denial.
+	 */
+	public static function resolve_area_assignment( int $post_id, array $requested, int $user_id = 0 ) {
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+		$ids     = array();
+		foreach ( $requested as $value ) {
+			if ( ! is_scalar( $value ) ) {
+				return new \WP_Error( 'evt_area_invalid', 'El ámbito solicitado no existe.', array( 'status' => 400 ) );
+			}
+			$value = trim( (string) $value );
+			$id    = ctype_digit( $value ) ? absint( $value ) : 0;
+			if ( $id <= 0 || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
+				return new \WP_Error( 'evt_area_invalid', 'El ámbito solicitado no existe.', array( 'status' => 400 ) );
+			}
+			$ids[] = $id;
+		}
+		$ids = array_values( array_unique( $ids ) );
+		if ( self::can_edit_all_areas( $user_id ) ) {
+			return $ids;
+		}
+		$allowed = self::scope_areas( $user_id );
+		if ( array() === $allowed ) {
+			return new \WP_Error( 'evt_area_forbidden', self::scope_assignment_message( $user_id ), array( 'status' => 403 ) );
+		}
+		if ( array_diff( $ids, $allowed ) ) {
+			return new \WP_Error( 'evt_area_forbidden', 'No puede asignar un ámbito de otra rama.', array( 'status' => 403 ) );
+		}
+		$foreign = $post_id > 0 ? array_diff( self::post_areas( $post_id ), $allowed ) : array();
+		$final   = array_values( array_unique( array_merge( $ids, $foreign ) ) );
+		if ( array() === $final ) {
+			return new \WP_Error( 'evt_area_required', 'El contenido debe conservar al menos un ámbito organizador.', array( 'status' => 400 ) );
+		}
+		return $final;
+	}
+
+	/**
+	 * Check a requested set of scope terms before any assignment path writes it.
+	 *
+	 * @param array<int, mixed> $requested Requested term IDs.
+	 * @param int               $user_id User ID (0 = current).
+	 * @return bool
+	 */
+	public static function may_assign_areas( array $requested, int $user_id = 0 ): bool {
+		if ( self::can_edit_all_areas( $user_id ) ) {
+			return true;
+		}
+		$allowed = self::scope_areas( $user_id );
+		if ( array() === $requested || array() === $allowed ) {
+			return false;
+		}
+		foreach ( $requested as $term_id ) {
+			$id = absint( $term_id );
+			if ( ! in_array( $id, $allowed, true ) || ! ( get_term( $id, EventTaxonomies::AREA ) instanceof \WP_Term ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Validate only the interactive wp-admin post form, before WordPress writes.
+	 *
+	 * Programmatic wp_insert_post calls do not pass through this request guard.
+	 */
+	public static function validate_admin_areas(): void {
+		global $pagenow;
+		// Core verifies the post nonce before writing; this guard does not persist data.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$action = isset( $_POST['action'] ) ? (string) $_POST['action'] : '';
+		if ( ! ( 'post.php' === $pagenow && 'editpost' === $action ) && ! ( 'admin-ajax.php' === $pagenow && 'inline-save' === $action ) && ! ( 'edit.php' === $pagenow && in_array( $action, array( 'edit', 'bulk_edit' ), true ) ) ) {
+			return;
+		}
+		$request = wp_unslash( $_POST );
+		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ( ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) && empty( $request['evt_area_present'] ) ) ) {
+			return;
+		}
+		$requested = $request['tax_input'][ EventTaxonomies::AREA ] ?? array();
+		$requested = is_array( $requested ) ? $requested : explode( ',', (string) $requested );
+		$final     = self::resolve_area_assignment( absint( $request['post_ID'] ?? 0 ), $requested );
+		if ( is_wp_error( $final ) ) {
+			wp_die( esc_html( $final->get_error_message() ), 'Ámbito no permitido', array( 'response' => absint( $final->get_error_data()['status'] ?? 403 ) ) );
+		}
+		$_POST['tax_input'][ EventTaxonomies::AREA ] = $final;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	}
+
+	/**
+	 * Return an error before an interactive post request can alter its terms.
+	 *
+	 * @param array<string, mixed> $request Unslashed admin request.
+	 * @return \WP_Error|null
+	 */
+	public static function admin_area_error( array $request ) {
+		if ( EventPostType::POST_TYPE !== ( $request['post_type'] ?? '' ) || ( ! isset( $request['tax_input'][ EventTaxonomies::AREA ] ) && empty( $request['evt_area_present'] ) ) ) {
+			return null;
+		}
+		$requested = $request['tax_input'][ EventTaxonomies::AREA ] ?? array();
+		$requested = is_array( $requested ) ? $requested : explode( ',', (string) $requested );
+		$result    = self::resolve_area_assignment( absint( $request['post_ID'] ?? 0 ), $requested );
+		return is_wp_error( $result ) ? $result : null;
 	}
 
 	/**
@@ -277,20 +522,18 @@ final class EventAccess {
 			return false;
 		}
 
-		$mine = self::user_areas( $user_id );
+		$mine = self::scope_areas( $user_id );
 		if ( array() === $mine ) {
 			return false;
 		}
 
 		$theirs = self::post_areas( $post_id );
 		if ( array() === $theirs ) {
-			// Recién creado y todavía sin área: lo edita quien lo creó, que es
-			// quien tiene que ponérsela. Para los ponentes y las actividades es
-			// una ventana muy corta, porque `stamp_area()` se la pone al
-			// guardar; se queda abierta cuando quien lo crea no tiene área
-			// propia —la administración—, y entonces solo lo
-			// toca esa persona hasta que alguien le asigne un área.
-			return (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
+			// El auto-borrador todavía sin ámbito solo lo abre quien lo creó.
+			// `stamp_area()` asigna el ámbito al guardar; fuera de esa ventana
+			// el contenido huérfano no concede acceso a una persona acotada.
+			return 'auto-draft' === get_post_status( self::root_id( $post_id ) )
+				&& (int) get_post_field( 'post_author', self::root_id( $post_id ) ) === $user_id;
 		}
 
 		return array() !== array_intersect( $mine, $theirs );
@@ -339,16 +582,13 @@ final class EventAccess {
 	}
 
 	/**
-	 * Give a brand new speaker or activity the áreas of whoever created it.
+	 * Give a new event, speaker or activity the creator's direct scope.
 	 *
-	 * Sin esto un ponente nace sin área y solo lo toca quien lo tecleó, no sus
-	 * compañeras: el área es el ámbito de trabajo, no la autoría (ADR-0006).
-	 * Solo escribe cuando todavía no hay ninguna, así que compartir un ponente
-	 * con otra área —añadirle su término— no se deshace en el siguiente
-	 * guardado. Se mira el área de quien firma el post y no la de quien guarda,
-	 * para que la migración y WP-CLI den el mismo resultado.
+	 * Solo escribe cuando todavía no hay términos, así que no deshace un
+	 * contenido compartido. Usa el perfil del autor, no el de quien guarda,
+	 * también en migraciones y WP-CLI.
 	 *
-	 * @param int $post_id Speaker or activity being saved.
+	 * @param int $post_id Post being saved.
 	 * @return void
 	 */
 	public static function stamp_area( int $post_id ): void {
@@ -469,7 +709,7 @@ final class EventAccess {
 			return 'Su perfil no organiza eventos. Si debería hacerlo, pídalo a quien administre el aplicativo.';
 		}
 		if ( array() === self::user_areas( $user_id ) ) {
-			return 'No tiene ningún área asignada en su perfil, así que no puede editar eventos. El área la pone quien administra el aplicativo.';
+			return self::scope_assignment_message( $user_id );
 		}
 		$nombres = array(
 			EventPostType::POST_TYPE    => 'Este evento',
@@ -477,7 +717,7 @@ final class EventAccess {
 			ActivityPostType::POST_TYPE => 'Esta actividad',
 		);
 		$que     = $nombres[ (string) get_post_type( $post_id ) ] ?? 'Esto';
-		return $que . ' es de otra área. Solo lo edita el área que lo organiza o quien administra el aplicativo.';
+		return $que . ' es de otro ámbito. Solo lo edita el ámbito que lo organiza o quien administra el aplicativo.';
 	}
 
 	/**
@@ -499,6 +739,13 @@ final class EventAccess {
 	 * @return string[]
 	 */
 	public static function map_meta_cap( array $caps, string $cap, int $user_id, array $args ): array {
+		if ( 'assign_term' === $cap ) {
+			$term = isset( $args[0] ) ? get_term( (int) $args[0] ) : null;
+			if ( $term instanceof \WP_Term && EventTaxonomies::AREA === $term->taxonomy && ! self::may_assign_areas( array( (int) $term->term_id ), $user_id ) ) {
+				return array( 'do_not_allow' );
+			}
+			return $caps;
+		}
 		if ( ! in_array( $cap, array( 'edit_post', 'delete_post', 'publish_post', 'read_post' ), true ) ) {
 			return $caps;
 		}
