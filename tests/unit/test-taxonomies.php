@@ -151,4 +151,48 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->acting_as( $editor );
 		$this->assertEqualsCanonicalizing( array( $service, $child ), EventTaxonomies::rest_area_query( array() )['include'] );
 	}
+
+	/** The native editor shows only assignable paths, even on a shared event. */
+	public function test_native_scope_box_keeps_foreign_terms_hidden() {
+		$own   = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $user, EventAccess::USER_AREA_META, array( $own ) );
+		$event = $this->event( $user, array( $own, $other ) );
+		$this->acting_as( $user );
+		ob_start();
+		EventTaxonomies::area_meta_box( get_post( $event ) );
+		$html = ob_get_clean();
+		$this->assertStringContainsString( 'value="' . $own . '" checked="checked"', $html );
+		$this->assertStringNotContainsString( 'value="' . $other . '"', $html );
+	}
+
+	/** Term forms display the saved image and a validation notice without altering metadata. */
+	public function test_scope_forms_and_validation_notice() {
+		$area  = $this->area( 'Ámbito 1' );
+		$admin = $this->administrator();
+		$image = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		update_term_meta( $area, EventTaxonomies::EMAIL, 'contact@example.org' );
+		update_term_meta( $area, EventTaxonomies::IMAGE_ID, $image );
+		$this->acting_as( $admin );
+		ob_start();
+		EventTaxonomies::add_fields();
+		$add_html = ob_get_clean();
+		$this->assertStringContainsString( 'evt_scope_meta_nonce', $add_html );
+		ob_start();
+		EventTaxonomies::edit_fields( get_term( $area, EventTaxonomies::AREA ) );
+		$edit_html = ob_get_clean();
+		$this->assertStringContainsString( 'contact@example.org', $edit_html );
+		$this->assertStringContainsString( 'ID ' . $image, $edit_html );
+		set_current_screen( 'edit-evt_area' );
+		EventTaxonomies::enqueue_media();
+		$this->assertTrue( wp_script_is( 'media-views', 'enqueued' ) );
+		$this->assertStringContainsString( 'evt-scope-choose-image', implode( '\n', (array) wp_scripts()->get_data( 'media-views', 'after' ) ) );
+		set_transient( 'evt_scope_error_' . $admin, 'Correo no válido', 60 );
+		ob_start();
+		EventTaxonomies::scope_notice();
+		$notice = ob_get_clean();
+		$this->assertStringContainsString( 'Correo no válido', $notice );
+		$this->assertFalse( get_transient( 'evt_scope_error_' . $admin ) );
+	}
 }

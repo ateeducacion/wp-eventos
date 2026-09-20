@@ -152,6 +152,46 @@ class Test_Evt_Rest_Area_Scoping extends WP_UnitTestCase {
 		$this->assertSame( $event, $updated );
 	}
 
+	/** Interactive admin saves preserve another organiser and reject foreign assignments before core writes. */
+	public function test_admin_request_guard_covers_classic_quick_and_bulk_paths() {
+		$event = $this->event( $this->owner, array( $this->area_owner, $this->area_other ) );
+		$this->acting_as( $this->owner );
+		global $pagenow;
+		$previous_page = $pagenow;
+		// This test deliberately builds and inspects a forged admin POST.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$previous_post = $_POST;
+		try {
+			foreach ( array(
+				'post.php'       => 'editpost',
+				'admin-ajax.php' => 'inline-save',
+				'edit.php'       => 'bulk_edit',
+			) as $page => $action ) {
+				$pagenow = $page;
+				$_POST   = array(
+					'action'    => $action,
+					'post_type' => EventPostType::POST_TYPE,
+					'post_ID'   => $event,
+					'tax_input' => array( EventTaxonomies::AREA => array( $this->area_owner ) ),
+				);
+				EventAccess::validate_admin_areas();
+				$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), $_POST['tax_input'][ EventTaxonomies::AREA ] );
+				$_POST['tax_input'][ EventTaxonomies::AREA ] = array( $this->area_other );
+				try {
+					EventAccess::validate_admin_areas();
+					$this->fail( 'The foreign term must be rejected before the post is saved.' );
+				} catch ( WPDieException $exception ) {
+					$this->assertStringContainsString( 'No puede asignar este ámbito', $exception->getMessage() );
+				}
+				$this->assertEqualsCanonicalizing( array( $this->area_owner, $this->area_other ), wp_get_post_terms( $event, EventTaxonomies::AREA, array( 'fields' => 'ids' ) ) );
+			}
+		} finally {
+			$pagenow = $previous_page;
+			$_POST   = $previous_post;
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+	}
+
 	/**
 	 * A post of one of the two satellite types, in the owning área.
 	 *
