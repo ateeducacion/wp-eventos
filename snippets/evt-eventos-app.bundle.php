@@ -1963,8 +1963,8 @@ final class RegistrationInput {
 		$email       = strtolower( self::text( $raw, 'email' ) );
 		$phone       = self::phone( self::text( $raw, 'phone' ) );
 		$centre      = self::text( $raw, 'centre' );
-		$centre_code = self::text( $raw, 'centre_code' );
-		$centre_name = $centre;
+		$centre_code = '';
+		$centre_name = '';
 		$consent     = ! empty( $raw['consent'] );
 
 		if ( ! self::is_tax_id( $tax_id ) ) {
@@ -1981,30 +1981,16 @@ final class RegistrationInput {
 		}
 
 
-
-		if ( '' === $centre ) {
+		if ( '' === $centre || ! self::is_centre_code( $centre ) ) {
 			$errors[] = 'centre';
 		} elseif ( is_array( $centres ) ) {
-			if ( array() === $centres ) {
+			if ( ! isset( $centres[ $centre ] ) ) {
 				$errors[] = 'centre';
-			} elseif ( isset( $centres[ $centre ] ) ) {
-				$matched_val = (string) $centres[ $centre ];
-				if ( self::is_centre_code( $centre ) ) {
-					$centre_code = $centre;
-					$centre_name = $matched_val;
-				} else {
-					$centre_name = $matched_val;
-				}
-			} elseif ( in_array( $centre, $centres, true ) ) {
-				$key = array_search( $centre, $centres, true );
-				if ( false !== $key && self::is_centre_code( (string) $key ) ) {
-					$centre_code = (string) $key;
-				}
-				$centre_name = $centre;
 			} else {
-				$errors[] = 'centre';
+				$centre_code = $centre;
+				$centre_name = (string) $centres[ $centre ];
 			}
-		} elseif ( '' === $centre_code && self::is_centre_code( $centre ) ) {
+		} else {
 			$centre_code = $centre;
 		}
 		if ( ! $consent ) {
@@ -2099,7 +2085,7 @@ final class RegistrationInput {
 
 
 	public static function is_centre_code( string $value ): bool {
-		return (bool) preg_match( '/^\d{7,8}$/', trim( $value ) );
+		return (bool) preg_match( '/^\d{8}$/', trim( $value ) );
 	}
 
 
@@ -3630,9 +3616,9 @@ final class CentreCatalogueSync {
 
 	public const OPTION_CATALOGUE_URL = 'evt_centres_catalogue_url';
 
-	public const LOCK_KEY = 'evt_centres_sync_lock';
+	public const OPTION_LOCK = 'evt_centres_sync_lock';
 
-	public const LOCK_EXPIRATION = 600;
+	public const LOCK_TTL = 300;
 
 	public const CRON_HOOK = 'evt_centres_cron_sync';
 
@@ -3663,6 +3649,22 @@ final class CentreCatalogueSync {
 
 			unset( $e );
 		}
+	}
+
+
+
+
+
+
+
+	public static function is_valid_https_url( string $url ): bool {
+		$url = trim( $url );
+		if ( '' === $url ) {
+			return false;
+		}
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$host   = wp_parse_url( $url, PHP_URL_HOST );
+		return 'https' === strtolower( (string) $scheme ) && '' !== trim( (string) $host );
 	}
 
 
@@ -3722,11 +3724,39 @@ final class CentreCatalogueSync {
 
 
 
-	public static function acquire_lock(): bool {
-		if ( get_transient( self::LOCK_KEY ) ) {
-			return false;
+
+
+
+
+	public static function acquire_lock() {
+		$token   = wp_generate_password( 32, false );
+		$payload = array(
+			'token' => $token,
+			'time'  => time(),
+		);
+
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+			return $token;
 		}
-		return set_transient( self::LOCK_KEY, time(), self::LOCK_EXPIRATION );
+
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['time'] ) ) {
+			$elapsed = time() - (int) $current['time'];
+			if ( $elapsed > self::LOCK_TTL ) {
+				delete_option( self::OPTION_LOCK );
+				wp_cache_delete( self::OPTION_LOCK, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+
+				if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+					return $token;
+				}
+			}
+		}
+
+		return false;
 	}
 
 
@@ -3734,8 +3764,14 @@ final class CentreCatalogueSync {
 
 
 
-	public static function release_lock(): void {
-		delete_transient( self::LOCK_KEY );
+
+	public static function release_lock( string $token ): bool {
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['token'] ) && hash_equals( (string) $current['token'], $token ) ) {
+			return delete_option( self::OPTION_LOCK );
+		}
+		return false;
 	}
 
 
@@ -3746,7 +3782,8 @@ final class CentreCatalogueSync {
 
 
 	public static function sync( bool $force = false ): array {
-		if ( ! self::acquire_lock() ) {
+		$token = self::acquire_lock();
+		if ( false === $token ) {
 			throw new RuntimeException( 'Hay otra sincronización de centros en curso. Espere a que finalice.' );
 		}
 
@@ -3754,8 +3791,8 @@ final class CentreCatalogueSync {
 
 		try {
 			$manifest_url = self::manifest_url();
-			if ( '' === $manifest_url ) {
-				throw new RuntimeException( 'URL de manifest de centros no configurada.' );
+			if ( ! self::is_valid_https_url( $manifest_url ) ) {
+				throw new RuntimeException( 'URL de manifest de centros inválida o no utiliza HTTPS.' );
 			}
 
 
@@ -3799,16 +3836,15 @@ final class CentreCatalogueSync {
 			$remote_count  = isset( $manifest['files']['centros.min.json']['records'] )
 				? (int) $manifest['files']['centros.min.json']['records']
 				: 0;
-			$updated_at    = isset( $manifest['catalogue_updated_at'] )
-				? (string) $manifest['catalogue_updated_at']
-				: current_time( 'mysql' );
+			$updated_at    = isset( $manifest['catalogue_updated_at'] ) && is_scalar( $manifest['catalogue_updated_at'] )
+				? trim( (string) $manifest['catalogue_updated_at'] )
+				: '';
 
 
 			if ( ! $force && $remote_sha256 === $status['sha256'] && ! empty( $status['sha256'] ) && CentreCatalogue::count() > 0 ) {
 				$status['last_checked_at'] = current_time( 'mysql' );
 				$status['last_error']      = '';
 				update_option( CentreCatalogue::OPTION_STATUS, $status, false );
-				self::release_lock();
 
 				return array(
 					'status'  => 'unchanged',
@@ -3820,8 +3856,8 @@ final class CentreCatalogueSync {
 
 
 			$catalogue_url = self::catalogue_url( $manifest_url );
-			if ( '' === $catalogue_url ) {
-				throw new RuntimeException( 'URL del catálogo de centros no configurada.' );
+			if ( ! self::is_valid_https_url( $catalogue_url ) ) {
+				throw new RuntimeException( 'URL del catálogo de centros inválida o no utiliza HTTPS.' );
 			}
 
 			$cat_response = wp_remote_get(
@@ -3930,8 +3966,6 @@ final class CentreCatalogueSync {
 			);
 			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
 
-			self::release_lock();
-
 			return array(
 				'status'  => 'updated',
 				'sha256'  => $remote_sha256,
@@ -3943,8 +3977,9 @@ final class CentreCatalogueSync {
 			$status['last_error']      = $e->getMessage();
 			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
 
-			self::release_lock();
 			throw $e;
+		} finally {
+			self::release_lock( $token );
 		}
 	}
 }
@@ -3988,362 +4023,6 @@ final class CentreCatalog {
 		}
 
 		return CentreCatalogue::active_options();
-	}
-}
-
-
-
-
-
-
-
-
-namespace Evt\Centre;
-
-use Evt\PublicFront\ExitSignal;
-use RuntimeException;
-
-
-
-
-
-
-
-final class CentreSettings {
-
-	public const MENU_SLUG = 'evt-centres-settings';
-
-	public const NONCE_MANUAL_SYNC = 'evt_centres_manual_sync';
-
-	public const NONCE_SETTINGS = 'evt_centres_save_settings';
-
-
-
-
-
-
-	public static function register(): void {
-		add_action( 'admin_menu', array( self::class, 'add_menu_page' ) );
-		add_action( 'admin_init', array( self::class, 'handle_actions' ) );
-	}
-
-
-
-
-
-
-	public static function add_menu_page(): string {
-		$hook = add_options_page(
-			'Centros educativos',
-			'Centros educativos',
-			'manage_options',
-			self::MENU_SLUG,
-			array( self::class, 'render_page' )
-		);
-		return is_string( $hook ) ? $hook : '';
-	}
-
-
-
-
-
-
-	public static function handle_actions(): void {
-		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-
-
-		if (
-			isset( $_POST['evt_centres_action'] ) &&
-			'sync_now' === $_POST['evt_centres_action'] &&
-			check_admin_referer( self::NONCE_MANUAL_SYNC, '_evt_centres_nonce' )
-		) {
-			$redirect_args = array( 'page' => self::MENU_SLUG );
-			try {
-				$result = CentreCatalogueSync::sync( true );
-				$msg    = sprintf(
-					'Catálogo actualizado correctamente (%d centros, %d activos). SHA-256: %s',
-					$result['records'],
-					$result['active'],
-					substr( $result['sha256'], 0, 12 ) . '…'
-				);
-				$redirect_args['updated'] = 'synced';
-				$redirect_args['msg']     = rawurlencode( $msg );
-			} catch ( RuntimeException $e ) {
-				$redirect_args['error'] = rawurlencode( $e->getMessage() );
-			}
-
-			self::leave( add_query_arg( $redirect_args, admin_url( 'options-general.php' ) ) );
-		}
-
-
-		if (
-			isset( $_POST['evt_centres_action'] ) &&
-			'save_settings' === $_POST['evt_centres_action'] &&
-			check_admin_referer( self::NONCE_SETTINGS, '_evt_centres_nonce' )
-		) {
-			$manifest_url  = isset( $_POST['manifest_url'] ) ? esc_url_raw( wp_unslash( $_POST['manifest_url'] ) ) : '';
-			$catalogue_url = isset( $_POST['catalogue_url'] ) ? esc_url_raw( wp_unslash( $_POST['catalogue_url'] ) ) : '';
-
-			update_option( CentreCatalogueSync::OPTION_MANIFEST_URL, $manifest_url, false );
-			update_option( CentreCatalogueSync::OPTION_CATALOGUE_URL, $catalogue_url, false );
-
-			self::leave(
-				add_query_arg(
-					array(
-						'page'    => self::MENU_SLUG,
-						'updated' => 'saved',
-					),
-					admin_url( 'options-general.php' )
-				)
-			);
-		}
-	}
-
-
-
-
-
-
-
-	private static function leave( string $url ): void {
-		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
-			throw new ExitSignal( $url );
-		}
-		wp_safe_redirect( $url );
-		exit;
-	}
-
-
-
-
-
-
-	public static function render_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'No tiene permisos suficientes para acceder a esta página.', 'default' ) );
-		}
-
-		$status       = CentreCatalogue::status();
-		$total_count  = CentreCatalogue::count();
-		$active_count = CentreCatalogue::active_count();
-		$is_ready     = $total_count > 0;
-
-		$manifest_url  = (string) get_option( CentreCatalogueSync::OPTION_MANIFEST_URL, '' );
-		$catalogue_url = (string) get_option( CentreCatalogueSync::OPTION_CATALOGUE_URL, '' );
-
-		$effective_manifest  = CentreCatalogueSync::manifest_url();
-		$effective_catalogue = CentreCatalogueSync::catalogue_url( $effective_manifest );
-
-		?>
-		<div class="wrap">
-			<h1>Centros educativos</h1>
-			<p class="description" style="max-width:48rem">
-				Catálogo de centros educativos cacheado localmente desde la fuente maestra externa.
-				Este catálogo no es público y se utiliza para alimentar los selectores de centros y validar inscripciones.
-			</p>
-
-			<?php if ( isset( $_GET['updated'] ) && 'synced' === $_GET['updated'] && ! empty( $_GET['msg'] ) ) : ?>
-				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['msg'] ) ) ); ?></p></div>
-			<?php elseif ( isset( $_GET['updated'] ) && 'saved' === $_GET['updated'] ) : ?>
-				<div class="notice notice-success is-dismissible"><p>Ajustes guardados correctamente.</p></div>
-			<?php elseif ( isset( $_GET['error'] ) ) : ?>
-				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); ?></p></div>
-			<?php endif; ?>
-
-			<div style="display:flex; gap:2rem; flex-wrap:wrap; margin-top:1.5rem;">
-				<!-- Diagnóstico del estado del catálogo -->
-				<div style="flex:1; min-width:20rem; max-width:42rem;">
-					<div class="card" style="margin:0; padding:1.2rem; max-width:none;">
-						<h2>Estado del catálogo local</h2>
-						<table class="widefat striped" style="margin-top:1rem;">
-							<tbody>
-								<tr>
-									<th style="width:40%;">Catálogo configurado</th>
-									<td>
-										<?php if ( $is_ready ) : ?>
-											<span class="dashicons dashicons-yes-alt" style="color:#46b450;" aria-hidden="true"></span> Sí
-										<?php else : ?>
-											<span class="dashicons dashicons-warning" style="color:#dc3232;" aria-hidden="true"></span> No (catálogo vacío)
-										<?php endif; ?>
-									</td>
-								</tr>
-								<tr>
-									<th>Registros totales</th>
-									<td><strong><?php echo esc_html( (string) $total_count ); ?></strong></td>
-								</tr>
-								<tr>
-									<th>Registros activos</th>
-									<td><strong style="color:#46b450;"><?php echo esc_html( (string) $active_count ); ?></strong></td>
-								</tr>
-								<tr>
-									<th>Registros inactivos</th>
-									<td><?php echo esc_html( (string) ( $total_count - $active_count ) ); ?></td>
-								</tr>
-								<tr>
-									<th>SHA-256 actual</th>
-									<td>
-										<?php if ( '' !== $status['sha256'] ) : ?>
-											<code style="font-size:0.85em;"><?php echo esc_html( $status['sha256'] ); ?></code>
-										<?php else : ?>
-											<em>Ninguno</em>
-										<?php endif; ?>
-									</td>
-								</tr>
-								<tr>
-									<th>Versión de esquema</th>
-									<td><?php echo esc_html( (string) $status['schema_version'] ); ?></td>
-								</tr>
-								<tr>
-									<th>Fecha del catálogo</th>
-									<td><?php echo esc_html( '' !== $status['catalogue_updated_at'] ? $status['catalogue_updated_at'] : '—' ); ?></td>
-								</tr>
-								<tr>
-									<th>Última comprobación</th>
-									<td><?php echo esc_html( '' !== $status['last_checked_at'] ? $status['last_checked_at'] : '—' ); ?></td>
-								</tr>
-								<tr>
-									<th>Última actualización correcta</th>
-									<td><?php echo esc_html( '' !== $status['last_success_at'] ? $status['last_success_at'] : '—' ); ?></td>
-								</tr>
-								<?php if ( '' !== $status['last_error'] ) : ?>
-									<tr>
-										<th style="color:#dc3232;">Último error</th>
-										<td style="color:#dc3232;"><code><?php echo esc_html( $status['last_error'] ); ?></code></td>
-									</tr>
-								<?php endif; ?>
-							</tbody>
-						</table>
-
-						<div style="margin-top:1.5rem; display:flex; gap:1rem; align-items:center;">
-							<form method="post" action="">
-								<?php wp_nonce_field( self::NONCE_MANUAL_SYNC, '_evt_centres_nonce' ); ?>
-								<input type="hidden" name="evt_centres_action" value="sync_now" />
-								<button type="submit" class="button button-primary">
-									Actualizar catálogo ahora
-								</button>
-							</form>
-						</div>
-					</div>
-				</div>
-
-				<!-- Configuración de URLs -->
-				<div style="flex:1; min-width:20rem; max-width:40rem;">
-					<div class="card" style="margin:0; padding:1.2rem; max-width:none;">
-						<h2>Configuración de la fuente externa</h2>
-						<form method="post" action="">
-							<?php wp_nonce_field( self::NONCE_SETTINGS, '_evt_centres_nonce' ); ?>
-							<input type="hidden" name="evt_centres_action" value="save_settings" />
-
-							<p>
-								<label for="evt_manifest_url"><strong>URL de manifest.json:</strong></label><br />
-								<input type="url" id="evt_manifest_url" name="manifest_url" value="<?php echo esc_attr( $manifest_url ); ?>" class="large-text" placeholder="https://ejemplo.org/.../manifest.json" />
-								<span class="description">URL completa del archivo <code>manifest.json</code> externo.</span>
-								<?php if ( '' !== $effective_manifest && $effective_manifest !== $manifest_url ) : ?>
-									<br /><span class="description" style="color:#666;">URL efectiva (por filtro/constante): <code><?php echo esc_html( $effective_manifest ); ?></code></span>
-								<?php endif; ?>
-							</p>
-
-							<p>
-								<label for="evt_catalogue_url"><strong>URL de centros.min.json (opcional):</strong></label><br />
-								<input type="url" id="evt_catalogue_url" name="catalogue_url" value="<?php echo esc_attr( $catalogue_url ); ?>" class="large-text" placeholder="https://ejemplo.org/.../centros.min.json" />
-								<span class="description">Si se deja en blanco, se deduce de la ruta de <code>manifest.json</code>.</span>
-								<?php if ( '' !== $effective_catalogue && $effective_catalogue !== $catalogue_url ) : ?>
-									<br /><span class="description" style="color:#666;">URL efectiva: <code><?php echo esc_html( $effective_catalogue ); ?></code></span>
-								<?php endif; ?>
-							</p>
-
-							<p style="margin-top:1.5rem;">
-								<button type="submit" class="button button-secondary">
-									Guardar configuración
-								</button>
-							</p>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-}
-
-
-
-
-
-
-
-
-namespace Evt\Centre;
-
-use RuntimeException;
-use WP_CLI;
-
-
-
-
-final class CentreCli {
-
-
-
-
-
-
-	public static function register(): void {
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			WP_CLI::add_command( 'evt centres sync', array( self::class, 'sync' ) );
-		}
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	public static function sync( array $args, array $assoc_args ): void {
-		unset( $args );
-		$force = isset( $assoc_args['force'] );
-
-		WP_CLI::log( 'Iniciando sincronización del catálogo de centros...' );
-
-		try {
-			$result = CentreCatalogueSync::sync( $force );
-
-			if ( 'unchanged' === $result['status'] ) {
-				WP_CLI::success(
-					sprintf(
-						'El catálogo local ya está al día (%d centros, %d activos). SHA-256: %s',
-						$result['records'],
-						$result['active'],
-						substr( $result['sha256'], 0, 12 ) . '…'
-					)
-				);
-			} else {
-				WP_CLI::success(
-					sprintf(
-						'Sincronización completada con éxito. %d centros almacenados (%d activos). SHA-256: %s',
-						$result['records'],
-						$result['active'],
-						substr( $result['sha256'], 0, 12 ) . '…'
-					)
-				);
-			}
-		} catch ( RuntimeException $e ) {
-			WP_CLI::error( $e->getMessage() );
-		}
 	}
 }
 
@@ -19059,11 +18738,14 @@ final class EventAdmin {
 namespace Evt\Admin;
 
 use Evt\Access\EventAccess;
+use Evt\Centre\CentreCatalogue;
+use Evt\Centre\CentreCatalogueSync;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\ExitSignal;
 use Evt\Taxonomy\EventTaxonomies;
-
+use RuntimeException;
 
 
 
@@ -19081,10 +18763,16 @@ final class Settings {
 
 
 
+	public const NONCE_SYNC_CENTRES = 'evt_centres_manual_sync';
+
+
+
+
 
 
 	public static function register(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
+		add_action( 'admin_init', array( self::class, 'handle_actions' ) );
 	}
 
 
@@ -19101,6 +18789,61 @@ final class Settings {
 			self::PAGE,
 			array( self::class, 'render' )
 		);
+	}
+
+
+
+
+
+
+	public static function handle_actions(): void {
+		if ( ! is_admin() || ! EventAccess::is_manager() ) {
+			return;
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
+			'sync_centres' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
+		) {
+			$redirect_args = array(
+				'post_type' => EventPostType::POST_TYPE,
+				'page'      => self::PAGE,
+			);
+
+			try {
+				$result = CentreCatalogueSync::sync( true );
+				$msg    = sprintf(
+					'Catálogo actualizado correctamente (%d centros, %d activos). SHA-256: %s',
+					$result['records'],
+					$result['active'],
+					substr( $result['sha256'], 0, 12 ) . '…'
+				);
+
+				$redirect_args['updated'] = 'synced';
+				$redirect_args['msg']     = rawurlencode( $msg );
+			} catch ( RuntimeException $e ) {
+				$redirect_args['error'] = rawurlencode( $e->getMessage() );
+			}
+
+			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
+		}
+	}
+
+
+
+
+
+
+
+
+	private static function leave( string $url ): void {
+		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
+
+			throw new ExitSignal( $url );
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 
@@ -19127,10 +18870,15 @@ final class Settings {
 		<div class="wrap">
 			<h1>Ajustes y diagnóstico de eventos</h1>
 			<p class="description" style="max-width:46rem">
-				Esta pantalla no guarda nada todavía: cuenta lo que el aplicativo tiene montado
-				en este sitio. Si algo sale «sin registrar», es que el snippet correspondiente
-				no está activo.
+				Esta pantalla cuenta lo que el aplicativo tiene montado en este sitio.
+				Si algo sale «sin registrar», es que el snippet correspondiente no está activo.
 			</p>
+
+			<?php if ( isset( $_GET['updated'] ) && 'synced' === $_GET['updated'] && ! empty( $_GET['msg'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['msg'] ) ) ); ?></p></div>
+			<?php elseif ( isset( $_GET['error'] ) && ! empty( $_GET['error'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); ?></p></div>
+			<?php endif; ?>
 
 			<h2>Tipos de contenido</h2>
 			<table class="widefat striped" style="max-width:46rem">
@@ -19196,6 +18944,83 @@ final class Settings {
 				</table>
 			<?php endif; ?>
 
+			<h2>Catálogo de centros educativos</h2>
+			<?php
+			$status       = CentreCatalogue::status();
+			$total_count  = CentreCatalogue::count();
+			$active_count = CentreCatalogue::active_count();
+			$is_ready     = $total_count > 0;
+			$has_source   = '' !== CentreCatalogueSync::manifest_url();
+			?>
+			<table class="widefat striped" style="max-width:46rem">
+				<tbody>
+					<tr>
+						<th style="width:40%;">Estado</th>
+						<td>
+							<?php if ( $is_ready ) : ?>
+								<span class="dashicons dashicons-yes-alt" style="color:#46b450;" aria-hidden="true"></span> Disponible
+							<?php else : ?>
+								<span class="dashicons dashicons-warning" style="color:#dc3232;" aria-hidden="true"></span> No disponible (catálogo vacío)
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th>Fuente configurada</th>
+						<td><?php echo $has_source ? 'Sí' : 'No'; ?></td>
+					</tr>
+					<tr>
+						<th>Registros totales</th>
+						<td><strong><?php echo esc_html( (string) $total_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros activos</th>
+						<td><strong style="color:#46b450;"><?php echo esc_html( (string) $active_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros inactivos</th>
+						<td><?php echo esc_html( (string) ( $total_count - $active_count ) ); ?></td>
+					</tr>
+					<tr>
+						<th>Fecha del catálogo</th>
+						<td><?php echo esc_html( '' !== $status['catalogue_updated_at'] ? $status['catalogue_updated_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última comprobación</th>
+						<td><?php echo esc_html( '' !== $status['last_checked_at'] ? $status['last_checked_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última actualización correcta</th>
+						<td><?php echo esc_html( '' !== $status['last_success_at'] ? $status['last_success_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>SHA-256 actual</th>
+						<td>
+							<?php if ( '' !== $status['sha256'] ) : ?>
+								<code style="font-size:0.85em;"><?php echo esc_html( $status['sha256'] ); ?></code>
+							<?php else : ?>
+								<em>Ninguno</em>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php if ( '' !== $status['last_error'] ) : ?>
+						<tr>
+							<th style="color:#dc3232;">Último error</th>
+							<td style="color:#dc3232;"><code><?php echo esc_html( $status['last_error'] ); ?></code></td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+
+			<div style="margin-top:1rem;">
+				<form method="post" action="">
+					<?php wp_nonce_field( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' ); ?>
+					<input type="hidden" name="evt_action" value="sync_centres" />
+					<button type="submit" class="button button-secondary">
+						Actualizar catálogo ahora
+					</button>
+				</form>
+			</div>
+
 			<h2>Su acotado por área</h2>
 			<?php
 			$areas = EventAccess::user_areas();
@@ -19235,8 +19060,6 @@ use Evt\Admin\EventAdmin;
 use Evt\Admin\Settings;
 use Evt\Centre\CentreCatalog;
 use Evt\Centre\CentreCatalogueSync;
-use Evt\Centre\CentreCli;
-use Evt\Centre\CentreSettings;
 use Evt\Meta\EventMetaRegistration;
 use Evt\Meta\ProgrammeMetaRegistration;
 use Evt\Meta\RegistrationMetaRegistration;
@@ -19336,9 +19159,7 @@ final class App {
 		CustomCode::register();
 
 		EventAdmin::register();
-		CentreSettings::register();
 		CentreCatalog::register();
-		CentreCli::register();
 		CentreCatalogueSync::register_cron();
 		Settings::register();
 	}

@@ -12,8 +12,6 @@ use Evt\Admin\EventAdmin;
 use Evt\Admin\Settings;
 use Evt\Centre\CentreCatalog;
 use Evt\Centre\CentreCatalogueSync;
-use Evt\Centre\CentreCli;
-use Evt\Centre\CentreSettings;
 use Evt\Meta\EventMetaRegistration;
 use Evt\Meta\ProgrammeMetaRegistration;
 use Evt\Meta\RegistrationMetaRegistration;
@@ -113,9 +111,7 @@ final class App {
 		CustomCode::register();
 
 		EventAdmin::register();
-		CentreSettings::register();
 		CentreCatalog::register();
-		CentreCli::register();
 		CentreCatalogueSync::register_cron();
 		Settings::register();
 	}

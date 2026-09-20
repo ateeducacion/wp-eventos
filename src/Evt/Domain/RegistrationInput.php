@@ -40,8 +40,8 @@ final class RegistrationInput {
 		$email       = strtolower( self::text( $raw, 'email' ) );
 		$phone       = self::phone( self::text( $raw, 'phone' ) );
 		$centre      = self::text( $raw, 'centre' );
-		$centre_code = self::text( $raw, 'centre_code' );
-		$centre_name = $centre;
+		$centre_code = '';
+		$centre_name = '';
 		$consent     = ! empty( $raw['consent'] );
 
 		if ( ! self::is_tax_id( $tax_id ) ) {
@@ -56,32 +56,18 @@ final class RegistrationInput {
 		if ( ! self::is_email( $email ) ) {
 			$errors[] = 'email';
 		}
-		// El centro se elige de un catálogo y **nunca se teclea** (ADR-0031):
-		// si se pasa catálogo, lo que llegue tiene que estar en él. Un catálogo
-		// vacío falla en cerrado (ADR-0037).
-		if ( '' === $centre ) {
+		// El centro se elige de un catálogo por su código oficial de 8 dígitos (ADR-0031, ADR-0037).
+		// Lo que envía el navegador es el código oficial; la denominación se obtiene del catálogo.
+		if ( '' === $centre || ! self::is_centre_code( $centre ) ) {
 			$errors[] = 'centre';
 		} elseif ( is_array( $centres ) ) {
-			if ( array() === $centres ) {
+			if ( ! isset( $centres[ $centre ] ) ) {
 				$errors[] = 'centre';
-			} elseif ( isset( $centres[ $centre ] ) ) {
-				$matched_val = (string) $centres[ $centre ];
-				if ( self::is_centre_code( $centre ) ) {
-					$centre_code = $centre;
-					$centre_name = $matched_val;
-				} else {
-					$centre_name = $matched_val;
-				}
-			} elseif ( in_array( $centre, $centres, true ) ) {
-				$key = array_search( $centre, $centres, true );
-				if ( false !== $key && self::is_centre_code( (string) $key ) ) {
-					$centre_code = (string) $key;
-				}
-				$centre_name = $centre;
 			} else {
-				$errors[] = 'centre';
+				$centre_code = $centre;
+				$centre_name = (string) $centres[ $centre ];
 			}
-		} elseif ( '' === $centre_code && self::is_centre_code( $centre ) ) {
+		} else {
 			$centre_code = $centre;
 		}
 		if ( ! $consent ) {
@@ -170,13 +156,13 @@ final class RegistrationInput {
 	/**
 	 * Whether a string has the shape of an official centre code.
 	 *
-	 * Solo dígitos, longitud de 7 u 8 caracteres.
+	 * Solo dígitos, longitud exacta de 8 caracteres.
 	 *
 	 * @param string $value Raw value.
 	 * @return bool
 	 */
 	public static function is_centre_code( string $value ): bool {
-		return (bool) preg_match( '/^\d{7,8}$/', trim( $value ) );
+		return (bool) preg_match( '/^\d{8}$/', trim( $value ) );
 	}
 
 	/**

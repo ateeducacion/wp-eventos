@@ -8,17 +8,20 @@
 namespace Evt\Admin;
 
 use Evt\Access\EventAccess;
+use Evt\Centre\CentreCatalogue;
+use Evt\Centre\CentreCatalogueSync;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\ExitSignal;
 use Evt\Taxonomy\EventTaxonomies;
+use RuntimeException;
 
 /**
  * Qué hay montado y qué falta, en una pantalla.
  *
- * De momento no guarda nada: la fase 1 no tiene ningún ajuste que decidir, y
- * lo que sí hace falta es poder mirar si los tipos, las taxonomías y los roles
- * están donde deberían sin abrir la base de datos.
+ * Muestra el estado de los tipos, taxonomías, roles, acotado y catálogo
+ * de centros educativos, con capacidad para forzar la sincronización manual.
  */
 final class Settings {
 
@@ -28,12 +31,18 @@ final class Settings {
 	public const PAGE = 'evt-settings';
 
 	/**
+	 * Nonce action for manual centre catalogue sync.
+	 */
+	public const NONCE_SYNC_CENTRES = 'evt_centres_manual_sync';
+
+	/**
 	 * Register hooks.
 	 *
 	 * @return void
 	 */
 	public static function register(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
+		add_action( 'admin_init', array( self::class, 'handle_actions' ) );
 	}
 
 	/**
@@ -50,6 +59,61 @@ final class Settings {
 			self::PAGE,
 			array( self::class, 'render' )
 		);
+	}
+
+	/**
+	 * Handle manual actions like centre catalogue sync.
+	 *
+	 * @return void
+	 */
+	public static function handle_actions(): void {
+		if ( ! is_admin() || ! EventAccess::is_manager() ) {
+			return;
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
+			'sync_centres' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
+		) {
+			$redirect_args = array(
+				'post_type' => EventPostType::POST_TYPE,
+				'page'      => self::PAGE,
+			);
+
+			try {
+				$result = CentreCatalogueSync::sync( true );
+				$msg    = sprintf(
+					'Catálogo actualizado correctamente (%d centros, %d activos). SHA-256: %s',
+					$result['records'],
+					$result['active'],
+					substr( $result['sha256'], 0, 12 ) . '…'
+				);
+
+				$redirect_args['updated'] = 'synced';
+				$redirect_args['msg']     = rawurlencode( $msg );
+			} catch ( RuntimeException $e ) {
+				$redirect_args['error'] = rawurlencode( $e->getMessage() );
+			}
+
+			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
+		}
+	}
+
+	/**
+	 * Safe exit or throw ExitSignal under tests.
+	 *
+	 * @param string $url Target redirect URL.
+	 * @throws ExitSignal When running under tests with exit filter.
+	 * @return void
+	 */
+	private static function leave( string $url ): void {
+		if ( apply_filters( 'evt_exit_throws', false, $url ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- la URL viaja para que el test la lea; no se imprime.
+			throw new ExitSignal( $url );
+		}
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 	/**
@@ -76,10 +140,15 @@ final class Settings {
 		<div class="wrap">
 			<h1>Ajustes y diagnóstico de eventos</h1>
 			<p class="description" style="max-width:46rem">
-				Esta pantalla no guarda nada todavía: cuenta lo que el aplicativo tiene montado
-				en este sitio. Si algo sale «sin registrar», es que el snippet correspondiente
-				no está activo.
+				Esta pantalla cuenta lo que el aplicativo tiene montado en este sitio.
+				Si algo sale «sin registrar», es que el snippet correspondiente no está activo.
 			</p>
+
+			<?php if ( isset( $_GET['updated'] ) && 'synced' === $_GET['updated'] && ! empty( $_GET['msg'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['msg'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?></p></div>
+			<?php elseif ( isset( $_GET['error'] ) && ! empty( $_GET['error'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?></p></div>
+			<?php endif; ?>
 
 			<h2>Tipos de contenido</h2>
 			<table class="widefat striped" style="max-width:46rem">
@@ -144,6 +213,83 @@ final class Settings {
 					</tbody>
 				</table>
 			<?php endif; ?>
+
+			<h2>Catálogo de centros educativos</h2>
+			<?php
+			$status       = CentreCatalogue::status();
+			$total_count  = CentreCatalogue::count();
+			$active_count = CentreCatalogue::active_count();
+			$is_ready     = $total_count > 0;
+			$has_source   = '' !== CentreCatalogueSync::manifest_url();
+			?>
+			<table class="widefat striped" style="max-width:46rem">
+				<tbody>
+					<tr>
+						<th style="width:40%;">Estado</th>
+						<td>
+							<?php if ( $is_ready ) : ?>
+								<span class="dashicons dashicons-yes-alt" style="color:#46b450;" aria-hidden="true"></span> Disponible
+							<?php else : ?>
+								<span class="dashicons dashicons-warning" style="color:#dc3232;" aria-hidden="true"></span> No disponible (catálogo vacío)
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th>Fuente configurada</th>
+						<td><?php echo $has_source ? 'Sí' : 'No'; ?></td>
+					</tr>
+					<tr>
+						<th>Registros totales</th>
+						<td><strong><?php echo esc_html( (string) $total_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros activos</th>
+						<td><strong style="color:#46b450;"><?php echo esc_html( (string) $active_count ); ?></strong></td>
+					</tr>
+					<tr>
+						<th>Registros inactivos</th>
+						<td><?php echo esc_html( (string) ( $total_count - $active_count ) ); ?></td>
+					</tr>
+					<tr>
+						<th>Fecha del catálogo</th>
+						<td><?php echo esc_html( '' !== $status['catalogue_updated_at'] ? $status['catalogue_updated_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última comprobación</th>
+						<td><?php echo esc_html( '' !== $status['last_checked_at'] ? $status['last_checked_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>Última actualización correcta</th>
+						<td><?php echo esc_html( '' !== $status['last_success_at'] ? $status['last_success_at'] : '—' ); ?></td>
+					</tr>
+					<tr>
+						<th>SHA-256 actual</th>
+						<td>
+							<?php if ( '' !== $status['sha256'] ) : ?>
+								<code style="font-size:0.85em;"><?php echo esc_html( $status['sha256'] ); ?></code>
+							<?php else : ?>
+								<em>Ninguno</em>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php if ( '' !== $status['last_error'] ) : ?>
+						<tr>
+							<th style="color:#dc3232;">Último error</th>
+							<td style="color:#dc3232;"><code><?php echo esc_html( $status['last_error'] ); ?></code></td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+
+			<div style="margin-top:1rem;">
+				<form method="post" action="">
+					<?php wp_nonce_field( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' ); ?>
+					<input type="hidden" name="evt_action" value="sync_centres" />
+					<button type="submit" class="button button-secondary">
+						Actualizar catálogo ahora
+					</button>
+				</form>
+			</div>
 
 			<h2>Su acotado por área</h2>
 			<?php

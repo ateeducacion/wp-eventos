@@ -36,8 +36,6 @@ return array(
 	'Centre/CentreCatalogue.php',
 	'Centre/CentreCatalogueSync.php',
 	'Centre/CentreCatalog.php',
-	'Centre/CentreSettings.php',
-	'Centre/CentreCli.php',
 	'Meta/RegistrationMetaRegistration.php',
 	'Taxonomy/EventTaxonomies.php',
 	'PublicFront/Assets.php',

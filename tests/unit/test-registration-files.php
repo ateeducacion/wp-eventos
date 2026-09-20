@@ -533,13 +533,13 @@ class Test_Registration_Files extends WP_UnitTestCase {
 				'name'                  => 'María',
 				'surname'               => 'Pérez',
 				'email'                 => 'maria@example.org',
-				'centre'                => 'CEIP Ejemplo',
+				'centre'                => '38000001',
 				'consent'               => '1',
 			),
 			SignupForm::NONCE_ACTION,
 			SignupForm::NONCE_FIELD
 		);
-		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+		add_filter( 'evt_centres', fn() => array( '38000001' => 'CEIP Ejemplo' ) );
 
 		SignupForm::maybe_handle_submit();
 
@@ -564,13 +564,13 @@ class Test_Registration_Files extends WP_UnitTestCase {
 				'name'                  => 'María',
 				'surname'               => 'Pérez',
 				'email'                 => 'maria@example.org',
-				'centre'                => 'CEIP Ejemplo',
+				'centre'                => '38000001',
 				'consent'               => '1',
 			),
 			SignupForm::NONCE_ACTION,
 			SignupForm::NONCE_FIELD
 		);
-		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+		add_filter( 'evt_centres', fn() => array( '38000001' => 'CEIP Ejemplo' ) );
 
 		SignupForm::maybe_handle_submit();
 
@@ -594,13 +594,13 @@ class Test_Registration_Files extends WP_UnitTestCase {
 				'name'                  => 'María',
 				'surname'               => 'Pérez',
 				'email'                 => 'maria@example.org',
-				'centre'                => 'CEIP Ejemplo',
+				'centre'                => '38000001',
 				'consent'               => '1',
 			),
 			SignupForm::NONCE_ACTION,
 			SignupForm::NONCE_FIELD
 		);
-		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+		add_filter( 'evt_centres', fn() => array( '38000001' => 'CEIP Ejemplo' ) );
 
 		$this->exit_url( array( SignupForm::class, 'maybe_handle_submit' ) );
 
@@ -1247,13 +1247,13 @@ class Test_Registration_Files extends WP_UnitTestCase {
 				'name'                  => 'María',
 				'surname'               => 'Pérez',
 				'email'                 => 'maria@example.org',
-				'centre'                => 'CEIP Ejemplo',
+				'centre'                => '38000001',
 				'consent'               => '1',
 			),
 			SignupForm::NONCE_ACTION,
 			SignupForm::NONCE_FIELD
 		);
-		add_filter( 'evt_centres', fn() => array( 'CEIP Ejemplo' ) );
+		add_filter( 'evt_centres', fn() => array( '38000001' => 'CEIP Ejemplo' ) );
 
 		SignupForm::maybe_handle_submit();
 

@@ -105,3 +105,36 @@ Sin embargo, esa aproximación presenta inconvenientes importantes:
 - La actualización del catálogo depende de la ejecución de WP-Cron o de la acción manual en ajustes.
 - El tamaño del array en la opción `evt_centres_catalogue` es de ~150-200 KB en disco, pero al tener
   `autoload = false` solo se carga en memoria cuando se solicita el selector de centros o se valida una inscripción.
+
+## Adenda — 2026-09-20
+
+Tras la revisión del diseño inicial se introducen las siguientes precisiones y simplificaciones:
+
+1. **Código oficial de exactamente 8 dígitos**:
+   - Se fija el contrato formal con la expresión regular `^\d{8}$` en todas las capas del aplicativo (`RegistrationInput::is_centre_code()`, `CentreCatalogueSync`).
+   - Se rechaza cualquier código que no tenga exactamente 8 dígitos (7 dígitos, 9 dígitos, letras o caracteres especiales), sin normalización con ceros a la izquierda.
+   - En el formulario de inscripción, lo que envía el navegador es el código oficial (`centre_code`); nunca se confía en un nombre enviado por el cliente ni se acepta la denominación como identidad de una inscripción nueva.
+
+2. **HTTPS obligatorio y prevención de SSRF**:
+   - Las fuentes remotas del catálogo (`manifest.json` y `centros.min.json`) exigen obligatoriamente el esquema `https://`.
+   - Se validan de forma estricta antes de realizar cualquier petición HTTP remota con `is_valid_https_url()`, rechazando `http://`, esquemas no seguros o URLs relativas.
+   - Se elimina cualquier campo de texto editable en el escritorio para introducir URLs arbitrarias, reduciendo la superficie de ataque SSRF y evitando desconfiguraciones administrativas. Las URLs se configuran mediante constantes de entorno (`EVT_CENTRES_MANIFEST_URL`, `EVT_CENTRES_CATALOGUE_URL`), opciones programáticas o filtros de WordPress (`evt_centres_manifest_url`, `evt_centres_catalogue_url`).
+
+3. **Candado de sincronización atómico con token**:
+   - Se sustituye el mecanismo de transients (`get_transient`/`set_transient`) por un candado atómico basado en `add_option('evt_centres_sync_lock', ...)` (análogo a `Registrations::lock()`).
+   - Almacena un token único aleatorio y la marca temporal. La liberación (`release_lock()`) requiere verificar la titularidad del token con `hash_equals()`, evitando que un proceso borre accidentalmente el candado adquirido por otro.
+   - Si un candado caduca tras 300 segundos (proceso muerto), el mecanismo lo retira y lo vuelve a reclamar de forma atómica.
+
+4. **Integración en Ajustes y diagnóstico (`Evt\Admin\Settings`)**:
+   - Se descarta la pantalla independiente `CentreSettings` bajo `manage_options`.
+   - La información de diagnóstico del catálogo se integra en la pantalla existente del aplicativo (`Ajustes y diagnóstico de eventos`), respetando la capacidad propia del aplicativo (`EventAccess::CAP_MANAGE`).
+   - Se expone el estado, recuentos de registros, fechas, SHA-256 y un botón de actualización manual con nonce y control de acceso.
+
+5. **Eliminación de WP-CLI**:
+   - El entorno de producción no dispone de WP-CLI. Dado que el aplicativo ya cuenta con WP-Cron diario y sincronización manual desde la interfaz de diagnóstico, se elimina por completo `CentreCli` (`wp evt centres sync`) para no mantener código innecesario en el bundle.
+
+6. **Decisión consciente sobre el CSV de participantes**:
+   - Se mantiene la incorporación de la columna `Código de centro` en la exportación CSV (`Participants::columns()`), situándola junto a `Centro`.
+   - `Código de centro` contiene `evt_reg_centre_code` y `Centro` contiene el snapshot de `evt_reg_centre`.
+   - En inscripciones históricas sin código, `Código de centro` permanece vacío (`""`) sin intentar rellenarlo retrospectivamente a partir del catálogo actual.
+

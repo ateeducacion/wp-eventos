@@ -22,9 +22,9 @@ final class CentreCatalogueSync {
 
 	public const OPTION_CATALOGUE_URL = 'evt_centres_catalogue_url';
 
-	public const LOCK_KEY = 'evt_centres_sync_lock';
+	public const OPTION_LOCK = 'evt_centres_sync_lock';
 
-	public const LOCK_EXPIRATION = 600;
+	public const LOCK_TTL = 300;
 
 	public const CRON_HOOK = 'evt_centres_cron_sync';
 
@@ -55,6 +55,22 @@ final class CentreCatalogueSync {
 			// Las excepciones en cron quedan registradas en el estado de diagnóstico.
 			unset( $e );
 		}
+	}
+
+	/**
+	 * Verify if a URL is a valid absolute HTTPS URL.
+	 *
+	 * @param string $url URL to validate.
+	 * @return bool
+	 */
+	public static function is_valid_https_url( string $url ): bool {
+		$url = trim( $url );
+		if ( '' === $url ) {
+			return false;
+		}
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$host   = wp_parse_url( $url, PHP_URL_HOST );
+		return 'https' === strtolower( (string) $scheme ) && '' !== trim( (string) $host );
 	}
 
 	/**
@@ -110,24 +126,58 @@ final class CentreCatalogueSync {
 	}
 
 	/**
-	 * Acquire execution lock.
+	 * Acquire execution lock with an ownership token.
 	 *
-	 * @return bool True if acquired, false if another sync is running.
+	 * Utiliza add_option() para garantizar concurrencia atómica sin condiciones
+	 * de carrera. Si el candado previo expiró (proceso muerto), lo retira y
+	 * lo vuelve a reclamar.
+	 *
+	 * @return string|false Token si se adquirió el candado, false si hay otra sincronización en curso.
 	 */
-	public static function acquire_lock(): bool {
-		if ( get_transient( self::LOCK_KEY ) ) {
-			return false;
+	public static function acquire_lock() {
+		$token   = wp_generate_password( 32, false );
+		$payload = array(
+			'token' => $token,
+			'time'  => time(),
+		);
+
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+			return $token;
 		}
-		return set_transient( self::LOCK_KEY, time(), self::LOCK_EXPIRATION );
+
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['time'] ) ) {
+			$elapsed = time() - (int) $current['time'];
+			if ( $elapsed > self::LOCK_TTL ) {
+				delete_option( self::OPTION_LOCK );
+				wp_cache_delete( self::OPTION_LOCK, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+
+				if ( add_option( self::OPTION_LOCK, $payload, '', 'no' ) ) {
+					return $token;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
-	 * Release execution lock.
+	 * Release execution lock, only if the token matches.
 	 *
-	 * @return void
+	 * @param string $token Ownership token.
+	 * @return bool True if released, false otherwise.
 	 */
-	public static function release_lock(): void {
-		delete_transient( self::LOCK_KEY );
+	public static function release_lock( string $token ): bool {
+		wp_cache_delete( self::OPTION_LOCK, 'options' );
+		$current = get_option( self::OPTION_LOCK );
+		if ( is_array( $current ) && isset( $current['token'] ) && hash_equals( (string) $current['token'], $token ) ) {
+			return delete_option( self::OPTION_LOCK );
+		}
+		return false;
 	}
 
 	/**
@@ -138,7 +188,8 @@ final class CentreCatalogueSync {
 	 * @throws RuntimeException On download, validation or checksum failure.
 	 */
 	public static function sync( bool $force = false ): array {
-		if ( ! self::acquire_lock() ) {
+		$token = self::acquire_lock();
+		if ( false === $token ) {
 			throw new RuntimeException( 'Hay otra sincronización de centros en curso. Espere a que finalice.' );
 		}
 
@@ -146,8 +197,8 @@ final class CentreCatalogueSync {
 
 		try {
 			$manifest_url = self::manifest_url();
-			if ( '' === $manifest_url ) {
-				throw new RuntimeException( 'URL de manifest de centros no configurada.' );
+			if ( ! self::is_valid_https_url( $manifest_url ) ) {
+				throw new RuntimeException( 'URL de manifest de centros inválida o no utiliza HTTPS.' );
 			}
 
 			// 1. Descargar manifest.json.
@@ -191,16 +242,15 @@ final class CentreCatalogueSync {
 			$remote_count  = isset( $manifest['files']['centros.min.json']['records'] )
 				? (int) $manifest['files']['centros.min.json']['records']
 				: 0;
-			$updated_at    = isset( $manifest['catalogue_updated_at'] )
-				? (string) $manifest['catalogue_updated_at']
-				: current_time( 'mysql' );
+			$updated_at    = isset( $manifest['catalogue_updated_at'] ) && is_scalar( $manifest['catalogue_updated_at'] )
+				? trim( (string) $manifest['catalogue_updated_at'] )
+				: '';
 
 			// 3. Comparar hash: si no ha cambiado y no se fuerza, salir.
 			if ( ! $force && $remote_sha256 === $status['sha256'] && ! empty( $status['sha256'] ) && CentreCatalogue::count() > 0 ) {
 				$status['last_checked_at'] = current_time( 'mysql' );
 				$status['last_error']      = '';
 				update_option( CentreCatalogue::OPTION_STATUS, $status, false );
-				self::release_lock();
 
 				return array(
 					'status'  => 'unchanged',
@@ -212,8 +262,8 @@ final class CentreCatalogueSync {
 
 			// 4. Descargar centros.min.json.
 			$catalogue_url = self::catalogue_url( $manifest_url );
-			if ( '' === $catalogue_url ) {
-				throw new RuntimeException( 'URL del catálogo de centros no configurada.' );
+			if ( ! self::is_valid_https_url( $catalogue_url ) ) {
+				throw new RuntimeException( 'URL del catálogo de centros inválida o no utiliza HTTPS.' );
 			}
 
 			$cat_response = wp_remote_get(
@@ -322,8 +372,6 @@ final class CentreCatalogueSync {
 			);
 			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
 
-			self::release_lock();
-
 			return array(
 				'status'  => 'updated',
 				'sha256'  => $remote_sha256,
@@ -335,8 +383,9 @@ final class CentreCatalogueSync {
 			$status['last_error']      = $e->getMessage();
 			update_option( CentreCatalogue::OPTION_STATUS, $status, false );
 
-			self::release_lock();
 			throw $e;
+		} finally {
+			self::release_lock( $token );
 		}
 	}
 }
