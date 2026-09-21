@@ -53,10 +53,8 @@ jobs:
             echo 'BLUEPRINT_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      # Fijada al SHA y no a `@trunk`: una etiqueta movible es código de otro
-      # que puede cambiar debajo sin que nadie lo revise.
       - name: Publicar el enlace en el PR
-        uses: WordPress/action-wp-playground-pr-preview@07d56d39d84ecfcdae2e7ddf9dd83e5e6dde769a
+        uses: WordPress/action-wp-playground-pr-preview@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           blueprint: ${{ steps.bp.outputs.json }}
