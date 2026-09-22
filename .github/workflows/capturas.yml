@@ -21,6 +21,8 @@ name: Capturas
 on:
   pull_request:
     paths-ignore:
+      - '.agents/skills/**'
+      - '.claude/skills/**'
       - '**.md'
       - 'docs/**'
   workflow_dispatch:

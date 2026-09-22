@@ -5,12 +5,15 @@ on:
   # En los PR corre siempre, también cuando solo cambia documentación: `lint`
   # y `test` son comprobaciones obligatorias de la regla que protege `main`
   # (ADR-0034), y un check que el workflow se salta no se da por pasado: GitHub
-  # se queda esperándolo y el PR no se puede mezclar.
+  # se queda esperándolo y el PR no se puede mezclar. El job `changes` permite
+  # omitir los jobs, sin omitir el workflow, cuando solo cambian skills.
   pull_request:
   push:
     branches:
       - 'main'
     paths-ignore:
+      - '.agents/skills/**'
+      - '.claude/skills/**'
       - '**.md'
       - 'docs/**'
       - '.github/*.md'
@@ -32,7 +35,41 @@ env:
   COMPOSER_NO_AUDIT: 1
 
 jobs:
+  changes:
+    runs-on: ${{ vars.EVT_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.files.outputs.code }}
+    steps:
+      - name: Detectar cambios fuera de las skills
+        id: files
+        uses: actions/github-script@v9
+        with:
+          script: |
+            let runCode = true;
+            if (context.eventName === 'pull_request') {
+              const request = { ...context.repo, pull_number: context.payload.pull_request.number };
+              const { data: before } = await github.rest.pulls.get(request);
+              const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
+              const { data: after } = await github.rest.pulls.get(request);
+              // Una lista incompleta o un PR que cambió durante la consulta no permite omitir CI.
+              const complete = files.length > 0 && files.length === before.changed_files
+                && before.head.sha === context.payload.pull_request.head.sha
+                && after.head.sha === before.head.sha && after.changed_files === before.changed_files;
+              if (complete) {
+                const isSkill = (path) => path.startsWith('.agents/skills/') || path.startsWith('.claude/skills/');
+                runCode = files.some((file) => !isSkill(file.filename)
+                  || (file.previous_filename && !isSkill(file.previous_filename)));
+              }
+            }
+            core.setOutput('code', String(runCode));
+
   lint:
+    needs: changes
+    # Ante un fallo del detector, se ejecuta el código en vez de omitir comprobaciones.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     # Dónde corre lo decide la variable EVT_RUNNER del repositorio: si vale
     # `self-hosted`, los jobs van a un runner propio (la facturación de la
     # organización puede estar bloqueada y entonces GitHub no arranca los
@@ -110,6 +147,9 @@ jobs:
           done
 
   test:
+    needs: changes
+    # Ante un fallo del detector, se ejecuta el código en vez de omitir comprobaciones.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     # Ver el comentario de EVT_RUNNER en el job `lint`.
     runs-on: ${{ vars.EVT_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
