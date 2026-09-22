@@ -16,6 +16,9 @@ name: Playground
 
 on:
   pull_request:
+    paths-ignore:
+      - '.agents/skills/**'
+      - '.claude/skills/**'
     types: [ opened, synchronize, reopened ]
 
 # Lo mínimo para editar la descripción del PR y dejar su comentario.

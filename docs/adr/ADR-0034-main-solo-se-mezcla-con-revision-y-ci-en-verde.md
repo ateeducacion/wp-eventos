@@ -152,3 +152,24 @@ Y `ci.yml` corre en **todos** los PR, también en los de solo documentación.
   regla; `AGENTS.md` lo deja apuntado.
 - El resto de workflows —PHPMD, capturas, Playground, CodeQL— siguen siendo
   informativos: se ven en el PR, no lo bloquean.
+
+
+## Adenda — 2026-09-22: actualizaciones de skills
+
+A petición del propietario, los cambios limitados a `.agents/skills/` y
+`.claude/skills/` no ejecutan lint, tests, PHPMD, capturas ni previews. El
+workflow de CI sigue respondiendo a todos los PR para conservar los checks
+obligatorios `lint` y `test`; un job mínimo consulta todos los archivos del PR
+y omite ambos jobs únicamente si la lista completa contiene solo skills.
+GitHub acepta los jobs omitidos por una condición como checks completados,
+a diferencia de un workflow que nunca se inicia por un filtro de rutas.
+
+Los cambios mixtos siguen ejecutando las comprobaciones. Se consideran también
+los nombres anteriores de archivos renombrados; si falla la consulta, está
+incompleta o el PR cambia mientras se consulta, no se permite omitir el código.
+Los filtros de los workflows informativos y del push conservan sus exclusiones
+previas. La revisión humana y la regla de rama siguen vigentes.
+
+Referencias: `.github/workflows/ci.yml` y
+[GitHub: comprobaciones obligatorias omitidas](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks).
+Asistencia de IA: Codex (GPT-6).
