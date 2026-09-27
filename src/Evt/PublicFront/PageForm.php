@@ -389,6 +389,14 @@ final class PageForm {
 		if ( $page_id > 0 ) {
 			$m['status'] = (string) get_post_status( $page_id );
 			$m['values'] = self::stored_values( $page_id );
+		} else {
+			// El tipo se elige en «Añadir sección» y llega en la dirección: no se
+			// vuelve a preguntar. Solo si es uno de la lista cerrada.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige qué se pinta; el envío revalida nonce y permisos.
+			$tipo = isset( $_GET[ EventWorkspace::ARG_TYPE ] ) ? sanitize_key( wp_unslash( $_GET[ EventWorkspace::ARG_TYPE ] ) ) : '';
+			if ( isset( EventMetaKeys::section_types()[ $tipo ] ) ) {
+				$m['values']['section_type'] = $tipo;
+			}
 		}
 
 		// Lo que se acaba de teclear manda sobre lo guardado: al corregir, la

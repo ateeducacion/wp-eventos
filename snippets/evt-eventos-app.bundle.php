@@ -16464,6 +16464,14 @@ final class PageForm {
 		if ( $page_id > 0 ) {
 			$m['status'] = (string) get_post_status( $page_id );
 			$m['values'] = self::stored_values( $page_id );
+		} else {
+
+
+
+			$tipo = isset( $_GET[ EventWorkspace::ARG_TYPE ] ) ? sanitize_key( wp_unslash( $_GET[ EventWorkspace::ARG_TYPE ] ) ) : '';
+			if ( isset( EventMetaKeys::section_types()[ $tipo ] ) ) {
+				$m['values']['section_type'] = $tipo;
+			}
 		}
 
 
