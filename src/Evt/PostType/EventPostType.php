@@ -355,4 +355,16 @@ final class EventPostType {
 	public static function admin_only_code_caps(): array {
 		return array( EventAccess::CAP_CUSTOM_JS );
 	}
+
+	/**
+	 * Whether this post is an event itself, and not one of its pages.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	public static function is_root( int $post_id ): bool {
+		return $post_id > 0
+			&& self::POST_TYPE === get_post_type( $post_id )
+			&& 0 === (int) get_post_field( 'post_parent', $post_id );
+	}
 }

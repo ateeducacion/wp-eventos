@@ -117,7 +117,7 @@ final class PageForm {
 		$page_id  = self::int_of( $raw, 'evt_page_id' );
 		$event_id = self::target_event( $raw, $page_id );
 
-		if ( ! self::is_event_root( $event_id ) ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			self::$rejected['message'] = 'No se sabe de qué evento cuelga esta sección. Ábrala desde su evento.';
 			return;
 		}
@@ -354,13 +354,13 @@ final class PageForm {
 		$user_id = get_current_user_id();
 		$page_id = self::query_id( 'seccion' );
 
-		if ( $page_id > 0 && self::is_event_root( $page_id ) ) {
+		if ( $page_id > 0 && EventPostType::is_root( $page_id ) ) {
 			$m['aviso'] = 'Eso es la portada del evento, no una de sus secciones: se edita en el taller del evento.';
 			return $m;
 		}
 
 		$event_id = $page_id > 0 ? self::parent_of( $page_id ) : self::query_id( 'evento' );
-		if ( ! self::is_event_root( $event_id ) ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			$m['aviso'] = 'Abra la sección desde el evento al que pertenece: así se sabe de cuál cuelga.';
 			return $m;
 		}
@@ -624,18 +624,5 @@ final class PageForm {
 			return 0;
 		}
 		return (int) get_post_field( 'post_parent', $page_id );
-	}
-
-	/**
-	 * Whether this post is an event itself, and not one of its pages.
-	 *
-	 * @param int $post_id Post ID.
-	 * @return bool
-	 */
-	private static function is_event_root( int $post_id ): bool {
-		if ( $post_id <= 0 || EventPostType::POST_TYPE !== get_post_type( $post_id ) ) {
-			return false;
-		}
-		return 0 === (int) get_post_field( 'post_parent', $post_id );
 	}
 }

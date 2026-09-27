@@ -868,33 +868,6 @@ final class ProgrammeMetaKeys {
 
 
 
-	public static function speaker_keys(): array {
-		return array( self::SPEAKER_ROLE, self::SPEAKER_ORG );
-	}
-
-
-
-
-
-
-	public static function activity_keys(): array {
-		return array(
-			self::ACTIVITY_KIND,
-			self::ACTIVITY_DATE,
-			self::ACTIVITY_START,
-			self::ACTIVITY_END,
-			self::ACTIVITY_VENUE,
-			self::ACTIVITY_ROOM,
-			self::ACTIVITY_SEATS,
-			self::ACTIVITY_SPEAKERS,
-		);
-	}
-
-
-
-
-
-
 
 
 
@@ -3493,6 +3466,18 @@ final class EventPostType {
 	public static function admin_only_code_caps(): array {
 		return array( EventAccess::CAP_CUSTOM_JS );
 	}
+
+
+
+
+
+
+
+	public static function is_root( int $post_id ): bool {
+		return $post_id > 0
+			&& self::POST_TYPE === get_post_type( $post_id )
+			&& 0 === (int) get_post_field( 'post_parent', $post_id );
+	}
 }
 
 
@@ -4784,10 +4769,7 @@ final class EventTaxonomies {
 		if ( ! is_array( $terms ) ) {
 			return array();
 		}
-		$names = array();
-		foreach ( $terms as $term ) {
-			$names[ (int) $term->term_id ] = $term->name;
-		}
+		$names   = wp_list_pluck( $terms, 'name', 'term_id' );
 		$options = array();
 		foreach ( $terms as $term ) {
 			$id = (int) $term->term_id;
@@ -6742,6 +6724,17 @@ use Evt\Taxonomy\EventTaxonomies;
 
 final class EventList {
 
+
+
+
+
+
+	private const AXES = array(
+		'area'   => 'areas',
+		'type'   => 'types',
+		'course' => 'courses',
+	);
+
 	public const SHORTCODE = 'evt_event_list';
 
 
@@ -6924,8 +6917,7 @@ final class EventList {
 		$user_id  = get_current_user_id();
 		$publicar = 'publish' === $op;
 
-		if ( EventPostType::POST_TYPE !== get_post_type( $event_id )
-			|| 0 !== (int) get_post_field( 'post_parent', $event_id )
+		if ( ! EventPostType::is_root( $event_id )
 			|| 'trash' === get_post_status( $event_id )
 			|| ! EventAccess::can_publish( $user_id, $event_id )
 			|| ! EventAccess::can_edit( $user_id, $event_id ) ) {
@@ -6967,8 +6959,7 @@ final class EventList {
 
 	private static function may_restore( int $user_id, int $post_id ): bool {
 		return 'trash' === get_post_status( $post_id )
-			&& EventPostType::POST_TYPE === get_post_type( $post_id )
-			&& 0 === (int) get_post_field( 'post_parent', $post_id )
+			&& EventPostType::is_root( $post_id )
 			&& EventAccess::can_edit( $user_id, $post_id );
 	}
 
@@ -7471,17 +7462,7 @@ final class EventList {
 
 	private static function terms( int $post_id, string $taxonomy ): array {
 		$terms = get_the_terms( $post_id, $taxonomy );
-		if ( ! is_array( $terms ) ) {
-			return array();
-		}
-
-		$out = array();
-		foreach ( $terms as $term ) {
-			if ( $term instanceof \WP_Term ) {
-				$out[ (int) $term->term_id ] = (string) $term->name;
-			}
-		}
-		return $out;
+		return is_array( $terms ) ? wp_list_pluck( $terms, 'name', 'term_id' ) : array();
 	}
 
 
@@ -7494,19 +7475,13 @@ final class EventList {
 
 
 	private static function options( array $rows ): array {
-		$out  = array(
+		$out = array(
 			'area'   => array(),
 			'type'   => array(),
 			'course' => array(),
 		);
-		$ejes = array(
-			'area'   => 'areas',
-			'type'   => 'types',
-			'course' => 'courses',
-		);
-
 		foreach ( $rows as $row ) {
-			foreach ( $ejes as $eje => $clave ) {
+			foreach ( self::AXES as $eje => $clave ) {
 				foreach ( $row[ $clave ] as $term_id => $nombre ) {
 					$out[ $eje ][ $term_id ] = $nombre;
 				}
@@ -7529,13 +7504,7 @@ final class EventList {
 
 
 	private static function in_scope( array $row, array $s ): bool {
-		$ejes = array(
-			'area'   => 'areas',
-			'type'   => 'types',
-			'course' => 'courses',
-		);
-
-		foreach ( $ejes as $eje => $clave ) {
+		foreach ( self::AXES as $eje => $clave ) {
 			if ( $s[ $eje ] > 0 && ! isset( $row[ $clave ][ $s[ $eje ] ] ) ) {
 				return false;
 			}
@@ -8372,14 +8341,26 @@ final class Programme {
 
 
 
-
-
-
-
 	public static function reorder_speaker( int $event_id, int $speaker_id, int $delta ): bool {
-		$ids   = wp_list_pluck( self::speakers( $event_id ), 'ID' );
-		$ids   = array_map( 'intval', $ids );
-		$desde = array_search( $speaker_id, $ids, true );
+		return self::move( wp_list_pluck( self::speakers( $event_id ), 'ID' ), $speaker_id, $delta );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function move( array $ids, int $id, int $delta ): bool {
+		$ids   = array_map( 'intval', array_values( $ids ) );
+		$desde = array_search( $id, $ids, true );
 		if ( false === $desde ) {
 			return false;
 		}
@@ -8388,14 +8369,13 @@ final class Programme {
 			return false;
 		}
 
-		$movido        = $ids[ $desde ];
 		$ids[ $desde ] = $ids[ $hasta ];
-		$ids[ $hasta ] = $movido;
+		$ids[ $hasta ] = $id;
 
-		foreach ( $ids as $posicion => $id ) {
+		foreach ( $ids as $posicion => $fila ) {
 			wp_update_post(
 				array(
-					'ID'         => $id,
+					'ID'         => $fila,
 					'menu_order' => ( $posicion + 1 ) * 10,
 				)
 			);
@@ -10782,19 +10762,11 @@ final class EventWorkspace {
 		self::PANEL_CODE,
 		self::OP_ARCHIVE,
 		self::OP_UNARCHIVE,
-		'up',
-		'down',
-		'publish',
-		'unpublish',
-		'delete',
-		'restore',
 		self::OP_SPEAKER,
 		self::OP_ACTIVITY,
 		self::OP_EXPORT,
-		'sp_up',
-		'sp_down',
-		'row_delete',
-		'row_restore',
+		...self::ROW_OPS,
+		...self::PROGRAMME_OPS,
 	);
 
 
@@ -11165,8 +11137,7 @@ final class EventWorkspace {
 			Shell::leave( $destino );
 			return;
 		}
-		if ( EventPostType::POST_TYPE !== get_post_type( $event_id )
-			|| (int) get_post_field( 'post_parent', $event_id ) > 0 ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			self::set_flash( 'error', 'Eso no es un evento: la marca de histórico se pone en el evento entero, no en una de sus páginas.' );
 			Shell::leave( $destino );
 			return;
@@ -11261,34 +11232,8 @@ final class EventWorkspace {
 
 
 
-
-
-
-
-
 	private static function reorder( int $event_id, int $section_id, int $delta ): void {
-		$ids   = array_map( 'intval', wp_list_pluck( self::children( $event_id ), 'ID' ) );
-		$desde = array_search( $section_id, $ids, true );
-		if ( false === $desde ) {
-			return;
-		}
-		$hasta = (int) $desde + $delta;
-		if ( $hasta < 0 || $hasta >= count( $ids ) ) {
-			return;
-		}
-
-		$movida        = $ids[ $desde ];
-		$ids[ $desde ] = $ids[ $hasta ];
-		$ids[ $hasta ] = $movida;
-
-		foreach ( $ids as $posicion => $id ) {
-			wp_update_post(
-				array(
-					'ID'         => $id,
-					'menu_order' => ( $posicion + 1 ) * 10,
-				)
-			);
-		}
+		Programme::move( wp_list_pluck( self::children( $event_id ), 'ID' ), $section_id, $delta );
 	}
 
 
@@ -11999,12 +11944,6 @@ final class EventWorkspace {
 
 
 
-
-
-
-
-
-
 	private static function fill_signup( array $m, int $event_id ): array {
 		$m['questions'] = Registrations::questions( $event_id );
 
@@ -12653,12 +12592,9 @@ final class EventWorkspace {
 
 
 	private static function term_lists( int $user_id ): array {
-		$solo = EventAccess::can_edit_all_areas( $user_id )
-			? array()
-			: EventAccess::scope_areas( $user_id );
-
 		return array(
-			'area'   => self::term_options( EventTaxonomies::AREA, $solo ),
+
+			'area'   => EventTaxonomies::area_options( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
@@ -12670,11 +12606,7 @@ final class EventWorkspace {
 
 
 
-
-	private static function term_options( string $taxonomy, array $solo = array() ): array {
-		if ( EventTaxonomies::AREA === $taxonomy ) {
-			return EventTaxonomies::area_options();
-		}
+	private static function term_options( string $taxonomy ): array {
 		$terms = get_terms(
 			array(
 				'taxonomy'   => $taxonomy,
@@ -12682,10 +12614,7 @@ final class EventWorkspace {
 				'fields'     => 'id=>name',
 			)
 		);
-		if ( ! is_array( $terms ) ) {
-			return array();
-		}
-		return array() === $solo ? $terms : array_intersect_key( $terms, array_flip( $solo ) );
+		return is_array( $terms ) ? $terms : array();
 	}
 
 
@@ -12821,7 +12750,8 @@ final class PanelParts {
 
 
 
-	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '' ): string {
+
+	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '', string $id_field = EventWorkspace::FIELD_ROW ): string {
 		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
 
 		ob_start();
@@ -12830,8 +12760,10 @@ final class PanelParts {
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::ARG_PANEL ); ?>" value="<?php echo esc_attr( $panel ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( $id_field ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<?php if ( '' !== $panel ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( EventWorkspace::ARG_PANEL ); ?>" value="<?php echo esc_attr( $panel ); ?>" />
+			<?php endif; ?>
 			<button type="submit" class="<?php echo esc_attr( $clases . ' evt-icono' ); ?>"
 				title="<?php echo esc_attr( $titulo ); ?>" data-bs-toggle="tooltip"
 				<?php disabled( $apagado, true ); ?>>
@@ -14177,25 +14109,6 @@ final class EventSectionsPanel {
 
 
 
-	private const SVG = array(
-		'svg'  => array(
-			'viewbox'     => true,
-			'width'       => true,
-			'height'      => true,
-			'aria-hidden' => true,
-			'focusable'   => true,
-		),
-		'path' => array(
-			'fill' => true,
-			'd'    => true,
-		),
-	);
-
-
-
-
-
-
 
 
 
@@ -14356,7 +14269,7 @@ final class EventSectionsPanel {
 								<td data-rotulo="Acciones">
 									<span class="evt-acciones">
 										<?php
-										$boton = self::action_form( $m, (int) $fila['id'], 'restore', 'Restaurar', 'Restaurar la sección, en borrador', $clases );
+										$boton = self::action_form( $m, (int) $fila['id'], 'restore', 'restaurar', 'Restaurar la sección, en borrador', $clases );
 										echo $boton; 
 										?>
 									</span>
@@ -14512,24 +14425,8 @@ final class EventSectionsPanel {
 
 
 	private static function action_form( array $m, int $id, string $op, string $icono, string $titulo, string $clases, bool $apagado = false, string $confirmar = '' ): string {
-		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
 
-		ob_start();
-		?>
-		<form class="evt-accion" method="post" action=""<?php echo $pregunta; ?>>
-			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_SECTION ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<button type="submit" class="<?php echo esc_attr( $clases . ' evt-icono' ); ?>"
-				title="<?php echo esc_attr( $titulo ); ?>" data-bs-toggle="tooltip"
-				<?php disabled( $apagado, true ); ?>>
-				<?php echo wp_kses( Shell::icon( $icono ), self::SVG ); ?>
-				<span class="screen-reader-text"><?php echo esc_html( $titulo ); ?></span>
-			</button>
-		</form>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::action( $m, $id, $op, $icono, $titulo, $clases, '', $apagado, $confirmar, EventWorkspace::FIELD_SECTION );
 	}
 
 
@@ -15889,7 +15786,7 @@ final class PageForm {
 		$page_id  = self::int_of( $raw, 'evt_page_id' );
 		$event_id = self::target_event( $raw, $page_id );
 
-		if ( ! self::is_event_root( $event_id ) ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			self::$rejected['message'] = 'No se sabe de qué evento cuelga esta sección. Ábrala desde su evento.';
 			return;
 		}
@@ -16126,13 +16023,13 @@ final class PageForm {
 		$user_id = get_current_user_id();
 		$page_id = self::query_id( 'seccion' );
 
-		if ( $page_id > 0 && self::is_event_root( $page_id ) ) {
+		if ( $page_id > 0 && EventPostType::is_root( $page_id ) ) {
 			$m['aviso'] = 'Eso es la portada del evento, no una de sus secciones: se edita en el taller del evento.';
 			return $m;
 		}
 
 		$event_id = $page_id > 0 ? self::parent_of( $page_id ) : self::query_id( 'evento' );
-		if ( ! self::is_event_root( $event_id ) ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			$m['aviso'] = 'Abra la sección desde el evento al que pertenece: así se sabe de cuál cuelga.';
 			return $m;
 		}
@@ -16396,19 +16293,6 @@ final class PageForm {
 			return 0;
 		}
 		return (int) get_post_field( 'post_parent', $page_id );
-	}
-
-
-
-
-
-
-
-	private static function is_event_root( int $post_id ): bool {
-		if ( $post_id <= 0 || EventPostType::POST_TYPE !== get_post_type( $post_id ) ) {
-			return false;
-		}
-		return 0 === (int) get_post_field( 'post_parent', $post_id );
 	}
 }
 

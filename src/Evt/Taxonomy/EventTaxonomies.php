@@ -118,10 +118,7 @@ final class EventTaxonomies {
 		if ( ! is_array( $terms ) ) {
 			return array();
 		}
-		$names = array();
-		foreach ( $terms as $term ) {
-			$names[ (int) $term->term_id ] = $term->name;
-		}
+		$names   = wp_list_pluck( $terms, 'name', 'term_id' );
 		$options = array();
 		foreach ( $terms as $term ) {
 			$id = (int) $term->term_id;

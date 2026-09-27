@@ -256,19 +256,31 @@ final class Programme {
 	/**
 	 * Move a speaker one place up or down.
 	 *
-	 * Se renumera la lista entera por el mismo motivo que en las secciones:
-	 * intercambiar dos `menu_order` no mueve nada cuando varias fichas
-	 * comparten número, que es lo que pasa en cuanto se crean seguidas.
-	 *
 	 * @param int $event_id   Event post ID.
 	 * @param int $speaker_id Speaker to move.
 	 * @param int $delta      -1 up, 1 down.
 	 * @return bool
 	 */
 	public static function reorder_speaker( int $event_id, int $speaker_id, int $delta ): bool {
-		$ids   = wp_list_pluck( self::speakers( $event_id ), 'ID' );
-		$ids   = array_map( 'intval', $ids );
-		$desde = array_search( $speaker_id, $ids, true );
+		return self::move( wp_list_pluck( self::speakers( $event_id ), 'ID' ), $speaker_id, $delta );
+	}
+
+	/**
+	 * Move one post of an ordered list one place, renumbering the whole list.
+	 *
+	 * Se renumera la lista entera en vez de intercambiar dos `menu_order`:
+	 * intercambiar no mueve nada cuando varias filas comparten número, que es
+	 * lo que traen las páginas heredadas del sistema anterior y lo que pasa con
+	 * las fichas en cuanto se crean seguidas. Son un puñado de filas.
+	 *
+	 * @param array<int, int|string> $ids   Post IDs in their current order.
+	 * @param int                    $id    Post to move.
+	 * @param int                    $delta -1 up, 1 down.
+	 * @return bool False when it is not in the list or is already at the edge.
+	 */
+	public static function move( array $ids, int $id, int $delta ): bool {
+		$ids   = array_map( 'intval', array_values( $ids ) );
+		$desde = array_search( $id, $ids, true );
 		if ( false === $desde ) {
 			return false;
 		}
@@ -277,14 +289,13 @@ final class Programme {
 			return false;
 		}
 
-		$movido        = $ids[ $desde ];
 		$ids[ $desde ] = $ids[ $hasta ];
-		$ids[ $hasta ] = $movido;
+		$ids[ $hasta ] = $id;
 
-		foreach ( $ids as $posicion => $id ) {
+		foreach ( $ids as $posicion => $fila ) {
 			wp_update_post(
 				array(
-					'ID'         => $id,
+					'ID'         => $fila,
 					'menu_order' => ( $posicion + 1 ) * 10,
 				)
 			);

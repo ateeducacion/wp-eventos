@@ -86,33 +86,6 @@ final class ProgrammeMetaKeys {
 	public const KIND_WORKSHOP = 'taller';
 
 	/**
-	 * All meta keys stored on a speaker.
-	 *
-	 * @return string[]
-	 */
-	public static function speaker_keys(): array {
-		return array( self::SPEAKER_ROLE, self::SPEAKER_ORG );
-	}
-
-	/**
-	 * All meta keys stored on an activity.
-	 *
-	 * @return string[]
-	 */
-	public static function activity_keys(): array {
-		return array(
-			self::ACTIVITY_KIND,
-			self::ACTIVITY_DATE,
-			self::ACTIVITY_START,
-			self::ACTIVITY_END,
-			self::ACTIVITY_VENUE,
-			self::ACTIVITY_ROOM,
-			self::ACTIVITY_SEATS,
-			self::ACTIVITY_SPEAKERS,
-		);
-	}
-
-	/**
 	 * Closed vocabulary of activity kinds.
 	 *
 	 * En código y no en taxonomía, por la misma lección que los tipos de

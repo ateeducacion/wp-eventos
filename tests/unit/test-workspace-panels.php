@@ -283,6 +283,22 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		}
 	}
 
+	/**
+	 * El botón «Restaurar» de la papelera de secciones lleva su icono.
+	 */
+	public function test_the_section_restore_button_has_its_icon() {
+		$evento  = $this->evento();
+		$seccion = $this->event_page( $evento );
+		wp_trash_post( $seccion );
+		$_GET[ EventWorkspace::ARG_TRASH ] = '1';
+
+		$html = $this->pintar( $evento, EventWorkspace::PANEL_SECTIONS );
+		unset( $_GET[ EventWorkspace::ARG_TRASH ] );
+
+		$this->assertStringContainsString( 'M12 5a7 7 0 1 1-6.7 9h2.2', $html );
+		$this->assertStringContainsString( 'name="' . EventWorkspace::FIELD_SECTION . '" value="' . $seccion . '"', $html );
+	}
+
 	// ─── Participantes ─────────────────────────────────────────────────────
 
 	/**
