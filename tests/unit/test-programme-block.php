@@ -225,6 +225,81 @@ class Test_Programme_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La página de actividades las lista, y con `/entry/<N>/` enseña una entera.
+	 */
+	public function test_the_activities_page_lists_them_and_opens_one() {
+		$ponente   = $this->ponente();
+		$actividad = $this->actividad(
+			array(
+				'speakers' => array( $ponente ),
+				'summary'  => 'Una descripción entera que en la lista va recortada.',
+				'video'    => 'https://example.org/grabacion.mp4',
+			)
+		);
+		$this->actividad(
+			array(
+				'title' => 'Sin fecha',
+				'date'  => '',
+			)
+		);
+		$pagina = $this->event_page( $this->evento, 'actividades' );
+		$fichas = $this->event_page( $this->evento, 'ponentes' );
+
+		$html = ProgrammeBlock::html( $this->modelo( $pagina ) );
+		$this->assertStringContainsString( 'Aulas del futuro', $html );
+		$this->assertStringContainsString( '(Asesora)', $html, 'en la lista, cada ponente con su cargo' );
+		$this->assertStringContainsString( esc_url( EventPostType::entry_url( $fichas, $ponente ) ), $html );
+
+		set_query_var( EventPostType::ENTRY_VAR, $actividad );
+		$ficha = ProgrammeBlock::html( $this->modelo( $pagina ) );
+		$this->assertStringContainsString( 'evt-ev__ficha--actividad', $ficha );
+		$this->assertStringContainsString( '<video', $ficha, 'un mp4 se reproduce aquí mismo' );
+		$this->assertStringContainsString( 'Volver', $ficha );
+
+		// La ficha del ponente dice en qué participa.
+		set_query_var( EventPostType::ENTRY_VAR, $ponente );
+		$this->assertStringContainsString( 'Participa en', ProgrammeBlock::html( $this->modelo( $fichas ) ) );
+	}
+
+	/**
+	 * Sin página de actividades, las fichas cuelgan del programa; y el vídeo se enseña como se puede.
+	 */
+	public function test_without_an_activities_page_entries_hang_from_the_programme() {
+		$actividad = $this->actividad( array( 'video' => 'https://example.org/podcast.mp3' ) );
+		$this->actividad(
+			array(
+				'title' => 'Otra',
+				'video' => 'https://example.org/no-es-un-video',
+			)
+		);
+		$programa = $this->event_page( $this->evento, 'programa' );
+		$media    = $this->event_page( $this->evento, 'multimedia' );
+
+		$this->assertStringContainsString( esc_url( EventPostType::entry_url( $programa, $actividad ) ), ProgrammeBlock::html( $this->modelo( $programa ) ) );
+
+		add_filter( 'pre_oembed_result', '__return_false' );
+		$html = ProgrammeBlock::html( $this->modelo( $media ) );
+		remove_filter( 'pre_oembed_result', '__return_false' );
+		$this->assertStringContainsString( '<audio', $html );
+		$this->assertStringContainsString( 'Ver el vídeo', $html, 'lo que no se sabe incrustar, como enlace' );
+
+		set_query_var( EventPostType::ENTRY_VAR, $actividad );
+		$this->assertStringContainsString( 'evt-ev__ficha--actividad', ProgrammeBlock::html( $this->modelo( $media ) ) );
+	}
+
+	/**
+	 * Lo que no es una sección con datos, o no hay datos, no pinta nada.
+	 */
+	public function test_nothing_to_paint_paints_nothing() {
+		$this->assertSame( '', ProgrammeBlock::html( $this->modelo( $this->event_page( $this->evento, 'contacto' ) ) ) );
+		foreach ( array( 'ponentes', 'programa', 'actividades', 'multimedia' ) as $tipo ) {
+			$this->assertSame( '', ProgrammeBlock::html( $this->modelo( $this->event_page( $this->evento, $tipo ) ) ), $tipo );
+		}
+		$this->assertSame( '', ProgrammeBlock::featured( $this->modelo( $this->evento ) ), 'sin destacados, sin bloque' );
+		$this->assertSame( '', ProgrammeBlock::featured( EventView::model( 0 ) ) );
+	}
+
+	/**
 	 * Un borrador no sale en la web.
 	 */
 	public function test_drafts_are_not_public() {
