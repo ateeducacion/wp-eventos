@@ -15048,7 +15048,8 @@ final class EventSectionsPanel {
 						. PanelParts::icon_link(
 							(string) $fila['view_url'],
 							'ojo',
-							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador'
+							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador',
+							'evt-abre-vista'
 						);
 					echo $acciones; 
 					?>
@@ -16197,7 +16198,10 @@ final class EventWorkspaceView {
 				<p class="evt-sub"><?php echo esc_html( implode( ' · ', $lugar ) ); ?></p>
 			</div>
 			<?php if ( '' !== (string) $m['view_url'] ) : ?>
-				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?> evt-abre-vista" href="<?php echo esc_url( (string) $m['view_url'] ); ?>">
+					<?php echo wp_kses( Shell::icon( 'ojo' ), PanelParts::SVG ); ?>
+					<?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?>
+				</a>
 			<?php endif; ?>
 		</header>
 		<?php
@@ -22086,8 +22090,11 @@ body:has(.evt-cajon) { overflow: hidden; }
   line-height: 1.4;
 }
 
-/* La edición de una página, en el panel lateral: más ancho, con un marco. */
-.evt-cajon.evt-cajon--ancho { width: min(1200px, 94vw); }
+/* La edición de una página y la vista previa, en el panel lateral, con un marco. */
+.evt-cajon.evt-cajon--pagina { width: min(860px, 100%); }
+/* La vista previa sí es ancha: es la página pública, para navegarla. */
+.evt-cajon.evt-cajon--vista { width: min(1400px, 96vw); }
+.evt-cajon__fuera { margin-left: auto; margin-right: 12px; font-size: 14px; }
 .evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
 body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 
@@ -23681,22 +23688,30 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 	 * pestaña, que así enseña lo que se haya guardado. Sin guion, el enlace y
 	 * el formulario abren la pantalla entera, como siempre.
 	 */
-	function abrirMarco( url, titulo ) {
+	function abrirMarco( url, titulo, vista ) {
 		var direccion = new URL( url, window.location.href );
 		if ( direccion.origin !== window.location.origin ) {
 			return false;
 		}
-		direccion.searchParams.set( \'evt_marco\', \'1\' );
+		// La vista previa es la página pública tal cual, para navegarla; la
+		// edición, la pantalla del aplicativo sin cabecera ni pie.
+		if ( ! vista ) {
+			direccion.searchParams.set( \'evt_marco\', \'1\' );
+		}
 
 		var fondo = document.createElement( \'div\' );
 		fondo.className = \'evt-cajon-fondo\';
 		var cajon = document.createElement( \'section\' );
-		cajon.className = \'evt-cajon evt-cajon--ancho\';
+		cajon.className = vista ? \'evt-cajon evt-cajon--vista\' : \'evt-cajon evt-cajon--pagina\';
 		cajon.setAttribute( \'role\', \'dialog\' );
 		cajon.setAttribute( \'aria-modal\', \'true\' );
 		cajon.setAttribute( \'aria-label\', titulo );
 		cajon.setAttribute( \'data-evt-cajon\', \'\' );
-		cajon.setAttribute( \'data-evt-cajon-edita\', \'\' );
+		// Cerrar la edición recarga la pestaña para enseñar lo guardado;
+		// cerrar la vista previa no toca nada de lo que se estaba haciendo.
+		if ( ! vista ) {
+			cajon.setAttribute( \'data-evt-cajon-edita\', \'\' );
+		}
 
 		var cabecera = document.createElement( \'header\' );
 		cabecera.className = \'evt-cajon__cabecera\';
@@ -23711,6 +23726,15 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 		cerrar.textContent = \'×\';
 		fondo.setAttribute( \'data-evt-cerrar-cajon\', \'\' );
 		cabecera.appendChild( h2 );
+		if ( vista ) {
+			var fuera = document.createElement( \'a\' );
+			fuera.className = \'evt-cajon__fuera\';
+			fuera.href = direccion.toString();
+			fuera.target = \'_blank\';
+			fuera.rel = \'noopener\';
+			fuera.textContent = \'Abrir en otra pestaña\';
+			cabecera.appendChild( fuera );
+		}
 		cabecera.appendChild( cerrar );
 
 		var marco = document.createElement( \'iframe\' );
@@ -23731,8 +23755,16 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 	}
 
 	document.addEventListener( \'click\', function ( e ) {
-		var enlace = e.target.closest ? e.target.closest( \'a.evt-abre-marco\' ) : null;
-		if ( enlace && ! e.metaKey && ! e.ctrlKey && abrirMarco( enlace.href, \'Editar la página\' ) ) {
+		if ( e.metaKey || e.ctrlKey || e.shiftKey || ! e.target.closest ) {
+			return;
+		}
+		var enlace = e.target.closest( \'a.evt-abre-marco\' );
+		if ( enlace && abrirMarco( enlace.href, \'Editar la página\', false ) ) {
+			e.preventDefault();
+			return;
+		}
+		var ver = e.target.closest( \'a.evt-abre-vista\' );
+		if ( ver && abrirMarco( ver.href, \'Así se ve la página\', true ) ) {
 			e.preventDefault();
 		}
 	} );
@@ -23746,7 +23778,7 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 		new FormData( form ).forEach( function ( valor, clave ) {
 			url.searchParams.set( clave, valor );
 		} );
-		if ( abrirMarco( url.toString(), \'Nueva página\' ) ) {
+		if ( abrirMarco( url.toString(), \'Nueva página\', false ) ) {
 			e.preventDefault();
 		}
 	} );

@@ -812,22 +812,30 @@
 	 * pestaña, que así enseña lo que se haya guardado. Sin guion, el enlace y
 	 * el formulario abren la pantalla entera, como siempre.
 	 */
-	function abrirMarco( url, titulo ) {
+	function abrirMarco( url, titulo, vista ) {
 		var direccion = new URL( url, window.location.href );
 		if ( direccion.origin !== window.location.origin ) {
 			return false;
 		}
-		direccion.searchParams.set( 'evt_marco', '1' );
+		// La vista previa es la página pública tal cual, para navegarla; la
+		// edición, la pantalla del aplicativo sin cabecera ni pie.
+		if ( ! vista ) {
+			direccion.searchParams.set( 'evt_marco', '1' );
+		}
 
 		var fondo = document.createElement( 'div' );
 		fondo.className = 'evt-cajon-fondo';
 		var cajon = document.createElement( 'section' );
-		cajon.className = 'evt-cajon evt-cajon--ancho';
+		cajon.className = vista ? 'evt-cajon evt-cajon--vista' : 'evt-cajon evt-cajon--pagina';
 		cajon.setAttribute( 'role', 'dialog' );
 		cajon.setAttribute( 'aria-modal', 'true' );
 		cajon.setAttribute( 'aria-label', titulo );
 		cajon.setAttribute( 'data-evt-cajon', '' );
-		cajon.setAttribute( 'data-evt-cajon-edita', '' );
+		// Cerrar la edición recarga la pestaña para enseñar lo guardado;
+		// cerrar la vista previa no toca nada de lo que se estaba haciendo.
+		if ( ! vista ) {
+			cajon.setAttribute( 'data-evt-cajon-edita', '' );
+		}
 
 		var cabecera = document.createElement( 'header' );
 		cabecera.className = 'evt-cajon__cabecera';
@@ -842,6 +850,15 @@
 		cerrar.textContent = '×';
 		fondo.setAttribute( 'data-evt-cerrar-cajon', '' );
 		cabecera.appendChild( h2 );
+		if ( vista ) {
+			var fuera = document.createElement( 'a' );
+			fuera.className = 'evt-cajon__fuera';
+			fuera.href = direccion.toString();
+			fuera.target = '_blank';
+			fuera.rel = 'noopener';
+			fuera.textContent = 'Abrir en otra pestaña';
+			cabecera.appendChild( fuera );
+		}
 		cabecera.appendChild( cerrar );
 
 		var marco = document.createElement( 'iframe' );
@@ -862,8 +879,16 @@
 	}
 
 	document.addEventListener( 'click', function ( e ) {
-		var enlace = e.target.closest ? e.target.closest( 'a.evt-abre-marco' ) : null;
-		if ( enlace && ! e.metaKey && ! e.ctrlKey && abrirMarco( enlace.href, 'Editar la página' ) ) {
+		if ( e.metaKey || e.ctrlKey || e.shiftKey || ! e.target.closest ) {
+			return;
+		}
+		var enlace = e.target.closest( 'a.evt-abre-marco' );
+		if ( enlace && abrirMarco( enlace.href, 'Editar la página', false ) ) {
+			e.preventDefault();
+			return;
+		}
+		var ver = e.target.closest( 'a.evt-abre-vista' );
+		if ( ver && abrirMarco( ver.href, 'Así se ve la página', true ) ) {
 			e.preventDefault();
 		}
 	} );
@@ -877,7 +902,7 @@
 		new FormData( form ).forEach( function ( valor, clave ) {
 			url.searchParams.set( clave, valor );
 		} );
-		if ( abrirMarco( url.toString(), 'Nueva página' ) ) {
+		if ( abrirMarco( url.toString(), 'Nueva página', false ) ) {
 			e.preventDefault();
 		}
 	} );

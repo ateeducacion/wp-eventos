@@ -256,7 +256,10 @@ final class EventWorkspaceView {
 				<p class="evt-sub"><?php echo esc_html( implode( ' · ', $lugar ) ); ?></p>
 			</div>
 			<?php if ( '' !== (string) $m['view_url'] ) : ?>
-				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?> evt-abre-vista" href="<?php echo esc_url( (string) $m['view_url'] ); ?>">
+					<?php echo wp_kses( Shell::icon( 'ojo' ), PanelParts::SVG ); ?>
+					<?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?>
+				</a>
 			<?php endif; ?>
 		</header>
 		<?php

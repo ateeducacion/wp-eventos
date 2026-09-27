@@ -1329,8 +1329,11 @@ body:has(.evt-cajon) { overflow: hidden; }
   line-height: 1.4;
 }
 
-/* La edición de una página, en el panel lateral: más ancho, con un marco. */
-.evt-cajon.evt-cajon--ancho { width: min(1200px, 94vw); }
+/* La edición de una página y la vista previa, en el panel lateral, con un marco. */
+.evt-cajon.evt-cajon--pagina { width: min(860px, 100%); }
+/* La vista previa sí es ancha: es la página pública, para navegarla. */
+.evt-cajon.evt-cajon--vista { width: min(1400px, 96vw); }
+.evt-cajon__fuera { margin-left: auto; margin-right: 12px; font-size: 14px; }
 .evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
 body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 

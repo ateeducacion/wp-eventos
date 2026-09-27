@@ -316,7 +316,8 @@ final class EventSectionsPanel {
 						. PanelParts::icon_link(
 							(string) $fila['view_url'],
 							'ojo',
-							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador'
+							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador',
+							'evt-abre-vista'
 						);
 					echo $acciones; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 					?>
