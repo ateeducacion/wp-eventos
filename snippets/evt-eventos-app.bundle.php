@@ -205,6 +205,26 @@ final class EventMetaKeys {
 
 
 
+	public const CONTACT_ADDRESS = 'evt_contact_address';
+
+
+
+
+	public const CONTACT_PHONE = 'evt_contact_phone';
+
+
+
+
+	public const CONTACT_EMAIL = 'evt_contact_email';
+
+
+
+
+	public const CONTACT_MAP = 'evt_contact_map';
+
+
+
+
 
 
 
@@ -303,6 +323,10 @@ final class EventMetaKeys {
 			self::PROGRAMME_LAYOUT,
 			self::PROGRAMME_FILE_ID,
 			self::SPONSORS,
+			self::CONTACT_ADDRESS,
+			self::CONTACT_PHONE,
+			self::CONTACT_EMAIL,
+			self::CONTACT_MAP,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -604,6 +628,22 @@ final class EventMetaRegistration {
 			EventMetaKeys::SPONSORS           => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_sponsors' ),
+			),
+			EventMetaKeys::CONTACT_ADDRESS    => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_PHONE      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_EMAIL      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_email',
+			),
+			EventMetaKeys::CONTACT_MAP        => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
@@ -17866,6 +17906,21 @@ final class PageForm {
 
 
 
+	public const CONTACT_KEYS = array(
+		EventMetaKeys::CONTACT_ADDRESS => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_PHONE   => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_EMAIL   => 'sanitize_email',
+		EventMetaKeys::CONTACT_MAP     => 'esc_url_raw',
+	);
+
+
+
+
+
+
+
+
+
 
 	private static $rejected = array(
 		'message' => '',
@@ -18061,6 +18116,18 @@ final class PageForm {
 				continue;
 			}
 			update_post_meta( $id, $clave, $valor );
+		}
+
+
+		if ( 'contacto' === (string) get_post_meta( $id, EventMetaKeys::SECTION_TYPE, true ) ) {
+			foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+				$valor = (string) ( $fields['contact'][ $clave ] ?? '' );
+				if ( '' === $valor ) {
+					delete_post_meta( $id, $clave );
+					continue;
+				}
+				update_post_meta( $id, $clave, $valor );
+			}
 		}
 
 		self::save_code( $user_id, $event_id, $id, $fields );
@@ -18264,6 +18331,7 @@ final class PageForm {
 			'menu_order'   => 0,
 			'content'      => '',
 			'look'         => $look,
+			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -18283,6 +18351,10 @@ final class PageForm {
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 			$code[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
 		}
+		$contacto = array();
+		foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+			$contacto[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
+		}
 		return array(
 			'title'        => (string) get_post_field( 'post_title', $page_id ),
 			'slug'         => (string) get_post_field( 'post_name', $page_id ),
@@ -18290,6 +18362,7 @@ final class PageForm {
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
@@ -18309,6 +18382,10 @@ final class PageForm {
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
+		$contacto = array();
+		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
+			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
+		}
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 
@@ -18324,6 +18401,7 @@ final class PageForm {
 
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
@@ -18587,6 +18665,10 @@ final class PageFormView {
 				?>
 			</fieldset>
 
+			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); ?>
+			<?php endif; ?>
+
 			<?php echo self::look( (array) $valores['look'] ); ?>
 
 			<?php echo self::code( (array) $m['code'], (array) $valores['code'] ); ?>
@@ -18602,6 +18684,46 @@ final class PageFormView {
 				<?php endif; ?>
 			</p>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function contact( array $c ): string {
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>Datos de contacto</legend>
+			<p class="evt-ayuda">Salen en tres columnas, cada una con su icono, debajo del texto de la página. El que deje en blanco no sale.</p>
+			<div class="evt-form-campo">
+				<label for="evt_contact_address">Dirección</label>
+				<textarea id="evt_contact_address" name="<?php echo esc_attr( EventMetaKeys::CONTACT_ADDRESS ); ?>" rows="10"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_ADDRESS ] ?? '' ) ); ?></textarea>
+				<small>Una línea por renglón. Si hay dos sedes, deje una línea en blanco entre ellas.</small>
+			</div>
+			<div class="evt-form-fila">
+				<div class="evt-form-campo">
+					<label for="evt_contact_phone">Teléfono</label>
+					<textarea id="evt_contact_phone" name="<?php echo esc_attr( EventMetaKeys::CONTACT_PHONE ); ?>" rows="2"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_PHONE ] ?? '' ) ); ?></textarea>
+					<small>Uno por línea, con su sede entre paréntesis si hay varias.</small>
+				</div>
+				<div class="evt-form-campo">
+					<label for="evt_contact_email">Correo</label>
+					<input type="email" id="evt_contact_email" name="<?php echo esc_attr( EventMetaKeys::CONTACT_EMAIL ); ?>"
+						value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_EMAIL ] ?? '' ) ); ?>" />
+				</div>
+			</div>
+			<div class="evt-form-campo">
+				<label for="evt_contact_map">Enlace al mapa</label>
+				<input type="url" id="evt_contact_map" name="<?php echo esc_attr( EventMetaKeys::CONTACT_MAP ); ?>" placeholder="https://"
+					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
+				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
+			</div>
+		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -18998,6 +19120,7 @@ use Evt\PublicFront\Programme;
 
 
 
+
 final class ProgrammeBlock {
 
 
@@ -19052,6 +19175,8 @@ final class ProgrammeBlock {
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
 				return self::download( $evento ) . self::grid( $evento );
+			case 'contacto':
+				return self::contact( $pagina );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -19258,6 +19383,51 @@ final class ProgrammeBlock {
 		</div>
 		<?php
 		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+
+
+
+
+
+
+
+
+	private static function contact( int $pagina ): string {
+		$dato = static function ( string $clave ) use ( $pagina ): string {
+			return trim( (string) get_post_meta( $pagina, $clave, true ) );
+		};
+
+		$parrafos = static function ( string $texto ): string {
+			$html = '';
+			foreach ( preg_split( '/\R\s*\R/', $texto ) as $bloque ) {
+				$lineas = array_filter( array_map( 'trim', preg_split( '/\R/', $bloque ) ) );
+				if ( array() !== $lineas ) {
+					$html .= '<p>' . implode( '<br />', array_map( 'esc_html', $lineas ) ) . '</p>';
+				}
+			}
+			return $html;
+		};
+
+		$columnas  = '';
+		$direccion = $parrafos( $dato( EventMetaKeys::CONTACT_ADDRESS ) );
+		$mapa      = $dato( EventMetaKeys::CONTACT_MAP );
+		if ( '' !== $mapa ) {
+			$direccion .= '<p><a href="' . esc_url( $mapa ) . '">Ver en el mapa</a></p>';
+		}
+		if ( '' !== $direccion ) {
+			$columnas .= '<div class="evt-ev__contacto-lugar"><h3 class="screen-reader-text">Dirección</h3>' . $direccion . '</div>';
+		}
+		$telefono = $parrafos( $dato( EventMetaKeys::CONTACT_PHONE ) );
+		if ( '' !== $telefono ) {
+			$columnas .= '<div class="evt-ev__contacto-telefono"><h3 class="screen-reader-text">Teléfono</h3>' . $telefono . '</div>';
+		}
+		$correo = sanitize_email( $dato( EventMetaKeys::CONTACT_EMAIL ) );
+		if ( '' !== $correo ) {
+			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
+		}
+
+		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
 	}
 
 
@@ -25435,14 +25605,7 @@ body .swal2-container { z-index: 100010; }
 }
 
 /* La página de contacto: dónde, teléfono y correo, cada uno con su icono en
-   el color de la cabecera. Es el marcado que escribe quien la rellena:
-
-       <div class="evt-ev__contacto">
-           <div class="evt-ev__contacto-lugar">…</div>
-           <div class="evt-ev__contacto-telefono">…</div>
-           <div class="evt-ev__contacto-correo">…</div>
-       </div>
-*/
+   el color de la cabecera. Salen de los campos de la página (ProgrammeBlock). */
 .evt-ev__contacto {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));

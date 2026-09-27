@@ -769,14 +769,7 @@
 }
 
 /* La página de contacto: dónde, teléfono y correo, cada uno con su icono en
-   el color de la cabecera. Es el marcado que escribe quien la rellena:
-
-       <div class="evt-ev__contacto">
-           <div class="evt-ev__contacto-lugar">…</div>
-           <div class="evt-ev__contacto-telefono">…</div>
-           <div class="evt-ev__contacto-correo">…</div>
-       </div>
-*/
+   el color de la cabecera. Salen de los campos de la página (ProgrammeBlock). */
 .evt-ev__contacto {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));

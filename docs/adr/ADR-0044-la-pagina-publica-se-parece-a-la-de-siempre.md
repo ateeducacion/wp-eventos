@@ -171,3 +171,15 @@ Y en «Mis eventos», el estado se elige con cuatro botones con su recuento
 —Activos, Borradores, Históricos y Todos— y **por defecto salen los activos**:
 publicados y no históricos, que es lo que se trabaja a diario. Los demás
 filtros por estado siguen valiendo por la URL.
+
+## Adenda — 2026-09-27: los datos de contacto son campos
+
+El punto 8 de la decisión se quedaba en reconocer un marcado dentro del texto
+de la página de contacto: se veía como hoy, pero quien organiza un evento nuevo
+no tenía dónde escribir esos datos si no era tecleando ese HTML. La página de
+contacto lleva ahora cuatro campos propios —`evt_contact_address` (una o varias
+sedes, separadas por una línea en blanco), `evt_contact_phone` (uno por línea),
+`evt_contact_email` y `evt_contact_map` (enlace)—, que se rellenan en su
+formulario solo cuando la página es de contacto y que la página pinta en las
+tres columnas con icono. El correo y el enlace se limpian al guardar: lo que no
+es un correo o una dirección web no se guarda.

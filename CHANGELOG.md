@@ -33,7 +33,7 @@ en el subsitio `eventos` se hace después.
 - **El programa en PDF tiene su campo** y sale como botón «Descargar programa» en la página del programa, después del texto
 - **«Editar esta página»** en la cabecera de cada sección para quien puede editarla, junto a «Gestionar este evento»
 - **«Mis eventos» filtra por estado**: Activos, Borradores, Históricos y Todos, cada uno con su número. Por defecto, los activos: publicados y no históricos
-- **La página de contacto en tres columnas**, dónde, teléfono y correo, cada una con su icono en el color de la cabecera
+- **La página de contacto tiene sus campos** —dirección (una o varias sedes), teléfono, correo y enlace al mapa— en su formulario, y los pinta en tres columnas, cada una con su icono en el color de la cabecera
 
 ### Cambiado
 

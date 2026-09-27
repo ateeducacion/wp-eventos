@@ -176,6 +176,26 @@ final class EventMetaKeys {
 	public const SPONSORS = 'evt_sponsors';
 
 	/**
+	 * Página de contacto: dirección, una o varias sedes separadas por una línea en blanco.
+	 */
+	public const CONTACT_ADDRESS = 'evt_contact_address';
+
+	/**
+	 * Página de contacto: teléfonos, uno por línea.
+	 */
+	public const CONTACT_PHONE = 'evt_contact_phone';
+
+	/**
+	 * Página de contacto: correo.
+	 */
+	public const CONTACT_EMAIL = 'evt_contact_email';
+
+	/**
+	 * Página de contacto: enlace al mapa de la sede.
+	 */
+	public const CONTACT_MAP = 'evt_contact_map';
+
+	/**
 	 * CSS a medida de esta página. Se guarda en crudo: es código, no texto.
 	 *
 	 * En la raíz del evento viste todas sus páginas; en una página satélite,
@@ -276,6 +296,10 @@ final class EventMetaKeys {
 			self::PROGRAMME_LAYOUT,
 			self::PROGRAMME_FILE_ID,
 			self::SPONSORS,
+			self::CONTACT_ADDRESS,
+			self::CONTACT_PHONE,
+			self::CONTACT_EMAIL,
+			self::CONTACT_MAP,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,

@@ -139,6 +139,22 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_sponsors' ),
 			),
+			EventMetaKeys::CONTACT_ADDRESS    => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_PHONE      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_EMAIL      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_email',
+			),
+			EventMetaKeys::CONTACT_MAP        => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_url' ),
+			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),

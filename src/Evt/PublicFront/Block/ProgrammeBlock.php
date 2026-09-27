@@ -25,7 +25,8 @@ use Evt\PublicFront\Programme;
  * - `ponentes`: la lista de ponentes, y la ficha de uno;
  * - `programa`: la parrilla, por día y por sede;
  * - `actividades`: las actividades con su descripción, y la ficha de una;
- * - `multimedia`: las actividades que tienen vídeo, con el vídeo.
+ * - `multimedia`: las actividades que tienen vídeo, con el vídeo;
+ * - `contacto`: dónde, teléfono y correo, en tres columnas.
  *
  * Y la portada, «Personas comunicadoras»: los ponentes destacados. Lo que la
  * sección tenga escrito sale antes, en el bloque de contenido.
@@ -87,6 +88,8 @@ final class ProgrammeBlock {
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
 				return self::download( $evento ) . self::grid( $evento );
+			case 'contacto':
+				return self::contact( $pagina );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -293,6 +296,51 @@ final class ProgrammeBlock {
 		</div>
 		<?php
 		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+	/**
+	 * The contact details: where, phone and e-mail, each in its column.
+	 *
+	 * Tres columnas con su icono, como hoy. La que no tiene dato no sale.
+	 *
+	 * @param int $pagina Contact page.
+	 * @return string Empty when nothing was filled in.
+	 */
+	private static function contact( int $pagina ): string {
+		$dato = static function ( string $clave ) use ( $pagina ): string {
+			return trim( (string) get_post_meta( $pagina, $clave, true ) );
+		};
+		// Una línea en blanco separa sedes; un salto, renglones.
+		$parrafos = static function ( string $texto ): string {
+			$html = '';
+			foreach ( preg_split( '/\R\s*\R/', $texto ) as $bloque ) {
+				$lineas = array_filter( array_map( 'trim', preg_split( '/\R/', $bloque ) ) );
+				if ( array() !== $lineas ) {
+					$html .= '<p>' . implode( '<br />', array_map( 'esc_html', $lineas ) ) . '</p>';
+				}
+			}
+			return $html;
+		};
+
+		$columnas  = '';
+		$direccion = $parrafos( $dato( EventMetaKeys::CONTACT_ADDRESS ) );
+		$mapa      = $dato( EventMetaKeys::CONTACT_MAP );
+		if ( '' !== $mapa ) {
+			$direccion .= '<p><a href="' . esc_url( $mapa ) . '">Ver en el mapa</a></p>';
+		}
+		if ( '' !== $direccion ) {
+			$columnas .= '<div class="evt-ev__contacto-lugar"><h3 class="screen-reader-text">Dirección</h3>' . $direccion . '</div>';
+		}
+		$telefono = $parrafos( $dato( EventMetaKeys::CONTACT_PHONE ) );
+		if ( '' !== $telefono ) {
+			$columnas .= '<div class="evt-ev__contacto-telefono"><h3 class="screen-reader-text">Teléfono</h3>' . $telefono . '</div>';
+		}
+		$correo = sanitize_email( $dato( EventMetaKeys::CONTACT_EMAIL ) );
+		if ( '' !== $correo ) {
+			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
+		}
+
+		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
 	}
 
 	/**

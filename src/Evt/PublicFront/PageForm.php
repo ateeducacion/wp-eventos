@@ -72,6 +72,21 @@ final class PageForm {
 	);
 
 	/**
+	 * The contact details a contact page carries, and how each is cleaned.
+	 *
+	 * Campos y no HTML dentro del texto: quien organiza rellena la dirección,
+	 * el teléfono y el correo, y la página los pinta en tres columnas.
+	 *
+	 * @var array<string, string>
+	 */
+	public const CONTACT_KEYS = array(
+		EventMetaKeys::CONTACT_ADDRESS => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_PHONE   => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_EMAIL   => 'sanitize_email',
+		EventMetaKeys::CONTACT_MAP     => 'esc_url_raw',
+	);
+
+	/**
 	 * Why the last submit did not go through, and which fields to mark.
 	 *
 	 * Un envío rechazado no redirige: la misma petición vuelve a pintar el
@@ -276,6 +291,18 @@ final class PageForm {
 			update_post_meta( $id, $clave, $valor );
 		}
 
+		// Solo en una página de contacto: en las demás estos campos ni se pintan.
+		if ( 'contacto' === (string) get_post_meta( $id, EventMetaKeys::SECTION_TYPE, true ) ) {
+			foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+				$valor = (string) ( $fields['contact'][ $clave ] ?? '' );
+				if ( '' === $valor ) {
+					delete_post_meta( $id, $clave );
+					continue;
+				}
+				update_post_meta( $id, $clave, $valor );
+			}
+		}
+
 		self::save_code( $user_id, $event_id, $id, $fields );
 
 		return $id;
@@ -477,6 +504,7 @@ final class PageForm {
 			'menu_order'   => 0,
 			'content'      => '',
 			'look'         => $look,
+			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -496,6 +524,10 @@ final class PageForm {
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 			$code[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
 		}
+		$contacto = array();
+		foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+			$contacto[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
+		}
 		return array(
 			'title'        => (string) get_post_field( 'post_title', $page_id ),
 			'slug'         => (string) get_post_field( 'post_name', $page_id ),
@@ -503,6 +535,7 @@ final class PageForm {
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
@@ -522,6 +555,10 @@ final class PageForm {
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
+		$contacto = array();
+		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
+			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
+		}
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 			// Tal cual llega: es código. Quien decide si se guarda es
@@ -537,6 +574,7 @@ final class PageForm {
 			// Nadie escribe HTML sin filtrar, tampoco quien organiza.
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
