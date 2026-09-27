@@ -90,6 +90,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$mia    = $this->area( 'Formación del Profesorado' );
 		$otra   = $this->area( 'Innovación' );
 		$evento = $this->event( $this->administrator(), array( $otra ) );
+		$pagina = $this->event_page( $evento, 'programa' );
 
 		$this->acting_as( 0 );
 		$this->assertStringContainsString( 'Debe iniciar sesión', EventWorkspace::model()['aviso'] );
@@ -99,7 +100,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$this->assertTrue( EventWorkspace::model()['nuevo'], 'sin ?evento= se crea uno' );
 
 		// Una página satélite no es un evento: el taller es del evento.
-		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $this->event_page( $evento, 'programa' );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $pagina;
 		$this->assertStringContainsString( 'Elija uno en la lista', EventWorkspace::model()['aviso'] );
 
 		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $evento;

@@ -257,12 +257,12 @@ class Test_Speaker_Activity_Access extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Y no se cuelan por la puerta de atrás: el guardián solo conoce los tres
-	 * tipos del aplicativo y deja en paz lo demás.
+	 * Y no se cuelan por la puerta de atrás: el guardián solo conoce los tipos
+	 * del aplicativo y deja en paz lo demás.
 	 */
 	public function test_the_guard_leaves_the_rest_of_the_site_alone() {
 		$this->assertSame(
-			array( 'evt_event', 'evt_speaker', 'evt_activity' ),
+			array( 'evt_event', 'evt_speaker', 'evt_activity', 'evt_registration' ),
 			array_keys( EventAccess::scoped_types() )
 		);
 
