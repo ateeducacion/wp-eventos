@@ -16,6 +16,7 @@ use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\RegistrationPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\ExitSignal;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
@@ -179,6 +180,34 @@ trait Evt_Fixtures {
 				)
 			);
 		}
+	}
+
+	/**
+	 * A solved ALTCHA payload, as the browser widget would send it.
+	 *
+	 * Se resuelve a fuerza bruta, como hace el navegador: son como mucho
+	 * `Captcha::MAX_NUMBER` hashes.
+	 *
+	 * @return string
+	 */
+	protected function altcha_payload(): string {
+		$reto = Captcha::challenge();
+		for ( $n = 0; $n <= $reto['maxnumber']; $n++ ) {
+			if ( hash( 'sha256', $reto['salt'] . $n ) === $reto['challenge'] ) {
+				break;
+			}
+		}
+		return base64_encode( // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- el formato de ALTCHA es JSON en Base64.
+			(string) wp_json_encode(
+				array(
+					'algorithm' => $reto['algorithm'],
+					'challenge' => $reto['challenge'],
+					'number'    => $n,
+					'salt'      => $reto['salt'],
+					'signature' => $reto['signature'],
+				)
+			)
+		);
 	}
 
 	/**

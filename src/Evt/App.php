@@ -28,6 +28,7 @@ use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
@@ -92,6 +93,7 @@ final class App {
 		// y la limpieza al borrarla. **No son adjuntos de WordPress** y no
 		// tocan la biblioteca de medios (ADR-0036).
 		RegistrationFiles::register();
+		Captcha::register();
 		SignupForm::register();
 		EventList::register();
 		EventWorkspace::register();

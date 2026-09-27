@@ -13,6 +13,7 @@ use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\View\EventParticipantsPanel;
 
@@ -633,6 +634,7 @@ class Test_Registration_Files extends WP_UnitTestCase {
 				'email'                 => 'maria@example.org',
 				'centre'                => '38000001',
 				'consent'               => '1',
+				Captcha::FIELD          => $this->altcha_payload(),
 			),
 			SignupForm::NONCE_ACTION,
 			SignupForm::NONCE_FIELD

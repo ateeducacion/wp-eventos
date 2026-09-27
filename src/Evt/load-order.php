@@ -49,6 +49,7 @@ return array(
 	'PublicFront/Participants.php',
 	'PublicFront/Registrations.php',
 	'PublicFront/RegistrationFiles.php',
+	'PublicFront/Captcha.php',
 	'PublicFront/SignupForm.php',
 	'PublicFront/EventWorkspace.php',
 	'PublicFront/View/PanelParts.php',

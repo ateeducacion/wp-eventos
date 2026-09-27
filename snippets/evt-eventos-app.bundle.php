@@ -10266,6 +10266,266 @@ final class RegistrationFiles {
 
 namespace Evt\PublicFront;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class Captcha {
+
+
+
+
+	public const FIELD = 'altcha';
+
+
+
+
+	public const REST_NAMESPACE = 'evt/v1';
+	public const REST_ROUTE     = '/altcha';
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public const VERSION = '3.2.3';
+	public const VENDOR  = array(
+		'evt-altcha'    => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/altcha@3.2.3/dist/main/altcha.min.js',
+			'sri' => 'sha384-MFz2FEOy9hhUgvaoYC2XcPN85++0YMPRCXPoGFrBDgBnivZCTF/z/hSq7DUtBEqe',
+		),
+		'evt-altcha-es' => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/altcha@3.2.3/dist/i18n/es-es.js',
+			'sri' => 'sha384-JV8Gd/8Xtl4a9bi45uorsFEGRNblS/3tx1fXO0XhcuJillj2VR/Ai0wy8IeDDh6U',
+		),
+	);
+
+
+
+
+
+
+
+	public const MAX_NUMBER = 100000;
+
+
+
+
+
+
+
+	public const TTL = 1200;
+
+
+
+
+
+
+	public static function register(): void {
+		add_action( 'rest_api_init', array( self::class, 'register_route' ) );
+		add_filter( 'script_loader_tag', array( self::class, 'module_tag' ), 10, 3 );
+	}
+
+
+
+
+
+
+	public static function enabled(): bool {
+
+
+
+
+
+		return (bool) apply_filters( 'evt_altcha_enabled', true );
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function register_route(): void {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			self::REST_ROUTE,
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'rest_challenge' ),
+
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+
+
+
+
+
+
+	public static function rest_challenge(): \WP_REST_Response {
+		$respuesta = new \WP_REST_Response( self::challenge() );
+		$respuesta->header( 'Cache-Control', 'no-store, max-age=0' );
+		return $respuesta;
+	}
+
+
+
+
+
+
+	public static function challenge(): array {
+		$salt      = bin2hex( random_bytes( 12 ) ) . '?expires=' . ( time() + self::TTL );
+		$challenge = hash( 'sha256', $salt . random_int( 0, self::MAX_NUMBER ) );
+
+		return array(
+			'algorithm' => 'SHA-256',
+			'challenge' => $challenge,
+			'maxnumber' => self::MAX_NUMBER,
+			'salt'      => $salt,
+			'signature' => self::sign( $challenge ),
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function verify( string $payload ): bool {
+		$datos = json_decode( (string) base64_decode( $payload, true ), true ); 
+		if ( ! is_array( $datos ) ) {
+			return false;
+		}
+		foreach ( array( 'algorithm', 'challenge', 'number', 'salt', 'signature' ) as $clave ) {
+			if ( ! isset( $datos[ $clave ] ) || ! is_scalar( $datos[ $clave ] ) ) {
+				return false;
+			}
+		}
+
+		$salt      = (string) $datos['salt'];
+		$challenge = (string) $datos['challenge'];
+		$numero    = (string) $datos['number'];
+		if ( 'SHA-256' !== $datos['algorithm'] || ! ctype_digit( $numero ) || self::expires( $salt ) < time() ) {
+			return false;
+		}
+		if ( ! hash_equals( self::sign( $challenge ), (string) $datos['signature'] )
+			|| ! hash_equals( hash( 'sha256', $salt . $numero ), $challenge ) ) {
+			return false;
+		}
+
+		$usado = 'evt_altcha_' . substr( $challenge, 0, 40 );
+		if ( false !== get_transient( $usado ) ) {
+			return false;
+		}
+		set_transient( $usado, 1, self::TTL );
+		return true;
+	}
+
+
+
+
+
+
+	public static function widget(): string {
+		foreach ( self::VENDOR as $handle => $vendor ) {
+			wp_enqueue_script( $handle, $vendor['url'], array(), self::VERSION, true );
+		}
+		return sprintf(
+			'<p class="evt-campo evt-ins__robot"><altcha-widget name="%1$s" challenge="%2$s" language="es-es"></altcha-widget></p>'
+				. '<noscript><p class="evt-aviso evt-aviso--aviso">Para inscribirse sin iniciar sesión hace falta tener JavaScript activado.</p></noscript>',
+			esc_attr( self::FIELD ),
+			esc_url( rest_url( self::REST_NAMESPACE . self::REST_ROUTE ) )
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function module_tag( $tag, $handle, $src ): string {
+		if ( ! isset( self::VENDOR[ $handle ] ) ) {
+			return (string) $tag;
+		}
+		$atributos = ' type="module"';
+		if ( 0 === strpos( (string) $src, 'https://cdn.jsdelivr.net/' ) ) {
+			$atributos .= ' integrity="' . esc_attr( self::VENDOR[ $handle ]['sri'] ) . '" crossorigin="anonymous"';
+		}
+		return (string) preg_replace( '/^<script(?: type=[\'"]text\/javascript[\'"])?/', '<script' . $atributos, (string) $tag, 1 );
+	}
+
+
+
+
+
+
+
+	private static function expires( string $salt ): int {
+		$pos = strpos( $salt, '?' );
+		if ( false === $pos ) {
+			return 0;
+		}
+		parse_str( substr( $salt, $pos + 1 ), $consulta );
+		return isset( $consulta['expires'] ) && is_string( $consulta['expires'] ) && ctype_digit( $consulta['expires'] )
+			? (int) $consulta['expires']
+			: 0;
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function sign( string $challenge ): string {
+		return hash_hmac( 'sha256', $challenge, hash_hmac( 'sha256', 'evt_altcha', wp_salt( 'nonce' ) ) );
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
 use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
@@ -10378,6 +10638,9 @@ final class SignupForm {
 		$porque = self::closed_because( $event_id );
 		if ( '' === $porque ) {
 			$porque = self::login_needed( $event_id );
+		}
+		if ( '' === $porque && ! is_user_logged_in() && Captcha::enabled() && ! Captcha::verify( (string) ( $raw[ Captcha::FIELD ] ?? '' ) ) ) {
+			$porque = 'Marque la casilla «No soy un robot» y espere a que diga «Verificado» antes de enviar.';
 		}
 		if ( '' !== $porque ) {
 			self::$notice = array(
@@ -17051,6 +17314,7 @@ final class SectionsBlock {
 namespace Evt\PublicFront\Block;
 
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\SignupForm;
@@ -17162,6 +17426,11 @@ final class SignupBlock {
 		$html .= self::questions( $evento );
 		$html .= self::workshops( $evento, 0 );
 		$html .= self::consent( $evento );
+
+
+		if ( ! is_user_logged_in() && Captcha::enabled() ) {
+			$html .= Captcha::widget();
+		}
 
 		$html .= '<p class="evt-ins__enviar"><button type="submit" class="evt-btn evt-btn--primario">Inscribirme</button></p>';
 		$html .= '</form>';
@@ -19764,6 +20033,7 @@ use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
@@ -19828,6 +20098,7 @@ final class App {
 
 
 		RegistrationFiles::register();
+		Captcha::register();
 		SignupForm::register();
 		EventList::register();
 		EventWorkspace::register();

@@ -8,6 +8,7 @@
 namespace Evt\PublicFront\Block;
 
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\SignupForm;
@@ -119,6 +120,11 @@ final class SignupBlock {
 		$html .= self::questions( $evento );
 		$html .= self::workshops( $evento, 0 );
 		$html .= self::consent( $evento );
+
+		// Sin sesión, la casilla de ALTCHA (ADR-0040); con sesión no hace falta.
+		if ( ! is_user_logged_in() && Captcha::enabled() ) {
+			$html .= Captcha::widget();
+		}
 
 		$html .= '<p class="evt-ins__enviar"><button type="submit" class="evt-btn evt-btn--primario">Inscribirme</button></p>';
 		$html .= '</form>';

@@ -11,6 +11,7 @@ use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\Programme;
 use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
 
 /**
@@ -102,6 +103,7 @@ class Test_Signup_Form extends WP_UnitTestCase {
 				array(
 					SignupForm::FIELD_OP    => SignupForm::OP_SIGNUP,
 					SignupForm::FIELD_EVENT => (string) $evento,
+					Captcha::FIELD          => $this->altcha_payload(),
 				),
 				$campos
 			),
