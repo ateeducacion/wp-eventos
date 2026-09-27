@@ -5219,6 +5219,11 @@ final class Shell {
 
 
 
+
+
+
+	public const ARG_FRAME = 'evt_marco';
+
 	public const SLUGS = array(
 		'home'     => 'eventos-gestion',
 		'events'   => 'mis-eventos',
@@ -5440,6 +5445,10 @@ final class Shell {
 
 
 	public static function show_admin_bar(): bool {
+
+		if ( self::framed() ) {
+			return false;
+		}
 		if ( current_user_can( 'manage_options' ) ) {
 			return true;
 		}
@@ -5477,7 +5486,24 @@ final class Shell {
 		if ( self::is_app_page() ) {
 			$classes[] = 'evt-app';
 		}
+		if ( self::framed() ) {
+			$classes[] = 'evt-marco';
+		}
 		return $classes;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function framed(): bool {
+
+		return isset( $_GET[ self::ARG_FRAME ] ) && '1' === $_GET[ self::ARG_FRAME ];
 	}
 
 
@@ -5715,7 +5741,7 @@ final class Shell {
 
 
 
-		if ( ! apply_filters( 'evt_show_chrome', true ) ) {
+		if ( ! apply_filters( 'evt_show_chrome', true ) || self::framed() ) {
 			return '<div class="evt-hoja">' . $body . '</div>';
 		}
 
@@ -14936,7 +14962,7 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>">
+		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>" data-evt-marco>
 			<h2>Añadir sección</h2>
 			<p>Elija qué va a ser la página nueva. El tipo decide los textos por defecto y el icono con que sale en la portada del evento.</p>
 			<div class="evt-form-fila">
@@ -15018,7 +15044,7 @@ final class EventSectionsPanel {
 			<td data-rotulo="Acciones">
 				<span class="evt-acciones">
 					<?php
-					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página' )
+					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página', 'evt-abre-marco' )
 						. PanelParts::icon_link(
 							(string) $fila['view_url'],
 							'ojo',
@@ -16423,9 +16449,13 @@ final class PageForm {
 	private static function leave_saved( int $page_id, int $saved ): void {
 		$destino = Shell::url(
 			'section',
-			array(
-				'seccion'   => $saved,
-				'evt_hecho' => 0 === $page_id ? 'creada' : 'guardada',
+			array_filter(
+				array(
+					'seccion'        => $saved,
+					'evt_hecho'      => 0 === $page_id ? 'creada' : 'guardada',
+
+					Shell::ARG_FRAME => Shell::framed() ? '1' : '',
+				)
 			)
 		);
 		Shell::leave( '' !== $destino ? $destino : Shell::back_url( 'events' ) );
@@ -17055,7 +17085,7 @@ final class PageFormView {
 					<?php echo esc_html( $nueva ? 'Crear la sección' : 'Guardar los cambios' ); ?>
 				</button>
 				<?php if ( '' !== (string) $m['event_url'] ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['event_url'] ); ?>">
+					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['event_url'] ); ?>" target="_top">
 						Volver a las secciones del evento
 					</a>
 				<?php endif; ?>
@@ -21123,6 +21153,9 @@ body.evt-app .evt-hoja {
 .evt-form label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px; }
 .evt-form input[type="text"],
 .evt-form input[type="url"],
+.evt-form input[type="email"],
+.evt-form input[type="tel"],
+.evt-form input[type="time"],
 .evt-form input[type="date"],
 .evt-form input[type="number"],
 .evt-form input[type="search"],
@@ -21972,7 +22005,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   z-index: 100001;
   display: flex;
   flex-direction: column;
-  width: min(520px, 100%);
+  width: min(760px, 100%);
   background: var(--evt-sup);
   box-shadow: var(--evt-e3);
 }
@@ -22040,6 +22073,23 @@ body:has(.evt-cajon) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .evt-cajon, .evt-cajon-fondo, .evt-cajon.evt-cajon--saliendo, .evt-cajon-fondo.evt-cajon--saliendo { animation: none; }
 }
+
+/* Un grupo de casillas se rotula como cualquier campo, no como un título. */
+.evt-form .evt-form-campo > legend,
+.evt-form fieldset.evt-form-campo > legend {
+  float: none;
+  width: auto;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* La edición de una página, en el panel lateral: más ancho, con un marco. */
+.evt-cajon.evt-cajon--ancho { width: min(1200px, 94vw); }
+.evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
+body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 
 ',
   'css/evt-evento.css' => '/*
@@ -23622,6 +23672,83 @@ body:has(.evt-cajon) { overflow: hidden; }
 			return;
 		}
 		cerrarCajon( document.querySelector( \'[data-evt-cajon] .evt-cajon__cerrar\' ) );
+	} );
+
+	/*
+	 * La edición de una página es su propia pantalla, con el editor de
+	 * WordPress y el código. Se abre en el panel lateral dentro de un marco,
+	 * pintada sin cabecera ni pie (`evt_marco=1`). Al cerrarlo se recarga la
+	 * pestaña, que así enseña lo que se haya guardado. Sin guion, el enlace y
+	 * el formulario abren la pantalla entera, como siempre.
+	 */
+	function abrirMarco( url, titulo ) {
+		var direccion = new URL( url, window.location.href );
+		if ( direccion.origin !== window.location.origin ) {
+			return false;
+		}
+		direccion.searchParams.set( \'evt_marco\', \'1\' );
+
+		var fondo = document.createElement( \'div\' );
+		fondo.className = \'evt-cajon-fondo\';
+		var cajon = document.createElement( \'section\' );
+		cajon.className = \'evt-cajon evt-cajon--ancho\';
+		cajon.setAttribute( \'role\', \'dialog\' );
+		cajon.setAttribute( \'aria-modal\', \'true\' );
+		cajon.setAttribute( \'aria-label\', titulo );
+		cajon.setAttribute( \'data-evt-cajon\', \'\' );
+		cajon.setAttribute( \'data-evt-cajon-edita\', \'\' );
+
+		var cabecera = document.createElement( \'header\' );
+		cabecera.className = \'evt-cajon__cabecera\';
+		var h2 = document.createElement( \'h2\' );
+		h2.className = \'evt-cajon__titulo\';
+		h2.textContent = titulo;
+		var cerrar = document.createElement( \'a\' );
+		cerrar.className = \'evt-cajon__cerrar\';
+		cerrar.href = window.location.href;
+		cerrar.setAttribute( \'aria-label\', \'Cerrar\' );
+		cerrar.setAttribute( \'data-evt-cerrar-cajon\', \'\' );
+		cerrar.textContent = \'×\';
+		fondo.setAttribute( \'data-evt-cerrar-cajon\', \'\' );
+		cabecera.appendChild( h2 );
+		cabecera.appendChild( cerrar );
+
+		var marco = document.createElement( \'iframe\' );
+		marco.className = \'evt-cajon__marco\';
+		marco.title = titulo;
+		marco.src = direccion.toString();
+
+		cajon.appendChild( cabecera );
+		cajon.appendChild( marco );
+		// Otro panel que hubiera, fuera: solo hay uno a la vez.
+		var viejos = document.querySelectorAll( \'[data-evt-cajon], .evt-cajon-fondo\' );
+		Array.prototype.forEach.call( viejos, function ( viejo ) {
+			viejo.parentNode.removeChild( viejo );
+		} );
+		document.body.appendChild( fondo );
+		document.body.appendChild( cajon );
+		return true;
+	}
+
+	document.addEventListener( \'click\', function ( e ) {
+		var enlace = e.target.closest ? e.target.closest( \'a.evt-abre-marco\' ) : null;
+		if ( enlace && ! e.metaKey && ! e.ctrlKey && abrirMarco( enlace.href, \'Editar la página\' ) ) {
+			e.preventDefault();
+		}
+	} );
+
+	document.addEventListener( \'submit\', function ( e ) {
+		var form = e.target;
+		if ( ! form || ! form.matches || ! form.matches( \'form[data-evt-marco]\' ) ) {
+			return;
+		}
+		var url = new URL( form.getAttribute( \'action\' ) || window.location.href, window.location.href );
+		new FormData( form ).forEach( function ( valor, clave ) {
+			url.searchParams.set( clave, valor );
+		} );
+		if ( abrirMarco( url.toString(), \'Nueva página\' ) ) {
+			e.preventDefault();
+		}
 	} );
 
 	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */

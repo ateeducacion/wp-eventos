@@ -168,7 +168,7 @@ final class PageFormView {
 					<?php echo esc_html( $nueva ? 'Crear la sección' : 'Guardar los cambios' ); ?>
 				</button>
 				<?php if ( '' !== (string) $m['event_url'] ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['event_url'] ); ?>">
+					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['event_url'] ); ?>" target="_top">
 						Volver a las secciones del evento
 					</a>
 				<?php endif; ?>

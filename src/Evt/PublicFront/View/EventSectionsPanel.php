@@ -230,7 +230,7 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>">
+		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>" data-evt-marco>
 			<h2>Añadir sección</h2>
 			<p>Elija qué va a ser la página nueva. El tipo decide los textos por defecto y el icono con que sale en la portada del evento.</p>
 			<div class="evt-form-fila">
@@ -312,7 +312,7 @@ final class EventSectionsPanel {
 			<td data-rotulo="Acciones">
 				<span class="evt-acciones">
 					<?php
-					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página' )
+					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página', 'evt-abre-marco' )
 						. PanelParts::icon_link(
 							(string) $fila['view_url'],
 							'ojo',

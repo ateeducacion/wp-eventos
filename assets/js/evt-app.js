@@ -805,6 +805,83 @@
 		cerrarCajon( document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' ) );
 	} );
 
+	/*
+	 * La edición de una página es su propia pantalla, con el editor de
+	 * WordPress y el código. Se abre en el panel lateral dentro de un marco,
+	 * pintada sin cabecera ni pie (`evt_marco=1`). Al cerrarlo se recarga la
+	 * pestaña, que así enseña lo que se haya guardado. Sin guion, el enlace y
+	 * el formulario abren la pantalla entera, como siempre.
+	 */
+	function abrirMarco( url, titulo ) {
+		var direccion = new URL( url, window.location.href );
+		if ( direccion.origin !== window.location.origin ) {
+			return false;
+		}
+		direccion.searchParams.set( 'evt_marco', '1' );
+
+		var fondo = document.createElement( 'div' );
+		fondo.className = 'evt-cajon-fondo';
+		var cajon = document.createElement( 'section' );
+		cajon.className = 'evt-cajon evt-cajon--ancho';
+		cajon.setAttribute( 'role', 'dialog' );
+		cajon.setAttribute( 'aria-modal', 'true' );
+		cajon.setAttribute( 'aria-label', titulo );
+		cajon.setAttribute( 'data-evt-cajon', '' );
+		cajon.setAttribute( 'data-evt-cajon-edita', '' );
+
+		var cabecera = document.createElement( 'header' );
+		cabecera.className = 'evt-cajon__cabecera';
+		var h2 = document.createElement( 'h2' );
+		h2.className = 'evt-cajon__titulo';
+		h2.textContent = titulo;
+		var cerrar = document.createElement( 'a' );
+		cerrar.className = 'evt-cajon__cerrar';
+		cerrar.href = window.location.href;
+		cerrar.setAttribute( 'aria-label', 'Cerrar' );
+		cerrar.setAttribute( 'data-evt-cerrar-cajon', '' );
+		cerrar.textContent = '×';
+		fondo.setAttribute( 'data-evt-cerrar-cajon', '' );
+		cabecera.appendChild( h2 );
+		cabecera.appendChild( cerrar );
+
+		var marco = document.createElement( 'iframe' );
+		marco.className = 'evt-cajon__marco';
+		marco.title = titulo;
+		marco.src = direccion.toString();
+
+		cajon.appendChild( cabecera );
+		cajon.appendChild( marco );
+		// Otro panel que hubiera, fuera: solo hay uno a la vez.
+		var viejos = document.querySelectorAll( '[data-evt-cajon], .evt-cajon-fondo' );
+		Array.prototype.forEach.call( viejos, function ( viejo ) {
+			viejo.parentNode.removeChild( viejo );
+		} );
+		document.body.appendChild( fondo );
+		document.body.appendChild( cajon );
+		return true;
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var enlace = e.target.closest ? e.target.closest( 'a.evt-abre-marco' ) : null;
+		if ( enlace && ! e.metaKey && ! e.ctrlKey && abrirMarco( enlace.href, 'Editar la página' ) ) {
+			e.preventDefault();
+		}
+	} );
+
+	document.addEventListener( 'submit', function ( e ) {
+		var form = e.target;
+		if ( ! form || ! form.matches || ! form.matches( 'form[data-evt-marco]' ) ) {
+			return;
+		}
+		var url = new URL( form.getAttribute( 'action' ) || window.location.href, window.location.href );
+		new FormData( form ).forEach( function ( valor, clave ) {
+			url.searchParams.set( clave, valor );
+		} );
+		if ( abrirMarco( url.toString(), 'Nueva página' ) ) {
+			e.preventDefault();
+		}
+	} );
+
 	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */
 
 	/*

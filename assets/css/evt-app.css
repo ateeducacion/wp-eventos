@@ -396,6 +396,9 @@ body.evt-app .evt-hoja {
 .evt-form label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px; }
 .evt-form input[type="text"],
 .evt-form input[type="url"],
+.evt-form input[type="email"],
+.evt-form input[type="tel"],
+.evt-form input[type="time"],
 .evt-form input[type="date"],
 .evt-form input[type="number"],
 .evt-form input[type="search"],
@@ -1245,7 +1248,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   z-index: 100001;
   display: flex;
   flex-direction: column;
-  width: min(520px, 100%);
+  width: min(760px, 100%);
   background: var(--evt-sup);
   box-shadow: var(--evt-e3);
 }
@@ -1313,4 +1316,21 @@ body:has(.evt-cajon) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .evt-cajon, .evt-cajon-fondo, .evt-cajon.evt-cajon--saliendo, .evt-cajon-fondo.evt-cajon--saliendo { animation: none; }
 }
+
+/* Un grupo de casillas se rotula como cualquier campo, no como un título. */
+.evt-form .evt-form-campo > legend,
+.evt-form fieldset.evt-form-campo > legend {
+  float: none;
+  width: auto;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* La edición de una página, en el panel lateral: más ancho, con un marco. */
+.evt-cajon.evt-cajon--ancho { width: min(1200px, 94vw); }
+.evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
+body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 

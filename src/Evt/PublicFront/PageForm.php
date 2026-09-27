@@ -173,9 +173,13 @@ final class PageForm {
 	private static function leave_saved( int $page_id, int $saved ): void {
 		$destino = Shell::url(
 			'section',
-			array(
-				'seccion'   => $saved,
-				'evt_hecho' => 0 === $page_id ? 'creada' : 'guardada',
+			array_filter(
+				array(
+					'seccion'        => $saved,
+					'evt_hecho'      => 0 === $page_id ? 'creada' : 'guardada',
+					// Guardar dentro del panel lateral se queda en el panel.
+					Shell::ARG_FRAME => Shell::framed() ? '1' : '',
+				)
 			)
 		);
 		Shell::leave( '' !== $destino ? $destino : Shell::back_url( 'events' ) );
