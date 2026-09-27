@@ -117,7 +117,7 @@ class Test_Views extends WP_UnitTestCase {
 		$m    = $this->taller( EventWorkspace::PANEL_SETTINGS );
 		$html = EventDataPanel::html( $m );
 
-		foreach ( array( 'Identidad', 'Cuándo y dónde', 'Clasificación', 'Inscripción' ) as $tarjeta ) {
+		foreach ( array( 'Identidad', 'Cuándo y dónde', 'Clasificación' ) as $tarjeta ) {
 			$this->assertStringContainsString( $tarjeta, $html );
 		}
 		$this->assertStringContainsString( 'Enseñar de otra manera', $html );
@@ -205,8 +205,10 @@ class Test_Views extends WP_UnitTestCase {
 	 * La foto de ponentes usa el mismo selector nativo que la apariencia.
 	 */
 	public function test_the_speaker_photo_uses_the_wordpress_media_picker() {
-		$m    = $this->taller( EventWorkspace::PANEL_SPEAKERS );
-		$html = EventWorkspaceView::html( $m );
+		$_GET[ EventWorkspace::ARG_NEW ] = '1';
+		$m                               = $this->taller( EventWorkspace::PANEL_SPEAKERS );
+		$html                            = EventWorkspaceView::html( $m );
+		unset( $_GET[ EventWorkspace::ARG_NEW ] );
 
 		$this->assertStringContainsString( 'name="evt_sp_photo"', $html );
 		$this->assertStringContainsString( 'data-evt-media-value', $html );

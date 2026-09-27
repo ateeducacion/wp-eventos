@@ -1,0 +1,346 @@
+/*
+ * La línea del tiempo pública (`[evt_timeline]`, ADR-0041).
+ *
+ * Va dentro del tema del sitio, así que no cuenta con Bootstrap ni con la
+ * hoja del aplicativo: todo lo que necesita está aquí, bajo `.evt-linea`,
+ * y no toca nada de fuera.
+ */
+/* Doble clase: el diseño «constrained» del tema limita `max-width` con la
+   misma especificidad y llega después. */
+.evt-linea.evt-linea {
+	/*
+	 * Una línea del tiempo necesita ancho: se sale de la columna estrecha
+	 * del tema hasta los bordes de la ventana, con su propio margen.
+	 */
+	position: relative;
+	left: 50%;
+	width: 100vw;
+	max-width: 100vw;
+	/* `transform` y no márgenes negativos: el diseño «constrained» de los
+	   temas de bloques fuerza sus márgenes con `!important`. */
+	transform: translateX(-50%);
+	padding: 0 max(16px, calc((100vw - 1240px) / 2));
+	box-sizing: border-box;
+	--evt-linea-azul: #1d4e89;
+	--evt-linea-azul-claro: #dbe5f1;
+	--evt-linea-gris: #c5ccd5;
+	--evt-linea-texto: #1f2328;
+	--evt-linea-suave: #5b6570;
+	--evt-linea-ancho: 380px;
+	color: var(--evt-linea-texto);
+	font-size: 1rem;
+	line-height: 1.45;
+}
+
+.evt-linea__barra {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.evt-linea__ayuda {
+	margin: 0;
+	color: var(--evt-linea-suave);
+	font-size: .95rem;
+}
+
+.evt-linea__botones {
+	display: flex;
+	gap: 6px;
+}
+
+.evt-linea__boton {
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 14px;
+	border: 1px solid var(--evt-linea-azul);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--evt-linea-azul);
+	font: inherit;
+	font-size: 1.1rem;
+	cursor: pointer;
+}
+
+.evt-linea__boton:hover,
+.evt-linea__boton:focus-visible {
+	background: var(--evt-linea-azul);
+	color: #fff;
+}
+
+.evt-linea__boton--hoy {
+	font-size: .95rem;
+	font-weight: 600;
+}
+
+/* Sin guion los botones no hacen nada: no se enseñan. */
+.evt-linea:not(.evt-linea--viva) .evt-linea__botones {
+	display: none;
+}
+
+.evt-linea__pista {
+	overflow-x: auto;
+	overflow-y: hidden;
+	scroll-snap-type: x proximity;
+	padding: 8px 0 20px;
+	outline-offset: 4px;
+}
+
+.evt-linea--viva .evt-linea__pista {
+	cursor: grab;
+}
+
+.evt-linea--arrastrando .evt-linea__pista {
+	cursor: grabbing;
+	scroll-snap-type: none;
+	user-select: none;
+}
+
+.evt-linea__meses {
+	display: flex;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-linea__mes {
+	flex: 0 0 var(--evt-linea-ancho);
+	scroll-snap-align: start;
+	display: flex;
+	flex-direction: column;
+}
+
+.evt-linea__rotulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	min-height: 2.5rem;
+	margin: 0;
+	padding: 0 20px 10px;
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.evt-linea__mes--pasado .evt-linea__nombre {
+	color: var(--evt-linea-suave);
+}
+
+.evt-linea__anio {
+	color: var(--evt-linea-suave);
+	font-size: .85rem;
+	font-weight: 400;
+}
+
+.evt-linea__chapa {
+	padding: 2px 8px;
+	border: 1px solid #d0d6de;
+	border-radius: 999px;
+	font-size: .75rem;
+	font-weight: 600;
+}
+
+.evt-linea__chapa--actual {
+	border-color: var(--evt-linea-azul);
+	background: var(--evt-linea-azul);
+	color: #fff;
+}
+
+/* La marca del mes sobre la línea y el tramo hasta el siguiente. */
+.evt-linea__marca {
+	display: flex;
+	align-items: center;
+	height: 22px;
+}
+
+.evt-linea__punto {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	margin-left: 25px;
+	border-radius: 50%;
+	background: var(--evt-linea-gris);
+}
+
+.evt-linea__mes--con-eventos .evt-linea__punto {
+	width: 14px;
+	height: 14px;
+	margin-left: 23px;
+	border: 3px solid var(--evt-linea-azul);
+	background: #fff;
+}
+
+.evt-linea__mes--actual .evt-linea__punto {
+	width: 20px;
+	height: 20px;
+	margin-left: 20px;
+	border: 0;
+	background: var(--evt-linea-azul);
+	box-shadow: 0 0 0 5px var(--evt-linea-azul-claro);
+}
+
+.evt-linea__trazo {
+	flex: 1 1 auto;
+	height: 2px;
+	margin-left: 8px;
+	background: #9fb3cc;
+}
+
+.evt-linea__mes--pasado .evt-linea__trazo {
+	background: var(--evt-linea-gris);
+}
+
+.evt-linea__vacio {
+	margin: 16px 20px 0;
+	color: var(--evt-linea-suave);
+	font-size: .9rem;
+}
+
+.evt-linea__eventos {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin: 16px 20px 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-linea__evento {
+	display: grid;
+	grid-template-columns: 110px minmax(0, 1fr);
+	overflow: hidden;
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(20, 28, 38, .12);
+}
+
+.evt-linea__evento--pasado {
+	opacity: .75;
+}
+
+.evt-linea__cartel {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 150px;
+	background: var(--evt-linea-color, var(--evt-linea-azul));
+	color: #fff;
+	text-decoration: none;
+}
+
+.evt-linea__cartel img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.evt-linea__sin-cartel {
+	padding: 10px;
+	font-size: .8rem;
+	font-weight: 600;
+	line-height: 1.25;
+	text-align: center;
+}
+
+.evt-linea__datos {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding: 12px 14px;
+}
+
+.evt-linea__fechas {
+	color: var(--evt-linea-azul);
+	font-size: .85rem;
+	font-weight: 600;
+}
+
+.evt-linea__titulo {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.3;
+}
+
+.evt-linea__titulo a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.evt-linea__titulo a:hover,
+.evt-linea__titulo a:focus-visible {
+	text-decoration: underline;
+}
+
+.evt-linea__sede {
+	color: var(--evt-linea-suave);
+	font-size: .85rem;
+}
+
+.evt-linea__estados {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin-top: auto;
+	padding-top: 4px;
+}
+
+.evt-linea__estado {
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: #e9eef4;
+	font-size: .75rem;
+	font-weight: 600;
+}
+
+.evt-linea__estado--upcoming {
+	background: #d9edf7;
+	color: #0b4a63;
+}
+
+.evt-linea__estado--open {
+	background: #d8efe0;
+	color: #185b30;
+}
+
+.evt-linea__estado--archived {
+	background: #2b3036;
+	color: #fff;
+}
+
+.evt-linea__inscribirse {
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--evt-linea-azul);
+	color: #fff;
+	font-size: .8rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.evt-linea__inscribirse:hover,
+.evt-linea__inscribirse:focus-visible {
+	background: #143a66;
+	color: #fff;
+}
+
+@media (max-width: 600px) {
+	.evt-linea {
+		--evt-linea-ancho: 86vw;
+	}
+
+	.evt-linea__pista {
+		scroll-snap-type: x mandatory;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.evt-linea__pista {
+		scroll-behavior: auto;
+	}
+}

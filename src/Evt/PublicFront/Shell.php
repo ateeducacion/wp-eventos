@@ -31,6 +31,11 @@ final class Shell {
 	 *
 	 * @var array<string, string>
 	 */
+	/**
+	 * Query var that paints a screen without header and footer, for the side panel.
+	 */
+	public const ARG_FRAME = 'evt_marco';
+
 	public const SLUGS = array(
 		'home'     => 'eventos-gestion',
 		'events'   => 'mis-eventos',
@@ -252,6 +257,11 @@ final class Shell {
 	 * @return bool
 	 */
 	public static function show_admin_bar(): bool {
+		// Dentro del panel lateral del taller —la edición de una página o la
+		// vista previa de la web— no hay barra: ya la tiene la página de fuera.
+		if ( self::framed() || self::in_frame() ) {
+			return false;
+		}
 		if ( current_user_can( 'manage_options' ) ) {
 			return true;
 		}
@@ -289,7 +299,38 @@ final class Shell {
 		if ( self::is_app_page() ) {
 			$classes[] = 'evt-app';
 		}
+		if ( self::framed() ) {
+			$classes[] = 'evt-marco';
+		}
 		return $classes;
+	}
+
+	/**
+	 * Whether the browser is loading this page inside a frame.
+	 *
+	 * Lo dice la cabecera `Sec-Fetch-Dest`, que el navegador manda en cada
+	 * carga, también al navegar por enlaces dentro del marco: por eso sirve
+	 * para la vista previa, donde un parámetro en la dirección se perdería al
+	 * primer clic. Solo decide si se pinta la barra de administración.
+	 *
+	 * @return bool
+	 */
+	public static function in_frame(): bool {
+		return isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) && 'iframe' === sanitize_key( wp_unslash( (string) $_SERVER['HTTP_SEC_FETCH_DEST'] ) );
+	}
+
+	/**
+	 * Whether this screen is shown inside the side panel of the workshop.
+	 *
+	 * La edición de una página se abre en el panel lateral del taller dentro
+	 * de un marco (ADR-0041): la misma pantalla, sin cabecera ni pie. Es solo
+	 * cómo se pinta; los permisos y el guardado no cambian.
+	 *
+	 * @return bool
+	 */
+	public static function framed(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige cómo se pinta.
+		return isset( $_GET[ self::ARG_FRAME ] ) && '1' === $_GET[ self::ARG_FRAME ];
 	}
 
 	/**
@@ -527,7 +568,7 @@ final class Shell {
 		 *
 		 * @param bool $pintar Whether to render the chrome.
 		 */
-		if ( ! apply_filters( 'evt_show_chrome', true ) ) {
+		if ( ! apply_filters( 'evt_show_chrome', true ) || self::framed() ) {
 			return '<div class="evt-hoja">' . $body . '</div>';
 		}
 

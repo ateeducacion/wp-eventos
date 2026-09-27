@@ -133,7 +133,6 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 				EventWorkspace::PANEL_SECTIONS,
 				EventWorkspace::PANEL_SPEAKERS,
 				EventWorkspace::PANEL_PROGRAMME,
-				EventWorkspace::PANEL_WORKSHOPS,
 				EventWorkspace::PANEL_SIGNUP,
 				EventWorkspace::PANEL_PEOPLE,
 				EventWorkspace::PANEL_SETTINGS,
@@ -482,20 +481,16 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 			$evento,
 			0,
 			array(
-				EventWorkspace::FIELD_TITLE   => 'Jornadas de Innovación 2026',
-				EventWorkspace::FIELD_AREA    => (string) $area,
-				EventWorkspace::FIELD_TYPE    => (string) $tipo,
-				EventWorkspace::FIELD_COURSE  => (string) $curso,
-				EventMetaKeys::TAGLINE        => 'Enseñar de otra manera',
-				EventMetaKeys::HASHTAG        => '#EVT 2026',
-				EventMetaKeys::INTRO          => '<p>Bienvenida.</p>',
-				EventMetaKeys::START_DATE     => '2026-03-10',
-				EventMetaKeys::END_DATE       => '2026-03-12',
-				EventMetaKeys::VENUE          => 'Sede Central',
-				EventMetaKeys::SIGNUP_SHOW    => '1',
-				EventMetaKeys::SIGNUP_LABEL   => 'Inscríbase',
-				EventMetaKeys::SIGNUP_URL     => 'https://example.org/inscripcion',
-				EventMetaKeys::SIGNUP_FORM_ID => '10',
+				EventWorkspace::FIELD_TITLE  => 'Jornadas de Innovación 2026',
+				EventWorkspace::FIELD_AREA   => (string) $area,
+				EventWorkspace::FIELD_TYPE   => (string) $tipo,
+				EventWorkspace::FIELD_COURSE => (string) $curso,
+				EventMetaKeys::TAGLINE       => 'Enseñar de otra manera',
+				EventMetaKeys::HASHTAG       => '#EVT 2026',
+				EventMetaKeys::INTRO         => '<p>Bienvenida.</p>',
+				EventMetaKeys::START_DATE    => '2026-03-10',
+				EventMetaKeys::END_DATE      => '2026-03-12',
+				EventMetaKeys::VENUE         => 'Sede Central',
 			)
 		);
 
@@ -506,8 +501,6 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$this->assertSame( '2026-03-10', get_post_meta( $evento, EventMetaKeys::START_DATE, true ) );
 		$this->assertSame( '2026-03-12', get_post_meta( $evento, EventMetaKeys::END_DATE, true ) );
 		$this->assertSame( 'Sede Central', get_post_meta( $evento, EventMetaKeys::VENUE, true ) );
-		$this->assertSame( '10', (string) get_post_meta( $evento, EventMetaKeys::SIGNUP_FORM_ID, true ) );
-		$this->assertNotEmpty( get_post_meta( $evento, EventMetaKeys::SIGNUP_SHOW, true ) );
 
 		$this->assertSame( array( $tipo ), wp_get_post_terms( $evento, EventTaxonomies::TYPE, array( 'fields' => 'ids' ) ) );
 		$this->assertSame( array( $curso ), wp_get_post_terms( $evento, EventTaxonomies::COURSE, array( 'fields' => 'ids' ) ) );
@@ -993,5 +986,65 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 
 		$this->assertTrue( shortcode_exists( EventWorkspace::SHORTCODE ) );
 		$this->assertSame( 20, has_action( 'init', array( EventWorkspace::class, 'handle' ) ) );
+	}
+
+	// ─── el rediseño del taller (ADR-0041) ─────────────────────────────────
+
+	/**
+	 * El botón de la portada y la inscripción en otro sitio se guardan desde
+	 * «Formulario y plazos», con el resto de la inscripción.
+	 */
+	public function test_the_signup_tab_saves_the_front_page_button() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				EventMetaKeys::SIGNUP_SHOW    => '1',
+				EventMetaKeys::SIGNUP_LABEL   => 'Inscríbase',
+				EventMetaKeys::SIGNUP_URL     => 'https://example.org/inscripcion',
+				EventMetaKeys::SIGNUP_FORM_ID => '10',
+			)
+		);
+
+		$this->assertSame( '1', (string) get_post_meta( $evento, EventMetaKeys::SIGNUP_SHOW, true ) );
+		$this->assertSame( 'Inscríbase', get_post_meta( $evento, EventMetaKeys::SIGNUP_LABEL, true ) );
+		$this->assertSame( 'https://example.org/inscripcion', get_post_meta( $evento, EventMetaKeys::SIGNUP_URL, true ) );
+		$this->assertSame( '10', (string) get_post_meta( $evento, EventMetaKeys::SIGNUP_FORM_ID, true ) );
+	}
+
+	/**
+	 * Un alta de ponente que no pasa vuelve con el panel lateral abierto.
+	 */
+	public function test_a_failed_speaker_reopens_the_side_panel() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+
+		$destino = $this->submit( $uid, EventWorkspace::OP_SPEAKER, $evento, 0, array( 'evt_sp_name' => '' ) );
+
+		$this->assertStringContainsString( EventWorkspace::ARG_NEW . '=1', (string) $destino );
+	}
+
+	/**
+	 * «Marcar como histórico» sale al final de «Datos del evento», en la zona roja.
+	 */
+	public function test_archiving_is_the_last_thing_of_the_data_tab() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+
+		$this->acting_as( $uid );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $evento;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_SETTINGS;
+		$html                              = \Evt\PublicFront\View\EventWorkspaceView::html( EventWorkspace::model() );
+
+		$this->assertStringContainsString( 'evt-peligro', $html );
+		$this->assertGreaterThan( strpos( $html, 'data-evt-guardar' ), strpos( $html, 'Dar el evento por terminado' ), 'después de guardar los datos, no antes' );
 	}
 }

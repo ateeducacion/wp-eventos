@@ -46,7 +46,8 @@
   --evt-adm-borde: #a67c00;
   --evt-adm-texto: #4a3a05;
   --evt-adm-marca: #6b5200;
-  --evt-ancho: 1128px;
+  /* Ancho completo, con margen a los lados (ADR-0041). */
+  --evt-ancho: 100vw;
 }
 
 /* --- página plana -------------------------------------------------------- */
@@ -303,8 +304,8 @@ html:has(> body.evt-app) { overflow-x: clip; }
 /* Al romper la columna del tema, la hoja pasa a ser de ancho completo: el
    centrado del contenido lo hace este relleno lateral. */
 body.evt-app .evt-hoja {
-  padding-left: max(24px, calc(50% - var(--evt-ancho) / 2));
-  padding-right: max(24px, calc(50% - var(--evt-ancho) / 2));
+  padding-left: max(32px, calc(50% - var(--evt-ancho) / 2));
+  padding-right: max(32px, calc(50% - var(--evt-ancho) / 2));
 }
 
 .evt-hoja .evt-tabs { margin: 0 0 28px; }
@@ -395,6 +396,9 @@ body.evt-app .evt-hoja {
 .evt-form label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px; }
 .evt-form input[type="text"],
 .evt-form input[type="url"],
+.evt-form input[type="email"],
+.evt-form input[type="tel"],
+.evt-form input[type="time"],
 .evt-form input[type="date"],
 .evt-form input[type="number"],
 .evt-form input[type="search"],
@@ -598,6 +602,8 @@ body.evt-app .evt-hoja {
 .evt-state-finalizado { background: var(--evt-sup-2); color: var(--evt-texto-2); }
 .evt-state-draft { background: var(--evt-esp-cont); color: var(--evt-esp); }
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
+.evt-state-archived { background: #2b3036; color: #fff; }
+.evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
 
 /* --- avisos -------------------------------------------------------------- */
 
@@ -627,7 +633,7 @@ body.evt-app .evt-hoja {
   min-height: 44px;
   padding: 0 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--evt-pri-cont);
   color: var(--evt-pri);
   font: inherit;
@@ -648,7 +654,7 @@ body.evt-app {
   --bs-link-color: #1b4f8a;
   --bs-link-hover-color: #123a68;
 }
-body.evt-app .btn { border-radius: 999px; min-height: 44px; font-weight: 600; }
+body.evt-app .btn { border-radius: 8px; min-height: 44px; font-weight: 600; }
 body.evt-app .btn-primary {
   --bs-btn-bg: var(--evt-pri);
   --bs-btn-border-color: var(--evt-pri);
@@ -962,3 +968,414 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 @media (prefers-reduced-motion: reduce) {
   .evt-app * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* --- listado de eventos: herramientas, cuadrícula y lista ----------------- */
+
+/*
+ * Una sola línea de herramientas: el nombre, el ámbito, cómo verlo y crear.
+ * Con pocos eventos por área no hace falta más (ADR-0041).
+ */
+.evt-herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.evt-herramientas__filtros {
+  display: flex;
+  flex: 1 1 420px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.evt-herramientas__buscar { flex: 1 1 240px; min-width: 0; }
+.evt-herramientas__ambito { flex: 0 1 240px; width: auto; }
+/* Con guion el nombre filtra al escribir y el ámbito se envía solo. */
+.evt-app-js .evt-herramientas__aplicar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.evt-sin-bootstrap .evt-herramientas input,
+.evt-sin-bootstrap .evt-herramientas select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #c3cad2;
+  border-radius: 8px;
+  background: var(--evt-sup);
+  font: inherit;
+}
+.evt-segmentos { display: inline-flex; }
+.evt-sin-bootstrap .evt-segmento {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--evt-pri);
+  color: var(--evt-pri);
+  text-decoration: none;
+}
+.evt-sin-bootstrap .evt-segmento:first-child { border-radius: 8px 0 0 8px; }
+.evt-sin-bootstrap .evt-segmento:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.evt-sin-bootstrap .evt-segmento.active { background: var(--evt-pri); color: #fff; }
+
+.evt-rejilla {
+  display: grid;
+  /* Tarjetas de ancho acotado y la rejilla centrada: con pocos eventos no se
+     estiran hasta hacer carteles enormes ni dejan un hueco a un lado. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 250px));
+  justify-content: center;
+  gap: 18px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.evt-ficha {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--evt-r);
+  background: var(--evt-sup);
+  box-shadow: var(--evt-e1);
+  transition: box-shadow .15s;
+}
+.evt-ficha:hover, .evt-ficha:focus-within { box-shadow: var(--evt-e3); }
+.evt-ficha[hidden] { display: none; }
+.evt-ficha__cartel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--evt-cartel, var(--evt-pri));
+  color: #fff;
+}
+.evt-ficha__cartel--vacio span,
+.evt-mini-cartel--vacio span {
+  padding: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+.evt-ficha__cuerpo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
+.evt-ficha__chapas { display: flex; flex-wrap: wrap; gap: 4px; }
+.evt-ficha__titulo { margin: 0; font-size: 1rem; line-height: 1.3; }
+.evt-ficha__enlace { color: inherit; text-decoration: none; }
+/* Toda la tarjeta abre el taller; «Ver la página» queda por encima. */
+.evt-ficha__enlace::after { content: ""; position: absolute; inset: 0; }
+.evt-ficha__enlace:focus-visible { outline: none; }
+.evt-ficha:has(.evt-ficha__enlace:focus-visible) { outline: 3px solid var(--evt-pri); outline-offset: 2px; }
+.evt-ficha__dato { margin: 0; color: var(--evt-texto-2); font-size: .85rem; }
+.evt-ficha__ver { position: relative; z-index: 1; align-self: flex-start; margin-top: 4px; font-size: .85rem; }
+.evt-ficha .evt-accion { position: relative; z-index: 1; }
+
+.evt-tabla__cartel { width: 64px; }
+.evt-mini-cartel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--evt-cartel, var(--evt-pri));
+  color: #fff;
+  font-size: 0;
+}
+.evt-tabla__titulo { font-weight: 600; }
+.evt-tabla tr[hidden] { display: none; }
+
+
+/* --- el taller del evento: cabecera, menú lateral y paneles -------------- */
+
+/*
+ * Un menú lateral en tres grupos en vez de nueve pestañas en fila: lo que se
+ * publica, quién se apunta y cómo es el evento (ADR-0041).
+ */
+.evt-taller-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.evt-taller-cabecera .evt-sub { margin-bottom: 0; }
+.evt-migas { display: flex; gap: 6px; margin-bottom: 4px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-migas a { color: var(--evt-pri); }
+
+.evt-taller {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.evt-taller__menu {
+  position: sticky;
+  top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px);
+  padding: 14px 10px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+}
+.evt-taller__grupo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 10px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--evt-texto-2);
+}
+.evt-taller__grupo:first-child { margin-top: 0; }
+/* La raya tras el nombre del grupo: dice que es una sección y la separa. */
+.evt-taller__grupo::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--evt-linea); }
+.evt-taller__lista { margin: 0 0 6px; padding: 0; list-style: none; }
+.evt-taller__enlace {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--evt-texto);
+  text-decoration: none;
+}
+.evt-taller__enlace:hover { background: var(--evt-sup-2); color: var(--evt-pri); text-decoration: none; }
+.evt-taller__enlace--on,
+.evt-taller__enlace--on:hover { background: var(--evt-pri); color: #fff; font-weight: 600; }
+.evt-taller__enlace--on .evt-tab-n { background: rgba(255, 255, 255, .22); color: #fff; }
+.evt-taller__panel { min-width: 0; }
+
+.evt-panel-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.evt-panel-cabecera .evt-sub { margin: 2px 0 0; }
+.evt-panel-titulo { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.evt-opcional { font-weight: 400; color: var(--evt-texto-2); }
+.evt-ayuda { margin: 6px 0 12px; font-size: 13px; color: var(--evt-texto-2); max-width: 68ch; }
+.evt-dos-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 16px; }
+.evt-dos-columnas > .evt-tarjeta { margin: 0 0 16px; }
+.evt-form-fila--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.evt-form-fila--ancha { grid-template-columns: 2fr 1fr; }
+.evt-tarjeta__titulo { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+
+/* Interruptores: con Bootstrap son `form-switch`; sin él, una casilla. */
+.evt-form .form-check-label { display: inline; margin: 0; font-weight: 500; }
+.evt-interruptor { display: flex; align-items: center; gap: 8px; min-height: 36px; margin: 0 0 8px; }
+.evt-sin-bootstrap .evt-interruptor input { width: 20px; height: 20px; margin: 0; }
+
+/* Preguntas y bloques que se tocan poco: plegados, con un resumen. */
+.evt-pregunta { border-top: 1px solid var(--evt-linea); }
+.evt-pregunta summary,
+.evt-plegable > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.evt-pregunta summary::-webkit-details-marker,
+.evt-plegable > summary::-webkit-details-marker { display: none; }
+.evt-pregunta summary::before,
+.evt-plegable > summary::before { content: "›"; display: inline-block; width: 1em; color: var(--evt-texto-2); transition: transform .15s; }
+.evt-pregunta[open] > summary::before,
+.evt-plegable[open] > summary::before { transform: rotate(90deg); }
+.evt-pregunta__rotulo { font-weight: 600; }
+.evt-pregunta__tipo { font-size: 13px; color: var(--evt-texto-2); }
+.evt-pregunta--nueva summary { color: var(--evt-pri); }
+.evt-pregunta__cuerpo { padding: 0 0 12px 1em; }
+.evt-plegable > summary { padding: 0; font-weight: 700; }
+.evt-plegable[open] > summary { margin-bottom: 12px; }
+
+/* La barra de guardar, pegada abajo mientras se baja por el formulario. */
+.evt-guardar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 8px -12px 0;
+  padding: 12px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r) var(--evt-r) 0 0;
+  box-shadow: 0 -4px 16px rgba(16, 24, 40, .08);
+}
+.evt-guardar__estado { font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-guardar--sucio .evt-guardar__estado { color: var(--evt-esp); font-weight: 600; }
+.evt-guardar__botones { display: flex; gap: 8px; margin-left: auto; }
+
+/* Lo que no tiene vuelta atrás, al final y en rojo. */
+.evt-peligro { border-color: #f1c7c3; background: #fffafa; }
+.evt-peligro > h2 { color: var(--evt-mal); }
+.evt-peligro__fila { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.evt-peligro__fila p { margin: 0; font-size: 14px; color: var(--evt-texto-2); }
+.evt-peligro__fila .evt-accion { flex-shrink: 0; }
+
+/* Apariencia: los ajustes a la izquierda y la muestra, fija, a la derecha. */
+.evt-apariencia { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+.evt-apariencia__muestra { position: sticky; top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px); }
+.evt-apariencia__muestra .evt-preview { margin: 0; }
+.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px; }
+.evt-imagenes > * { margin: 0; padding: 12px; border: 1px solid var(--evt-linea); border-radius: 10px; }
+
+/* Plazas de un taller, dentro de su fila del programa. */
+.evt-plazas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-plazas__barra { display: inline-block; width: 110px; height: 6px; overflow: hidden; border-radius: 3px; background: var(--evt-linea); }
+.evt-plazas__barra > span { display: block; height: 100%; background: var(--evt-pri); }
+
+/* El panel lateral: añadir o editar una fila sin perder la lista de vista. */
+.evt-cajon-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(20, 28, 38, .45);
+}
+.evt-cajon {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100001;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  background: var(--evt-sup);
+  box-shadow: var(--evt-e3);
+}
+.evt-cajon__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--evt-linea);
+}
+.evt-cajon__titulo { margin: 0; font-size: 18px; font-weight: 700; }
+.evt-cajon__cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--evt-texto);
+  font-size: 26px;
+  line-height: 1;
+  text-decoration: none;
+}
+.evt-cajon__cerrar:hover { background: var(--evt-sup-2); text-decoration: none; }
+.evt-cajon__cuerpo { flex: 1 1 auto; overflow-y: auto; padding: 20px; }
+.evt-cajon .evt-form-fila { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+body:has(.evt-cajon) { overflow: hidden; }
+
+@media (max-width: 900px) {
+  .evt-taller { grid-template-columns: 1fr; }
+  .evt-taller__menu { position: static; }
+  .evt-apariencia { grid-template-columns: 1fr; }
+  .evt-apariencia__muestra { position: static; }
+  .evt-peligro__fila { flex-direction: column; align-items: flex-start; }
+  .evt-form-fila--2, .evt-form-fila--ancha { grid-template-columns: 1fr; }
+}
+
+/* Los grupos de botones y los interruptores, con el azul del aplicativo. */
+.evt-segmentos .btn-outline-primary {
+  --bs-btn-color: var(--evt-pri);
+  --bs-btn-border-color: var(--evt-pri);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--evt-pri);
+  --bs-btn-hover-border-color: var(--evt-pri);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--evt-pri);
+  --bs-btn-active-border-color: var(--evt-pri);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.evt-app .form-check-input:checked { background-color: var(--evt-pri); border-color: var(--evt-pri); }
+.evt-app .form-check-input:focus { border-color: var(--evt-pri); box-shadow: 0 0 0 .25rem rgba(27, 79, 138, .25); }
+
+/* El panel lateral entra y sale deslizándose. */
+.evt-cajon[hidden], .evt-cajon-fondo[hidden] { display: none; }
+@keyframes evt-cajon-entra { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes evt-cajon-sale { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes evt-fondo-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes evt-fondo-sale { from { opacity: 1; } to { opacity: 0; } }
+.evt-cajon { animation: evt-cajon-entra .22s ease-out; }
+.evt-cajon-fondo { animation: evt-fondo-entra .22s ease-out; }
+.evt-cajon.evt-cajon--saliendo { animation: evt-cajon-sale .2s ease-in forwards; }
+.evt-cajon-fondo.evt-cajon--saliendo { animation: evt-fondo-sale .2s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .evt-cajon, .evt-cajon-fondo, .evt-cajon.evt-cajon--saliendo, .evt-cajon-fondo.evt-cajon--saliendo { animation: none; }
+}
+
+/* Un grupo de casillas se rotula como cualquier campo, no como un título. */
+.evt-form .evt-form-campo > legend,
+.evt-form fieldset.evt-form-campo > legend {
+  float: none;
+  width: auto;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* La edición de una página y la vista previa, en el panel lateral, con un marco. */
+.evt-cajon.evt-cajon--pagina { width: min(860px, 100%); }
+/* La vista previa sí es ancha: es la página pública, para navegarla. */
+.evt-cajon.evt-cajon--vista { width: min(1400px, 96vw); }
+.evt-cajon__fuera { margin-left: auto; margin-right: 12px; font-size: 14px; }
+.evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
+body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
+
+
+/* Un campo y su botón en la misma fila, a la misma altura; la ayuda, debajo. */
+.evt-campo-con-boton { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.evt-campo-con-boton > select,
+.evt-campo-con-boton > input { flex: 1 1 16rem; width: auto; }
+.evt-campo-con-boton > .btn,
+.evt-campo-con-boton > .evt-btn { flex: 0 0 auto; }
+
+/* Borrador, histórico o papelera: la tarjeta más clara y una banda cruzada
+   en la esquina que lo dice (ADR-0041). La chapa de la lista lo repite. */
+.evt-ficha__banda {
+  position: absolute;
+  top: 22px;
+  right: -44px;
+  z-index: 2;
+  width: 170px;
+  padding: 5px 0;
+  transform: rotate(45deg);
+  background: var(--evt-esp);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, .25);
+  pointer-events: none;
+}
+.evt-ficha--historico .evt-ficha__banda { background: #2b3036; }
+.evt-ficha--papelera .evt-ficha__banda { background: var(--evt-mal); }
+.evt-ficha--borrador .evt-ficha__cartel,
+.evt-ficha--borrador .evt-ficha__cuerpo,
+.evt-ficha--papelera .evt-ficha__cartel,
+.evt-ficha--papelera .evt-ficha__cuerpo { opacity: .6; }
+.evt-ficha--historico .evt-ficha__cartel { filter: grayscale(1); opacity: .8; }
+.evt-fila--borrador > td,
+.evt-fila--papelera > td { opacity: .65; }
+.evt-fila--borrador > td:last-child,
+.evt-fila--papelera > td:last-child { opacity: 1; }

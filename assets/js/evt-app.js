@@ -13,6 +13,9 @@
 ( function () {
 	'use strict';
 
+	// Lo que solo tiene sentido con guion se enseña o se esconde con esta clase.
+	document.documentElement.classList.add( 'evt-app-js' );
+
 	/* --- 1. Confirmar antes de borrar ------------------------------------ */
 
 	/*
@@ -651,5 +654,317 @@
 		Array.prototype.forEach.call( botones, function ( boton ) {
 			boton.hidden = true;
 		} );
+	} );
+
+	/* --- 7. El listado de eventos: filtrar por nombre mientras se escribe -- */
+
+	/*
+	 * `data-evt-filtro` en el campo; `data-evt-buscar="<nombre normalizado>"`
+	 * en cada tarjeta o fila. Se esconden las que no contienen lo escrito, sin
+	 * tildes ni mayúsculas, que es como el servidor normaliza el nombre. Solo
+	 * filtra la página que se ve: Intro envía el formulario y busca en todas.
+	 */
+	function normalizar( texto ) {
+		return String( texto ).normalize( 'NFD' ).replace( /[̀-ͯ]/g, '' ).toLowerCase().trim();
+	}
+
+	document.addEventListener( 'input', function ( e ) {
+		var campo = e.target.closest ? e.target.closest( '[data-evt-filtro]' ) : null;
+		if ( ! campo ) {
+			return;
+		}
+		var busca = normalizar( campo.value );
+		var elementos = document.querySelectorAll( '[data-evt-buscar]' );
+		var visibles = 0;
+		Array.prototype.forEach.call( elementos, function ( el ) {
+			var sale = '' === busca || -1 !== normalizar( el.getAttribute( 'data-evt-buscar' ) ).indexOf( busca );
+			el.hidden = ! sale;
+			if ( sale ) {
+				visibles++;
+			}
+		} );
+		var vacio = document.querySelector( '[data-evt-filtro-vacio]' );
+		if ( vacio ) {
+			vacio.hidden = 0 !== visibles || 0 === elementos.length;
+		}
+	} );
+
+	/* Un desplegable con `data-evt-autoenvio` envía su formulario al cambiar. */
+	document.addEventListener( 'change', function ( e ) {
+		var lista = e.target.closest ? e.target.closest( '[data-evt-autoenvio]' ) : null;
+		if ( lista && lista.form ) {
+			lista.form.submit();
+		}
+	} );
+
+	/* --- 8. El panel lateral: se abre y se cierra deslizándose ------------ */
+
+	/*
+	 * La hoja del aplicativo se centra con `transform`, y eso hace de ella la
+	 * caja de referencia de todo lo `position: fixed` que lleve dentro: el
+	 * panel quedaría debajo de la cabecera y del pie. Se lleva al final del
+	 * `<body>`, que es donde un panel sobre la página tiene que estar.
+	 *
+	 * El de alta ya está en la página, escondido: «Añadir» lo abre sin
+	 * recargar. Cerrar lo esconde; el de edición, que trae los datos de una
+	 * ficha, recarga la pestaña para no dejar esos datos en el alta. Sin
+	 * guion, los mismos enlaces lo hacen todo por la dirección.
+	 */
+	function piezasCajon() {
+		return {
+			cajon: document.querySelector( '[data-evt-cajon]' ),
+			fondo: document.querySelector( '.evt-cajon-fondo' )
+		};
+	}
+
+	function enfocarCajon( cajon ) {
+		var primero = cajon.querySelector( 'input:not([type=hidden]), textarea, select' );
+		if ( primero ) {
+			primero.focus();
+		}
+	}
+
+	function abrirCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return false;
+		}
+		p.cajon.classList.remove( 'evt-cajon--saliendo' );
+		p.cajon.hidden = false;
+		if ( p.fondo ) {
+			p.fondo.classList.remove( 'evt-cajon--saliendo' );
+			p.fondo.hidden = false;
+		}
+		enfocarCajon( p.cajon );
+		return true;
+	}
+
+	function cerrarCajon( destino ) {
+		var p = piezasCajon();
+		if ( ! p.cajon || p.cajon.hidden ) {
+			return;
+		}
+		var recargar = p.cajon.hasAttribute( 'data-evt-cajon-edita' );
+		var reducido = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		p.cajon.classList.add( 'evt-cajon--saliendo' );
+		if ( p.fondo ) {
+			p.fondo.classList.add( 'evt-cajon--saliendo' );
+		}
+		window.setTimeout( function () {
+			if ( recargar && destino ) {
+				window.location.assign( destino.href );
+				return;
+			}
+			p.cajon.hidden = true;
+			if ( p.fondo ) {
+				p.fondo.hidden = true;
+			}
+			// La dirección deja de pedir el alta: recargar no la vuelve a abrir.
+			if ( destino && window.history && window.history.replaceState ) {
+				window.history.replaceState( null, '', destino.href );
+			}
+		}, reducido ? 0 : 200 );
+	}
+
+	function prepararCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return;
+		}
+		if ( p.fondo ) {
+			document.body.appendChild( p.fondo );
+		}
+		document.body.appendChild( p.cajon );
+		if ( ! p.cajon.hidden ) {
+			enfocarCajon( p.cajon );
+		}
+	}
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', prepararCajon );
+	} else {
+		prepararCajon();
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var abrir = e.target.closest ? e.target.closest( '[data-evt-abrir-cajon]' ) : null;
+		if ( abrir && abrirCajon() ) {
+			e.preventDefault();
+			return;
+		}
+		var cerrar = e.target.closest ? e.target.closest( '[data-evt-cerrar-cajon]' ) : null;
+		if ( cerrar ) {
+			e.preventDefault();
+			cerrarCajon( cerrar );
+		}
+	} );
+
+	document.addEventListener( 'keydown', function ( e ) {
+		if ( 'Escape' !== e.key ) {
+			return;
+		}
+		cerrarCajon( document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' ) );
+	} );
+
+	/*
+	 * La edición de una página es su propia pantalla, con el editor de
+	 * WordPress y el código. Se abre en el panel lateral dentro de un marco,
+	 * pintada sin cabecera ni pie (`evt_marco=1`). Al cerrarlo se recarga la
+	 * pestaña, que así enseña lo que se haya guardado. Sin guion, el enlace y
+	 * el formulario abren la pantalla entera, como siempre.
+	 */
+	function abrirMarco( url, titulo, vista ) {
+		var direccion = new URL( url, window.location.href );
+		if ( direccion.origin !== window.location.origin ) {
+			return false;
+		}
+		// La vista previa es la página pública tal cual, para navegarla; la
+		// edición, la pantalla del aplicativo sin cabecera ni pie.
+		if ( ! vista ) {
+			direccion.searchParams.set( 'evt_marco', '1' );
+		}
+
+		var fondo = document.createElement( 'div' );
+		fondo.className = 'evt-cajon-fondo';
+		var cajon = document.createElement( 'section' );
+		cajon.className = vista ? 'evt-cajon evt-cajon--vista' : 'evt-cajon evt-cajon--pagina';
+		cajon.setAttribute( 'role', 'dialog' );
+		cajon.setAttribute( 'aria-modal', 'true' );
+		cajon.setAttribute( 'aria-label', titulo );
+		cajon.setAttribute( 'data-evt-cajon', '' );
+		// Cerrar la edición recarga la pestaña para enseñar lo guardado;
+		// cerrar la vista previa no toca nada de lo que se estaba haciendo.
+		if ( ! vista ) {
+			cajon.setAttribute( 'data-evt-cajon-edita', '' );
+		}
+
+		var cabecera = document.createElement( 'header' );
+		cabecera.className = 'evt-cajon__cabecera';
+		var h2 = document.createElement( 'h2' );
+		h2.className = 'evt-cajon__titulo';
+		h2.textContent = titulo;
+		var cerrar = document.createElement( 'a' );
+		cerrar.className = 'evt-cajon__cerrar';
+		cerrar.href = window.location.href;
+		cerrar.setAttribute( 'aria-label', 'Cerrar' );
+		cerrar.setAttribute( 'data-evt-cerrar-cajon', '' );
+		cerrar.textContent = '×';
+		fondo.setAttribute( 'data-evt-cerrar-cajon', '' );
+		cabecera.appendChild( h2 );
+		if ( vista ) {
+			var fuera = document.createElement( 'a' );
+			fuera.className = 'evt-cajon__fuera';
+			fuera.href = direccion.toString();
+			fuera.target = '_blank';
+			fuera.rel = 'noopener';
+			fuera.textContent = 'Abrir en otra pestaña';
+			cabecera.appendChild( fuera );
+		}
+		cabecera.appendChild( cerrar );
+
+		var marco = document.createElement( 'iframe' );
+		marco.className = 'evt-cajon__marco';
+		marco.title = titulo;
+		marco.src = direccion.toString();
+
+		cajon.appendChild( cabecera );
+		cajon.appendChild( marco );
+		// Otro panel que hubiera, fuera: solo hay uno a la vez.
+		var viejos = document.querySelectorAll( '[data-evt-cajon], .evt-cajon-fondo' );
+		Array.prototype.forEach.call( viejos, function ( viejo ) {
+			viejo.parentNode.removeChild( viejo );
+		} );
+		document.body.appendChild( fondo );
+		document.body.appendChild( cajon );
+		return true;
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		if ( e.metaKey || e.ctrlKey || e.shiftKey || ! e.target.closest ) {
+			return;
+		}
+		var enlace = e.target.closest( 'a.evt-abre-marco' );
+		if ( enlace && abrirMarco( enlace.href, 'Editar la página', false ) ) {
+			e.preventDefault();
+			return;
+		}
+		var ver = e.target.closest( 'a.evt-abre-vista' );
+		if ( ver && abrirMarco( ver.href, 'Así se ve la página', true ) ) {
+			e.preventDefault();
+		}
+	} );
+
+	document.addEventListener( 'submit', function ( e ) {
+		var form = e.target;
+		if ( ! form || ! form.matches || ! form.matches( 'form[data-evt-marco]' ) ) {
+			return;
+		}
+		var url = new URL( form.getAttribute( 'action' ) || window.location.href, window.location.href );
+		new FormData( form ).forEach( function ( valor, clave ) {
+			url.searchParams.set( clave, valor );
+		} );
+		if ( abrirMarco( url.toString(), 'Nueva página', false ) ) {
+			e.preventDefault();
+		}
+	} );
+
+	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */
+
+	/*
+	 * `data-evt-cambios` en el formulario. Al tocar un campo, la barra dice
+	 * «Hay cambios sin guardar» y enseña «Descartar», que vuelve el formulario
+	 * a como estaba. Salir de la página con cambios pide confirmación. Sin
+	 * guion, la barra es solo el botón de guardar.
+	 */
+	function marcar( form, sucio ) {
+		var barra = form.querySelector( '[data-evt-guardar]' );
+		if ( ! barra ) {
+			return;
+		}
+		form.evtSucio = sucio;
+		barra.classList.toggle( 'evt-guardar--sucio', sucio );
+		var estado = barra.querySelector( '[data-evt-guardar-estado]' );
+		if ( estado ) {
+			estado.textContent = sucio ? 'Hay cambios sin guardar' : '';
+		}
+		var descartar = barra.querySelector( '[data-evt-guardar-descartar]' );
+		if ( descartar ) {
+			descartar.hidden = ! sucio;
+		}
+	}
+
+	function alCambiar( e ) {
+		var form = e.target.closest ? e.target.closest( 'form[data-evt-cambios]' ) : null;
+		if ( form ) {
+			marcar( form, true );
+		}
+	}
+	document.addEventListener( 'input', alCambiar );
+	document.addEventListener( 'change', alCambiar );
+
+	document.addEventListener( 'reset', function ( e ) {
+		var form = e.target;
+		if ( form && form.matches && form.matches( 'form[data-evt-cambios]' ) ) {
+			window.setTimeout( function () {
+				marcar( form, false );
+				form.dispatchEvent( new Event( 'evt:descartado', { bubbles: true } ) );
+			}, 0 );
+		}
+	} );
+
+	document.addEventListener( 'submit', function ( e ) {
+		if ( e.target && e.target.matches && e.target.matches( 'form[data-evt-cambios]' ) ) {
+			e.target.evtSucio = false;
+		}
+	}, true );
+
+	window.addEventListener( 'beforeunload', function ( e ) {
+		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
+		for ( var i = 0; i < formularios.length; i++ ) {
+			if ( formularios[ i ].evtSucio ) {
+				e.preventDefault();
+				e.returnValue = '';
+				return;
+			}
+		}
 	} );
 }() );

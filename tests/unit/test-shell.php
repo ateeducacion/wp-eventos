@@ -465,4 +465,37 @@ class Test_Shell extends WP_UnitTestCase {
 			unset( $_COOKIE[ $cookie ] );
 		}
 	}
+
+	/**
+	 * Dentro del panel lateral del taller (`?evt_marco=1`) la pantalla se pinta
+	 * sin cabecera ni pie, y sin barra de administración.
+	 */
+	public function test_a_framed_screen_has_no_header_nor_footer() {
+		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertStringContainsString( 'evt-top', Shell::render( 'Título', '', '<p>cuerpo</p>' ) );
+
+		$_GET[ Shell::ARG_FRAME ] = '1';
+		$html                     = Shell::render( 'Título', '', '<p>cuerpo</p>' );
+		$barra                    = Shell::show_admin_bar();
+		unset( $_GET[ Shell::ARG_FRAME ] );
+
+		$this->assertStringNotContainsString( 'evt-top', $html );
+		$this->assertStringContainsString( '<p>cuerpo</p>', $html );
+		$this->assertFalse( $barra );
+	}
+
+	/**
+	 * Cargada dentro de un marco —la vista previa del taller—, la web no
+	 * lleva la barra de administración, tampoco al navegar por sus enlaces.
+	 */
+	public function test_no_admin_bar_inside_a_frame() {
+		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertTrue( Shell::show_admin_bar() );
+
+		$_SERVER['HTTP_SEC_FETCH_DEST'] = 'iframe';
+		$barra                          = Shell::show_admin_bar();
+		unset( $_SERVER['HTTP_SEC_FETCH_DEST'] );
+
+		$this->assertFalse( $barra );
+	}
 }

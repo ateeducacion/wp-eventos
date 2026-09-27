@@ -81,11 +81,10 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Las páginas de este evento, en el orden en que salen en su menú. Cada
-			una es una página propia con su dirección: al despublicarla desaparece
-			del menú, pero no se pierde nada de lo escrito.
-		</p>
+		<div class="evt-panel-cabecera"><div>
+			<h2 class="evt-panel-titulo">Páginas</h2>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+		</div></div>
 
 		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::add_form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -231,25 +230,21 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>">
+		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>" data-evt-marco>
 			<h2>Añadir sección</h2>
 			<p>Elija qué va a ser la página nueva. El tipo decide los textos por defecto y el icono con que sale en la portada del evento.</p>
-			<div class="evt-form-fila">
-				<div>
-					<label for="evt-add-tipo">Tipo de sección</label>
-					<select id="evt-add-tipo" name="<?php echo esc_attr( EventWorkspace::ARG_TYPE ); ?>">
-						<?php foreach ( (array) $m['section_types'] as $slug => $rotulo ) : ?>
-							<option value="<?php echo esc_attr( (string) $slug ); ?>"><?php echo esc_html( (string) $rotulo ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<small>Si ninguna encaja, elija «Otra» y póngale el título que quiera.</small>
-				</div>
-				<div class="evt-acciones">
-					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-						<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
-					</button>
-				</div>
+			<label for="evt-add-tipo">Tipo de sección</label>
+			<div class="evt-campo-con-boton">
+				<select id="evt-add-tipo" name="<?php echo esc_attr( EventWorkspace::ARG_TYPE ); ?>">
+					<?php foreach ( (array) $m['section_types'] as $slug => $rotulo ) : ?>
+						<option value="<?php echo esc_attr( (string) $slug ); ?>"><?php echo esc_html( (string) $rotulo ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
+				</button>
 			</div>
+			<small>Si ninguna encaja, elija «Otra» y póngale el título que quiera.</small>
 			<?php foreach ( $ocultos as $clave => $valor ) : ?>
 				<input type="hidden" name="<?php echo esc_attr( (string) $clave ); ?>" value="<?php echo esc_attr( (string) $valor ); ?>" />
 			<?php endforeach; ?>
@@ -313,11 +308,12 @@ final class EventSectionsPanel {
 			<td data-rotulo="Acciones">
 				<span class="evt-acciones">
 					<?php
-					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página' )
+					$acciones = PanelParts::icon_link( (string) $fila['edit_url'], 'lapiz', 'Editar esta página', 'evt-abre-marco' )
 						. PanelParts::icon_link(
 							(string) $fila['view_url'],
 							'ojo',
-							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador'
+							$fila['published'] ? 'Ver esta página' : 'Previsualizar esta página, que está en borrador',
+							'evt-abre-vista'
 						);
 					echo $acciones; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 					?>

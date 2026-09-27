@@ -578,7 +578,8 @@ class Test_Programme extends WP_UnitTestCase {
 
 		$this->assertSame( 1, $paneles[ EventWorkspace::PANEL_SPEAKERS ]['count'] );
 		$this->assertSame( 2, $paneles[ EventWorkspace::PANEL_PROGRAMME ]['count'], 'la parrilla cuenta las dos' );
-		$this->assertSame( 1, $paneles[ EventWorkspace::PANEL_WORKSHOPS ]['count'] );
+		$this->assertArrayNotHasKey( 'talleres', $paneles, 'los talleres viven dentro del programa' );
+		$this->assertSame( EventWorkspace::GROUP_CONTENT, $paneles[ EventWorkspace::PANEL_PROGRAMME ]['group'] );
 		$this->assertSame( 0, $paneles[ EventWorkspace::PANEL_PEOPLE ]['count'] );
 		$this->assertNull( $paneles[ EventWorkspace::PANEL_SETTINGS ]['count'], 'en «Ajustes» un número no significaría nada' );
 	}

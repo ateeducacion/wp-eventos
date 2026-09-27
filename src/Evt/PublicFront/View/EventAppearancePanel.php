@@ -105,14 +105,14 @@ final class EventAppearancePanel {
 			'evt_logo',
 			'Logo acompañante',
 			self::image_of( (int) ( $medios['logo'] ?? 0 ) ),
-			'Sale junto al título en la cabecera. Un PNG con fondo transparente queda mejor sobre el color de fondo.',
+			'Junto al título. Mejor un PNG con fondo transparente.',
 			$subir
 		);
 		$img_banner    = self::image_field(
 			'evt_header_banner',
 			'Banner de cabecera',
 			self::image_of( (int) ( $medios['header_banner'] ?? 0 ) ),
-			'Sustituye visualmente la cabecera completa solo en la portada del evento. Debe tener al menos 1920 píxeles de ancho. Al quitarla reaparecen el título, el lema, las fechas, la sede y las acciones guardadas; esos datos no se borran.',
+			'Sustituye la cabecera solo en la portada. Al menos 1920 píxeles de ancho.',
 			$subir,
 			1920
 		);
@@ -120,29 +120,29 @@ final class EventAppearancePanel {
 			'evt_poster',
 			'Cartel del evento',
 			self::image_of( (int) ( $medios['poster'] ?? 0 ) ),
-			'El cartel completo. Se enseña en la portada del evento, y al pulsarlo se abre a tamaño completo para descargarlo o compartirlo.',
+			'En la portada, y a tamaño completo al pulsarlo. Es también el que sale en el listado y en la línea del tiempo.',
 			$subir
 		);
 		$img_destacada = self::image_field(
 			'evt_featured',
 			'Imagen destacada',
 			self::image_of( (int) ( $medios['featured'] ?? 0 ) ),
-			'La que se ve cuando se comparte el enlace del evento y en los listados. Apaisada se recorta menos.',
+			'Al compartir el enlace. Apaisada se recorta menos.',
 			$subir
 		);
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="" enctype="multipart/form-data">
+		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Apariencia</h2><p class="evt-sub">Se aplica a todas las páginas del evento. La muestra cambia al momento; nada se guarda hasta pulsar «Guardar la apariencia».</p></div></div>
+		<form class="evt-form" method="post" action="" enctype="multipart/form-data" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_LOOK ), EventWorkspace::nonce_name( EventWorkspace::PANEL_LOOK ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
-			<?php echo $vista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-
+			<div class="evt-apariencia">
+			<div class="evt-apariencia__ajustes">
 			<fieldset class="evt-tarjeta">
 				<legend>Colores de la cabecera</legend>
-				<p>Los dos colores de la banda de arriba de todas las páginas del evento. Elíjalos con contraste: el texto tiene que leerse sobre el fondo.</p>
 
 				<div class="evt-form-fila">
 					<div><?php echo $color_bg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
@@ -151,19 +151,12 @@ final class EventAppearancePanel {
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">
-				<legend>Tipografías</legend>
-				<p>Dos y no más: una para los títulos y otra para el texto. «La del tema» no carga ninguna fuente y es la opción más rápida de cargar.</p>
+				<legend>Tipografía y remate</legend>
 
 				<div class="evt-form-fila">
 					<div><?php echo $sel_titulo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 					<div><?php echo $sel_cuerpo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 				</div>
-			</fieldset>
-
-			<fieldset class="evt-tarjeta">
-				<legend>Forma y remate</legend>
-				<p>Detalles que se aplican a todas las páginas del evento.</p>
-
 				<div class="evt-form-fila">
 					<div><?php echo $sel_forma; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 					<div><?php echo $sel_sep; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
@@ -172,12 +165,7 @@ final class EventAppearancePanel {
 
 			<fieldset class="evt-tarjeta">
 				<legend>Imágenes</legend>
-				<p>
-					Las cuatro salen de la biblioteca de medios del sitio: «Seleccionar o subir» abre la
-					ventana nativa de WordPress, donde puede reutilizar una imagen, previsualizarla o
-					arrastrar una nueva desde su equipo
-					(JPG, PNG, WEBP o GIF). Nada cambia hasta que pulse «Guardar la apariencia».
-				</p>
+				<p class="evt-ayuda">De la biblioteca de medios del sitio: JPG, PNG, WEBP o GIF.</p>
 
 				<?php if ( ! $subir ) : ?>
 					<p class="<?php echo esc_attr( Assets::alert_class( 'warning' ) ); ?>">
@@ -185,15 +173,20 @@ final class EventAppearancePanel {
 					</p>
 				<?php endif; ?>
 
-				<?php echo $img_logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-				<?php echo $img_banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-				<?php echo $img_cartel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-				<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<div class="evt-imagenes">
+					<?php echo $img_cartel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $img_logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $img_banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				</div>
 			</fieldset>
+			</div>
+			<aside class="evt-apariencia__muestra" aria-label="Así se verá">
+				<?php echo $vista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			</aside>
+			</div>
 
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la apariencia</button>
-			</p>
+			<?php echo PanelParts::save_bar( 'Guardar la apariencia' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</form>
 		<?php
 		return (string) ob_get_clean();
@@ -247,7 +240,7 @@ final class EventAppearancePanel {
 					<?php // La muestra es una silueta fija dentro de la propia hoja: escapada con esc_attr porque es una constante de esta clase, no una URL de nadie. ?>
 					<img src="<?php echo esc_attr( self::SHAPE_SAMPLE ); ?>" width="72" height="72" alt="Ejemplo de la forma de las fotografías" />
 				</span>
-				Así se verá la cabecera del evento y así se recortarán las fotos de las personas. Es una muestra: no se guarda nada hasta que pulse «Guardar la apariencia».
+				Así se verá la cabecera y así se recortarán las fotos de las personas.
 			</div>
 		</div>
 		<?php

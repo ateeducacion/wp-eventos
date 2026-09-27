@@ -37,7 +37,7 @@ final class EventDataPanel {
 		// Los desplegables se arman antes de la plantilla: dentro de cada
 		// ayudante la salida ya va escapada, y así cada `echo` de la plantilla
 		// es de una sola línea.
-		$sel_area    = self::area_checks(
+		$sel_area  = self::area_checks(
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
 			'Ámbitos organizativos',
@@ -48,7 +48,7 @@ final class EventDataPanel {
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
 				: 'Seleccione solo ámbitos dentro de su subárbol.'
 		);
-		$sel_tipo    = self::term_select(
+		$sel_tipo  = self::term_select(
 			'evt-type',
 			EventWorkspace::FIELD_TYPE,
 			'Tipología',
@@ -56,7 +56,7 @@ final class EventDataPanel {
 			(int) $v[ EventWorkspace::FIELD_TYPE ],
 			'Jornadas, encuentro, congreso, taller… Sirve para agrupar eventos parecidos.'
 		);
-		$sel_curso   = self::term_select(
+		$sel_curso = self::term_select(
 			'evt-course',
 			EventWorkspace::FIELD_COURSE,
 			'Curso escolar',
@@ -64,18 +64,20 @@ final class EventDataPanel {
 			(int) $v[ EventWorkspace::FIELD_COURSE ],
 			'El curso al que pertenece, en la forma 2025-2026.'
 		);
-		$inscripcion = self::signup_card( $v );
+		$nuevo     = true === ( $m['nuevo'] ?? false );
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="">
+		<?php if ( ! $nuevo ) : ?>
+			<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Datos del evento</h2><p class="evt-sub">Lo que se anuncia, y de dónde sale el estado: próximo, abierto o finalizado.</p></div></div>
+		<?php endif; ?>
+		<form class="evt-form" method="post" action="" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_SETTINGS ), EventWorkspace::nonce_name( EventWorkspace::PANEL_SETTINGS ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_SETTINGS ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
 			<fieldset class="evt-tarjeta">
 				<legend>Identidad</legend>
-				<p>Cómo se llama el evento y qué se lee de él antes de entrar.</p>
 
 				<div class="evt-form-campo">
 					<label for="evt-title">Título del evento</label>
@@ -84,31 +86,30 @@ final class EventDataPanel {
 					<small>El nombre completo, tal y como se anuncia. Es el que sale en grande en la cabecera.</small>
 				</div>
 
-				<div class="evt-form-fila">
+				<div class="evt-form-fila evt-form-fila--ancha">
 					<div>
-						<label for="evt-tagline">Lema</label>
+						<label for="evt-tagline">Lema <span class="evt-opcional">(opcional)</span></label>
 						<input type="text" id="evt-tagline" name="<?php echo esc_attr( EventMetaKeys::TAGLINE ); ?>"
 							value="<?php echo esc_attr( (string) $v[ EventMetaKeys::TAGLINE ] ); ?>" />
-						<small>La línea corta que acompaña al título. Puede dejarse en blanco.</small>
+						<small>La línea corta que acompaña al título.</small>
 					</div>
 					<div>
 						<label for="evt-hashtag">Etiqueta de redes</label>
 						<input type="text" id="evt-hashtag" name="<?php echo esc_attr( EventMetaKeys::HASHTAG ); ?>"
 							value="<?php echo esc_attr( (string) $v[ EventMetaKeys::HASHTAG ] ); ?>" />
-						<small>Sin la almohadilla: escriba <code>jornadas25</code>, no <code>#jornadas25</code>.</small>
+						<small>Sin la almohadilla: <code>jornadas25</code>.</small>
 					</div>
 				</div>
 
 				<div class="evt-form-campo">
 					<label for="evt-intro">Texto introductorio</label>
 					<textarea id="evt-intro" name="<?php echo esc_attr( EventMetaKeys::INTRO ); ?>" rows="6"><?php echo esc_textarea( (string) $v[ EventMetaKeys::INTRO ] ); ?></textarea>
-					<small>Dos o tres párrafos que expliquen de qué va y a quién se dirige. Es lo que se lee en la portada del evento, debajo de la cabecera.</small>
+					<small>Dos o tres párrafos: de qué va y a quién se dirige. Se lee en la portada, debajo de la cabecera.</small>
 				</div>
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">
 				<legend>Cuándo y dónde</legend>
-				<p>De estas fechas sale el estado del evento —próximo, abierto o finalizado—, así que no hay que marcarlo a mano en ningún sitio.</p>
 
 				<div class="evt-form-fila">
 					<div>
@@ -135,7 +136,6 @@ final class EventDataPanel {
 
 			<fieldset class="evt-tarjeta">
 				<legend>Clasificación</legend>
-				<p>Con qué se ordena y se busca el evento. Cada ámbito seleccionado puede editarlo.</p>
 
 				<div class="evt-form-fila">
 					<div><?php echo $sel_area; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
@@ -144,62 +144,8 @@ final class EventDataPanel {
 				</div>
 			</fieldset>
 
-			<?php echo $inscripcion; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-					<?php echo esc_html( true === ( $m['nuevo'] ?? false ) ? 'Crear el evento' : 'Guardar los datos' ); ?>
-				</button>
-			</p>
+			<?php echo PanelParts::save_bar( $nuevo ? 'Crear el evento' : 'Guardar los datos' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</form>
-		<?php
-		return (string) ob_get_clean();
-	}
-
-	/**
-	 * The «Inscripción» card.
-	 *
-	 * @param array<string, string> $v Field values.
-	 * @return string
-	 */
-	private static function signup_card( array $v ): string {
-		ob_start();
-		?>
-			<fieldset class="evt-tarjeta">
-				<legend>Inscripción</legend>
-				<p>Las inscripciones siguen llevándose en el sistema anterior: aquí solo se dice si la portada enseña el botón y a dónde lleva.</p>
-
-				<div class="evt-form-campo">
-					<label for="evt-signup-show">
-						<input type="checkbox" id="evt-signup-show" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_SHOW ); ?>" value="1"
-							<?php checked( '' !== (string) $v[ EventMetaKeys::SIGNUP_SHOW ] ); ?> />
-						Mostrar el botón de inscripción en la portada del evento
-					</label>
-					<small>Desmárquelo cuando el plazo se cierre: el botón desaparece y no hay que tocar la página.</small>
-				</div>
-
-				<div class="evt-form-fila">
-					<div>
-						<label for="evt-signup-label">Texto del botón</label>
-						<input type="text" id="evt-signup-label" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_LABEL ); ?>"
-							placeholder="Inscríbete" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::SIGNUP_LABEL ] ); ?>" />
-						<small>Lo que se lee dentro del botón. En blanco, pone «Inscríbete».</small>
-					</div>
-					<div>
-						<label for="evt-signup-form">Formulario antiguo <span class="evt-state evt-state-draft">Histórico</span></label>
-						<input type="number" id="evt-signup-form" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_FORM_ID ); ?>"
-							min="0" step="1" value="<?php echo esc_attr( (string) (int) $v[ EventMetaKeys::SIGNUP_FORM_ID ] ); ?>" />
-						<small><strong>No lo rellene en un evento nuevo.</strong> Es el número del formulario de inscripción del sistema anterior, y está aquí solo para que los eventos migrados sigan viéndose igual. Los participantes de este aplicativo se gestionan en la pestaña «Participantes». <strong>Este campo desaparecerá.</strong></small>
-					</div>
-				</div>
-
-				<div class="evt-form-campo">
-					<label for="evt-signup-url">Dirección a la que lleva el botón</label>
-					<input type="url" id="evt-signup-url" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_URL ); ?>"
-						placeholder="https://" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::SIGNUP_URL ] ); ?>" />
-					<small>Solo si la inscripción está fuera de este sitio. Con formulario propio, déjelo en blanco.</small>
-				</div>
-			</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}

@@ -30,6 +30,7 @@ use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
+use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
@@ -99,6 +100,9 @@ final class App {
 		EventWorkspace::register();
 		PageForm::register();
 		Home::register();
+		// La puerta pública: todos los eventos en una línea del tiempo, sin
+		// sesión y dentro del tema del sitio (ADR-0041).
+		Timeline::register();
 
 		// La vista pública del evento no es una pantalla del aplicativo: no
 		// lleva ni la cabecera ni las pestañas del armazón. Se pinta el

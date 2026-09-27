@@ -48,20 +48,16 @@ final class EventWorkspaceView {
 
 		ob_start();
 		echo self::head( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-		echo self::tabs( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo '<div class="evt-taller">';
+		echo self::menu( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		echo '<div class="evt-taller__panel">';
 
-		if ( '' !== (string) $flash['texto'] ) {
+		// Con el panel lateral abierto, el error de guardar se enseña dentro.
+		if ( '' !== (string) $flash['texto'] && ! ( true === $m['drawer'] && 'error' === (string) $flash['tipo'] ) ) {
 			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		}
 
 		echo self::archived_notice( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-
-		// El interruptor va fuera de lo que se apaga, y antes: si estuviera
-		// dentro del panel bloqueado, marcar un evento sería un viaje sin
-		// vuelta ni siquiera para quien administra.
-		if ( EventWorkspace::PANEL_SETTINGS === $panel ) {
-			echo self::archive_switch( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-		}
 
 		// Solo lectura: un `fieldset` desactivado apaga de una vez todos los
 		// controles que tenga dentro —también los de los formularios que hay
@@ -77,8 +73,6 @@ final class EventWorkspaceView {
 			echo EventSpeakersPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_PROGRAMME === $panel ) {
 			echo EventProgrammePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-		} elseif ( EventWorkspace::PANEL_WORKSHOPS === $panel ) {
-			echo EventWorkshopsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_SIGNUP === $panel ) {
 			echo EventSignupPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
@@ -98,6 +92,15 @@ final class EventWorkspaceView {
 		if ( $cerrado ) {
 			echo '</fieldset>';
 		}
+
+		// Cerrar el evento es lo último de «Datos», fuera de lo que se apaga:
+		// si estuviera dentro del panel bloqueado, marcarlo sería un viaje sin
+		// vuelta ni siquiera para quien administra.
+		if ( EventWorkspace::PANEL_SETTINGS === $panel ) {
+			echo self::archive_switch( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		}
+
+		echo '</div></div>';
 
 		return Shell::render( '', '', (string) ob_get_clean() );
 	}
@@ -178,10 +181,12 @@ final class EventWorkspaceView {
 
 		ob_start();
 		?>
-		<section class="evt-tarjeta">
+		<section class="evt-tarjeta evt-peligro">
 			<h2>Dar el evento por terminado</h2>
-			<p>Cuando ya no quede nada que tocar —los vídeos subidos, las presentaciones colgadas, las erratas corregidas—, márquelo como histórico y quedará cerrado tal y como está. Seguirá entrando a consultarlo y a exportarlo, y la página pública se verá igual que siempre; lo que ya no podrá es cambiar nada, ni de él ni de sus secciones. <strong>Para volver a abrirlo tendrá que pedírselo a quien administre el aplicativo.</strong></p>
-			<?php echo self::archive_form( $m, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<div class="evt-peligro__fila">
+				<p>Queda cerrado tal cual: se sigue consultando y exportando, y la página pública no cambia, pero ya no se edita ni él ni sus páginas. <strong>Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.</strong></p>
+				<?php echo self::archive_form( $m, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			</div>
 		</section>
 		<?php
 		return (string) ob_get_clean();
@@ -216,63 +221,84 @@ final class EventWorkspaceView {
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<button type="submit" class="<?php echo esc_attr( Assets::button_class() ); ?>" title="<?php echo esc_attr( $rotulo ); ?>"><?php echo esc_html( $rotulo ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( $marcar ? 'evt-btn btn btn-outline-danger evt-btn-borrar' : Assets::button_class() ); ?>"><?php echo esc_html( $marcar ? $rotulo . '…' : $rotulo ); ?></button>
 		</form>
 		<?php
 		return (string) ob_get_clean();
 	}
 
 	/**
-	 * The name of the event, what state it is in, its área, and where to see it.
+	 * The name of the event, what state it is in, when, where, and where to see it.
 	 *
 	 * @param array<string, mixed> $m Model.
 	 * @return string
 	 */
 	private static function head( array $m ): string {
+		$lugar = array_filter( array( (string) ( $m['dates_text'] ?? '' ), (string) ( $m['venue_text'] ?? '' ), 'Ámbito: ' . self::area_names( (array) $m['area_ids'] ) ) );
+
 		ob_start();
 		?>
-		<p class="evt-sub"><a href="<?php echo esc_url( (string) $m['events_url'] ); ?>">&larr; Todos los eventos</a></p>
-		<div class="evt-h1-fila">
-			<h1 class="evt-h1"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></h1>
-			<span class="<?php echo esc_attr( Assets::state_class( (string) $m['state'] ) ); ?>"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
-			<span class="<?php echo esc_attr( 'publish' === (string) $m['status'] ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ); ?>"><?php echo esc_html( (string) $m['status_label'] ); ?></span>
-			<span class="evt-acciones">
-				<?php if ( '' !== (string) $m['view_url'] ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['view_url'] ); ?>">Ver la página</a>
-				<?php endif; ?>
-			</span>
-		</div>
-		<p class="evt-sub"><?php echo esc_html( 'Ámbito: ' . self::area_names( (array) $m['area_ids'] ) ); ?></p>
+		<header class="evt-taller-cabecera">
+			<div>
+				<nav class="evt-migas" aria-label="Migas de pan">
+					<a href="<?php echo esc_url( (string) $m['events_url'] ); ?>">Eventos</a>
+					<span aria-hidden="true">›</span>
+					<span aria-current="page"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></span>
+				</nav>
+				<div class="evt-h1-fila">
+					<h1 class="evt-h1"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></h1>
+					<span class="<?php echo esc_attr( Assets::state_class( (string) $m['state'] ) ); ?>"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+					<span class="<?php echo esc_attr( 'publish' === (string) $m['status'] ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ); ?>"><?php echo esc_html( (string) $m['status_label'] ); ?></span>
+					<?php if ( true === $m['archived'] ) : ?>
+						<span class="evt-state evt-state-archived">Histórico</span>
+					<?php endif; ?>
+				</div>
+				<p class="evt-sub"><?php echo esc_html( implode( ' · ', $lugar ) ); ?></p>
+			</div>
+			<?php if ( '' !== (string) $m['view_url'] ) : ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?> evt-abre-vista" href="<?php echo esc_url( (string) $m['view_url'] ); ?>">
+					<?php echo wp_kses( Shell::icon( 'ojo' ), PanelParts::SVG ); ?>
+					<?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?>
+				</a>
+			<?php endif; ?>
+		</header>
 		<?php
 		return (string) ob_get_clean();
 	}
 
 	/**
-	 * The inner tabs of the workshop, each with its count.
+	 * The side menu of the workshop: three groups, each tab with its count.
 	 *
 	 * @param array<string, mixed> $m Model.
 	 * @return string
 	 */
-	private static function tabs( array $m ): string {
+	private static function menu( array $m ): string {
 		$activa = (string) $m['panel'];
+		$grupos = array();
+		foreach ( (array) $m['panels'] as $clave => $panel ) {
+			$grupos[ (string) ( $panel['group'] ?? '' ) ][ $clave ] = $panel;
+		}
 
 		ob_start();
 		?>
-		<nav class="evt-tabs" aria-label="Paneles del evento">
-			<div class="evt-tabs-fila">
-				<?php foreach ( (array) $m['panels'] as $clave => $panel ) : ?>
-					<a class="evt-tab<?php echo $clave === $activa ? ' evt-tab-on' : ''; ?>"
-						<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>
-						href="<?php echo esc_url( (string) $panel['url'] ); ?>"><?php echo esc_html( (string) $panel['label'] ); ?>
-						<?php
-						// El recuento solo donde hay algo que contar: en «Ajustes»,
-						// «Apariencia» y «Código» no significaría nada.
-						if ( null !== ( $panel['count'] ?? null ) ) :
-							?>
-							<span class="evt-tab-n"><?php echo esc_html( (string) (int) $panel['count'] ); ?></span>
-						<?php endif; ?></a>
-				<?php endforeach; ?>
-			</div>
+		<nav class="evt-taller__menu" aria-label="Partes del evento">
+			<?php foreach ( $grupos as $grupo => $paneles ) : ?>
+				<p class="evt-taller__grupo"><?php echo esc_html( $grupo ); ?></p>
+				<ul class="evt-taller__lista">
+					<?php foreach ( $paneles as $clave => $panel ) : ?>
+						<li>
+							<a class="evt-taller__enlace<?php echo $clave === $activa ? ' evt-taller__enlace--on' : ''; ?>"
+								<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>
+								href="<?php echo esc_url( (string) $panel['url'] ); ?>">
+								<span><?php echo esc_html( (string) $panel['label'] ); ?></span>
+								<?php if ( null !== ( $panel['count'] ?? null ) ) : ?>
+									<span class="evt-tab-n"><?php echo esc_html( (string) (int) $panel['count'] ); ?></span>
+								<?php endif; ?>
+							</a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endforeach; ?>
 		</nav>
 		<?php
 		return (string) ob_get_clean();

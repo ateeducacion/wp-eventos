@@ -42,6 +42,7 @@ function evt_page_titles(): array {
 		'event'    => 'Evento',
 		'section'  => 'Sección',
 		'speakers' => 'Ponentes del evento',
+		'timeline' => 'Eventos',
 	);
 }
 
@@ -72,8 +73,17 @@ function evt_setup_pages( string $evt_padre ): void {
 	$evt_completadas = 0;
 	$evt_saltadas    = 0;
 
-	foreach ( \Evt\PublicFront\Shell::SLUGS as $evt_seccion => $evt_slug ) {
-		$evt_shortcode = \Evt\PublicFront\Shell::SHORTCODES[ $evt_seccion ] ?? '';
+	// Las del aplicativo, que piden sesión, y la puerta pública: la línea del
+	// tiempo de todos los eventos (ADR-0041).
+	$evt_paginas    = \Evt\PublicFront\Shell::SLUGS;
+	$evt_shortcodes = \Evt\PublicFront\Shell::SHORTCODES;
+	if ( class_exists( '\Evt\PublicFront\Timeline' ) ) {
+		$evt_paginas['timeline']    = \Evt\PublicFront\Timeline::SLUG;
+		$evt_shortcodes['timeline'] = \Evt\PublicFront\Timeline::SHORTCODE;
+	}
+
+	foreach ( $evt_paginas as $evt_seccion => $evt_slug ) {
+		$evt_shortcode = $evt_shortcodes[ $evt_seccion ] ?? '';
 
 		// Una pantalla que todavía no existe no tiene página: lo que se
 		// publicaría es una página con el corchete del shortcode escrito a la
