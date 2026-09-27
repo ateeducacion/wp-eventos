@@ -142,6 +142,41 @@ class Test_Page_Form extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'panel=secciones', $m['event_url'] );
 	}
 
+	/**
+	 * El tipo elegido en «Añadir sección» llega ya puesto; uno inventado, no.
+	 */
+	public function test_a_new_section_keeps_the_type_chosen_when_adding_it() {
+		$area   = $this->area( 'Innovación' );
+		$yo     = $this->organiser( array( $area ) );
+		$evento = $this->event( $yo, array( $area ) );
+
+		$this->acting_as( $yo );
+		$_GET['evento'] = (string) $evento;
+		$_GET['tipo']   = 'contacto';
+		$this->assertSame( 'contacto', PageForm::model()['values']['section_type'] );
+
+		$_GET['tipo'] = 'no-existe';
+		$this->assertSame( '', PageForm::model()['values']['section_type'] );
+		unset( $_GET['tipo'] );
+	}
+
+	/**
+	 * Y el formulario lo enseña elegido.
+	 */
+	public function test_the_chosen_type_is_selected_in_the_form() {
+		$area   = $this->area( 'Innovación' );
+		$yo     = $this->organiser( array( $area ) );
+		$evento = $this->event( $yo, array( $area ) );
+
+		$this->acting_as( $yo );
+		$_GET['evento'] = (string) $evento;
+		$_GET['tipo']   = 'contacto';
+		$html           = \Evt\PublicFront\View\PageFormView::html( PageForm::model() );
+		unset( $_GET['tipo'] );
+
+		$this->assertMatchesRegularExpression( '/<option value="contacto"\s+selected/', $html );
+	}
+
 	// ─── alta ──────────────────────────────────────────────────────────────
 
 	/**
