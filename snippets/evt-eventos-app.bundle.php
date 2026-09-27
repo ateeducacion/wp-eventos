@@ -21821,7 +21821,10 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 
 .evt-rejilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  /* Tarjetas de ancho acotado y la rejilla centrada: con pocos eventos no se
+     estiran hasta hacer carteles enormes ni dejan un hueco a un lado. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 250px));
+  justify-content: center;
   gap: 18px;
   margin: 0 0 20px;
   padding: 0;
