@@ -140,6 +140,16 @@ final class EventAppearancePanel {
 			'Detrás del título en todas las páginas del evento, sobre el color de fondo.',
 			$subir
 		);
+		$pdf_programa  = self::image_field(
+			'evt_programme_file',
+			'Programa en PDF',
+			self::image_of( (int) ( $medios['programme'] ?? 0 ) ),
+			'Sale como botón «Descargar programa» en la página del programa, después del texto.',
+			$subir,
+			0,
+			'application/pdf'
+		);
+		$logos         = self::sponsors( (array) ( $medios['sponsors'] ?? array() ), $subir );
 		$img_cartel    = self::image_field(
 			'evt_poster',
 			'Cartel del evento',
@@ -211,6 +221,15 @@ final class EventAppearancePanel {
 					<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 				</div>
 			</fieldset>
+
+			<fieldset class="evt-tarjeta">
+				<legend>Programa y logos corporativos</legend>
+				<div class="evt-imagenes">
+					<?php echo $pdf_programa; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				</div>
+				<p class="evt-ayuda">Los logos corporativos salen abajo del todo en la portada, en fila, cada uno con su enlace si lo tiene. Para añadir más, guarde y aparecerán huecos nuevos.</p>
+				<?php echo $logos; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			</fieldset>
 			</div>
 			<aside class="evt-apariencia__muestra" aria-label="Así se verá">
 				<?php echo $vista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -219,6 +238,47 @@ final class EventAppearancePanel {
 
 			<?php echo PanelParts::save_bar( 'Guardar la apariencia' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The corporate logos: the ones there are, and a few empty slots after them.
+	 *
+	 * @param array<int, array{id:int, url:string}> $logos    Stored logos.
+	 * @param bool                                  $can_load Whether this person can upload.
+	 * @return string
+	 */
+	private static function sponsors( array $logos, bool $can_load ): string {
+		$filas = array_values( array_filter( $logos, 'is_array' ) );
+		$total = count( $filas ) + EventWorkspace::SPONSOR_BLANKS;
+
+		ob_start();
+		?>
+		<input type="hidden" name="evt_sponsor_rows" value="<?php echo esc_attr( (string) $total ); ?>" />
+		<div class="evt-imagenes">
+			<?php for ( $i = 0; $i < $total; $i++ ) : ?>
+				<?php $logo = $filas[ $i ] ?? array(); ?>
+				<div>
+					<?php
+					$campo = self::image_field(
+						'evt_sponsor_' . $i,
+						'Logo ' . ( $i + 1 ),
+						self::image_of( (int) ( $logo['id'] ?? 0 ) ),
+						'Mejor un PNG con fondo transparente.',
+						$can_load
+					);
+					echo $campo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+					?>
+					<div class="evt-form-campo">
+						<label for="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>">Enlace del logo <?php echo esc_html( (string) ( $i + 1 ) ); ?></label>
+						<input class="form-control" type="url" id="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>"
+							name="<?php echo esc_attr( 'evt_sponsor_url_' . $i ); ?>"
+							value="<?php echo esc_attr( (string) ( $logo['url'] ?? '' ) ); ?>" placeholder="https://" />
+					</div>
+				</div>
+			<?php endfor; ?>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -313,6 +373,10 @@ final class EventAppearancePanel {
 		}
 
 		$url = (string) wp_get_attachment_image_url( $attachment_id, 'medium' );
+		if ( '' === $url && 'attachment' === get_post_type( $attachment_id ) ) {
+			// Un PDF sin miniatura: su icono de tipo de fichero.
+			$url = (string) wp_mime_type_icon( $attachment_id );
+		}
 		if ( '' === $url ) {
 			// El identificador guardado apunta a un adjunto que ya no está:
 			// se enseña el hueco, no una imagen rota.
@@ -404,9 +468,11 @@ final class EventAppearancePanel {
 	 * @param string               $ayuda    Help text.
 	 * @param bool                 $can_load Whether this person may upload files.
 	 * @param int                  $min_width Minimum width for direct uploads.
+	 * @param string               $type      Media type the library offers: `image` or `application/pdf`.
 	 * @return string
 	 */
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0 ): string {
+	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
+		$pdf    = 'application/pdf' === $type;
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
 		$puesta = '' !== $url;
@@ -415,9 +481,9 @@ final class EventAppearancePanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
 			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="Usar esta imagen">
+			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
 			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
@@ -433,23 +499,23 @@ final class EventAppearancePanel {
 				</span>
 			</div>
 			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( $puesta ? 'hidden' : '' ); ?>>
-				Todavía no hay ninguna imagen puesta.
+				<?php echo esc_html( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ); ?>
 			</p>
 
 			<?php if ( $can_load ) : ?>
-				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-drop"><?php echo esc_html( $pdf ? 'Arrastre el PDF hasta este campo o selecciónelo en la biblioteca.' : 'Arrastre una imagen hasta este campo o selecciónela en la biblioteca.' ); ?></p>
 				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
 			<?php endif; ?>
 
 			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
 				<?php if ( $can_load ) : ?>
 					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						data-evt-media-pick aria-label="<?php echo esc_attr( 'Elegir imagen para: ' . $rotulo ); ?>">
+						data-evt-media-pick aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir PDF para: ' : 'Elegir imagen para: ' ) . $rotulo ); ?>">
 						Seleccionar o subir
 					</button>
 				<?php endif; ?>
 				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					data-evt-media-clear aria-label="<?php echo esc_attr( 'Quitar la imagen de: ' . $rotulo ); ?>"
+					data-evt-media-clear aria-label="<?php echo esc_attr( ( $pdf ? 'Quitar el PDF de: ' : 'Quitar la imagen de: ' ) . $rotulo ); ?>"
 					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
 					Eliminar del campo
 				</button>
@@ -459,12 +525,12 @@ final class EventAppearancePanel {
 				<?php if ( $puesta ) : ?>
 					<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
 						<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $campo . '_clear' ); ?>" value="1" />
-						Quitar esta imagen al guardar
+						<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
 					</label>
 				<?php endif; ?>
-				<label for="<?php echo esc_attr( $id . '-file' ); ?>">Subir una imagen desde su equipo</label>
+				<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
 				<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $campo . '_file' ); ?>"
-					accept="image/jpeg,image/png,image/webp,image/gif" <?php disabled( ! $can_load, true ); ?> />
+					accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
 			</noscript>
 
 			<small><?php echo esc_html( $ayuda ); ?></small>

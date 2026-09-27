@@ -810,6 +810,51 @@
 	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z'/%3E%3C/svg%3E");
 }
 
+/* «Descargar programa»: el botón gris grande con su icono, centrado. */
+.evt-ev__descarga {
+	margin: 0 0 var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev .evt-ev__descargar {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	padding: 0.6rem 1.2rem;
+	border-radius: var(--evt-radio);
+	background: var(--evt-tinta);
+	color: var(--evt-papel);
+	font-size: var(--evt-t-menudo);
+	text-decoration: none;
+}
+
+.evt-ev .evt-ev__descargar:hover {
+	background: var(--evt-titulos);
+}
+
+/* Los logos corporativos, en fila al pie de la portada. */
+.evt-ev__bloque--logos {
+	padding-block: calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev__logos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--evt-espacio) * 1.5);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__logos img {
+	display: block;
+	max-height: 110px;
+	width: auto;
+}
+
 /* Una tabla nunca empuja la página: se desplaza ella sola. */
 .evt-ev__bloque table {
 	display: block;

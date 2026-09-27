@@ -194,7 +194,7 @@ class Test_Event_Blocks extends WP_UnitTestCase {
 	 */
 	public function test_the_three_blocks_are_wired_into_the_skeleton() {
 		$this->assertSame(
-			array( ContentBlock::NAME, \Evt\PublicFront\Block\ProgrammeBlock::NAME, PosterBlock::NAME, SignupBlock::NAME, SectionsBlock::NAME, \Evt\PublicFront\Block\ProgrammeBlock::FEATURED_NAME ),
+			array( ContentBlock::NAME, \Evt\PublicFront\Block\ProgrammeBlock::NAME, PosterBlock::NAME, SignupBlock::NAME, SectionsBlock::NAME, \Evt\PublicFront\Block\ProgrammeBlock::FEATURED_NAME, \Evt\PublicFront\Block\SponsorsBlock::NAME ),
 			array_keys( EventLayout::blocks() )
 		);
 		$this->assertLessThan( PosterBlock::PRIORITY, ContentBlock::PRIORITY );

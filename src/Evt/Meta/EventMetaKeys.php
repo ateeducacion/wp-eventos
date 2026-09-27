@@ -163,6 +163,19 @@ final class EventMetaKeys {
 	public const LAYOUT_ACCORDION = 'accordion';
 
 	/**
+	 * ID del adjunto con el programa en PDF, para el botón «Descargar programa».
+	 */
+	public const PROGRAMME_FILE_ID = 'evt_programme_file_id';
+
+	/**
+	 * Los logos corporativos del pie de la portada: JSON, `[{id, url}, …]`.
+	 *
+	 * Una lista y no cinco campos sueltos: hay eventos con dos logos y eventos
+	 * con doce.
+	 */
+	public const SPONSORS = 'evt_sponsors';
+
+	/**
 	 * CSS a medida de esta página. Se guarda en crudo: es código, no texto.
 	 *
 	 * En la raíz del evento viste todas sus páginas; en una página satélite,
@@ -261,6 +274,8 @@ final class EventMetaKeys {
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,
 			self::PROGRAMME_LAYOUT,
+			self::PROGRAMME_FILE_ID,
+			self::SPONSORS,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,

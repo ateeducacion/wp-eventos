@@ -74,8 +74,8 @@ final class EventListView {
 				<?php if ( EventList::VIEW_LIST === $vista ) : ?>
 					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_VIEW ); ?>" value="<?php echo esc_attr( EventList::VIEW_LIST ); ?>" />
 				<?php endif; ?>
-				<?php if ( EventList::FILTER_TRASH === (string) $s['state'] ) : ?>
-					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( EventList::FILTER_TRASH ); ?>" />
+				<?php if ( EventList::FILTER_ACTIVE !== (string) $s['state'] ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( (string) $s['state'] ); ?>" />
 				<?php endif; ?>
 				<label class="screen-reader-text" for="evt-buscar">Filtrar por nombre</label>
 				<input class="form-control evt-herramientas__buscar" type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
@@ -92,6 +92,17 @@ final class EventListView {
 				<?php endif; ?>
 				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
 			</form>
+			<div class="btn-group evt-segmentos" role="group" aria-label="Qué eventos ver">
+				<?php
+				foreach ( EventList::SEGMENTS as $clave => $rotulo ) :
+					$activa = $clave === (string) $s['state'];
+					?>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
+						href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
+						<span class="evt-segmento__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
+				<?php endforeach; ?>
+			</div>
 			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
 				<?php
 				foreach ( array(
@@ -265,7 +276,7 @@ final class EventListView {
 		?>
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
-				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => 'all' ) ) ); ?>">Volver al listado</a>
+				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
 				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">

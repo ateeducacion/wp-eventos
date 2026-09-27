@@ -86,7 +86,7 @@ final class ProgrammeBlock {
 				$ponente = self::entry( $evento, $ficha, SpeakerPostType::POST_TYPE );
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
-				return self::grid( $evento );
+				return self::download( $evento ) . self::grid( $evento );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -293,6 +293,25 @@ final class ProgrammeBlock {
 		</div>
 		<?php
 		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+	/**
+	 * «Descargar programa»: the PDF of the programme, after the written text.
+	 *
+	 * Como siempre: un botón grande con su icono, centrado, antes de la parrilla.
+	 *
+	 * @param int $evento Event.
+	 * @return string Empty when there is no PDF.
+	 */
+	private static function download( int $evento ): string {
+		$id  = (int) get_post_meta( $evento, EventMetaKeys::PROGRAMME_FILE_ID, true );
+		$url = $id > 0 ? (string) wp_get_attachment_url( $id ) : '';
+		if ( '' === $url ) {
+			return '';
+		}
+		return '<p class="evt-ev__descarga"><a class="evt-ev__descargar" href="' . esc_url( $url ) . '" download>'
+			. '<svg viewBox="0 -960 960 960" width="40" height="40" aria-hidden="true" focusable="false"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>'
+			. '<span>Descargar programa</span></a></p>';
 	}
 
 	/**

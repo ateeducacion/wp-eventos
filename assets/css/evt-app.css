@@ -1004,6 +1004,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   font: inherit;
 }
 .evt-segmentos { display: inline-flex; }
+/* La cifra de cada filtro, separada y más suave que el rótulo. */
+.evt-segmento__cifra { margin-left: 0.4em; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .evt-sin-bootstrap .evt-segmento {
   display: inline-flex;
   align-items: center;

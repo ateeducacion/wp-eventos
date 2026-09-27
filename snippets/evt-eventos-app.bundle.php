@@ -192,6 +192,19 @@ final class EventMetaKeys {
 
 
 
+	public const PROGRAMME_FILE_ID = 'evt_programme_file_id';
+
+
+
+
+
+
+
+	public const SPONSORS = 'evt_sponsors';
+
+
+
+
 
 
 
@@ -288,6 +301,8 @@ final class EventMetaKeys {
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,
 			self::PROGRAMME_LAYOUT,
+			self::PROGRAMME_FILE_ID,
+			self::SPONSORS,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -582,6 +597,14 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_programme_layout' ),
 			),
+			EventMetaKeys::PROGRAMME_FILE_ID  => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::SPONSORS           => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_sponsors' ),
+			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
@@ -849,6 +872,27 @@ final class EventMetaRegistration {
 
 	public static function sanitize_separator( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::separators(), '' );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_sponsors( $value ): string {
+		$lista  = is_array( $value ) ? $value : json_decode( (string) $value, true );
+		$limpia = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $logo ) {
+			$id = is_array( $logo ) ? absint( $logo['id'] ?? 0 ) : 0;
+			if ( $id > 0 ) {
+				$limpia[] = array(
+					'id'  => $id,
+					'url' => esc_url_raw( (string) ( $logo['url'] ?? '' ) ),
+				);
+			}
+		}
+		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
 	}
 
 
@@ -7323,6 +7367,26 @@ final class EventList {
 
 
 
+	public const FILTER_ACTIVE = 'active';
+
+
+
+
+
+
+	public const SEGMENTS = array(
+		self::FILTER_ACTIVE   => 'Activos',
+		self::FILTER_DRAFT    => 'Borradores',
+		self::FILTER_ARCHIVED => 'Históricos',
+		'all'                 => 'Todos',
+	);
+
+
+
+
+
+
+
 
 
 	public const FILTER_TRASH = 'trash';
@@ -7565,6 +7629,7 @@ final class EventList {
 
 	public static function state_filters(): array {
 		return array(
+			self::FILTER_ACTIVE           => 'Activos',
 			'all'                         => 'Todos',
 			EventMetaKeys::STATE_UPCOMING => 'Próximos',
 			EventMetaKeys::STATE_OPEN     => 'Abiertos',
@@ -7612,14 +7677,14 @@ final class EventList {
 
 
 	public static function selection(): array {
-		$estado = self::input( self::VAR_STATE, 'all' );
+		$estado = self::input( self::VAR_STATE, self::FILTER_ACTIVE );
 		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
 			'type'   => max( 0, (int) self::input( self::VAR_TYPE ) ),
 			'course' => max( 0, (int) self::input( self::VAR_COURSE ) ),
-			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : 'all',
+			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_ACTIVE,
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
 			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
@@ -7642,7 +7707,7 @@ final class EventList {
 			self::VAR_AREA   => $s['area'] > 0 ? (string) $s['area'] : '',
 			self::VAR_TYPE   => $s['type'] > 0 ? (string) $s['type'] : '',
 			self::VAR_COURSE => $s['course'] > 0 ? (string) $s['course'] : '',
-			self::VAR_STATE  => 'all' !== $s['state'] ? (string) $s['state'] : '',
+			self::VAR_STATE  => self::FILTER_ACTIVE !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
 			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
@@ -7713,6 +7778,14 @@ final class EventList {
 				? 'La papelera está vacía: no hay ningún evento esperando a que lo restauren.'
 				: self::empty_text( $filtrando, $todas );
 			$m['reset_url']  = $filtrando ? self::url( $s, self::no_filters() ) : '';
+		}
+
+
+
+		$estado = (string) $s['state'];
+		if ( array() === $m['rows'] && ! $en_papelera && 'all' !== $estado && $m['counts']['all'] > 0 && '' === $s['search'] ) {
+			$m['empty_text'] = sprintf( 'No hay ningún evento en «%s». Los tiene todos en «Todos».', self::state_filters()[ $estado ] );
+			$m['reset_url']  = self::url( $s, array( 'state' => 'all' ) );
 		}
 
 		return $m;
@@ -8212,6 +8285,9 @@ final class EventList {
 		if ( self::FILTER_DRAFT === $filter ) {
 			return 'draft' === $row['status'];
 		}
+		if ( self::FILTER_ACTIVE === $filter ) {
+			return 'draft' !== $row['status'] && self::FILTER_TRASH !== $row['status'] && true !== $row['archived'];
+		}
 		return $filter === $row['state'];
 	}
 
@@ -8272,7 +8348,7 @@ final class EventList {
 
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
-			|| 'all' !== $s['state'] || '' !== $s['search'];
+			|| self::FILTER_ACTIVE !== $s['state'] || '' !== $s['search'];
 	}
 
 
@@ -8285,7 +8361,7 @@ final class EventList {
 			'area'   => 0,
 			'type'   => 0,
 			'course' => 0,
-			'state'  => 'all',
+			'state'  => self::FILTER_ACTIVE,
 			'search' => '',
 			'page'   => 1,
 		);
@@ -8432,8 +8508,8 @@ final class EventListView {
 				<?php if ( EventList::VIEW_LIST === $vista ) : ?>
 					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_VIEW ); ?>" value="<?php echo esc_attr( EventList::VIEW_LIST ); ?>" />
 				<?php endif; ?>
-				<?php if ( EventList::FILTER_TRASH === (string) $s['state'] ) : ?>
-					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( EventList::FILTER_TRASH ); ?>" />
+				<?php if ( EventList::FILTER_ACTIVE !== (string) $s['state'] ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( (string) $s['state'] ); ?>" />
 				<?php endif; ?>
 				<label class="screen-reader-text" for="evt-buscar">Filtrar por nombre</label>
 				<input class="form-control evt-herramientas__buscar" type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
@@ -8450,6 +8526,17 @@ final class EventListView {
 				<?php endif; ?>
 				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
 			</form>
+			<div class="btn-group evt-segmentos" role="group" aria-label="Qué eventos ver">
+				<?php
+				foreach ( EventList::SEGMENTS as $clave => $rotulo ) :
+					$activa = $clave === (string) $s['state'];
+					?>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
+						href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
+						<span class="evt-segmento__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
+				<?php endforeach; ?>
+			</div>
 			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
 				<?php
 				foreach ( array(
@@ -8623,7 +8710,7 @@ final class EventListView {
 		?>
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
-				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => 'all' ) ) ); ?>">Volver al listado</a>
+				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
 				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">
@@ -12016,6 +12103,16 @@ final class EventWorkspace {
 
 
 
+	private const PDF_MIMES = array( 'pdf' => 'application/pdf' );
+
+
+
+
+	public const SPONSOR_BLANKS = 3;
+
+
+
+
 
 
 	public static function register(): void {
@@ -13127,12 +13224,14 @@ final class EventWorkspace {
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
 			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
 			self::save_image( $event_id, 'evt_header_bg_image', EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			self::save_image( $event_id, 'evt_programme_file', EventMetaKeys::PROGRAMME_FILE_ID, 0, true ),
+			self::save_sponsors( $event_id ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
 
 		if ( in_array( false, $subidas, true ) ) {
-			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho.' );
+			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho. El programa tiene que ser un PDF.' );
 			Shell::leave( $destino );
 			return;
 		}
@@ -13157,15 +13256,16 @@ final class EventWorkspace {
 
 
 
-	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0 ): bool {
+
+	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
 
 
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
-			$subido = self::upload( $campo . '_file', $event_id );
+			$subido = self::upload( $campo . '_file', $event_id, $pdf );
 			if ( $subido <= 0 ) {
 				return false;
 			}
-			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width );
+			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width, $pdf );
 		}
 
 		if ( ! empty( $_POST[ $campo . '_clear' ] ) ) {
@@ -13179,7 +13279,7 @@ final class EventWorkspace {
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
 
 
-		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width );
+		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width, $pdf );
 	}
 
 
@@ -13191,14 +13291,16 @@ final class EventWorkspace {
 
 
 
-	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+
+	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width, bool $pdf = false ): bool {
 
 
 		$actual = '' === $meta_key ? (int) get_post_thumbnail_id( $event_id ) : (int) get_post_meta( $event_id, $meta_key, true );
 		if ( $attachment_id > 0 && $attachment_id === $actual ) {
 			return true;
 		}
-		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
+		$vale = $pdf ? self::is_pdf_attachment( $attachment_id ) : self::is_image_attachment( $attachment_id );
+		if ( $attachment_id > 0 && ! $vale ) {
 			return false;
 		}
 		if ( $attachment_id > 0 && ! self::image_meets_min_width( $attachment_id, $min_width ) ) {
@@ -13257,6 +13359,61 @@ final class EventWorkspace {
 
 
 
+	private static function is_pdf_attachment( int $attachment_id ): bool {
+		return 'attachment' === get_post_type( $attachment_id )
+			&& 'application/pdf' === get_post_mime_type( $attachment_id )
+			&& current_user_can( 'read_post', $attachment_id );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function save_sponsors( int $event_id ): bool {
+
+		$filas = isset( $_POST['evt_sponsor_rows'] ) ? min( 60, absint( wp_unslash( $_POST['evt_sponsor_rows'] ) ) ) : -1;
+		if ( $filas < 0 ) {
+			return true;
+		}
+		$logos = array();
+		$bien  = true;
+		for ( $i = 0; $i < $filas; $i++ ) {
+			$campo = 'evt_sponsor_' . $i;
+			$id    = 0;
+			if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
+				$id = self::upload( $campo . '_file', $event_id );
+			} elseif ( isset( $_POST[ $campo . '_id' ] ) && empty( $_POST[ $campo . '_clear' ] ) ) {
+				$id = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
+			}
+			if ( $id <= 0 ) {
+				continue;
+			}
+			if ( ! self::is_image_attachment( $id ) ) {
+				$bien = false;
+				continue;
+			}
+			$logos[] = array(
+				'id'  => $id,
+				'url' => isset( $_POST[ 'evt_sponsor_url_' . $i ] ) ? esc_url_raw( wp_unslash( $_POST[ 'evt_sponsor_url_' . $i ] ) ) : '',
+			);
+		}
+
+		update_post_meta( $event_id, EventMetaKeys::SPONSORS, wp_json_encode( $logos ) );
+		return $bien;
+	}
+
+
+
+
+
+
+
 
 	private static function image_meets_min_width( int $attachment_id, int $min_width ): bool {
 		if ( $min_width <= 0 ) {
@@ -13273,7 +13430,8 @@ final class EventWorkspace {
 
 
 
-	private static function upload( string $campo, int $event_id ): int {
+
+	private static function upload( string $campo, int $event_id, bool $pdf = false ): int {
 		if ( ! current_user_can( 'upload_files' ) ) {
 			return 0;
 		}
@@ -13289,7 +13447,7 @@ final class EventWorkspace {
 
 
 				'test_form' => false,
-				'mimes'     => self::IMAGE_MIMES,
+				'mimes'     => $pdf ? self::PDF_MIMES : self::IMAGE_MIMES,
 			)
 		);
 		return is_wp_error( $id ) ? 0 : (int) $id;
@@ -13813,6 +13971,8 @@ final class EventWorkspace {
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
 			'header_bg'     => (int) self::meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			'programme'     => (int) self::meta( $event_id, EventMetaKeys::PROGRAMME_FILE_ID ),
+			'sponsors'      => (array) json_decode( (string) self::meta( $event_id, EventMetaKeys::SPONSORS ), true ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
@@ -16644,6 +16804,16 @@ final class EventAppearancePanel {
 			'Detrás del título en todas las páginas del evento, sobre el color de fondo.',
 			$subir
 		);
+		$pdf_programa  = self::image_field(
+			'evt_programme_file',
+			'Programa en PDF',
+			self::image_of( (int) ( $medios['programme'] ?? 0 ) ),
+			'Sale como botón «Descargar programa» en la página del programa, después del texto.',
+			$subir,
+			0,
+			'application/pdf'
+		);
+		$logos         = self::sponsors( (array) ( $medios['sponsors'] ?? array() ), $subir );
 		$img_cartel    = self::image_field(
 			'evt_poster',
 			'Cartel del evento',
@@ -16715,6 +16885,15 @@ final class EventAppearancePanel {
 					<?php echo $img_destacada; ?>
 				</div>
 			</fieldset>
+
+			<fieldset class="evt-tarjeta">
+				<legend>Programa y logos corporativos</legend>
+				<div class="evt-imagenes">
+					<?php echo $pdf_programa; ?>
+				</div>
+				<p class="evt-ayuda">Los logos corporativos salen abajo del todo en la portada, en fila, cada uno con su enlace si lo tiene. Para añadir más, guarde y aparecerán huecos nuevos.</p>
+				<?php echo $logos; ?>
+			</fieldset>
 			</div>
 			<aside class="evt-apariencia__muestra" aria-label="Así se verá">
 				<?php echo $vista; ?>
@@ -16723,6 +16902,47 @@ final class EventAppearancePanel {
 
 			<?php echo PanelParts::save_bar( 'Guardar la apariencia' ); ?>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+	private static function sponsors( array $logos, bool $can_load ): string {
+		$filas = array_values( array_filter( $logos, 'is_array' ) );
+		$total = count( $filas ) + EventWorkspace::SPONSOR_BLANKS;
+
+		ob_start();
+		?>
+		<input type="hidden" name="evt_sponsor_rows" value="<?php echo esc_attr( (string) $total ); ?>" />
+		<div class="evt-imagenes">
+			<?php for ( $i = 0; $i < $total; $i++ ) : ?>
+				<?php $logo = $filas[ $i ] ?? array(); ?>
+				<div>
+					<?php
+					$campo = self::image_field(
+						'evt_sponsor_' . $i,
+						'Logo ' . ( $i + 1 ),
+						self::image_of( (int) ( $logo['id'] ?? 0 ) ),
+						'Mejor un PNG con fondo transparente.',
+						$can_load
+					);
+					echo $campo; 
+					?>
+					<div class="evt-form-campo">
+						<label for="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>">Enlace del logo <?php echo esc_html( (string) ( $i + 1 ) ); ?></label>
+						<input class="form-control" type="url" id="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>"
+							name="<?php echo esc_attr( 'evt_sponsor_url_' . $i ); ?>"
+							value="<?php echo esc_attr( (string) ( $logo['url'] ?? '' ) ); ?>" placeholder="https://" />
+					</div>
+				</div>
+			<?php endfor; ?>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -16817,6 +17037,10 @@ final class EventAppearancePanel {
 		}
 
 		$url = (string) wp_get_attachment_image_url( $attachment_id, 'medium' );
+		if ( '' === $url && 'attachment' === get_post_type( $attachment_id ) ) {
+
+			$url = (string) wp_mime_type_icon( $attachment_id );
+		}
 		if ( '' === $url ) {
 
 
@@ -16910,7 +17134,9 @@ final class EventAppearancePanel {
 
 
 
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0 ): string {
+
+	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
+		$pdf    = 'application/pdf' === $type;
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
 		$puesta = '' !== $url;
@@ -16919,9 +17145,9 @@ final class EventAppearancePanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
 			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="Usar esta imagen">
+			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
 			<?php ?>
@@ -16937,23 +17163,23 @@ final class EventAppearancePanel {
 				</span>
 			</div>
 			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( $puesta ? 'hidden' : '' ); ?>>
-				Todavía no hay ninguna imagen puesta.
+				<?php echo esc_html( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ); ?>
 			</p>
 
 			<?php if ( $can_load ) : ?>
-				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-drop"><?php echo esc_html( $pdf ? 'Arrastre el PDF hasta este campo o selecciónelo en la biblioteca.' : 'Arrastre una imagen hasta este campo o selecciónela en la biblioteca.' ); ?></p>
 				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
 			<?php endif; ?>
 
 			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
 				<?php if ( $can_load ) : ?>
 					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						data-evt-media-pick aria-label="<?php echo esc_attr( 'Elegir imagen para: ' . $rotulo ); ?>">
+						data-evt-media-pick aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir PDF para: ' : 'Elegir imagen para: ' ) . $rotulo ); ?>">
 						Seleccionar o subir
 					</button>
 				<?php endif; ?>
 				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					data-evt-media-clear aria-label="<?php echo esc_attr( 'Quitar la imagen de: ' . $rotulo ); ?>"
+					data-evt-media-clear aria-label="<?php echo esc_attr( ( $pdf ? 'Quitar el PDF de: ' : 'Quitar la imagen de: ' ) . $rotulo ); ?>"
 					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
 					Eliminar del campo
 				</button>
@@ -16963,12 +17189,12 @@ final class EventAppearancePanel {
 				<?php if ( $puesta ) : ?>
 					<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
 						<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $campo . '_clear' ); ?>" value="1" />
-						Quitar esta imagen al guardar
+						<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
 					</label>
 				<?php endif; ?>
-				<label for="<?php echo esc_attr( $id . '-file' ); ?>">Subir una imagen desde su equipo</label>
+				<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
 				<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $campo . '_file' ); ?>"
-					accept="image/jpeg,image/png,image/webp,image/gif" <?php disabled( ! $can_load, true ); ?> />
+					accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
 			</noscript>
 
 			<small><?php echo esc_html( $ayuda ); ?></small>
@@ -18808,7 +19034,7 @@ final class ProgrammeBlock {
 				$ponente = self::entry( $evento, $ficha, SpeakerPostType::POST_TYPE );
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
-				return self::grid( $evento );
+				return self::download( $evento ) . self::grid( $evento );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -19015,6 +19241,25 @@ final class ProgrammeBlock {
 		</div>
 		<?php
 		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+
+
+
+
+
+
+
+
+	private static function download( int $evento ): string {
+		$id  = (int) get_post_meta( $evento, EventMetaKeys::PROGRAMME_FILE_ID, true );
+		$url = $id > 0 ? (string) wp_get_attachment_url( $id ) : '';
+		if ( '' === $url ) {
+			return '';
+		}
+		return '<p class="evt-ev__descarga"><a class="evt-ev__descargar" href="' . esc_url( $url ) . '" download>'
+			. '<svg viewBox="0 -960 960 960" width="40" height="40" aria-hidden="true" focusable="false"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>'
+			. '<span>Descargar programa</span></a></p>';
 	}
 
 
@@ -19871,6 +20116,67 @@ final class SignupBlock {
 
 
 
+namespace Evt\PublicFront\Block;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+final class SponsorsBlock {
+
+
+
+
+	public const NAME = 'logos';
+
+
+
+
+	public const PRIORITY = 90;
+
+
+
+
+
+
+
+	public static function html( array $m ): string {
+		if ( empty( $m['is_root'] ) ) {
+			return '';
+		}
+		$logos = json_decode( (string) get_post_meta( (int) $m['event_id'], EventMetaKeys::SPONSORS, true ), true );
+
+		$piezas = '';
+		foreach ( is_array( $logos ) ? $logos : array() as $logo ) {
+			$id  = absint( $logo['id'] ?? 0 );
+			$src = $id > 0 ? (string) wp_get_attachment_image_url( $id, 'medium' ) : '';
+			if ( '' === $src ) {
+				continue;
+			}
+			$alt     = trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) );
+			$imagen  = '<img src="' . esc_url( $src ) . '" alt="' . esc_attr( '' !== $alt ? $alt : 'Logo' ) . '" loading="lazy" />';
+			$url     = (string) ( $logo['url'] ?? '' );
+			$piezas .= '<li>' . ( '' !== $url ? '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . $imagen . '</a>' : $imagen ) . '</li>';
+		}
+
+		return '' !== $piezas ? '<ul class="evt-ev__logos">' . $piezas . '</ul>' : '';
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\PublicFront;
 
 use Evt\Meta\EventMetaKeys;
@@ -19879,6 +20185,7 @@ use Evt\PublicFront\Block\PosterBlock;
 use Evt\PublicFront\Block\ProgrammeBlock;
 use Evt\PublicFront\Block\SectionsBlock;
 use Evt\PublicFront\Block\SignupBlock;
+use Evt\PublicFront\Block\SponsorsBlock;
 use Evt\PublicFront\View\EventChrome;
 
 
@@ -19957,6 +20264,7 @@ final class EventLayout {
 		self::add_block( SignupBlock::NAME, array( SignupBlock::class, 'html' ), SignupBlock::PRIORITY );
 		self::add_block( ProgrammeBlock::NAME, array( ProgrammeBlock::class, 'html' ), ProgrammeBlock::PRIORITY );
 		self::add_block( ProgrammeBlock::FEATURED_NAME, array( ProgrammeBlock::class, 'featured' ), ProgrammeBlock::FEATURED_PRIORITY );
+		self::add_block( SponsorsBlock::NAME, array( SponsorsBlock::class, 'html' ), SponsorsBlock::PRIORITY );
 	}
 
 
@@ -20705,6 +21013,7 @@ final class EventView {
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
 			'manage_url'   => self::manage_url( $event_id ),
+			'edit_url'     => $is_root ? '' : self::edit_url( $event_id, $post_id ),
 		);
 
 
@@ -20754,6 +21063,7 @@ final class EventView {
 			'description'  => '',
 			'image'        => '',
 			'manage_url'   => '',
+			'edit_url'     => '',
 		);
 	}
 
@@ -20824,6 +21134,29 @@ final class EventView {
 			return '';
 		}
 		return Shell::url( 'event', array( self::MANAGE_ARG => $event_id ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function edit_url( int $event_id, int $page_id ): string {
+		if ( ! EventAccess::can_edit( get_current_user_id(), $page_id ) ) {
+			return '';
+		}
+		return Shell::url(
+			'section',
+			array(
+				EventWorkspace::ARG_EVENT   => $event_id,
+				EventWorkspace::ARG_SECTION => $page_id,
+			)
+		);
 	}
 
 
@@ -21282,6 +21615,12 @@ final class EventChrome {
 			<div class="evt-ev__portada evt-ev__portada--banner">
 				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
 					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+					<?php ?>
+					<p class="evt-ev__ancho evt-ev__acciones">
+						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+					</p>
+				<?php endif; ?>
 				<div class="screen-reader-text">
 					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
 					<?php
@@ -21350,6 +21689,9 @@ final class EventChrome {
 							<?php endif; ?>
 							<?php if ( $raiz && '' !== (string) $signup['url'] ) : ?>
 								<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $m['edit_url'] ?? '' ) ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['edit_url'] ); ?>">Editar esta página</a>
 							<?php endif; ?>
 							<?php if ( '' !== (string) $m['manage_url'] ) : ?>
 								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
@@ -23852,6 +24194,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   font: inherit;
 }
 .evt-segmentos { display: inline-flex; }
+/* La cifra de cada filtro, separada y más suave que el rótulo. */
+.evt-segmento__cifra { margin-left: 0.4em; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .evt-sin-bootstrap .evt-segmento {
   display: inline-flex;
   align-items: center;
@@ -25086,6 +25430,51 @@ body .swal2-container { z-index: 100010; }
 
 .evt-ev__contacto-correo {
 	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z\'/%3E%3C/svg%3E");
+}
+
+/* «Descargar programa»: el botón gris grande con su icono, centrado. */
+.evt-ev__descarga {
+	margin: 0 0 var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev .evt-ev__descargar {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	padding: 0.6rem 1.2rem;
+	border-radius: var(--evt-radio);
+	background: var(--evt-tinta);
+	color: var(--evt-papel);
+	font-size: var(--evt-t-menudo);
+	text-decoration: none;
+}
+
+.evt-ev .evt-ev__descargar:hover {
+	background: var(--evt-titulos);
+}
+
+/* Los logos corporativos, en fila al pie de la portada. */
+.evt-ev__bloque--logos {
+	padding-block: calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev__logos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--evt-espacio) * 1.5);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__logos img {
+	display: block;
+	max-height: 110px;
+	width: auto;
 }
 
 /* Una tabla nunca empuja la página: se desplaza ella sola. */

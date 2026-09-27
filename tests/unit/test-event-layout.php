@@ -226,7 +226,7 @@ class Test_Event_Layout extends WP_UnitTestCase {
 		EventLayout::add_block( 'pronto', $pintar( '[pronto]' ), 1 );
 
 		$this->assertSame(
-			array( 'pronto', 'contenido', 'fichas', 'cartel', 'inscripcion', 'secciones', 'destacados', 'tarde' ),
+			array( 'pronto', 'contenido', 'fichas', 'cartel', 'inscripcion', 'secciones', 'destacados', 'logos', 'tarde' ),
 			array_keys( EventLayout::blocks() )
 		);
 

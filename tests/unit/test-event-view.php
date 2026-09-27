@@ -440,6 +440,90 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Los logos corporativos van abajo del todo en la portada, con su enlace.
+	 */
+	public function test_the_corporate_logos_go_at_the_foot_of_the_front_page() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$logo    = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $evento );
+		update_post_meta(
+			$evento,
+			EventMetaKeys::SPONSORS,
+			array(
+				array(
+					'id'  => $logo,
+					'url' => 'https://example.org/',
+				),
+				array(
+					'id'  => 0,
+					'url' => 'https://example.org/nada',
+				),
+			)
+		);
+
+		$this->assertSame( 1, count( json_decode( (string) get_post_meta( $evento, EventMetaKeys::SPONSORS, true ), true ) ), 'sin imagen no hay logo' );
+
+		$this->acting_as( 0 );
+		$portada = EventLayout::body( EventView::model( $evento ) );
+		$interna = EventLayout::body( EventView::model( $seccion ) );
+
+		$this->assertStringContainsString( 'evt-ev__bloque--logos', $portada );
+		$this->assertStringContainsString( 'href="https://example.org/"', $portada );
+		$this->assertGreaterThan( strpos( $portada, 'evt-ev__bloque--contenido' ), strpos( $portada, 'evt-ev__bloque--logos' ), 'detrás de todo' );
+		$this->assertStringNotContainsString( 'evt-ev__bloque--logos', $interna, 'solo en la portada' );
+	}
+
+	/**
+	 * «Descargar programa» sale en la página del programa si hay PDF.
+	 */
+	public function test_the_programme_pdf_is_a_download_button_on_the_programme_page() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$pdf     = self::factory()->attachment->create(
+			array(
+				'post_mime_type' => 'application/pdf',
+				'file'           => 'programa.pdf',
+				'post_parent'    => $evento,
+			)
+		);
+
+		$this->acting_as( 0 );
+		$this->assertStringNotContainsString( 'Descargar programa', EventLayout::body( EventView::model( $seccion ) ) );
+
+		update_post_meta( $evento, EventMetaKeys::PROGRAMME_FILE_ID, $pdf );
+		$html = EventLayout::body( EventView::model( $seccion ) );
+		$this->assertStringContainsString( 'class="evt-ev__descargar"', $html );
+		$this->assertStringContainsString( 'programa.pdf', $html );
+	}
+
+	/**
+	 * Quien puede editar ve «Editar esta página» en la sección, y con banner
+	 * también ve «Gestionar este evento» en la portada.
+	 */
+	public function test_whoever_can_edit_sees_the_edit_links_also_under_a_banner() {
+		$area    = $this->area( 'Innovación' );
+		$autor   = $this->administrator();
+		$evento  = $this->evento_con_aspecto( $autor, $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$banner  = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $evento );
+		update_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, $banner );
+
+		$this->acting_as( 0 );
+		$this->assertStringNotContainsString( 'Editar esta página', EventChrome::cover( EventView::model( $seccion ) ) );
+
+		$prop = new ReflectionProperty( EventView::class, 'models' );
+		$prop->setAccessible( true );
+		$prop->setValue( null, array() );
+		$this->acting_as( $autor );
+		$this->assertStringContainsString( 'Editar esta página', EventChrome::cover( EventView::model( $seccion ) ) );
+		$portada = EventChrome::cover( EventView::model( $evento ) );
+		$this->assertStringContainsString( 'evt-ev__portada--banner', $portada );
+		$this->assertStringContainsString( 'Gestionar este evento', $portada, 'el banner no se come el enlace' );
+	}
+
+	/**
 	 * Lo que no es un color ni una tipografía de la lista no viste nada.
 	 */
 	public function test_a_broken_appearance_paints_the_default_one() {

@@ -209,6 +209,12 @@ final class EventChrome {
 			<div class="evt-ev__portada evt-ev__portada--banner">
 				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
 					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+					<?php // Con banner no hay portada de color donde poner los botones: el de gestionar va debajo. ?>
+					<p class="evt-ev__ancho evt-ev__acciones">
+						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+					</p>
+				<?php endif; ?>
 				<div class="screen-reader-text">
 					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
 					<?php
@@ -277,6 +283,9 @@ final class EventChrome {
 							<?php endif; ?>
 							<?php if ( $raiz && '' !== (string) $signup['url'] ) : ?>
 								<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $m['edit_url'] ?? '' ) ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['edit_url'] ); ?>">Editar esta página</a>
 							<?php endif; ?>
 							<?php if ( '' !== (string) $m['manage_url'] ) : ?>
 								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>

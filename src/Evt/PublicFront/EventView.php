@@ -506,6 +506,7 @@ final class EventView {
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
 			'manage_url'   => self::manage_url( $event_id ),
+			'edit_url'     => $is_root ? '' : self::edit_url( $event_id, $post_id ),
 		);
 
 		/**
@@ -555,6 +556,7 @@ final class EventView {
 			'description'  => '',
 			'image'        => '',
 			'manage_url'   => '',
+			'edit_url'     => '',
 		);
 	}
 
@@ -625,6 +627,29 @@ final class EventView {
 			return '';
 		}
 		return Shell::url( 'event', array( self::MANAGE_ARG => $event_id ) );
+	}
+
+	/**
+	 * Link to the form of this section, for whoever may edit it.
+	 *
+	 * Lo que hoy es «Editar página» bajo el título: va directo al formulario de
+	 * la página, sin pasar por el taller.
+	 *
+	 * @param int $event_id Event.
+	 * @param int $page_id  Section.
+	 * @return string Empty when this person cannot edit it.
+	 */
+	private static function edit_url( int $event_id, int $page_id ): string {
+		if ( ! EventAccess::can_edit( get_current_user_id(), $page_id ) ) {
+			return '';
+		}
+		return Shell::url(
+			'section',
+			array(
+				EventWorkspace::ARG_EVENT   => $event_id,
+				EventWorkspace::ARG_SECTION => $page_id,
+			)
+		);
 	}
 
 	/**

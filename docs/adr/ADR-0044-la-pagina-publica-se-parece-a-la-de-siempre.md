@@ -147,3 +147,27 @@ Opción 2:
 - El CSS a medida que apuntaba a las clases del tema anterior hay que
   traducirlo al migrar: la cabecera es `.evt-ev__portada` y su ilustración,
   `.evt-ev__dibujo`.
+
+## Adenda — 2026-09-27
+
+Tras la primera revisión, tres piezas más que el sistema anterior tenía y que
+iban metidas en el contenido de la página:
+
+- **Los logos corporativos tienen su campo**, `evt_sponsors`: una lista de
+  `{id, url}` (JSON), porque hay eventos con dos logos y eventos con doce. Se
+  pintan abajo del todo en la portada, en fila y con su enlace, en un bloque
+  propio (`SponsorsBlock`, `logos`). En el panel «Apariencia» salen los que hay
+  y tres huecos más; guardar deja otros tres.
+- **El programa en PDF también**, `evt_programme_file_id`: el botón «Descargar
+  programa» sale en la página del programa, después del texto y antes de la
+  parrilla, como hoy. El panel lo elige en la biblioteca con el mismo campo que
+  las imágenes, restringido a `application/pdf`, y el servidor comprueba que
+  sea un PDF.
+- **«Editar esta página» en cada sección** para quien puede editarla, además
+  de «Gestionar este evento». Con banner en la portada, el enlace de gestionar
+  va debajo del banner: antes el banner se lo comía.
+
+Y en «Mis eventos», el estado se elige con cuatro botones con su recuento
+—Activos, Borradores, Históricos y Todos— y **por defecto salen los activos**:
+publicados y no históricos, que es lo que se trabaja a diario. Los demás
+filtros por estado siguen valiendo por la URL.

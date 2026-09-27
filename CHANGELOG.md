@@ -29,6 +29,10 @@ en el subsitio `eventos` se hace después.
 - **Color de acento y fondo de cabecera.** En «Apariencia», el evento elige el color de los títulos de las tarjetas, del nombre en «Acerca de» y de las rayas, y una imagen detrás del color de la cabecera
 - **El programa, en pestañas por día o en acordeón.** Se elige en «Apariencia» («Diseño del programa»). Cada actividad va en tres columnas —tipo, qué y cuándo— con el color de su familia de tipos. Sin JavaScript, los días salen uno debajo de otro
 - **El logo de quien publica, arriba a la izquierda, y el color del pie**, desde la configuración (`evt_chrome`: `brand_logo`, `brand_alt`, `brand_url`, `footer_bg`). Sin configurar, no se pinta ningún logo
+- **Los logos corporativos, abajo del todo en la portada.** Tienen su campo en «Apariencia» —cada logo con su enlace, tantos como hagan falta— y dejan de ir dentro del texto
+- **El programa en PDF tiene su campo** y sale como botón «Descargar programa» en la página del programa, después del texto
+- **«Editar esta página»** en la cabecera de cada sección para quien puede editarla, junto a «Gestionar este evento»
+- **«Mis eventos» filtra por estado**: Activos, Borradores, Históricos y Todos, cada uno con su número. Por defecto, los activos: publicados y no históricos
 - **La página de contacto en tres columnas**, dónde, teléfono y correo, cada una con su icono en el color de la cabecera
 
 ### Cambiado
@@ -42,6 +46,7 @@ en el subsitio `eventos` se hace después.
 
 ### Corregido
 
+- **Con banner, la portada no enseñaba «Gestionar este evento».** El banner sustituye la cabecera y se llevaba el enlace; ahora va debajo
 - **Los colores propios de una sección no salían.** El formulario de la página los guardaba, pero la página pública solo leía los del evento
 - **El programa salía dos veces** en los eventos que lo escribieron a mano: su CSS a medida escondía la parrilla por la clase `programa-estandar`, que la parrilla nueva no llevaba. Y las actividades sin fecha ya no salen en un bloque «Sin fecha»
 - **El texto de la cabecera de una sección se comprobaba contra el color equivocado.** Va sobre la parte blanca del degradado, así que el contraste se mide contra el blanco

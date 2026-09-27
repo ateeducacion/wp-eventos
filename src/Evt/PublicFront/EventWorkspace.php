@@ -294,6 +294,16 @@ final class EventWorkspace {
 	);
 
 	/**
+	 * The only document the look panel takes: the programme, as a PDF.
+	 */
+	private const PDF_MIMES = array( 'pdf' => 'application/pdf' );
+
+	/**
+	 * Empty sponsor slots offered after the ones already there.
+	 */
+	public const SPONSOR_BLANKS = 3;
+
+	/**
 	 * Register the shortcode and the POST handler.
 	 *
 	 * @return void
@@ -1407,12 +1417,14 @@ final class EventWorkspace {
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
 			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
 			self::save_image( $event_id, 'evt_header_bg_image', EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			self::save_image( $event_id, 'evt_programme_file', EventMetaKeys::PROGRAMME_FILE_ID, 0, true ),
+			self::save_sponsors( $event_id ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
 
 		if ( in_array( false, $subidas, true ) ) {
-			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho.' );
+			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho. El programa tiene que ser un PDF.' );
 			Shell::leave( $destino );
 			return;
 		}
@@ -1435,17 +1447,18 @@ final class EventWorkspace {
 	 * @param string $campo    Field prefix, e.g. `evt_logo`.
 	 * @param string $meta_key Where the attachment ID lives; empty = thumbnail.
 	 * @param int    $min_width Minimum width in pixels; 0 accepts any width.
+	 * @param bool   $pdf       Whether it takes a PDF instead of an image.
 	 * @return bool False when what was sent could not be stored.
 	 */
-	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0 ): bool {
+	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- del fichero se encarga media_handle_upload(); del identificador, absint().
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
-			$subido = self::upload( $campo . '_file', $event_id );
+			$subido = self::upload( $campo . '_file', $event_id, $pdf );
 			if ( $subido <= 0 ) {
 				return false;
 			}
-			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width );
+			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width, $pdf );
 		}
 
 		if ( ! empty( $_POST[ $campo . '_clear' ] ) ) {
@@ -1459,7 +1472,7 @@ final class EventWorkspace {
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width );
+		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width, $pdf );
 	}
 
 	/**
@@ -1469,16 +1482,18 @@ final class EventWorkspace {
 	 * @param string $meta_key      Where the attachment ID lives; empty = thumbnail.
 	 * @param int    $attachment_id Attachment ID; 0 to clear it.
 	 * @param int    $min_width     Minimum width in pixels; 0 accepts any width.
+	 * @param bool   $pdf           Whether it takes a PDF instead of an image.
 	 * @return bool False when the attachment is not a usable image.
 	 */
-	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width, bool $pdf = false ): bool {
 		// Lo que ya estaba se queda: un cartel migrado en PDF no se elige aquí,
 		// pero guardar la apariencia no tiene que tirarlo.
 		$actual = '' === $meta_key ? (int) get_post_thumbnail_id( $event_id ) : (int) get_post_meta( $event_id, $meta_key, true );
 		if ( $attachment_id > 0 && $attachment_id === $actual ) {
 			return true;
 		}
-		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
+		$vale = $pdf ? self::is_pdf_attachment( $attachment_id ) : self::is_image_attachment( $attachment_id );
+		if ( $attachment_id > 0 && ! $vale ) {
 			return false;
 		}
 		if ( $attachment_id > 0 && ! self::image_meets_min_width( $attachment_id, $min_width ) ) {
@@ -1532,6 +1547,61 @@ final class EventWorkspace {
 	}
 
 	/**
+	 * Whether that ID really is a PDF in the media library, readable here.
+	 *
+	 * @param int $attachment_id What the hidden field carried.
+	 * @return bool
+	 */
+	private static function is_pdf_attachment( int $attachment_id ): bool {
+		return 'attachment' === get_post_type( $attachment_id )
+			&& 'application/pdf' === get_post_mime_type( $attachment_id )
+			&& current_user_can( 'read_post', $attachment_id );
+	}
+
+	/**
+	 * Save the corporate logos of the front page: one image and one link per row.
+	 *
+	 * Cada fila es un campo de imagen como los demás (`evt_sponsor_<N>`) y su
+	 * enlace (`evt_sponsor_url_<N>`). Una fila vacía o con una imagen que no es
+	 * imagen se cae; las que quedan, en su orden.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return bool False when some image could not be used.
+	 */
+	private static function save_sponsors( int $event_id ): bool {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
+		$filas = isset( $_POST['evt_sponsor_rows'] ) ? min( 60, absint( wp_unslash( $_POST['evt_sponsor_rows'] ) ) ) : -1;
+		if ( $filas < 0 ) {
+			return true;
+		}
+		$logos = array();
+		$bien  = true;
+		for ( $i = 0; $i < $filas; $i++ ) {
+			$campo = 'evt_sponsor_' . $i;
+			$id    = 0;
+			if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
+				$id = self::upload( $campo . '_file', $event_id );
+			} elseif ( isset( $_POST[ $campo . '_id' ] ) && empty( $_POST[ $campo . '_clear' ] ) ) {
+				$id = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
+			}
+			if ( $id <= 0 ) {
+				continue;
+			}
+			if ( ! self::is_image_attachment( $id ) ) {
+				$bien = false;
+				continue;
+			}
+			$logos[] = array(
+				'id'  => $id,
+				'url' => isset( $_POST[ 'evt_sponsor_url_' . $i ] ) ? esc_url_raw( wp_unslash( $_POST[ 'evt_sponsor_url_' . $i ] ) ) : '',
+			);
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		update_post_meta( $event_id, EventMetaKeys::SPONSORS, wp_json_encode( $logos ) );
+		return $bien;
+	}
+
+	/**
 	 * Whether an image is wide enough for a field with a minimum resolution.
 	 *
 	 * @param int $attachment_id Image attachment ID.
@@ -1551,9 +1621,10 @@ final class EventWorkspace {
 	 *
 	 * @param string $campo    Field name.
 	 * @param int    $event_id Event post ID.
+	 * @param bool   $pdf      Whether it takes a PDF instead of an image.
 	 * @return int Attachment ID, or 0 when it could not be stored.
 	 */
-	private static function upload( string $campo, int $event_id ): int {
+	private static function upload( string $campo, int $event_id, bool $pdf = false ): int {
 		if ( ! current_user_can( 'upload_files' ) ) {
 			return 0;
 		}
@@ -1569,7 +1640,7 @@ final class EventWorkspace {
 				// El formulario ya trae comprobado su nonce; la comprobación
 				// propia de `wp_handle_upload` es la del escritorio.
 				'test_form' => false,
-				'mimes'     => self::IMAGE_MIMES,
+				'mimes'     => $pdf ? self::PDF_MIMES : self::IMAGE_MIMES,
 			)
 		);
 		return is_wp_error( $id ) ? 0 : (int) $id;
@@ -2093,6 +2164,8 @@ final class EventWorkspace {
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
 			'header_bg'     => (int) self::meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			'programme'     => (int) self::meta( $event_id, EventMetaKeys::PROGRAMME_FILE_ID ),
+			'sponsors'      => (array) json_decode( (string) self::meta( $event_id, EventMetaKeys::SPONSORS ), true ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);

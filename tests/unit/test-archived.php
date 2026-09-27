@@ -458,6 +458,11 @@ class Test_Archived extends WP_UnitTestCase {
 
 		$m   = EventList::model();
 		$ids = array_map( 'intval', array_column( (array) $m['rows'], 'id' ) );
+		$this->assertSame( array( $nuevo ), $ids, 'por defecto, «Activos»: el histórico no' );
+
+		$_GET[ EventList::VAR_STATE ] = 'all';
+		$m                            = EventList::model();
+		$ids                          = array_map( 'intval', array_column( (array) $m['rows'], 'id' ) );
 		$this->assertContains( $viejo, $ids, 'un evento histórico no desaparece del listado' );
 		$this->assertContains( $nuevo, $ids );
 		$this->assertSame( 1, (int) $m['counts'][ EventList::FILTER_ARCHIVED ] );

@@ -131,6 +131,14 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_programme_layout' ),
 			),
+			EventMetaKeys::PROGRAMME_FILE_ID  => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::SPONSORS           => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_sponsors' ),
+			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
@@ -398,6 +406,27 @@ final class EventMetaRegistration {
 	 */
 	public static function sanitize_separator( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::separators(), '' );
+	}
+
+	/**
+	 * Keep a clean list of sponsor logos: an attachment ID and an optional link.
+	 *
+	 * @param mixed $value JSON string or array.
+	 * @return string JSON; `[]` when nothing valid is left.
+	 */
+	public static function sanitize_sponsors( $value ): string {
+		$lista  = is_array( $value ) ? $value : json_decode( (string) $value, true );
+		$limpia = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $logo ) {
+			$id = is_array( $logo ) ? absint( $logo['id'] ?? 0 ) : 0;
+			if ( $id > 0 ) {
+				$limpia[] = array(
+					'id'  => $id,
+					'url' => esc_url_raw( (string) ( $logo['url'] ?? '' ) ),
+				);
+			}
+		}
+		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
 	}
 
 	/**
