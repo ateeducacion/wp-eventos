@@ -31,6 +31,16 @@ final class EventPostType {
 	public const TEMPLATE_DEFAULT = 'default';
 
 	/**
+	 * Option: '1' serves events at the root of the site (ADR-0042).
+	 */
+	public const OPTION_ROOT_URLS = 'evt_root_urls';
+
+	/**
+	 * Query var: the speaker or activity whose detail a section shows.
+	 */
+	public const ENTRY_VAR = 'evt_entry';
+
+	/**
 	 * Hook registration.
 	 *
 	 * @return void
@@ -60,8 +70,8 @@ final class EventPostType {
 				'menu_icon'       => 'dashicons-calendar-alt',
 				'supports'        => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'page-attributes' ),
 				'has_archive'     => false,
-				// Conservar las URL actuales (`/eventos/<slug>/`) pide reescritura
-				// en la raíz del subsitio y su propia ADR; la fase 1 no la toca.
+				// Con `evt_root_urls` el evento se sirve además en la raíz, con la
+				// misma URL que la página a la que sustituye (ADR-0042).
 				'rewrite'         => array(
 					'slug'       => 'evento',
 					'with_front' => false,
@@ -79,6 +89,155 @@ final class EventPostType {
 		// y el título del tema encima del nuestro.
 		add_filter( 'theme_' . self::POST_TYPE . '_templates', array( self::class, 'theme_templates' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( self::class, 'set_blank_template' ) );
+
+		add_filter( 'request', array( self::class, 'resolve_request' ) );
+		add_filter( 'post_type_link', array( self::class, 'root_link' ), 10, 2 );
+		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
+		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
+	}
+
+	/**
+	 * Whether events are served at the root of the site, like the pages they replace.
+	 *
+	 * @return bool
+	 */
+	public static function root_urls(): bool {
+		/**
+		 * Filter whether events live at the root of the site.
+		 *
+		 * @param bool $root Whether they do; the option `evt_root_urls` by default.
+		 */
+		return (bool) apply_filters( 'evt_root_urls', '1' === get_option( self::OPTION_ROOT_URLS, '' ) );
+	}
+
+	/**
+	 * Answer the URLs the current pages have with the event that replaces them.
+	 *
+	 * Dos formas de URL llegan hoy de fuera —enlaces compartidos, carteles
+	 * impresos, el menú de cada evento—: `/<evento>/<sección>/` y
+	 * `?page_id=<N>`. La primera WordPress la entiende como una `page`; si no
+	 * hay ninguna `page` en esa ruta y sí un evento, se sirve el evento. La
+	 * segunda solo pide que el evento conserve su ID, y aquí se le dice a
+	 * WordPress de qué tipo es para que `redirect_canonical()` lleve a la
+	 * URL bonita. Una `page` que exista con la misma ruta siempre gana.
+	 *
+	 * @param mixed $vars Parsed query vars.
+	 * @return mixed
+	 */
+	public static function resolve_request( $vars ) {
+		if ( ! is_array( $vars ) ) {
+			return $vars;
+		}
+
+		foreach ( array( 'page_id', 'p' ) as $clave ) {
+			$id = isset( $vars[ $clave ] ) ? absint( $vars[ $clave ] ) : 0;
+			if ( $id > 0 && self::POST_TYPE === get_post_type( $id ) ) {
+				unset( $vars['page_id'] );
+				$vars['p']         = $id;
+				$vars['post_type'] = self::POST_TYPE;
+				return $vars;
+			}
+		}
+
+		// La ficha de un ponente o de una actividad cuelga de su sección, como
+		// hoy: `<sección>/entry/<N>/`. Bajo `/evento/` la regla del tipo la lee
+		// como la página `<sección>/entry` y el número como su paginación.
+		if ( isset( $vars[ self::POST_TYPE ], $vars['page'] ) && preg_match( '~^(.+)/entry$~', (string) $vars[ self::POST_TYPE ], $m ) ) {
+			$vars[ self::POST_TYPE ] = $m[1];
+			$vars['name']            = $m[1];
+			$vars[ self::ENTRY_VAR ] = absint( trim( (string) $vars['page'], '/' ) );
+			unset( $vars['page'] );
+			return $vars;
+		}
+
+		if ( ! self::root_urls() ) {
+			return $vars;
+		}
+		// Según la estructura de enlaces, la misma ruta llega como página, como
+		// entrada, como adjunto o sin regla: se mira la ruta pedida, entera.
+		$como = array_intersect_key( $vars, array_flip( array( 'pagename', 'name', 'attachment', 'error' ) ) );
+		if ( array() === $como || isset( $vars['post_type'] ) || ! isset( $GLOBALS['wp'] ) ) {
+			return $vars;
+		}
+		$ruta  = trim( (string) $GLOBALS['wp']->request, '/' );
+		$ficha = 0;
+		if ( preg_match( '~^(.+)/entry/(\d+)$~', $ruta, $m ) ) {
+			$ruta  = $m[1];
+			$ficha = absint( $m[2] );
+		}
+		if ( '' === $ruta || get_page_by_path( $ruta ) || get_page_by_path( $ruta, OBJECT, 'post' ) ) {
+			return $vars;
+		}
+		$evento = get_page_by_path( $ruta, OBJECT, self::POST_TYPE );
+		if ( ! $evento instanceof \WP_Post ) {
+			return $vars;
+		}
+		return array_filter(
+			array(
+				self::POST_TYPE => $ruta,
+				'post_type'     => self::POST_TYPE,
+				'name'          => $ruta,
+				self::ENTRY_VAR => $ficha,
+			)
+		);
+	}
+
+	/**
+	 * The detail of one speaker or activity keeps its own URL.
+	 *
+	 * Sin esto, `redirect_canonical()` ve una URL que no es el enlace
+	 * permanente de la sección y manda a la sección.
+	 *
+	 * @param mixed $url Where WordPress would redirect.
+	 * @return mixed
+	 */
+	public static function keep_entry_url( $url ) {
+		return absint( get_query_var( self::ENTRY_VAR ) ) > 0 ? false : $url;
+	}
+
+	/**
+	 * URL of the detail of one speaker or activity under a section.
+	 *
+	 * @param int $section_id Section.
+	 * @param int $entry_id   Speaker or activity.
+	 * @return string
+	 */
+	public static function entry_url( int $section_id, int $entry_id ): string {
+		$url = (string) get_permalink( $section_id );
+		if ( ! get_option( 'permalink_structure' ) ) {
+			return add_query_arg( self::ENTRY_VAR, $entry_id, $url );
+		}
+		return user_trailingslashit( trailingslashit( $url ) . 'entry/' . $entry_id );
+	}
+
+	/**
+	 * Let `?evt_entry=<N>` through, for sites without pretty permalinks.
+	 *
+	 * @param mixed $vars Public query vars.
+	 * @return mixed
+	 */
+	public static function query_vars( $vars ) {
+		if ( is_array( $vars ) ) {
+			$vars[] = self::ENTRY_VAR;
+		}
+		return $vars;
+	}
+
+	/**
+	 * The root URL of an event page when events live at the root.
+	 *
+	 * @param mixed $url  Permalink.
+	 * @param mixed $post Post.
+	 * @return mixed
+	 */
+	public static function root_link( $url, $post ) {
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type || ! self::root_urls() ) {
+			return $url;
+		}
+		if ( ! get_option( 'permalink_structure' ) || in_array( $post->post_status, array( 'draft', 'pending', 'auto-draft' ), true ) ) {
+			return $url;
+		}
+		return user_trailingslashit( home_url( '/' . get_page_uri( $post ) ) );
 	}
 
 	/**

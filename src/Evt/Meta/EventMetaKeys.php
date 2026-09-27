@@ -290,24 +290,40 @@ final class EventMetaKeys {
 	/**
 	 * Closed vocabulary of typefaces.
 	 *
-	 * Hoy la tipografía sale de un desplegable con las 1.461 familias de Google
-	 * Fonts, y el resultado —está medido, y el material está en `.local/`— son
-	 * decenas de combinaciones distintas conviviendo en el mismo sitio. Aquí son
-	 * seis, elegidas por legibilidad y por pares que combinan, y una de ellas es
-	 * «la del tema»: el valor vacío, que no carga nada. El slug es el que va en
-	 * la clave; la etiqueta, el nombre de la familia tal y como lo pide la hoja
-	 * de estilos.
+	 * El formulario anterior ofrece las 1.461 familias de Google Fonts. Aquí
+	 * la lista sigue cerrada: las cinco elegidas por legibilidad, más las que
+	 * usan de verdad los eventos publicados —está medido, y el material está
+	 * en `.local/`—, para que un evento migrado se vea igual. «La del tema» es
+	 * el valor vacío y no carga nada; «Times New Roman» es del sistema y
+	 * tampoco. Las demás se cargan con {@see \Evt\PublicFront\Fonts}.
 	 *
 	 * @return array<string, string> slug => nombre de la familia.
 	 */
 	public static function fonts(): array {
 		return array(
-			self::FONT_DEFAULT => 'La del tema',
-			'open-sans'        => 'Open Sans',
-			'lato'             => 'Lato',
-			'montserrat'       => 'Montserrat',
-			'source-serif'     => 'Source Serif 4',
-			'merriweather'     => 'Merriweather',
+			self::FONT_DEFAULT   => 'La del tema',
+			'open-sans'          => 'Open Sans',
+			'lato'               => 'Lato',
+			'montserrat'         => 'Montserrat',
+			'source-serif'       => 'Source Serif 4',
+			'merriweather'       => 'Merriweather',
+			'roboto'             => 'Roboto',
+			'nunito'             => 'Nunito',
+			'cantarell'          => 'Cantarell',
+			'dosis'              => 'Dosis',
+			'oxanium'            => 'Oxanium',
+			'cormorant-garamond' => 'Cormorant Garamond',
+			'alata'              => 'Alata',
+			'aboreto'            => 'Aboreto',
+			'aldrich'            => 'Aldrich',
+			'dela-gothic-one'    => 'Dela Gothic One',
+			'fredoka-one'        => 'Fredoka One',
+			'new-tegomin'        => 'New Tegomin',
+			'nosifer'            => 'Nosifer',
+			'oi'                 => 'Oi',
+			'patrick-hand'       => 'Patrick Hand',
+			'patua-one'          => 'Patua One',
+			'times'              => 'Times New Roman',
 		);
 	}
 
@@ -327,20 +343,26 @@ final class EventMetaKeys {
 	 * Closed vocabulary of header separators.
 	 *
 	 * El formulario anterior ofrece hoy las veinticinco siluetas del tema. Se
-	 * conservan las seis que se dibujan con una silueta propia y se usan de
-	 * verdad; una que llegue de la migración fuera de esta lista se queda sin
+	 * conservan las que usan de verdad los eventos publicados, cada una con su
+	 * silueta propia; las variantes de una misma forma se quedan en la forma.
+	 * Una que llegue de la migración fuera de esta lista se queda sin
 	 * separador, que es el valor vacío y el aspecto por defecto.
 	 *
 	 * @return array<string, string> slug => etiqueta.
 	 */
 	public static function separators(): array {
 		return array(
-			''         => 'Sin separador',
-			'slant'    => 'Diagonal',
-			'ramp'     => 'Rampa',
-			'curve'    => 'Curva',
-			'wave'     => 'Onda',
-			'triangle' => 'Triángulo',
+			''          => 'Sin separador',
+			'slant'     => 'Diagonal',
+			'ramp'      => 'Rampa',
+			'curve'     => 'Curva',
+			'wave'      => 'Onda',
+			'triangle'  => 'Triángulo',
+			'waves'     => 'Ondas',
+			'clouds'    => 'Nubes',
+			'mountains' => 'Montañas',
+			'graph'     => 'Gráfica',
+			'arrow'     => 'Flecha',
 		);
 	}
 

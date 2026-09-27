@@ -36,6 +36,11 @@ final class Settings {
 	public const NONCE_SYNC_CENTRES = 'evt_centres_manual_sync';
 
 	/**
+	 * Nonce action of the URL form.
+	 */
+	public const NONCE_URLS = 'evt_root_urls';
+
+	/**
 	 * Register hooks.
 	 *
 	 * @return void
@@ -69,6 +74,25 @@ final class Settings {
 	public static function handle_actions(): void {
 		if ( ! is_admin() || ! EventAccess::is_manager() ) {
 			return;
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
+			'root_urls' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_URLS, '_evt_urls_nonce' )
+		) {
+			update_option( EventPostType::OPTION_ROOT_URLS, empty( $_POST['evt_root_urls'] ) ? '' : '1' );
+			self::leave(
+				add_query_arg(
+					array(
+						'post_type' => EventPostType::POST_TYPE,
+						'page'      => self::PAGE,
+						'updated'   => 'synced',
+						'msg'       => rawurlencode( 'Guardada la forma de las direcciones de los eventos.' ),
+					),
+					admin_url( 'edit.php' )
+				)
+			);
 		}
 
 		if (
@@ -149,6 +173,24 @@ final class Settings {
 			<?php elseif ( isset( $_GET['error'] ) && ! empty( $_GET['error'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?></p></div>
 			<?php endif; ?>
+
+			<h2>Direcciones de los eventos</h2>
+			<form method="post" action="" style="max-width:46rem">
+				<?php wp_nonce_field( self::NONCE_URLS, '_evt_urls_nonce' ); ?>
+				<input type="hidden" name="evt_action" value="root_urls" />
+				<p>
+					<label>
+						<input type="checkbox" name="evt_root_urls" value="1" <?php checked( EventPostType::root_urls() ); ?> />
+						Servir los eventos en la raíz del sitio: <code><?php echo esc_html( home_url( '/nombre-del-evento/' ) ); ?></code>
+					</label>
+				</p>
+				<p class="description">
+					Es la forma que tienen hoy las páginas de los eventos, y la que conservan al migrarlos.
+					Sin marcar, van bajo <code><?php echo esc_html( home_url( '/evento/' ) ); ?></code>.
+					Si en la raíz hay una página con la misma dirección, gana la página.
+				</p>
+				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
+			</form>
 
 			<h2>Tipos de contenido</h2>
 			<table class="widefat striped" style="max-width:46rem">

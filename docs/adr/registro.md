@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -276,6 +276,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) | Inscribirse pide sesión salvo que el evento la abra, y adjuntar la pide siempre | Propuesta | 2026-09-27 | [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
 | [ADR-0040](ADR-0040-captcha-altcha-para-la-inscripcion-sin-sesion.md) | La inscripción sin sesión pasa por ALTCHA, con el servidor escrito aquí | Propuesta | 2026-09-27 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) |
 | [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) | La gestión se agrupa en un menú lateral y los eventos se publican en una línea del tiempo | Propuesta | 2026-09-27 | [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) |
+| [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa | Propuesta | 2026-09-27 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -569,3 +570,11 @@ de guardar abajo. Además deja el listado en nombre y ámbito, con cuadrícula d
 carteles, y publica todos los eventos en una línea del tiempo horizontal en
 `/eventos/`.
 
+**Las URL de siempre y la página pública completa, 2026-09-27: ADR-0042.** La
+[ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md)
+sirve los eventos en la raíz del sitio si se pide, lleva `?page_id=` al evento
+y da a cada ponente y actividad su ficha en `<sección>/entry/<N>/`. La página
+pública pasa a pintar ponentes, programa, actividades, multimedia y los
+ponentes destacados. Las listas de tipos de actividad, siluetas y tipografías
+crecen con lo que usan los eventos publicados, las tipografías se cargan de
+verdad y el cartel puede ser un PDF.

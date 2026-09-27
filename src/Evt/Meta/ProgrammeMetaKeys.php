@@ -81,6 +81,40 @@ final class ProgrammeMetaKeys {
 	public const ACTIVITY_SPEAKERS = 'evt_activity_speakers';
 
 	/**
+	 * Whether a speaker also shows on the front page of the event: '1' or ''.
+	 *
+	 * La portada de hoy enseña «Personas comunicadoras» con los ponentes
+	 * destacados, no con todos.
+	 */
+	public const SPEAKER_FEATURED = 'evt_speaker_featured';
+
+	/**
+	 * Recording of the activity: a URL that WordPress can embed.
+	 *
+	 * La página de multimedia enseña las actividades que tienen vídeo.
+	 */
+	public const ACTIVITY_VIDEO = 'evt_activity_video';
+
+	/**
+	 * Other people taking part who are not speakers of the event, one per line.
+	 *
+	 * «Nombre (centro o cargo)»: quien presenta una mesa, quien inaugura… Salen
+	 * en la actividad y no en la página de ponentes, como hoy.
+	 */
+	public const ACTIVITY_GUESTS = 'evt_activity_guests';
+
+	/**
+	 * Number the speaker or activity had in the old system, when it had one.
+	 *
+	 * Hoy la ficha de un ponente vive en `<sección>/entry/<N>/`, con el
+	 * número de su entrada del formulario. Al migrar, la ficha conserva ese
+	 * número como ID siempre que esté libre; cuando lo ocupa otra cosa, se
+	 * guarda aquí y la sección lo busca por él. Lo escribe la migración y
+	 * nadie lo edita.
+	 */
+	public const LEGACY_ENTRY = 'evt_legacy_entry';
+
+	/**
 	 * The kind that takes seats and enrolment.
 	 */
 	public const KIND_WORKSHOP = 'taller';
@@ -89,17 +123,25 @@ final class ProgrammeMetaKeys {
 	 * Closed vocabulary of activity kinds.
 	 *
 	 * En código y no en taxonomía, por la misma lección que los tipos de
-	 * sección: una lista abierta acaba mezclando ejes (ADR-0004).
+	 * sección: una lista abierta acaba mezclando ejes (ADR-0004). Lleva los
+	 * tipos que usan de verdad los programas publicados, con su nombre de
+	 * siempre, para que un programa migrado diga lo mismo que decía.
 	 *
 	 * @return array<string, string> slug => etiqueta.
 	 */
 	public static function activity_kinds(): array {
 		return array(
 			'ponencia'     => 'Ponencia',
+			'conferencia'  => 'Conferencia',
 			'taller'       => 'Taller',
 			'mesa'         => 'Mesa redonda',
 			'comunicacion' => 'Comunicación',
 			'panel'        => 'Panel de experiencias',
+			'practicas'    => 'Buenas prácticas',
+			'experiencia'  => 'Experiencia',
+			'encuentro'    => 'Encuentro',
+			'actuacion'    => 'Actuación',
+			'proyeccion'   => 'Proyección audiovisual',
 			'inauguracion' => 'Inauguración',
 			'clausura'     => 'Clausura',
 			'descanso'     => 'Descanso',

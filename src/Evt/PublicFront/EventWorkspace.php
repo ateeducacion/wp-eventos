@@ -758,10 +758,11 @@ final class EventWorkspace {
 	private static function save_speaker( int $event_id, int $row_id, string $destino ): void {
 		$check = ActivityInput::speaker(
 			array(
-				'name' => self::field( 'evt_sp_name' ),
-				'role' => self::field( 'evt_sp_role' ),
-				'org'  => self::field( 'evt_sp_org' ),
-				'bio'  => self::field( 'evt_sp_bio' ),
+				'name'     => self::field( 'evt_sp_name' ),
+				'role'     => self::field( 'evt_sp_role' ),
+				'org'      => self::field( 'evt_sp_org' ),
+				'bio'      => self::field( 'evt_sp_bio' ),
+				'featured' => self::field( 'evt_sp_featured' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -819,6 +820,8 @@ final class EventWorkspace {
 				'seats'    => self::field( 'evt_ac_seats' ),
 				'summary'  => self::field( 'evt_ac_summary' ),
 				'speakers' => $ponentes,
+				'video'    => self::field( 'evt_ac_video' ),
+				'guests'   => self::field( 'evt_ac_guests' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -1299,6 +1302,12 @@ final class EventWorkspace {
 	 * @return bool False when the attachment is not a usable image.
 	 */
 	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+		// Lo que ya estaba se queda: un cartel migrado en PDF no se elige aquí,
+		// pero guardar la apariencia no tiene que tirarlo.
+		$actual = '' === $meta_key ? (int) get_post_thumbnail_id( $event_id ) : (int) get_post_meta( $event_id, $meta_key, true );
+		if ( $attachment_id > 0 && $attachment_id === $actual ) {
+			return true;
+		}
 		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
 			return false;
 		}

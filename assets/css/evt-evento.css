@@ -371,6 +371,194 @@
 	opacity: 0.8;
 }
 
+/* ─── ponentes y programa (ProgrammeBlock) ────────────────────────────── */
+
+.evt-ev__personas {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	text-align: center;
+}
+
+.evt-ev__personas h3 {
+	margin: 0.6rem 0 0.2rem;
+	font-size: 1.05rem;
+}
+
+.evt-ev__personas h3 a,
+.evt-ev__actividad h3 a,
+.evt-ev__hueco h3 a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.evt-ev__personas--fichas {
+	grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+	text-align: left;
+}
+
+.evt-ev__personas--fichas .evt-ev__persona {
+	display: grid;
+	grid-template-columns: 96px minmax(0, 1fr);
+	gap: 1rem;
+	align-items: start;
+}
+
+.evt-ev__personas--fichas h3 {
+	margin-top: 0;
+}
+
+.evt-ev__persona p {
+	margin: 0.3rem 0 0;
+}
+
+.evt-ev__retrato {
+	display: block;
+	width: 100%;
+	max-width: 180px;
+	margin-inline: auto;
+}
+
+.evt-ev__retrato--vacio {
+	display: grid;
+	place-items: center;
+	background: var(--evt-suave);
+	color: var(--evt-borde);
+}
+
+.evt-ev__retrato--vacio svg {
+	width: 60%;
+	fill: currentColor;
+}
+
+.evt-ev__cargo {
+	font-size: var(--evt-t-menudo);
+	opacity: 0.8;
+}
+
+.evt-ev__ficha {
+	display: grid;
+	grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+	gap: var(--evt-espacio);
+	align-items: start;
+}
+
+.evt-ev__ficha--actividad {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.evt-ev__ficha h2 {
+	margin: 0 0 0.3rem;
+}
+
+@media (max-width: 600px) {
+	.evt-ev__ficha {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.evt-ev__dia {
+	margin: calc(var(--evt-espacio) * 1.2) 0 0.6rem;
+	padding-bottom: 0.3rem;
+	border-bottom: 2px solid var(--evt-fondo);
+	font-size: 1.2rem;
+	text-transform: uppercase;
+}
+
+.evt-ev__parrilla,
+.evt-ev__actividades,
+.evt-ev__gente {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__hueco {
+	display: grid;
+	grid-template-columns: 8.5rem minmax(0, 1fr);
+	gap: 1rem;
+	padding: 0.8rem 0;
+	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__hueco h3,
+.evt-ev__actividad h3 {
+	margin: 0.2rem 0;
+	font-size: 1.1rem;
+}
+
+.evt-ev__hora {
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.evt-ev__tipo,
+.evt-ev__sala {
+	display: inline-block;
+	margin-right: 0.4rem;
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	opacity: 0.75;
+}
+
+.evt-ev__sala {
+	font-weight: 400;
+	text-transform: none;
+}
+
+.evt-ev__actividades {
+	display: grid;
+	gap: var(--evt-espacio);
+}
+
+.evt-ev__actividad {
+	padding: 1rem 1.2rem;
+	background: var(--evt-suave);
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__actividad p {
+	margin: 0.4rem 0;
+}
+
+.evt-ev__gente li {
+	margin: 0.15rem 0;
+}
+
+.evt-ev__cuando {
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+}
+
+.evt-ev__video {
+	position: relative;
+	margin: 0.8rem 0;
+	aspect-ratio: 16 / 9;
+}
+
+.evt-ev__video--fichero {
+	aspect-ratio: auto;
+}
+
+.evt-ev__video iframe {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+@media (max-width: 600px) {
+	.evt-ev__hueco {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.2rem;
+	}
+}
+
 /* Una tabla nunca empuja la página: se desplaza ella sola. */
 .evt-ev__bloque table {
 	display: block;

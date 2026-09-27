@@ -100,11 +100,19 @@ class Test_Appearance_Meta extends WP_UnitTestCase {
 	public function test_a_typeface_outside_the_list_is_not_stored() {
 		$evento = $this->un_evento();
 
+		$fuentes = array_keys( EventMetaKeys::fonts() );
+		$this->assertSame( EventMetaKeys::FONT_DEFAULT, $fuentes[0], 'la primera es «la del tema»' );
 		$this->assertSame(
-			array( EventMetaKeys::FONT_DEFAULT, 'open-sans', 'lato', 'montserrat', 'source-serif', 'merriweather' ),
-			array_keys( EventMetaKeys::fonts() ),
-			'seis, y una de ellas es «la del tema»'
+			array( 'open-sans', 'lato', 'montserrat', 'source-serif', 'merriweather' ),
+			array_slice( $fuentes, 1, 5 ),
+			'las cinco elegidas van delante; detrás, las que usan los eventos de hoy (ADR-0042)'
 		);
+		foreach ( array_slice( $fuentes, 1 ) as $slug ) {
+			$this->assertTrue(
+				'times' === $slug || isset( \Evt\PublicFront\Fonts::FILES[ \Evt\PublicFront\Fonts::package( $slug ) ] ),
+				"«{$slug}» tiene fichero que cargar"
+			);
+		}
 
 		foreach ( array( 'lato', 'montserrat', 'merriweather' ) as $buena ) {
 			update_post_meta( $evento, EventMetaKeys::TITLE_FONT, $buena );

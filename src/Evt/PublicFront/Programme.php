@@ -179,6 +179,7 @@ final class Programme {
 
 		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_ROLE, (string) $data['role'] );
 		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_ORG, (string) $data['org'] );
+		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_FEATURED, ! empty( $data['featured'] ) );
 		EventAccess::stamp_area( $id );
 
 		return $id;
@@ -213,6 +214,8 @@ final class Programme {
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VENUE, (string) $data['venue'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_ROOM, (string) $data['room'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, (int) $data['seats'] );
+		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VIDEO, (string) ( $data['video'] ?? '' ) );
+		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_GUESTS, (string) ( $data['guests'] ?? '' ) );
 		// Solo los ponentes que son de este evento: una ficha de otro evento no
 		// se enlaza aquí, que es lo que sostiene ADR-0021.
 		update_post_meta(
@@ -325,6 +328,7 @@ final class Programme {
 			'bio'      => (string) $ponente->post_content,
 			'photo'    => (string) get_the_post_thumbnail_url( $id, 'thumbnail' ),
 			'photo_id' => (int) get_post_thumbnail_id( $id ),
+			'featured' => (bool) get_post_meta( $id, ProgrammeMetaKeys::SPEAKER_FEATURED, true ),
 		);
 	}
 
@@ -358,6 +362,8 @@ final class Programme {
 			'seats'       => (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true ),
 			'speaker_ids' => array_keys( $ponentes ),
 			'speakers'    => $ponentes,
+			'video'       => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VIDEO, true ),
+			'guests'      => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_GUESTS, true ),
 		);
 	}
 

@@ -41,7 +41,7 @@ final class PosterBlock {
 	 */
 	public static function html( array $m ): string {
 		$look = (array) $m['appearance'];
-		if ( empty( $m['is_root'] ) || '' === (string) $look['poster'] ) {
+		if ( empty( $m['is_root'] ) || ( '' === (string) $look['poster'] && '' === (string) $look['poster_file'] ) ) {
 			return '';
 		}
 
@@ -54,11 +54,19 @@ final class PosterBlock {
 		ob_start();
 		?>
 		<figure class="evt-ev__cartel">
-			<a href="<?php echo esc_url( (string) $look['poster_full'] ); ?>">
-				<img src="<?php echo esc_url( (string) $look['poster'] ); ?>"
-					alt="<?php echo esc_attr( $alt ); ?>" loading="lazy" />
-			</a>
-			<figcaption><?php esc_html_e( 'Pulse el cartel para verlo a tamaño completo.', 'wp-eventos' ); ?></figcaption>
+			<?php if ( '' !== (string) $look['poster'] ) : ?>
+				<a href="<?php echo esc_url( '' !== (string) $look['poster_file'] ? (string) $look['poster_file'] : (string) $look['poster_full'] ); ?>">
+					<img src="<?php echo esc_url( (string) $look['poster'] ); ?>"
+						alt="<?php echo esc_attr( $alt ); ?>" loading="lazy" />
+				</a>
+			<?php endif; ?>
+			<figcaption>
+				<?php if ( '' !== (string) $look['poster_file'] ) : ?>
+					<a href="<?php echo esc_url( (string) $look['poster_file'] ); ?>" download><?php esc_html_e( 'Descargar el cartel (PDF)', 'wp-eventos' ); ?></a>
+				<?php else : ?>
+					<?php esc_html_e( 'Pulse el cartel para verlo a tamaño completo.', 'wp-eventos' ); ?>
+				<?php endif; ?>
+			</figcaption>
 		</figure>
 		<?php
 		return (string) ob_get_clean();
