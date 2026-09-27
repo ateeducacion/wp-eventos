@@ -59,6 +59,10 @@
 	--evt-espacio: clamp(1rem, 4vw, 2rem);
 	--evt-radio: 0.4rem;
 
+	/* El avatar de quien no tiene foto: figura clara sobre gris, el de siempre. */
+	--evt-avatar-fondo: #c5ccd3;
+	--evt-avatar-figura: #eef1f4;
+
 	/* Forma de las fotos de personas: 0 cuadrada, 50% redonda. */
 	--evt-forma: 0;
 
@@ -544,14 +548,17 @@
 }
 
 .evt-ev__retrato--vacio {
-	display: grid;
-	place-items: center;
-	background: var(--evt-suave);
-	color: var(--evt-borde);
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	overflow: hidden;
+	background: var(--evt-avatar-fondo);
+	color: var(--evt-avatar-figura);
 }
 
 .evt-ev__retrato--vacio svg {
-	width: 60%;
+	width: 88%;
+	height: 88%;
 	fill: currentColor;
 }
 

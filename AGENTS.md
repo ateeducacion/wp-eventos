@@ -57,8 +57,9 @@ La pestaña «Participantes» **no rompe esa regla**: el aplicativo no lee el
 gestor de formularios, **pregunta** con el filtro `evt_participants` y quien lo
 tenga delante contesta desde un snippet suelto (ADR-0027). Lo que sí es del
 aplicativo —el filtro y la exportación a CSV— es puro y se prueba sin ningún
-gestor de formularios delante. En el wp-env contesta el mu-plugin de
-desarrollo.
+gestor de formularios delante. En el wp-env y en Playground nadie contesta
+al filtro: `scripts/seed-demo.php` crea inscripciones de verdad en el evento
+de demostración, que son las que se corrigen y se borran.
 
 ---
 

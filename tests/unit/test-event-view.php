@@ -418,6 +418,8 @@ class Test_Event_View extends WP_UnitTestCase {
 				'current' => true,
 			),
 		);
+		// El entorno de desarrollo pone un logo de ejemplo; sin nadie que lo configure, no hay.
+		remove_filter( EventChrome::HOOK, 'evt_dev_chrome' );
 		$this->assertSame( '', EventChrome::nav( $items ), 'sin logo y sin menú no hay barra' );
 
 		$pon = static function ( array $c ): array {
@@ -684,7 +686,7 @@ class Test_Event_View extends WP_UnitTestCase {
 		$this->acting_as( 0 );
 		$m = EventView::model( $evento );
 
-		$this->assertSame( '', EventChrome::nav( (array) $m['nav'] ), 'con una sola entrada no hay entre qué navegar' );
+		$this->assertStringNotContainsString( '<nav', EventChrome::nav( (array) $m['nav'] ), 'con una sola entrada no hay entre qué navegar' );
 		$this->assertSame( '', SectionsBlock::html( $m ), 'sin secciones no se pinta una rejilla vacía' );
 	}
 

@@ -111,15 +111,15 @@ function evt_demo_events(): array {
 
 	return array(
 		array(
-			'slug'      => 'jornadas-tecnologia-educativa',
-			'title'     => 'III Jornadas de Tecnología Educativa',
-			'author'    => 'organizacion',
-			'areas'     => array( 'subambito-1' ),
-			'type'      => 'jornadas',
-			'start'     => $proximo_inicio,
-			'end'       => $proximo_fin,
-			'venue'     => 'Centro de formación Norte',
-			'meta'      => array(
+			'slug'          => 'jornadas-tecnologia-educativa',
+			'title'         => 'III Jornadas de Tecnología Educativa',
+			'author'        => 'organizacion',
+			'areas'         => array( 'subambito-1' ),
+			'type'          => 'jornadas',
+			'start'         => $proximo_inicio,
+			'end'           => $proximo_fin,
+			'venue'         => 'Centro de formación Norte',
+			'meta'          => array(
 				'evt_tagline'          => 'Aprender con tecnología, enseñar con criterio',
 				'evt_hashtag'          => 'JornadasTE',
 				'evt_intro'            => 'Tres días de talleres, ponencias y experiencias de aula sobre tecnología educativa en los centros educativos.',
@@ -142,7 +142,7 @@ function evt_demo_events(): array {
 				'evt_image_shape'      => 'circle',
 				'evt_separator'        => 'wave',
 			),
-			'sections'  => array(
+			'sections'      => array(
 				array(
 					'slug'    => 'programa',
 					'title'   => 'Programa',
@@ -200,7 +200,7 @@ function evt_demo_events(): array {
 					'content' => 'Visitas, mesas de trabajo y actividades fuera del programa principal.',
 				),
 			),
-			'speakers'  => array(
+			'speakers'      => array(
 				array(
 					'name' => 'Ana Martín Cabrera',
 					'role' => 'Asesora de Tecnología Educativa',
@@ -223,7 +223,19 @@ function evt_demo_events(): array {
 			// Dos sedes el mismo día, a propósito: es el caso que ADR-0024
 			// decidió que tenía que caber y el que parte la parrilla en dos
 			// bloques dentro del primer día.
-			'programme' => array(
+			// Inscripciones de verdad, por la misma vía que el formulario: así la
+			// pestaña «Participantes» enseña desde el principio corregir, borrar,
+			// el filtro y la exportación. Nombre, apellidos, centro y taller.
+			'registrations' => array(
+				array( 'Ana', 'Martín Cabrera', 'CEIP El Drago', 'Taller de radio escolar', true, array( 'Gluten' ) ),
+				array( 'Luis', 'Gómez Perdomo', 'Instituto Sur', 'Taller de robótica en Primaria', false, array() ),
+				array( 'Marta', 'Ruiz Santana', 'CEIP Valverde', '', true, array() ),
+				array( 'Jorge', 'Delgado Rivero', 'IES El Mirador', 'Taller de radio escolar', true, array( 'Lactosa', 'Frutos secos' ) ),
+				array( 'Nayra', 'Hernández Bello', 'CEIP El Drago', 'Taller de robótica en Primaria', false, array() ),
+				array( 'Iván', 'Padrón Mesa', 'Instituto Sur', '', true, array() ),
+				array( 'Lucía', 'Afonso Quintero', 'CEIP Valverde', 'Taller de radio escolar', false, array() ),
+			),
+			'programme'     => array(
 				array(
 					'title' => 'Inauguración de las jornadas',
 					'kind'  => 'inauguracion',
@@ -609,6 +621,7 @@ function evt_seed_event( array $event ): bool {
 	}
 
 	evt_seed_programme( $root, $event );
+	evt_seed_registrations( $root, $event );
 
 	echo esc_html(
 		sprintf(
@@ -674,6 +687,67 @@ function evt_seed_programme( int $root, array $event ): void {
 			count( (array) $event['programme'] )
 		)
 	) . "\n";
+}
+
+/**
+ * Sign the demo people up for one event, as the public form would.
+ *
+ * Con `Registrations::create()` y `Registrations::seat()`, que son los del
+ * formulario: la plaza de taller respeta el aforo y cada inscripción lleva su
+ * testigo, igual que una de verdad. Si el evento ya tiene alguna, no se toca:
+ * volver a ejecutar el guion no duplica a nadie ni pisa lo que se corrigió a
+ * mano.
+ *
+ * @param int                  $root  Event post ID.
+ * @param array<string, mixed> $event Demo event definition.
+ * @return void
+ * @throws RuntimeException If one registration cannot be stored.
+ */
+function evt_seed_registrations( int $root, array $event ): void {
+	if ( empty( $event['registrations'] ) || \Evt\PublicFront\Registrations::has_any( $root ) ) {
+		return;
+	}
+
+	$talleres = array();
+	foreach ( get_posts(
+		array(
+			'post_type'   => 'evt_activity',
+			'post_parent' => $root,
+			'numberposts' => -1,
+			'post_status' => 'any',
+		)
+	) as $actividad ) {
+		$talleres[ $actividad->post_title ] = (int) $actividad->ID;
+	}
+
+	$cuenta = 0;
+	foreach ( (array) $event['registrations'] as $i => $persona ) {
+		list( $nombre, $apellidos, $centro, $taller, $come, $alergias ) = $persona;
+		$id = \Evt\PublicFront\Registrations::create(
+			$root,
+			array(
+				'tax_id'  => sprintf( '%08dZ', 10000000 + $i ),
+				'name'    => $nombre,
+				'surname' => $apellidos,
+				'email'   => sanitize_title( $nombre . ' ' . $apellidos ) . '@example.org',
+				'phone'   => '',
+				'centre'  => $centro,
+			),
+			array(
+				'qcomida000001' => $come,
+				'qintoler00001' => $alergias,
+			)
+		);
+		if ( $id <= 0 ) {
+			throw new RuntimeException( esc_html( "No se pudo inscribir a {$nombre} {$apellidos}." ) );
+		}
+		if ( isset( $talleres[ $taller ] ) ) {
+			\Evt\PublicFront\Registrations::seat( $root, $id, $talleres[ $taller ] );
+		}
+		++$cuenta;
+	}
+
+	echo esc_html( sprintf( '  … %d inscripción(es).', $cuenta ) ) . "\n";
 }
 
 /**

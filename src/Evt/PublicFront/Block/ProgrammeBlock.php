@@ -585,7 +585,7 @@ final class ProgrammeBlock {
 		$src = (string) get_the_post_thumbnail_url( $id, 'medium' );
 		$img = '' !== $src
 			? '<img class="evt-ev__retrato" src="' . esc_url( $src ) . '" alt="" loading="lazy" />'
-			: '<span class="evt-ev__retrato evt-ev__retrato--vacio" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8z"/></svg></span>';
+			: '<span class="evt-ev__retrato evt-ev__retrato--vacio" aria-hidden="true"><svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMax meet"><circle cx="12" cy="9.5" r="4.6"/><path d="M2.5 24c0-5.6 4.3-9.4 9.5-9.4s9.5 3.8 9.5 9.4z"/></svg></span>';
 		return '' !== $url ? '<a href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true">' . $img . '</a>' : $img;
 	}
 
