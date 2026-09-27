@@ -36,6 +36,8 @@ en el subsitio `eventos` se hace después.
 
 ### Corregido
 
+- **Cerrar la edición de una página pulsando fuera del panel llevaba a `…/evento/undefined`.** El fondo oscuro no tiene dirección y el guion la tomaba de él; ahora vuelve siempre a donde apunta el botón de cerrar del panel
+
 - **En «Mis eventos» y en la línea del tiempo, un evento con el cartel en PDF salía sin imagen.** Ahora sale su imagen destacada. Y el nombre del evento que no tiene ninguna imagen se escribe en un color que se lee sobre el de su cabecera, también cuando es claro
 - **El filtro de ámbitos de «Mis eventos» es una lista única y en árbol:** cada ámbito sale una vez, con sus subámbitos sangrados debajo, y elegir uno trae también lo de sus subámbitos. Administración ve todos los ámbitos del sitio; el resto, los de su ámbito en los que tiene eventos
 - La paginación de «Mis eventos» sale centrada bajo la cuadrícula

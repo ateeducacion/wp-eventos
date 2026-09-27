@@ -44,6 +44,7 @@ const FORM = `<!doctype html><meta charset="utf-8">
   <button id="be" type="submit" class="evt-btn evt-mini evt-btn-borrar">Borrar</button>
 </form>
 <a id="fuera" href="#">un enlace fuera del diálogo</a>
+<a id="editar" class="evt-abre-marco" href="/pagina">Editar la página</a>
 </body>`;
 
 let fallos = 0;
@@ -190,6 +191,18 @@ async function abrir( ctx, conSwal ) {
 		await page.fill( '.swal2-input', 'ana@example.org' );
 		await Promise.all( [ page.waitForURL( '**/enviado' ), page.click( '.swal2-confirm' ) ] );
 		ok( ( await enviado( page ) ).includes( 'evt_confirm_email=ana@example.org' ), 'con su correo se envía' );
+		await page.close();
+	}
+
+	// --- 5. Cerrar la edición de una página pulsando fuera --------------------
+	{
+		const page = await abrir( ctx, true );
+		await page.click( '#editar' );
+		await page.waitForSelector( '.evt-cajon--pagina', { state: 'visible' } );
+		ok( true, 'la edición de la página se abre en el panel lateral' );
+		await Promise.all( [ page.waitForNavigation(), page.mouse.click( 5, 300 ) ] );
+		ok( ! page.url().includes( 'undefined' ), 'cerrar pulsando el fondo no lleva a …/undefined: ' + page.url() );
+		ok( page.url().endsWith( '/panel' ), 'vuelve a la pantalla de la que salió' );
 		await page.close();
 	}
 
