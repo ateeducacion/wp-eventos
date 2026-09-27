@@ -867,16 +867,19 @@ final class Shell {
 	public static function icon( string $nombre ): string {
 		$caminos = array(
 			// Lápiz: editar.
-			'lapiz'     => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
+			'lapiz'      => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
 			// Ojo: ver la página pública.
-			'ojo'       => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
+			'ojo'        => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
 			// Papelera: enviar a la papelera.
-			'papelera'  => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
+			'papelera'   => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
 			// Flechas: subir y bajar una posición.
-			'subir'     => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
-			'bajar'     => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
+			'subir'      => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
+			'bajar'      => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
+			// Cuatro cuadros y tres renglones: ver en cuadrícula o en lista.
+			'cuadricula' => '<path fill="currentColor" d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/>',
+			'lista'      => '<path fill="currentColor" d="M4 5h3v3H4V5Zm5 0h11v3H9V5Zm-5 5.5h3v3H4v-3Zm5 0h11v3H9v-3ZM4 16h3v3H4v-3Zm5 0h11v3H9v-3Z"/>',
 			// Flecha que vuelve: restaurar de la papelera.
-			'restaurar' => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
+			'restaurar'  => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
 			return '';

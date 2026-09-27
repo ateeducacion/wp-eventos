@@ -159,6 +159,10 @@ final class PageFormView {
 				?>
 			</fieldset>
 
+			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php endif; ?>
+
 			<?php echo self::look( (array) $valores['look'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
 			<?php echo self::code( (array) $m['code'], (array) $valores['code'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -174,6 +178,46 @@ final class PageFormView {
 				<?php endif; ?>
 			</p>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The contact details of a contact page.
+	 *
+	 * @param array<string, string> $c Current values, by meta key.
+	 * @return string
+	 */
+	private static function contact( array $c ): string {
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>Datos de contacto</legend>
+			<p class="evt-ayuda">Salen en tres columnas, cada una con su icono, debajo del texto de la página. El que deje en blanco no sale.</p>
+			<div class="evt-form-campo">
+				<label for="evt_contact_address">Dirección</label>
+				<textarea id="evt_contact_address" name="<?php echo esc_attr( EventMetaKeys::CONTACT_ADDRESS ); ?>" rows="10"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_ADDRESS ] ?? '' ) ); ?></textarea>
+				<small>Una línea por renglón. Si hay dos sedes, deje una línea en blanco entre ellas.</small>
+			</div>
+			<div class="evt-form-fila">
+				<div class="evt-form-campo">
+					<label for="evt_contact_phone">Teléfono</label>
+					<textarea id="evt_contact_phone" name="<?php echo esc_attr( EventMetaKeys::CONTACT_PHONE ); ?>" rows="2"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_PHONE ] ?? '' ) ); ?></textarea>
+					<small>Uno por línea, con su sede entre paréntesis si hay varias.</small>
+				</div>
+				<div class="evt-form-campo">
+					<label for="evt_contact_email">Correo</label>
+					<input type="email" id="evt_contact_email" name="<?php echo esc_attr( EventMetaKeys::CONTACT_EMAIL ); ?>"
+						value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_EMAIL ] ?? '' ) ); ?>" />
+				</div>
+			</div>
+			<div class="evt-form-campo">
+				<label for="evt_contact_map">Enlace al mapa</label>
+				<input type="url" id="evt_contact_map" name="<?php echo esc_attr( EventMetaKeys::CONTACT_MAP ); ?>" placeholder="https://"
+					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
+				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
+			</div>
+		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}

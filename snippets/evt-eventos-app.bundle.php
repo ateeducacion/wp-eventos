@@ -130,6 +130,20 @@ final class EventMetaKeys {
 
 
 
+	public const ACCENT = 'evt_accent';
+
+
+
+
+
+
+
+
+	public const HEADER_BG_IMAGE_ID = 'evt_header_bg_image_id';
+
+
+
+
 	public const TITLE_FONT = 'evt_title_font';
 
 
@@ -164,6 +178,49 @@ final class EventMetaKeys {
 
 
 	public const SEPARATOR = 'evt_separator';
+
+
+
+
+	public const PROGRAMME_LAYOUT = 'evt_programme_layout';
+
+
+
+
+	public const LAYOUT_ACCORDION = 'accordion';
+
+
+
+
+	public const PROGRAMME_FILE_ID = 'evt_programme_file_id';
+
+
+
+
+
+
+
+	public const SPONSORS = 'evt_sponsors';
+
+
+
+
+	public const CONTACT_ADDRESS = 'evt_contact_address';
+
+
+
+
+	public const CONTACT_PHONE = 'evt_contact_phone';
+
+
+
+
+	public const CONTACT_EMAIL = 'evt_contact_email';
+
+
+
+
+	public const CONTACT_MAP = 'evt_contact_map';
 
 
 
@@ -254,6 +311,8 @@ final class EventMetaKeys {
 			self::SIGNUP_FORM_ID,
 			self::HEADER_BG,
 			self::HEADER_TEXT,
+			self::ACCENT,
+			self::HEADER_BG_IMAGE_ID,
 			self::TITLE_FONT,
 			self::BODY_FONT,
 			self::LOGO_ID,
@@ -261,6 +320,13 @@ final class EventMetaKeys {
 			self::POSTER_ID,
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,
+			self::PROGRAMME_LAYOUT,
+			self::PROGRAMME_FILE_ID,
+			self::SPONSORS,
+			self::CONTACT_ADDRESS,
+			self::CONTACT_PHONE,
+			self::CONTACT_EMAIL,
+			self::CONTACT_MAP,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -401,6 +467,21 @@ final class EventMetaKeys {
 
 
 
+	public static function programme_layouts(): array {
+		return array(
+			''                     => 'Pestañas por día',
+			self::LAYOUT_ACCORDION => 'Acordeón',
+		);
+	}
+
+
+
+
+
+
+
+
+
 	public static function in_list( $value, array $allowed, string $fallback = '' ): string {
 		$value = trim( (string) $value );
 		return isset( $allowed[ $value ] ) ? $value : $fallback;
@@ -448,97 +529,133 @@ final class EventMetaRegistration {
 
 	public static function schema(): array {
 		return array(
-			EventMetaKeys::SECTION_TYPE     => array(
+			EventMetaKeys::SECTION_TYPE       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_section_type' ),
 			),
-			EventMetaKeys::START_DATE       => array(
+			EventMetaKeys::START_DATE         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::END_DATE         => array(
+			EventMetaKeys::END_DATE           => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::VENUE            => array(
+			EventMetaKeys::VENUE              => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::TAGLINE          => array(
+			EventMetaKeys::TAGLINE            => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::HASHTAG          => array(
+			EventMetaKeys::HASHTAG            => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_hashtag' ),
 			),
-			EventMetaKeys::INTRO            => array(
+			EventMetaKeys::INTRO              => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			EventMetaKeys::SIGNUP_SHOW      => array(
+			EventMetaKeys::SIGNUP_SHOW        => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			EventMetaKeys::SIGNUP_LABEL     => array(
+			EventMetaKeys::SIGNUP_LABEL       => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::SIGNUP_URL       => array(
+			EventMetaKeys::SIGNUP_URL         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
-			EventMetaKeys::SIGNUP_FORM_ID   => array(
+			EventMetaKeys::SIGNUP_FORM_ID     => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::HEADER_BG        => array(
+			EventMetaKeys::HEADER_BG          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::HEADER_TEXT      => array(
+			EventMetaKeys::HEADER_TEXT        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::TITLE_FONT       => array(
+			EventMetaKeys::ACCENT             => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_color' ),
+			),
+			EventMetaKeys::HEADER_BG_IMAGE_ID => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::TITLE_FONT         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::BODY_FONT        => array(
+			EventMetaKeys::BODY_FONT          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::LOGO_ID          => array(
+			EventMetaKeys::LOGO_ID            => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::HEADER_BANNER_ID => array(
+			EventMetaKeys::HEADER_BANNER_ID   => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::POSTER_ID        => array(
+			EventMetaKeys::POSTER_ID          => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::IMAGE_SHAPE      => array(
+			EventMetaKeys::IMAGE_SHAPE        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_image_shape' ),
 			),
-			EventMetaKeys::SEPARATOR        => array(
+			EventMetaKeys::SEPARATOR          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_separator' ),
 			),
-			EventMetaKeys::CUSTOM_CSS       => array(
+			EventMetaKeys::PROGRAMME_LAYOUT   => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_programme_layout' ),
+			),
+			EventMetaKeys::PROGRAMME_FILE_ID  => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::SPONSORS           => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_sponsors' ),
+			),
+			EventMetaKeys::CONTACT_ADDRESS    => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_PHONE      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			EventMetaKeys::CONTACT_EMAIL      => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_email',
+			),
+			EventMetaKeys::CONTACT_MAP        => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_url' ),
+			),
+			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
 				'auth'     => array( self::class, 'auth_custom_css' ),
 			),
-			EventMetaKeys::CUSTOM_JS        => array(
+			EventMetaKeys::CUSTOM_JS          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_js' ),
 				'auth'     => array( self::class, 'auth_custom_js' ),
 			),
-			EventMetaKeys::ARCHIVED         => array(
+			EventMetaKeys::ARCHIVED           => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 				'auth'     => array( self::class, 'auth_archived' ),
@@ -795,6 +912,37 @@ final class EventMetaRegistration {
 
 	public static function sanitize_separator( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::separators(), '' );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_sponsors( $value ): string {
+		$lista  = is_array( $value ) ? $value : json_decode( (string) $value, true );
+		$limpia = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $logo ) {
+			$id = is_array( $logo ) ? absint( $logo['id'] ?? 0 ) : 0;
+			if ( $id > 0 ) {
+				$limpia[] = array(
+					'id'  => $id,
+					'url' => esc_url_raw( (string) ( $logo['url'] ?? '' ) ),
+				);
+			}
+		}
+		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_programme_layout( $value ): string {
+		return EventMetaKeys::in_list( $value, EventMetaKeys::programme_layouts(), '' );
 	}
 }
 
@@ -6487,16 +6635,19 @@ final class Shell {
 	public static function icon( string $nombre ): string {
 		$caminos = array(
 
-			'lapiz'     => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
+			'lapiz'      => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
 
-			'ojo'       => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
+			'ojo'        => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
 
-			'papelera'  => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
+			'papelera'   => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
 
-			'subir'     => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
-			'bajar'     => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
+			'subir'      => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
+			'bajar'      => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
 
-			'restaurar' => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
+			'cuadricula' => '<path fill="currentColor" d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/>',
+			'lista'      => '<path fill="currentColor" d="M4 5h3v3H4V5Zm5 0h11v3H9V5Zm-5 5.5h3v3H4v-3Zm5 0h11v3H9v-3ZM4 16h3v3H4v-3Zm5 0h11v3H9v-3Z"/>',
+
+			'restaurar'  => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
 			return '';
@@ -7259,6 +7410,26 @@ final class EventList {
 
 
 
+	public const FILTER_ACTIVE = 'active';
+
+
+
+
+
+
+	public const SEGMENTS = array(
+		self::FILTER_ACTIVE   => 'Activos',
+		self::FILTER_DRAFT    => 'Borradores',
+		self::FILTER_ARCHIVED => 'Históricos',
+		'all'                 => 'Todos',
+	);
+
+
+
+
+
+
+
 
 
 	public const FILTER_TRASH = 'trash';
@@ -7501,6 +7672,7 @@ final class EventList {
 
 	public static function state_filters(): array {
 		return array(
+			self::FILTER_ACTIVE           => 'Activos',
 			'all'                         => 'Todos',
 			EventMetaKeys::STATE_UPCOMING => 'Próximos',
 			EventMetaKeys::STATE_OPEN     => 'Abiertos',
@@ -7548,14 +7720,14 @@ final class EventList {
 
 
 	public static function selection(): array {
-		$estado = self::input( self::VAR_STATE, 'all' );
+		$estado = self::input( self::VAR_STATE, self::FILTER_ACTIVE );
 		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
 			'type'   => max( 0, (int) self::input( self::VAR_TYPE ) ),
 			'course' => max( 0, (int) self::input( self::VAR_COURSE ) ),
-			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : 'all',
+			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_ACTIVE,
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
 			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
@@ -7578,7 +7750,7 @@ final class EventList {
 			self::VAR_AREA   => $s['area'] > 0 ? (string) $s['area'] : '',
 			self::VAR_TYPE   => $s['type'] > 0 ? (string) $s['type'] : '',
 			self::VAR_COURSE => $s['course'] > 0 ? (string) $s['course'] : '',
-			self::VAR_STATE  => 'all' !== $s['state'] ? (string) $s['state'] : '',
+			self::VAR_STATE  => self::FILTER_ACTIVE !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
 			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
@@ -7649,6 +7821,14 @@ final class EventList {
 				? 'La papelera está vacía: no hay ningún evento esperando a que lo restauren.'
 				: self::empty_text( $filtrando, $todas );
 			$m['reset_url']  = $filtrando ? self::url( $s, self::no_filters() ) : '';
+		}
+
+
+
+		$estado = (string) $s['state'];
+		if ( array() === $m['rows'] && ! $en_papelera && 'all' !== $estado && $m['counts']['all'] > 0 && '' === $s['search'] ) {
+			$m['empty_text'] = sprintf( 'No hay ningún evento en «%s». Los tiene todos en «Todos».', self::state_filters()[ $estado ] );
+			$m['reset_url']  = self::url( $s, array( 'state' => 'all' ) );
 		}
 
 		return $m;
@@ -8148,6 +8328,9 @@ final class EventList {
 		if ( self::FILTER_DRAFT === $filter ) {
 			return 'draft' === $row['status'];
 		}
+		if ( self::FILTER_ACTIVE === $filter ) {
+			return 'draft' !== $row['status'] && self::FILTER_TRASH !== $row['status'] && true !== $row['archived'];
+		}
 		return $filter === $row['state'];
 	}
 
@@ -8208,7 +8391,7 @@ final class EventList {
 
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
-			|| 'all' !== $s['state'] || '' !== $s['search'];
+			|| self::FILTER_ACTIVE !== $s['state'] || '' !== $s['search'];
 	}
 
 
@@ -8221,7 +8404,7 @@ final class EventList {
 			'area'   => 0,
 			'type'   => 0,
 			'course' => 0,
-			'state'  => 'all',
+			'state'  => self::FILTER_ACTIVE,
 			'search' => '',
 			'page'   => 1,
 		);
@@ -8327,6 +8510,7 @@ final class EventListView {
 		?>
 		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); ?>
 		<?php self::toolbar( $m ); ?>
+		<?php self::states( $m ); ?>
 		<?php self::trash_bar( $m ); ?>
 		<?php if ( array() === $m['rows'] ) : ?>
 			<div class="evt-vacio evt-tarjeta">
@@ -8355,6 +8539,30 @@ final class EventListView {
 
 
 
+	private static function states( array $m ): void {
+		$s = $m['selection'];
+		?>
+		<nav class="evt-fichas" aria-label="Qué eventos ver">
+			<?php foreach ( EventList::SEGMENTS as $clave => $rotulo ) : ?>
+				<?php $activa = $clave === (string) $s['state']; ?>
+				<a class="evt-fichas__una<?php echo $activa ? ' is-active' : ''; ?>"
+					href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
+					<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
+					<span class="evt-fichas__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
+	}
+
+
+
+
+
+
+
+
+
+
 
 	private static function toolbar( array $m ): void {
 		$s     = $m['selection'];
@@ -8368,8 +8576,8 @@ final class EventListView {
 				<?php if ( EventList::VIEW_LIST === $vista ) : ?>
 					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_VIEW ); ?>" value="<?php echo esc_attr( EventList::VIEW_LIST ); ?>" />
 				<?php endif; ?>
-				<?php if ( EventList::FILTER_TRASH === (string) $s['state'] ) : ?>
-					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( EventList::FILTER_TRASH ); ?>" />
+				<?php if ( EventList::FILTER_ACTIVE !== (string) $s['state'] ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( (string) $s['state'] ); ?>" />
 				<?php endif; ?>
 				<label class="screen-reader-text" for="evt-buscar">Filtrar por nombre</label>
 				<input class="form-control evt-herramientas__buscar" type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
@@ -8408,7 +8616,7 @@ final class EventListView {
 						);
 						?>
 								"
-						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?></a>
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo wp_kses( Shell::icon( EventList::VIEW_GRID === $clave ? 'cuadricula' : 'lista' ), PanelParts::SVG ); ?> <?php echo esc_html( $rotulo ); ?></a>
 				<?php endforeach; ?>
 			</div>
 			<?php if ( ! empty( $m['can_create'] ) ) : ?>
@@ -8559,7 +8767,7 @@ final class EventListView {
 		?>
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
-				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => 'all' ) ) ); ?>">Volver al listado</a>
+				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
 				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">
@@ -11952,6 +12160,16 @@ final class EventWorkspace {
 
 
 
+	private const PDF_MIMES = array( 'pdf' => 'application/pdf' );
+
+
+
+
+	public const SPONSOR_BLANKS = 3;
+
+
+
+
 
 
 	public static function register(): void {
@@ -13043,14 +13261,16 @@ final class EventWorkspace {
 
 	private static function save_look( int $event_id, string $destino ): void {
 		$listas = array(
-			EventMetaKeys::TITLE_FONT  => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
-			EventMetaKeys::BODY_FONT   => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
-			EventMetaKeys::IMAGE_SHAPE => array( EventMetaKeys::image_shapes(), EventMetaKeys::SHAPE_SQUARE ),
-			EventMetaKeys::SEPARATOR   => array( EventMetaKeys::separators(), '' ),
+			EventMetaKeys::TITLE_FONT       => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
+			EventMetaKeys::BODY_FONT        => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
+			EventMetaKeys::IMAGE_SHAPE      => array( EventMetaKeys::image_shapes(), EventMetaKeys::SHAPE_SQUARE ),
+			EventMetaKeys::SEPARATOR        => array( EventMetaKeys::separators(), '' ),
+			EventMetaKeys::PROGRAMME_LAYOUT => array( EventMetaKeys::programme_layouts(), '' ),
 		);
 
 		update_post_meta( $event_id, EventMetaKeys::HEADER_BG, self::field( EventMetaKeys::HEADER_BG ) );
 		update_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, self::field( EventMetaKeys::HEADER_TEXT ) );
+		update_post_meta( $event_id, EventMetaKeys::ACCENT, self::field( EventMetaKeys::ACCENT ) );
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
@@ -13060,12 +13280,15 @@ final class EventWorkspace {
 		$subidas = array(
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
 			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
+			self::save_image( $event_id, 'evt_header_bg_image', EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			self::save_image( $event_id, 'evt_programme_file', EventMetaKeys::PROGRAMME_FILE_ID, 0, true ),
+			self::save_sponsors( $event_id ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
 
 		if ( in_array( false, $subidas, true ) ) {
-			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho.' );
+			self::set_flash( 'aviso', 'Se guardó la apariencia, pero alguna imagen no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF—, que no pese demasiado y, si es el banner, que tenga al menos 1920 píxeles de ancho. El programa tiene que ser un PDF.' );
 			Shell::leave( $destino );
 			return;
 		}
@@ -13090,15 +13313,16 @@ final class EventWorkspace {
 
 
 
-	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0 ): bool {
+
+	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
 
 
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
-			$subido = self::upload( $campo . '_file', $event_id );
+			$subido = self::upload( $campo . '_file', $event_id, $pdf );
 			if ( $subido <= 0 ) {
 				return false;
 			}
-			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width );
+			return self::validate_and_put_image( $event_id, $meta_key, $subido, $min_width, $pdf );
 		}
 
 		if ( ! empty( $_POST[ $campo . '_clear' ] ) ) {
@@ -13112,7 +13336,7 @@ final class EventWorkspace {
 		$elegido = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
 
 
-		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width );
+		return self::validate_and_put_image( $event_id, $meta_key, $elegido, $min_width, $pdf );
 	}
 
 
@@ -13124,14 +13348,16 @@ final class EventWorkspace {
 
 
 
-	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+
+	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width, bool $pdf = false ): bool {
 
 
 		$actual = '' === $meta_key ? (int) get_post_thumbnail_id( $event_id ) : (int) get_post_meta( $event_id, $meta_key, true );
 		if ( $attachment_id > 0 && $attachment_id === $actual ) {
 			return true;
 		}
-		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
+		$vale = $pdf ? self::is_pdf_attachment( $attachment_id ) : self::is_image_attachment( $attachment_id );
+		if ( $attachment_id > 0 && ! $vale ) {
 			return false;
 		}
 		if ( $attachment_id > 0 && ! self::image_meets_min_width( $attachment_id, $min_width ) ) {
@@ -13190,6 +13416,61 @@ final class EventWorkspace {
 
 
 
+	private static function is_pdf_attachment( int $attachment_id ): bool {
+		return 'attachment' === get_post_type( $attachment_id )
+			&& 'application/pdf' === get_post_mime_type( $attachment_id )
+			&& current_user_can( 'read_post', $attachment_id );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function save_sponsors( int $event_id ): bool {
+
+		$filas = isset( $_POST['evt_sponsor_rows'] ) ? min( 60, absint( wp_unslash( $_POST['evt_sponsor_rows'] ) ) ) : -1;
+		if ( $filas < 0 ) {
+			return true;
+		}
+		$logos = array();
+		$bien  = true;
+		for ( $i = 0; $i < $filas; $i++ ) {
+			$campo = 'evt_sponsor_' . $i;
+			$id    = 0;
+			if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
+				$id = self::upload( $campo . '_file', $event_id );
+			} elseif ( isset( $_POST[ $campo . '_id' ] ) && empty( $_POST[ $campo . '_clear' ] ) ) {
+				$id = absint( wp_unslash( $_POST[ $campo . '_id' ] ) );
+			}
+			if ( $id <= 0 ) {
+				continue;
+			}
+			if ( ! self::is_image_attachment( $id ) ) {
+				$bien = false;
+				continue;
+			}
+			$logos[] = array(
+				'id'  => $id,
+				'url' => isset( $_POST[ 'evt_sponsor_url_' . $i ] ) ? esc_url_raw( wp_unslash( $_POST[ 'evt_sponsor_url_' . $i ] ) ) : '',
+			);
+		}
+
+		update_post_meta( $event_id, EventMetaKeys::SPONSORS, wp_json_encode( $logos ) );
+		return $bien;
+	}
+
+
+
+
+
+
+
 
 	private static function image_meets_min_width( int $attachment_id, int $min_width ): bool {
 		if ( $min_width <= 0 ) {
@@ -13206,7 +13487,8 @@ final class EventWorkspace {
 
 
 
-	private static function upload( string $campo, int $event_id ): int {
+
+	private static function upload( string $campo, int $event_id, bool $pdf = false ): int {
 		if ( ! current_user_can( 'upload_files' ) ) {
 			return 0;
 		}
@@ -13222,7 +13504,7 @@ final class EventWorkspace {
 
 
 				'test_form' => false,
-				'mimes'     => self::IMAGE_MIMES,
+				'mimes'     => $pdf ? self::PDF_MIMES : self::IMAGE_MIMES,
 			)
 		);
 		return is_wp_error( $id ) ? 0 : (int) $id;
@@ -13745,6 +14027,9 @@ final class EventWorkspace {
 		$m['media']         = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
+			'header_bg'     => (int) self::meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID ),
+			'programme'     => (int) self::meta( $event_id, EventMetaKeys::PROGRAMME_FILE_ID ),
+			'sponsors'      => (array) json_decode( (string) self::meta( $event_id, EventMetaKeys::SPONSORS ), true ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
@@ -13915,26 +14200,28 @@ final class EventWorkspace {
 
 
 
-			self::FIELD_TITLE             => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
-			self::FIELD_AREA              => implode( ',', EventAccess::post_areas( $event_id ) ),
-			self::FIELD_TYPE              => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
-			self::FIELD_COURSE            => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
-			EventMetaKeys::TAGLINE        => self::meta( $event_id, EventMetaKeys::TAGLINE ),
-			EventMetaKeys::HASHTAG        => self::meta( $event_id, EventMetaKeys::HASHTAG ),
-			EventMetaKeys::INTRO          => self::meta( $event_id, EventMetaKeys::INTRO ),
-			EventMetaKeys::START_DATE     => self::meta( $event_id, EventMetaKeys::START_DATE ),
-			EventMetaKeys::END_DATE       => self::meta( $event_id, EventMetaKeys::END_DATE ),
-			EventMetaKeys::VENUE          => self::meta( $event_id, EventMetaKeys::VENUE ),
-			EventMetaKeys::SIGNUP_SHOW    => '' === self::meta( $event_id, EventMetaKeys::SIGNUP_SHOW ) ? '' : '1',
-			EventMetaKeys::SIGNUP_LABEL   => self::meta( $event_id, EventMetaKeys::SIGNUP_LABEL ),
-			EventMetaKeys::SIGNUP_URL     => self::meta( $event_id, EventMetaKeys::SIGNUP_URL ),
-			EventMetaKeys::SIGNUP_FORM_ID => self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID ),
-			EventMetaKeys::HEADER_BG      => self::meta( $event_id, EventMetaKeys::HEADER_BG ),
-			EventMetaKeys::HEADER_TEXT    => self::meta( $event_id, EventMetaKeys::HEADER_TEXT ),
-			EventMetaKeys::TITLE_FONT     => self::meta( $event_id, EventMetaKeys::TITLE_FONT ),
-			EventMetaKeys::BODY_FONT      => self::meta( $event_id, EventMetaKeys::BODY_FONT ),
-			EventMetaKeys::IMAGE_SHAPE    => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
-			EventMetaKeys::SEPARATOR      => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
+			self::FIELD_TITLE               => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
+			self::FIELD_AREA                => implode( ',', EventAccess::post_areas( $event_id ) ),
+			self::FIELD_TYPE                => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
+			self::FIELD_COURSE              => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
+			EventMetaKeys::TAGLINE          => self::meta( $event_id, EventMetaKeys::TAGLINE ),
+			EventMetaKeys::HASHTAG          => self::meta( $event_id, EventMetaKeys::HASHTAG ),
+			EventMetaKeys::INTRO            => self::meta( $event_id, EventMetaKeys::INTRO ),
+			EventMetaKeys::START_DATE       => self::meta( $event_id, EventMetaKeys::START_DATE ),
+			EventMetaKeys::END_DATE         => self::meta( $event_id, EventMetaKeys::END_DATE ),
+			EventMetaKeys::VENUE            => self::meta( $event_id, EventMetaKeys::VENUE ),
+			EventMetaKeys::SIGNUP_SHOW      => '' === self::meta( $event_id, EventMetaKeys::SIGNUP_SHOW ) ? '' : '1',
+			EventMetaKeys::SIGNUP_LABEL     => self::meta( $event_id, EventMetaKeys::SIGNUP_LABEL ),
+			EventMetaKeys::SIGNUP_URL       => self::meta( $event_id, EventMetaKeys::SIGNUP_URL ),
+			EventMetaKeys::SIGNUP_FORM_ID   => self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID ),
+			EventMetaKeys::HEADER_BG        => self::meta( $event_id, EventMetaKeys::HEADER_BG ),
+			EventMetaKeys::HEADER_TEXT      => self::meta( $event_id, EventMetaKeys::HEADER_TEXT ),
+			EventMetaKeys::ACCENT           => self::meta( $event_id, EventMetaKeys::ACCENT ),
+			EventMetaKeys::TITLE_FONT       => self::meta( $event_id, EventMetaKeys::TITLE_FONT ),
+			EventMetaKeys::BODY_FONT        => self::meta( $event_id, EventMetaKeys::BODY_FONT ),
+			EventMetaKeys::IMAGE_SHAPE      => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
+			EventMetaKeys::SEPARATOR        => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
+			EventMetaKeys::PROGRAMME_LAYOUT => self::meta( $event_id, EventMetaKeys::PROGRAMME_LAYOUT ),
 		);
 
 
@@ -16485,6 +16772,8 @@ final class EventAppearancePanel {
 		$v[ EventMetaKeys::HEADER_BG ]   = self::color( (string) $v[ EventMetaKeys::HEADER_BG ], '#1b4f8a' );
 		$v[ EventMetaKeys::HEADER_TEXT ] = self::color( (string) $v[ EventMetaKeys::HEADER_TEXT ], '#ffffff' );
 
+		$v[ EventMetaKeys::ACCENT ] = self::color( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ), (string) $v[ EventMetaKeys::HEADER_BG ] );
+
 
 
 
@@ -16502,6 +16791,13 @@ final class EventAppearancePanel {
 			'Color del texto',
 			(string) $v[ EventMetaKeys::HEADER_TEXT ],
 			'Sobre fondos oscuros, blanco (#ffffff); sobre claros, casi negro (#1b1b1b).'
+		);
+		$color_acento  = self::color_field(
+			'evt-accent',
+			EventMetaKeys::ACCENT,
+			'Color de acento',
+			(string) $v[ EventMetaKeys::ACCENT ],
+			'El de los títulos de las tarjetas, el «Acerca de» y las rayas bajo los títulos.'
 		);
 		$sel_titulo    = self::select(
 			'evt-title-font',
@@ -16535,6 +16831,14 @@ final class EventAppearancePanel {
 			(string) $v[ EventMetaKeys::SEPARATOR ],
 			'La silueta con la que termina la banda de arriba. «Sin separador» deja el corte recto.'
 		);
+		$sel_programa  = self::select(
+			'evt-programme-layout',
+			EventMetaKeys::PROGRAMME_LAYOUT,
+			'Diseño del programa',
+			EventMetaKeys::programme_layouts(),
+			(string) ( $v[ EventMetaKeys::PROGRAMME_LAYOUT ] ?? '' ),
+			'Cómo se reparten los días en la página del programa.'
+		);
 		$img_logo      = self::image_field(
 			'evt_logo',
 			'Logo acompañante',
@@ -16550,6 +16854,23 @@ final class EventAppearancePanel {
 			$subir,
 			1920
 		);
+		$img_fondo     = self::image_field(
+			'evt_header_bg_image',
+			'Fondo de la cabecera',
+			self::image_of( (int) ( $medios['header_bg'] ?? 0 ) ),
+			'Detrás del título en todas las páginas del evento, sobre el color de fondo.',
+			$subir
+		);
+		$pdf_programa  = self::image_field(
+			'evt_programme_file',
+			'Programa en PDF',
+			self::image_of( (int) ( $medios['programme'] ?? 0 ) ),
+			'Sale como botón «Descargar programa» en la página del programa, después del texto.',
+			$subir,
+			0,
+			'application/pdf'
+		);
+		$logos         = self::sponsors( (array) ( $medios['sponsors'] ?? array() ), $subir );
 		$img_cartel    = self::image_field(
 			'evt_poster',
 			'Cartel del evento',
@@ -16576,11 +16897,14 @@ final class EventAppearancePanel {
 			<div class="evt-apariencia">
 			<div class="evt-apariencia__ajustes">
 			<fieldset class="evt-tarjeta">
-				<legend>Colores de la cabecera</legend>
+				<legend>Colores</legend>
 
 				<div class="evt-form-fila">
 					<div><?php echo $color_bg; ?></div>
 					<div><?php echo $color_txt; ?></div>
+				</div>
+				<div class="evt-form-fila">
+					<div><?php echo $color_acento; ?></div>
 				</div>
 			</fieldset>
 
@@ -16594,6 +16918,9 @@ final class EventAppearancePanel {
 				<div class="evt-form-fila">
 					<div><?php echo $sel_forma; ?></div>
 					<div><?php echo $sel_sep; ?></div>
+				</div>
+				<div class="evt-form-fila">
+					<div><?php echo $sel_programa; ?></div>
 				</div>
 			</fieldset>
 
@@ -16611,8 +16938,18 @@ final class EventAppearancePanel {
 					<?php echo $img_cartel; ?>
 					<?php echo $img_logo; ?>
 					<?php echo $img_banner; ?>
+					<?php echo $img_fondo; ?>
 					<?php echo $img_destacada; ?>
 				</div>
+			</fieldset>
+
+			<fieldset class="evt-tarjeta">
+				<legend>Programa y logos corporativos</legend>
+				<div class="evt-imagenes">
+					<?php echo $pdf_programa; ?>
+				</div>
+				<p class="evt-ayuda">Los logos corporativos salen abajo del todo en la portada, en fila, cada uno con su enlace si lo tiene. Para añadir más, guarde y aparecerán huecos nuevos.</p>
+				<?php echo $logos; ?>
 			</fieldset>
 			</div>
 			<aside class="evt-apariencia__muestra" aria-label="Así se verá">
@@ -16622,6 +16959,47 @@ final class EventAppearancePanel {
 
 			<?php echo PanelParts::save_bar( 'Guardar la apariencia' ); ?>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+	private static function sponsors( array $logos, bool $can_load ): string {
+		$filas = array_values( array_filter( $logos, 'is_array' ) );
+		$total = count( $filas ) + EventWorkspace::SPONSOR_BLANKS;
+
+		ob_start();
+		?>
+		<input type="hidden" name="evt_sponsor_rows" value="<?php echo esc_attr( (string) $total ); ?>" />
+		<div class="evt-imagenes">
+			<?php for ( $i = 0; $i < $total; $i++ ) : ?>
+				<?php $logo = $filas[ $i ] ?? array(); ?>
+				<div>
+					<?php
+					$campo = self::image_field(
+						'evt_sponsor_' . $i,
+						'Logo ' . ( $i + 1 ),
+						self::image_of( (int) ( $logo['id'] ?? 0 ) ),
+						'Mejor un PNG con fondo transparente.',
+						$can_load
+					);
+					echo $campo; 
+					?>
+					<div class="evt-form-campo">
+						<label for="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>">Enlace del logo <?php echo esc_html( (string) ( $i + 1 ) ); ?></label>
+						<input class="form-control" type="url" id="<?php echo esc_attr( 'evt-sponsor-url-' . $i ); ?>"
+							name="<?php echo esc_attr( 'evt_sponsor_url_' . $i ); ?>"
+							value="<?php echo esc_attr( (string) ( $logo['url'] ?? '' ) ); ?>" placeholder="https://" />
+					</div>
+				</div>
+			<?php endfor; ?>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -16716,6 +17094,10 @@ final class EventAppearancePanel {
 		}
 
 		$url = (string) wp_get_attachment_image_url( $attachment_id, 'medium' );
+		if ( '' === $url && 'attachment' === get_post_type( $attachment_id ) ) {
+
+			$url = (string) wp_mime_type_icon( $attachment_id );
+		}
 		if ( '' === $url ) {
 
 
@@ -16809,7 +17191,9 @@ final class EventAppearancePanel {
 
 
 
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0 ): string {
+
+	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
+		$pdf    = 'application/pdf' === $type;
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
 		$puesta = '' !== $url;
@@ -16818,9 +17202,9 @@ final class EventAppearancePanel {
 
 		ob_start();
 		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
+		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
 			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="Usar esta imagen">
+			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
 			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
 
 			<?php ?>
@@ -16836,23 +17220,23 @@ final class EventAppearancePanel {
 				</span>
 			</div>
 			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( $puesta ? 'hidden' : '' ); ?>>
-				Todavía no hay ninguna imagen puesta.
+				<?php echo esc_html( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ); ?>
 			</p>
 
 			<?php if ( $can_load ) : ?>
-				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
+				<p class="evt-media-drop"><?php echo esc_html( $pdf ? 'Arrastre el PDF hasta este campo o selecciónelo en la biblioteca.' : 'Arrastre una imagen hasta este campo o selecciónela en la biblioteca.' ); ?></p>
 				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
 			<?php endif; ?>
 
 			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
 				<?php if ( $can_load ) : ?>
 					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						data-evt-media-pick aria-label="<?php echo esc_attr( 'Elegir imagen para: ' . $rotulo ); ?>">
+						data-evt-media-pick aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir PDF para: ' : 'Elegir imagen para: ' ) . $rotulo ); ?>">
 						Seleccionar o subir
 					</button>
 				<?php endif; ?>
 				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					data-evt-media-clear aria-label="<?php echo esc_attr( 'Quitar la imagen de: ' . $rotulo ); ?>"
+					data-evt-media-clear aria-label="<?php echo esc_attr( ( $pdf ? 'Quitar el PDF de: ' : 'Quitar la imagen de: ' ) . $rotulo ); ?>"
 					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
 					Eliminar del campo
 				</button>
@@ -16862,12 +17246,12 @@ final class EventAppearancePanel {
 				<?php if ( $puesta ) : ?>
 					<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
 						<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $campo . '_clear' ); ?>" value="1" />
-						Quitar esta imagen al guardar
+						<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
 					</label>
 				<?php endif; ?>
-				<label for="<?php echo esc_attr( $id . '-file' ); ?>">Subir una imagen desde su equipo</label>
+				<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
 				<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $campo . '_file' ); ?>"
-					accept="image/jpeg,image/png,image/webp,image/gif" <?php disabled( ! $can_load, true ); ?> />
+					accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
 			</noscript>
 
 			<small><?php echo esc_html( $ayuda ); ?></small>
@@ -17522,6 +17906,21 @@ final class PageForm {
 
 
 
+	public const CONTACT_KEYS = array(
+		EventMetaKeys::CONTACT_ADDRESS => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_PHONE   => 'sanitize_textarea_field',
+		EventMetaKeys::CONTACT_EMAIL   => 'sanitize_email',
+		EventMetaKeys::CONTACT_MAP     => 'esc_url_raw',
+	);
+
+
+
+
+
+
+
+
+
 
 	private static $rejected = array(
 		'message' => '',
@@ -17717,6 +18116,18 @@ final class PageForm {
 				continue;
 			}
 			update_post_meta( $id, $clave, $valor );
+		}
+
+
+		if ( 'contacto' === (string) get_post_meta( $id, EventMetaKeys::SECTION_TYPE, true ) ) {
+			foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+				$valor = (string) ( $fields['contact'][ $clave ] ?? '' );
+				if ( '' === $valor ) {
+					delete_post_meta( $id, $clave );
+					continue;
+				}
+				update_post_meta( $id, $clave, $valor );
+			}
 		}
 
 		self::save_code( $user_id, $event_id, $id, $fields );
@@ -17920,6 +18331,7 @@ final class PageForm {
 			'menu_order'   => 0,
 			'content'      => '',
 			'look'         => $look,
+			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -17939,6 +18351,10 @@ final class PageForm {
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 			$code[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
 		}
+		$contacto = array();
+		foreach ( array_keys( self::CONTACT_KEYS ) as $clave ) {
+			$contacto[ $clave ] = (string) get_post_meta( $page_id, $clave, true );
+		}
 		return array(
 			'title'        => (string) get_post_field( 'post_title', $page_id ),
 			'slug'         => (string) get_post_field( 'post_name', $page_id ),
@@ -17946,6 +18362,7 @@ final class PageForm {
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
@@ -17965,6 +18382,10 @@ final class PageForm {
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
+		$contacto = array();
+		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
+			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
+		}
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 
@@ -17980,6 +18401,7 @@ final class PageForm {
 
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
+			'contact'      => $contacto,
 			'code'         => $code,
 		);
 	}
@@ -18243,6 +18665,10 @@ final class PageFormView {
 				?>
 			</fieldset>
 
+			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); ?>
+			<?php endif; ?>
+
 			<?php echo self::look( (array) $valores['look'] ); ?>
 
 			<?php echo self::code( (array) $m['code'], (array) $valores['code'] ); ?>
@@ -18258,6 +18684,46 @@ final class PageFormView {
 				<?php endif; ?>
 			</p>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function contact( array $c ): string {
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>Datos de contacto</legend>
+			<p class="evt-ayuda">Salen en tres columnas, cada una con su icono, debajo del texto de la página. El que deje en blanco no sale.</p>
+			<div class="evt-form-campo">
+				<label for="evt_contact_address">Dirección</label>
+				<textarea id="evt_contact_address" name="<?php echo esc_attr( EventMetaKeys::CONTACT_ADDRESS ); ?>" rows="10"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_ADDRESS ] ?? '' ) ); ?></textarea>
+				<small>Una línea por renglón. Si hay dos sedes, deje una línea en blanco entre ellas.</small>
+			</div>
+			<div class="evt-form-fila">
+				<div class="evt-form-campo">
+					<label for="evt_contact_phone">Teléfono</label>
+					<textarea id="evt_contact_phone" name="<?php echo esc_attr( EventMetaKeys::CONTACT_PHONE ); ?>" rows="2"><?php echo esc_textarea( (string) ( $c[ EventMetaKeys::CONTACT_PHONE ] ?? '' ) ); ?></textarea>
+					<small>Uno por línea, con su sede entre paréntesis si hay varias.</small>
+				</div>
+				<div class="evt-form-campo">
+					<label for="evt_contact_email">Correo</label>
+					<input type="email" id="evt_contact_email" name="<?php echo esc_attr( EventMetaKeys::CONTACT_EMAIL ); ?>"
+						value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_EMAIL ] ?? '' ) ); ?>" />
+				</div>
+			</div>
+			<div class="evt-form-campo">
+				<label for="evt_contact_map">Enlace al mapa</label>
+				<input type="url" id="evt_contact_map" name="<?php echo esc_attr( EventMetaKeys::CONTACT_MAP ); ?>" placeholder="https://"
+					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
+				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
+			</div>
+		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -18634,7 +19100,9 @@ use Evt\Meta\ProgrammeMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Assets;
 use Evt\PublicFront\Programme;
+
 
 
 
@@ -18706,7 +19174,9 @@ final class ProgrammeBlock {
 				$ponente = self::entry( $evento, $ficha, SpeakerPostType::POST_TYPE );
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
-				return self::grid( $evento );
+				return self::download( $evento ) . self::grid( $evento );
+			case 'contacto':
+				return self::contact( $pagina );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -18847,38 +19317,149 @@ final class ProgrammeBlock {
 
 
 
+
+
+
+
+
+
+
+
+
+
 	private static function grid( int $evento ): string {
-		$dias = self::published_grid( Programme::grid( $evento ) );
+		$dias = array_filter(
+			self::published_grid( Programme::grid( $evento ) ),
+			static function ( array $dia ): bool {
+				return '' !== (string) $dia['date'];
+			}
+		);
 		if ( array() === $dias ) {
 			return '';
 		}
-		$fichas = self::section( $evento, 'actividades' );
+		$fichas     = self::section( $evento, 'actividades' );
+		$acordeon   = EventMetaKeys::LAYOUT_ACCORDION === (string) get_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, true );
+		$primero    = true;
+		$contenedor = $acordeon ? 'evt-ev__programa evt-ev__programa--acordeon' : 'evt-ev__programa';
 
 		ob_start();
+		?>
+		<div class="<?php echo esc_attr( $contenedor . ' programa-estandar' ); ?>"<?php echo $acordeon ? '' : ' data-evt-pestanas'; ?>>
+		<?php
 		foreach ( $dias as $dia ) {
 			foreach ( (array) $dia['venues'] as $sede ) {
-				$rotulo = implode( ' – ', array_filter( array( (string) $sede['venue'], '' !== (string) $dia['date'] ? DateRange::of( (string) $dia['date'], (string) $dia['date'] ) : 'Sin fecha' ) ) );
+				$rotulo = implode( ' – ', array_filter( array( (string) $sede['venue'], DateRange::of( (string) $dia['date'], (string) $dia['date'] ) ) ) );
 				?>
-				<h2 class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></h2>
+				<?php if ( $acordeon ) : ?>
+					<details class="evt-ev__dia-panel" name="evt-programa"<?php echo $primero ? ' open' : ''; ?>>
+						<summary class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></summary>
+				<?php else : ?>
+					<section class="evt-ev__dia-panel">
+						<h2 class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></h2>
+				<?php endif; ?>
 				<ol class="evt-ev__parrilla">
 					<?php foreach ( (array) $sede['rows'] as $fila ) : ?>
-						<li class="evt-ev__hueco">
-							<span class="evt-ev__hora"><?php echo esc_html( self::hours( $fila ) ); ?></span>
-							<div>
-								<span class="evt-ev__tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></span>
+						<li class="<?php echo esc_attr( 'evt-ev__hueco evt-ev__hueco--' . sanitize_html_class( (string) $fila['kind'] ) ); ?>">
+							<span class="evt-ev__tipo">
+								<?php echo esc_html( (string) $fila['kind_label'] ); ?>
 								<?php if ( '' !== (string) $fila['room'] ) : ?>
 									<span class="evt-ev__sala"><?php echo esc_html( (string) $fila['room'] ); ?></span>
 								<?php endif; ?>
+							</span>
+							<div class="evt-ev__que">
 								<h3><?php echo self::link( (string) $fila['title'], $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $fila['id'] ) : '' ); ?></h3>
 								<?php echo self::people( $evento, $fila, false ); ?>
 							</div>
+							<span class="evt-ev__hora"><?php echo esc_html( self::hours( $fila ) ); ?></span>
 						</li>
 					<?php endforeach; ?>
 				</ol>
+				<?php echo $acordeon ? '</details>' : '</section>'; ?>
 				<?php
+				$primero = false;
 			}
 		}
-		return (string) ob_get_clean();
+		?>
+		</div>
+		<?php
+		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+
+
+
+
+
+
+
+
+	private static function contact( int $pagina ): string {
+		$dato = static function ( string $clave ) use ( $pagina ): string {
+			return trim( (string) get_post_meta( $pagina, $clave, true ) );
+		};
+
+		$parrafos = static function ( string $texto ): string {
+			$html = '';
+			foreach ( preg_split( '/\R\s*\R/', $texto ) as $bloque ) {
+				$lineas = array_filter( array_map( 'trim', preg_split( '/\R/', $bloque ) ) );
+				if ( array() !== $lineas ) {
+					$html .= '<p>' . implode( '<br />', array_map( 'esc_html', $lineas ) ) . '</p>';
+				}
+			}
+			return $html;
+		};
+
+		$columnas  = '';
+		$direccion = $parrafos( $dato( EventMetaKeys::CONTACT_ADDRESS ) );
+		$mapa      = $dato( EventMetaKeys::CONTACT_MAP );
+		if ( '' !== $mapa ) {
+			$direccion .= '<p><a href="' . esc_url( $mapa ) . '">Ver en el mapa</a></p>';
+		}
+		if ( '' !== $direccion ) {
+			$columnas .= '<div class="evt-ev__contacto-lugar"><h3 class="screen-reader-text">Dirección</h3>' . $direccion . '</div>';
+		}
+		$telefono = $parrafos( $dato( EventMetaKeys::CONTACT_PHONE ) );
+		if ( '' !== $telefono ) {
+			$columnas .= '<div class="evt-ev__contacto-telefono"><h3 class="screen-reader-text">Teléfono</h3>' . $telefono . '</div>';
+		}
+		$correo = sanitize_email( $dato( EventMetaKeys::CONTACT_EMAIL ) );
+		if ( '' !== $correo ) {
+			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
+		}
+
+		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+	}
+
+
+
+
+
+
+
+
+
+	private static function download( int $evento ): string {
+		$id  = (int) get_post_meta( $evento, EventMetaKeys::PROGRAMME_FILE_ID, true );
+		$url = $id > 0 ? (string) wp_get_attachment_url( $id ) : '';
+		if ( '' === $url ) {
+			return '';
+		}
+		return '<p class="evt-ev__descarga"><a class="evt-ev__descargar" href="' . esc_url( $url ) . '" download>'
+			. '<svg viewBox="0 -960 960 960" width="40" height="40" aria-hidden="true" focusable="false"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>'
+			. '<span>Descargar programa</span></a></p>';
+	}
+
+
+
+
+
+
+
+
+
+	private static function tabs_script(): string {
+		$js = Assets::contents( 'js/evt-evento.js' );
+		return '' !== $js ? '<script>' . $js . '</script>' : '';
 	}
 
 
@@ -19722,6 +20303,67 @@ final class SignupBlock {
 
 
 
+namespace Evt\PublicFront\Block;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+final class SponsorsBlock {
+
+
+
+
+	public const NAME = 'logos';
+
+
+
+
+	public const PRIORITY = 90;
+
+
+
+
+
+
+
+	public static function html( array $m ): string {
+		if ( empty( $m['is_root'] ) ) {
+			return '';
+		}
+		$logos = json_decode( (string) get_post_meta( (int) $m['event_id'], EventMetaKeys::SPONSORS, true ), true );
+
+		$piezas = '';
+		foreach ( is_array( $logos ) ? $logos : array() as $logo ) {
+			$id  = absint( $logo['id'] ?? 0 );
+			$src = $id > 0 ? (string) wp_get_attachment_image_url( $id, 'medium' ) : '';
+			if ( '' === $src ) {
+				continue;
+			}
+			$alt     = trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) );
+			$imagen  = '<img src="' . esc_url( $src ) . '" alt="' . esc_attr( '' !== $alt ? $alt : 'Logo' ) . '" loading="lazy" />';
+			$url     = (string) ( $logo['url'] ?? '' );
+			$piezas .= '<li>' . ( '' !== $url ? '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . $imagen . '</a>' : $imagen ) . '</li>';
+		}
+
+		return '' !== $piezas ? '<ul class="evt-ev__logos">' . $piezas . '</ul>' : '';
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\PublicFront;
 
 use Evt\Meta\EventMetaKeys;
@@ -19730,6 +20372,7 @@ use Evt\PublicFront\Block\PosterBlock;
 use Evt\PublicFront\Block\ProgrammeBlock;
 use Evt\PublicFront\Block\SectionsBlock;
 use Evt\PublicFront\Block\SignupBlock;
+use Evt\PublicFront\Block\SponsorsBlock;
 use Evt\PublicFront\View\EventChrome;
 
 
@@ -19808,6 +20451,7 @@ final class EventLayout {
 		self::add_block( SignupBlock::NAME, array( SignupBlock::class, 'html' ), SignupBlock::PRIORITY );
 		self::add_block( ProgrammeBlock::NAME, array( ProgrammeBlock::class, 'html' ), ProgrammeBlock::PRIORITY );
 		self::add_block( ProgrammeBlock::FEATURED_NAME, array( ProgrammeBlock::class, 'featured' ), ProgrammeBlock::FEATURED_PRIORITY );
+		self::add_block( SponsorsBlock::NAME, array( SponsorsBlock::class, 'html' ), SponsorsBlock::PRIORITY );
 	}
 
 
@@ -19897,6 +20541,9 @@ final class EventLayout {
 
 	public static function render( array $m ): string {
 		$clases = array( 'evt-ev' );
+		if ( ! empty( $m['is_root'] ) ) {
+			$clases[] = 'evt-ev--portada';
+		}
 		if ( '' !== (string) $m['section_type'] ) {
 			$clases[] = 'evt-ev--' . sanitize_html_class( (string) $m['section_type'] );
 		}
@@ -19999,12 +20646,20 @@ final class EventLayout {
 	public static function tokens( array $m ): string {
 		$look = (array) $m['appearance'];
 
-		$fondo  = (string) $look['bg'];
+		$fondo = (string) $look['bg'];
+		$pie   = (string) sanitize_hex_color( (string) EventChrome::chrome()['footer_bg'] );
+
+
+		$sobre  = empty( $m['is_root'] ) && ! empty( $m['event_id'] ) ? '#ffffff' : $fondo;
 		$tokens = array(
 			'--evt-fondo'       => $fondo,
-			'--evt-texto'       => '' !== $fondo ? EventChrome::readable_ink( $fondo, (string) $look['fg'] ) : (string) $look['fg'],
+			'--evt-texto'       => '' !== $sobre ? EventChrome::readable_ink( $sobre, (string) $look['fg'] ) : (string) $look['fg'],
+			'--evt-acento'      => (string) $look['accent'],
+			'--evt-fondo-img'   => '' !== (string) $look['header_bg_image'] ? 'url("' . esc_url( (string) $look['header_bg_image'] ) . '")' : '',
 			'--evt-tipo-titulo' => (string) $look['title_font'],
 			'--evt-tipo-texto'  => (string) $look['body_font'],
+			'--evt-pie'         => $pie,
+			'--evt-pie-texto'   => '' !== $pie ? EventChrome::readable_ink( $pie, '' ) : '',
 			'--evt-forma'       => EventMetaKeys::SHAPE_CIRCLE === (string) $look['shape'] ? '50%' : '',
 		);
 
@@ -20508,7 +21163,7 @@ final class EventView {
 		$end      = (string) get_post_meta( $event_id, EventMetaKeys::END_DATE, true );
 		$is_root  = $event_id === $post_id;
 		$estado   = EventState::of( $start, $end );
-		$look     = self::appearance( $event_id );
+		$look     = self::appearance( $event_id, $post_id );
 
 		$m = array(
 			'page_id'      => $post_id,
@@ -20537,10 +21192,15 @@ final class EventView {
 			'signup'       => self::signup( $event_id ),
 			'nav'          => self::nav( $event_id, $post_id ),
 			'cards'        => $is_root ? self::cards( $event_id ) : array(),
+
+
+			'intro'        => $is_root ? '' : self::section_intro( $post_id ),
+			'illustration' => $is_root ? '' : self::card_image( $post_id, (string) get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ), 'medium_large' ),
 			'content'      => $content,
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
 			'manage_url'   => self::manage_url( $event_id ),
+			'edit_url'     => $is_root ? '' : self::edit_url( $event_id, $post_id ),
 		);
 
 
@@ -20584,10 +21244,13 @@ final class EventView {
 			'signup'       => self::signup( 0 ),
 			'nav'          => array(),
 			'cards'        => array(),
+			'intro'        => '',
+			'illustration' => '',
 			'content'      => $content,
 			'description'  => '',
 			'image'        => '',
 			'manage_url'   => '',
+			'edit_url'     => '',
 		);
 	}
 
@@ -20666,10 +21329,40 @@ final class EventView {
 
 
 
-	private static function appearance( int $event_id ): array {
+
+
+
+
+	private static function edit_url( int $event_id, int $page_id ): string {
+		if ( ! EventAccess::can_edit( get_current_user_id(), $page_id ) ) {
+			return '';
+		}
+		return Shell::url(
+			'section',
+			array(
+				EventWorkspace::ARG_EVENT   => $event_id,
+				EventWorkspace::ARG_SECTION => $page_id,
+			)
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function appearance( int $event_id, int $page_id = 0 ): array {
 		$vacia = array(
 			'bg'                => '',
 			'fg'                => '',
+			'accent'            => '',
+			'header_bg_image'   => '',
 			'title_font'        => '',
 			'body_font'         => '',
 			'logo'              => '',
@@ -20687,12 +21380,21 @@ final class EventView {
 			return $vacia;
 		}
 
-		$bg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
-		$fg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
-		$logo     = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$lee = static function ( string $clave ) use ( $event_id, $page_id ) {
+			$propio = $page_id > 0 && $page_id !== $event_id && in_array( $clave, PageForm::LOOK_KEYS, true )
+				? get_post_meta( $page_id, $clave, true )
+				: '';
+			return '' !== (string) $propio && '0' !== (string) $propio ? $propio : get_post_meta( $event_id, $clave, true );
+		};
+
+		$bg       = sanitize_hex_color( (string) $lee( EventMetaKeys::HEADER_BG ) );
+		$fg       = sanitize_hex_color( (string) $lee( EventMetaKeys::HEADER_TEXT ) );
+		$acento   = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::ACCENT, true ) );
+		$fondo    = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID, true );
+		$logo     = (int) $lee( EventMetaKeys::LOGO_ID );
 		$banner   = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
 		$cartel   = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
-		$imagenes = array_filter( array( $logo, $banner, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
+		$imagenes = array_filter( array( $logo, $banner, $fondo, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
 		if ( $imagenes ) {
 			_prime_post_caches( $imagenes, false, true );
 		}
@@ -20706,8 +21408,10 @@ final class EventView {
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
 			'fg'                => is_string( $fg ) ? $fg : '',
-			'title_font'        => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
-			'body_font'         => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
+			'accent'            => is_string( $acento ) ? $acento : '',
+			'header_bg_image'   => $fondo > 0 ? (string) wp_get_attachment_image_url( $fondo, 'full' ) : '',
+			'title_font'        => self::font_stack( (string) $lee( EventMetaKeys::TITLE_FONT ) ),
+			'body_font'         => self::font_stack( (string) $lee( EventMetaKeys::BODY_FONT ) ),
 			'logo'              => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
 			'logo_alt'          => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
 			'header_banner'     => $banner > 0 ? (string) wp_get_attachment_image_url( $banner, 'full' ) : '',
@@ -20719,12 +21423,12 @@ final class EventView {
 			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
 			'poster_file'       => $pdf,
 			'shape'             => EventMetaKeys::in_list(
-				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
+				$lee( EventMetaKeys::IMAGE_SHAPE ),
 				EventMetaKeys::image_shapes(),
 				EventMetaKeys::SHAPE_SQUARE
 			),
 			'separator'         => EventMetaKeys::in_list(
-				get_post_meta( $event_id, EventMetaKeys::SEPARATOR, true ),
+				$lee( EventMetaKeys::SEPARATOR ),
 				EventMetaKeys::separators()
 			),
 		);
@@ -20815,11 +21519,29 @@ final class EventView {
 
 
 
+	private static function section_intro( int $post_id ): string {
+		$texto = trim( (string) get_post_meta( $post_id, EventMetaKeys::INTRO, true ) );
+		if ( '' !== $texto ) {
+			return wp_strip_all_tags( $texto );
+		}
+		$tipo = EventMetaKeys::in_list( get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ), EventMetaKeys::section_types() );
+		return self::DEFAULT_INTRO[ $tipo ] ?? '';
+	}
 
 
 
-	private static function card_image( int $post_id, string $type ): string {
-		$url = (string) get_the_post_thumbnail_url( $post_id, 'medium' );
+
+
+
+
+
+
+
+
+
+
+	private static function card_image( int $post_id, string $type, string $size = 'medium' ): string {
+		$url = (string) get_the_post_thumbnail_url( $post_id, $size );
 		if ( '' !== $url ) {
 			return $url;
 		}
@@ -20941,6 +21663,11 @@ final class EventChrome {
 			'credit'         => '',
 			'footer_links'   => array(),
 
+			'brand_logo'     => '',
+			'brand_alt'      => '',
+			'brand_url'      => '',
+			'footer_bg'      => '',
+
 			'consent_css'    => '',
 			'consent_js'     => '',
 			'consent_init'   => '',
@@ -21013,22 +21740,41 @@ final class EventChrome {
 
 
 	public static function nav( array $items ): string {
-		if ( count( $items ) < 2 ) {
+		$chrome = self::chrome();
+		$logo   = (string) $chrome['brand_logo'];
+		$menu   = count( $items ) >= 2;
+		if ( '' === $logo && ! $menu ) {
 			return '';
 		}
 
 		ob_start();
 		?>
-		<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
-			<ul class="evt-ev__ancho nav">
-				<?php foreach ( $items as $item ) : ?>
-					<li class="nav-item">
-						<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-							<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
-					</li>
-				<?php endforeach; ?>
-			</ul>
-		</nav>
+		<div class="evt-ev__barra">
+			<div class="evt-ev__ancho">
+				<?php if ( '' !== $logo ) : ?>
+					<?php $url = (string) $chrome['brand_url']; ?>
+					<?php if ( '' !== $url ) : ?>
+						<a class="evt-ev__marca" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener">
+					<?php else : ?>
+						<span class="evt-ev__marca">
+					<?php endif; ?>
+					<img src="<?php echo esc_url( $logo ); ?>" alt="<?php echo esc_attr( (string) $chrome['brand_alt'] ); ?>" />
+					<?php echo '' !== $url ? '</a>' : '</span>'; ?>
+				<?php endif; ?>
+				<?php if ( $menu ) : ?>
+					<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
+						<ul class="nav">
+							<?php foreach ( $items as $item ) : ?>
+								<li class="nav-item">
+									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
+										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					</nav>
+				<?php endif; ?>
+			</div>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -21056,6 +21802,12 @@ final class EventChrome {
 			<div class="evt-ev__portada evt-ev__portada--banner">
 				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
 					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+					<?php ?>
+					<p class="evt-ev__ancho evt-ev__acciones">
+						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+					</p>
+				<?php endif; ?>
 				<div class="screen-reader-text">
 					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
 					<?php
@@ -21076,54 +21828,67 @@ final class EventChrome {
 			return (string) ob_get_clean();
 		}
 
+		$raiz    = ! empty( $m['is_root'] );
+		$dibujo  = (string) ( $m['illustration'] ?? '' );
+		$entrada = (string) ( $m['intro'] ?? '' );
+		$clases  = 'evt-ev__portada' . ( '' !== $dibujo ? ' evt-ev__portada--dibujo' : '' );
+
 		ob_start();
 		?>
-		<div class="evt-ev__portada">
-			<div class="evt-ev__ancho">
-				<?php if ( '' !== (string) $look['logo'] ) : ?>
-					<img class="evt-ev__logo" src="<?php echo esc_url( (string) $look['logo'] ); ?>"
-						alt="<?php echo esc_attr( (string) $look['logo_alt'] ); ?>" />
-				<?php endif; ?>
-
-				<?php if ( empty( $m['is_root'] ) && '' !== (string) $m['event_url'] ) : ?>
-					<p class="evt-ev__madre">
-						<a href="<?php echo esc_url( (string) $m['event_url'] ); ?>"><?php echo esc_html( (string) $m['event_title'] ); ?></a>
-					</p>
-				<?php endif; ?>
-
-				<h1 class="evt-ev__titulo"><?php echo esc_html( (string) $m['title'] ); ?></h1>
-
-				<?php if ( '' !== (string) $m['tagline'] ) : ?>
-					<p class="evt-ev__lema"><?php echo esc_html( (string) $m['tagline'] ); ?></p>
-				<?php endif; ?>
-
-				<div class="evt-ev__linea" aria-hidden="true"></div>
-
-				<?php if ( '' !== (string) $m['dates'] || '' !== (string) $m['venue'] ) : ?>
-					<p class="evt-ev__datos">
-						<?php if ( '' !== (string) $m['dates'] ) : ?>
-							<span><?php echo esc_html( (string) $m['dates'] ); ?></span>
-						<?php endif; ?>
-						<?php if ( '' !== (string) $m['venue'] ) : ?>
-							<span><?php echo esc_html( (string) $m['venue'] ); ?></span>
-						<?php endif; ?>
-					</p>
-				<?php endif; ?>
-
-				<p class="evt-ev__acciones">
-					<?php if ( '' !== (string) $m['state_label'] ) : ?>
-						<span class="evt-ev__estado"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+		<div class="<?php echo esc_attr( $clases ); ?>">
+			<div class="evt-ev__ancho evt-ev__portada-rejilla">
+				<div class="evt-ev__portada-texto">
+					<?php if ( $raiz && '' !== (string) $look['logo'] ) : ?>
+						<img class="evt-ev__logo" src="<?php echo esc_url( (string) $look['logo'] ); ?>"
+							alt="<?php echo esc_attr( (string) $look['logo_alt'] ); ?>" />
 					<?php endif; ?>
-					<?php if ( '' !== (string) $m['hashtag'] ) : ?>
-						<span class="evt-ev__hashtag">#<?php echo esc_html( (string) $m['hashtag'] ); ?></span>
+
+					<h1 class="evt-ev__titulo"><?php echo esc_html( (string) $m['title'] ); ?></h1>
+
+					<?php if ( $raiz && '' !== (string) $m['tagline'] ) : ?>
+						<p class="evt-ev__lema"><?php echo esc_html( (string) $m['tagline'] ); ?></p>
 					<?php endif; ?>
-					<?php if ( '' !== (string) $signup['url'] ) : ?>
-						<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+
+					<div class="evt-ev__linea" aria-hidden="true"></div>
+
+					<?php if ( $raiz && ( '' !== (string) $m['dates'] || '' !== (string) $m['venue'] ) ) : ?>
+						<p class="evt-ev__datos">
+							<?php if ( '' !== (string) $m['dates'] ) : ?>
+								<strong><?php echo esc_html( (string) $m['dates'] ); ?></strong>
+							<?php endif; ?>
+							<?php if ( '' !== (string) $m['venue'] ) : ?>
+								<em><?php echo esc_html( (string) $m['venue'] ); ?></em>
+							<?php endif; ?>
+						</p>
 					<?php endif; ?>
-					<?php if ( '' !== (string) $m['manage_url'] ) : ?>
-						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+
+					<?php if ( ! $raiz && '' !== $entrada ) : ?>
+						<p class="evt-ev__entrada"><?php echo esc_html( $entrada ); ?></p>
 					<?php endif; ?>
-				</p>
+
+					<?php if ( $raiz || '' !== (string) $m['manage_url'] ) : ?>
+						<p class="evt-ev__acciones">
+							<?php if ( $raiz && '' !== (string) $m['state_label'] ) : ?>
+								<span class="evt-ev__estado"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( $raiz && '' !== (string) $m['hashtag'] ) : ?>
+								<span class="evt-ev__hashtag">#<?php echo esc_html( (string) $m['hashtag'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( $raiz && '' !== (string) $signup['url'] ) : ?>
+								<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $m['edit_url'] ?? '' ) ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['edit_url'] ); ?>">Editar esta página</a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+							<?php endif; ?>
+						</p>
+					<?php endif; ?>
+				</div>
+				<?php if ( '' !== $dibujo ) : ?>
+					<img class="evt-ev__dibujo" src="<?php echo esc_url( $dibujo ); ?>" alt="" />
+				<?php endif; ?>
 			</div>
 			<?php echo self::separator( (string) $look['separator'] ); ?>
 		</div>
@@ -23616,6 +24381,35 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   font: inherit;
 }
 .evt-segmentos { display: inline-flex; }
+.evt-segmento svg { flex: none; margin-right: 0.35em; vertical-align: -0.2em; }
+/* Los filtros de estado del listado: fichas sueltas, esquinas rectas, su
+   número en una pastilla suave y la activa rellena. Igual con Bootstrap o sin él. */
+.evt-fichas { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+.evt-fichas__una {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  color: #212529;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+.evt-fichas__una:hover { border-color: var(--evt-pri); color: var(--evt-pri); }
+.evt-fichas__una.is-active { border-color: var(--evt-pri); background: var(--evt-pri); color: #fff; font-weight: 600; }
+.evt-fichas__cifra {
+  min-width: 1.9em;
+  padding: 0.15em 0.5em;
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.evt-fichas__una.is-active .evt-fichas__cifra { background: rgba(255, 255, 255, 0.2); color: #fff; }
 .evt-sin-bootstrap .evt-segmento {
   display: inline-flex;
   align-items: center;
@@ -24063,6 +24857,10 @@ body .swal2-container { z-index: 100010; }
 	/* Los colores de la cabecera, que es lo que cada evento elige. */
 	--evt-fondo: #0a3d62;
 	--evt-texto: #ffffff;
+	/* El acento: títulos de tarjeta, «Acerca de», rayas. Sin él, el de la cabecera. */
+	--evt-acento: var(--evt-fondo);
+	/* Una imagen detrás del color de la cabecera, `url(…)`; ninguna por defecto. */
+	--evt-fondo-img: none;
 
 	/* Las dos tipografías. Vacías = las del navegador. */
 	--evt-tipo-titulo: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif;
@@ -24070,15 +24868,30 @@ body .swal2-container { z-index: 100010; }
 
 	/* La página. */
 	--evt-papel: #ffffff;
-	--evt-tinta: #1d2b36;
+	/* El gris del texto y el casi negro de los títulos, los de siempre. */
+	--evt-tinta: #666666;
+	--evt-titulos: #333333;
 	--evt-suave: #f5f9fb;
 	--evt-borde: rgba(0, 0, 0, 0.12);
-	--evt-enlace: #1155aa;
+	--evt-enlace: #1d6fa5;
 	--evt-foco: #b8860b;
 	--evt-sombra: 0 2px 12px rgba(0, 0, 0, 0.14);
 
-	/* Medidas. El gutter se define AQUÍ y en ningún otro sitio. */
-	--evt-ancho: 1080px;
+	/* El programa: la raya entre huecos y el color de cada familia de tipos,
+	   los de siempre. */
+	--evt-raya: #7193bc;
+	--evt-tipo-charla: #4a70a0;
+	--evt-tipo-practica: #8a5d00;
+	--evt-tipo-taller: #3d7a4f;
+	--evt-tipo-protocolo: #721f37;
+
+	/* El pie: color de quien despliega; sin él, el suave de la página. */
+	--evt-pie: var(--evt-suave);
+	--evt-pie-texto: var(--evt-tinta);
+
+	/* Medidas. El gutter se define AQUÍ y en ningún otro sitio. El ancho es el
+	   80 % de la ventana hasta 1080 px, como la página de siempre. */
+	--evt-ancho: min(1080px, 80vw + 2 * var(--evt-espacio));
 	--evt-espacio: clamp(1rem, 4vw, 2rem);
 	--evt-radio: 0.4rem;
 
@@ -24086,11 +24899,12 @@ body .swal2-container { z-index: 100010; }
 	--evt-forma: 0;
 
 	/* Tipografía fluida: un solo sitio donde se decide cada escalón. */
-	--evt-t-titulo: clamp(1.9rem, 1.2rem + 3.2vw, 2.9rem);
+	--evt-t-titulo: clamp(2rem, 1.2rem + 3vw, 2.875rem);
 	--evt-t-lema: clamp(1.05rem, 0.95rem + 0.6vw, 1.35rem);
-	--evt-t-h2: clamp(1.4rem, 1.2rem + 1vw, 1.9rem);
-	--evt-t-texto: clamp(1rem, 0.97rem + 0.15vw, 1.08rem);
-	--evt-t-menudo: 0.9rem;
+	--evt-t-h2: clamp(1.6rem, 1.2rem + 1.6vw, 2.5rem);
+	--evt-t-texto: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+	--evt-t-portada: clamp(1.05rem, 0.95rem + 0.4vw, 1.25rem);
+	--evt-t-menudo: 0.875rem;
 }
 
 /* ─── el documento ────────────────────────────────────────────────────── */
@@ -24122,8 +24936,15 @@ body .swal2-container { z-index: 100010; }
 .evt-ev h2,
 .evt-ev h3,
 .evt-ev h4 {
+	color: var(--evt-titulos);
 	font-family: var(--evt-tipo-titulo);
-	line-height: 1.25;
+	font-weight: 500;
+	line-height: 1.3;
+}
+
+/* El nombre del evento en el «Acerca de» de la portada, y lo que lo pida. */
+.evt-ev .evt-ev__acento {
+	color: var(--evt-acento);
 }
 
 .evt-ev a {
@@ -24179,51 +25000,98 @@ body .swal2-container { z-index: 100010; }
 	white-space: nowrap;
 }
 
-/* ─── navegación entre secciones ──────────────────────────────────────── */
+/* ─── la barra de arriba: logo y secciones ────────────────────────────── */
 
-.evt-ev__nav {
+.evt-ev__barra {
 	background: var(--evt-papel);
-	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__barra > div {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 2rem;
+	min-height: 90px;
+}
+
+.evt-ev__marca img {
+	display: block;
+	max-height: 90px;
+	width: auto;
 }
 
 .evt-ev__nav ul {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
 	margin: 0;
-	padding-block: 0.5rem;
+	padding: 0.5rem 0;
 	list-style: none;
 }
 
 .evt-ev__nav a {
 	display: block;
-	padding: 0.5rem 0.9rem;
-	border-radius: var(--evt-radio);
+	padding: 0.35rem 0.6rem;
 	color: var(--evt-tinta);
-	font-weight: 600;
+	font-family: var(--evt-tipo-texto);
+	font-size: 0.8125rem;
 	text-decoration: none;
+	text-transform: uppercase;
 }
 
-.evt-ev__nav a:hover {
-	background: var(--evt-suave);
-}
-
+.evt-ev__nav a:hover,
 .evt-ev__nav [aria-current="page"] {
-	background: var(--evt-fondo);
-	color: var(--evt-texto);
+	color: var(--evt-titulos);
+	box-shadow: inset 0 -2px 0 var(--evt-acento);
 }
 
 /* ─── portada de la cabecera ──────────────────────────────────────────── */
 
 .evt-ev__portada {
 	position: relative;
-	background: var(--evt-fondo);
+	background-color: var(--evt-fondo);
+	background-image: var(--evt-fondo-img);
+	background-position: top left;
+	background-blend-mode: darken;
 	color: var(--evt-texto);
-	padding-block: calc(var(--evt-espacio) * 1.6) calc(var(--evt-espacio) * 2.4);
+	padding-block: 0.6rem 100px;
 }
 
 .evt-ev__portada a {
 	color: inherit;
+}
+
+/* En una sección el título va en el gris de los títulos, que el degradado
+   empieza en blanco; su color es para la entradilla y la raya. */
+.evt-ev:not(.evt-ev--portada) .evt-ev__portada .evt-ev__titulo {
+	color: var(--evt-titulos);
+}
+
+/* Las secciones: de blanco arriba a su color abajo, como siempre. La portada
+   del evento se queda con el color liso. */
+.evt-ev:not(.evt-ev--portada) .evt-ev__portada {
+	/* Sin color de base: la fusión `darken` de la imagen se comería el blanco. */
+	background-color: transparent;
+	background-image: var(--evt-fondo-img), linear-gradient(180deg, var(--evt-papel), var(--evt-fondo));
+}
+
+/* Texto a la izquierda e ilustración a la derecha; en estrecho, una columna. */
+.evt-ev__portada-rejilla {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	align-items: start;
+}
+
+.evt-ev__portada .evt-ev__titulo,
+.evt-ev__portada .evt-ev__lema {
+	color: inherit;
+}
+
+.evt-ev__dibujo {
+	justify-self: center;
+	max-height: 400px;
+	width: auto;
 }
 
 .evt-ev__portada--banner {
@@ -24240,17 +25108,12 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__logo {
 	max-height: 90px;
 	width: auto;
-	margin-bottom: 1rem;
-}
-
-.evt-ev__madre {
-	margin: 0 0 0.4rem;
-	font-size: var(--evt-t-menudo);
-	opacity: 0.9;
+	margin-top: 1rem;
 }
 
 .evt-ev__titulo {
 	margin: 0;
+	padding-top: 2.5rem;
 	font-size: var(--evt-t-titulo);
 	font-weight: 500;
 }
@@ -24265,16 +25128,23 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__linea {
 	width: 90px;
 	height: 2px;
-	margin: 1.2rem 0;
+	margin: 1.4rem 0;
 	background: currentColor;
-	opacity: 0.7;
 }
 
 .evt-ev__datos {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.25rem 0.9rem;
+	flex-direction: column;
 	margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.4;
+}
+
+.evt-ev__entrada {
+	margin: 0;
+	font-size: 1.125rem;
+	font-style: italic;
+	line-height: 1.3;
 }
 
 .evt-ev__acciones {
@@ -24305,10 +25175,12 @@ body .swal2-container { z-index: 100010; }
 	display: inline-block;
 	padding: 0.45rem 1rem;
 	border: 1px solid currentColor;
-	border-radius: var(--evt-radio);
+	border-radius: 0;
 	font-size: var(--evt-t-menudo);
 	font-weight: 700;
+	letter-spacing: 1px;
 	text-decoration: none;
+	text-transform: uppercase;
 }
 
 .evt-ev__acciones .evt-ev__boton {
@@ -24341,7 +25213,45 @@ body .swal2-container { z-index: 100010; }
 	padding-block: calc(var(--evt-espacio) * 1.4);
 }
 
-.evt-ev__bloque + .evt-ev__bloque {
+/* La portada: la presentación en dos tercios y el cartel en el otro, como
+   siempre. Con `flex-wrap` y bases, no con una media query: en estrecho el
+   cartel baja solo. Todo lo demás ocupa la fila entera. */
+.evt-ev--portada .evt-ev__main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: calc(var(--evt-espacio) * 1.4) calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev--portada .evt-ev__main > * {
+	flex: 1 1 100%;
+	margin-top: 0;
+}
+
+.evt-ev--portada .evt-ev__main > .evt-ev__bloque--contenido {
+	flex: 2 1 28rem;
+	font-size: var(--evt-t-portada);
+	line-height: 1.5;
+}
+
+.evt-ev--portada .evt-ev__main > .evt-ev__bloque--cartel {
+	flex: 1 1 14rem;
+}
+
+.evt-ev--portada .evt-ev__bloque--contenido h2 {
+	font-size: var(--evt-t-h2);
+}
+
+.evt-ev--portada .evt-ev__bloque--contenido h2::after {
+	content: "";
+	display: block;
+	width: 90px;
+	height: 3px;
+	margin-top: 1.2rem;
+	background: var(--evt-acento);
+}
+
+.evt-ev__main > .evt-ev__bloque + .evt-ev__bloque {
 	margin-top: calc(var(--evt-espacio) * 1.4);
 }
 
@@ -24351,9 +25261,11 @@ body .swal2-container { z-index: 100010; }
 }
 
 /* Toda rejilla de la página, con o sin Bootstrap: mide el contenedor. */
+/* `auto-fill` y no `auto-fit`: con dos secciones, dos tarjetas del ancho de
+   siempre —cuatro por fila— y no dos que se estiran hasta ocuparlo todo. */
 .evt-ev__rejilla {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 	gap: var(--evt-espacio);
 }
 
@@ -24369,11 +25281,14 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__tarjeta img {
 	display: block;
 	width: 100%;
+	aspect-ratio: 1;
+	object-fit: contain;
 }
 
 .evt-ev__tarjeta h3 {
 	margin: 0;
 	padding: 0.9rem 1rem 0;
+	color: var(--evt-acento);
 	font-size: 1.25rem;
 	font-weight: 700;
 	text-align: center;
@@ -24505,9 +25420,47 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__dia {
 	margin: calc(var(--evt-espacio) * 1.2) 0 0.6rem;
 	padding-bottom: 0.3rem;
-	border-bottom: 2px solid var(--evt-fondo);
+	border-bottom: 2px solid var(--evt-acento);
 	font-size: 1.2rem;
 	text-transform: uppercase;
+}
+
+/* Las pestañas del programa, cuando hay guion que las monte. */
+.evt-ev__pestanas {
+	display: flex;
+	flex-wrap: wrap;
+	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__pestanas button {
+	padding: 0.6rem 1.2rem;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	background: var(--evt-suave);
+	color: var(--evt-tinta);
+	font: inherit;
+	font-size: var(--evt-t-menudo);
+	cursor: pointer;
+}
+
+.evt-ev__pestanas [aria-selected="true"] {
+	border-color: var(--evt-borde);
+	background: var(--evt-papel);
+	color: var(--evt-titulos);
+	font-weight: 700;
+}
+
+.evt-ev__programa--pestanas .evt-ev__dia-panel {
+	padding: 1rem 0;
+}
+
+/* El acordeón: un `<details>` por día, sin guion. */
+.evt-ev__programa--acordeon summary {
+	cursor: pointer;
+}
+
+.evt-ev__programa--acordeon details[open] summary {
+	margin-bottom: 0.6rem;
 }
 
 .evt-ev__parrilla,
@@ -24516,25 +25469,6 @@ body .swal2-container { z-index: 100010; }
 	margin: 0;
 	padding: 0;
 	list-style: none;
-}
-
-.evt-ev__hueco {
-	display: grid;
-	grid-template-columns: 8.5rem minmax(0, 1fr);
-	gap: 1rem;
-	padding: 0.8rem 0;
-	border-bottom: 1px solid var(--evt-borde);
-}
-
-.evt-ev__hueco h3,
-.evt-ev__actividad h3 {
-	margin: 0.2rem 0;
-	font-size: 1.1rem;
-}
-
-.evt-ev__hora {
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
 }
 
 .evt-ev__tipo,
@@ -24551,6 +25485,75 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__sala {
 	font-weight: 400;
 	text-transform: none;
+}
+
+/* Cada hueco del programa: tipo, qué y cuándo, en tres columnas, y el color
+   del tipo en las tres, como siempre. */
+.evt-ev__hueco {
+	--evt-tipo-color: var(--evt-tinta);
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+	gap: 0 2rem;
+	padding: 1.6rem 0;
+	border-bottom: 2px solid var(--evt-raya);
+	color: var(--evt-tipo-color);
+}
+
+.evt-ev__hueco--conferencia,
+.evt-ev__hueco--ponencia {
+	--evt-tipo-color: var(--evt-tipo-charla);
+}
+
+.evt-ev__hueco--practicas {
+	--evt-tipo-color: var(--evt-tipo-practica);
+}
+
+.evt-ev__hueco--taller,
+.evt-ev__hueco--panel {
+	--evt-tipo-color: var(--evt-tipo-taller);
+}
+
+.evt-ev__hueco--descanso,
+.evt-ev__hueco--inauguracion,
+.evt-ev__hueco--clausura {
+	--evt-tipo-color: var(--evt-tipo-protocolo);
+}
+
+.evt-ev__hueco h3,
+.evt-ev__actividad h3 {
+	margin: 0 0 0.4rem;
+	font-size: 1.1rem;
+}
+
+.evt-ev__hueco h3 {
+	color: inherit;
+	font-family: var(--evt-tipo-texto);
+	font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+	font-weight: 700;
+}
+
+.evt-ev__hueco .evt-ev__que {
+	color: var(--evt-tinta);
+}
+
+.evt-ev__hueco .evt-ev__tipo {
+	margin: 0;
+	font-size: 1.3rem;
+	letter-spacing: 0;
+	text-transform: none;
+	opacity: 1;
+}
+
+.evt-ev__hueco .evt-ev__sala {
+	display: block;
+	color: var(--evt-tinta);
+	font-size: var(--evt-t-menudo);
+}
+
+.evt-ev__hora {
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
 }
 
 .evt-ev__actividades {
@@ -24597,8 +25600,88 @@ body .swal2-container { z-index: 100010; }
 @media (max-width: 600px) {
 	.evt-ev__hueco {
 		grid-template-columns: minmax(0, 1fr);
-		gap: 0.2rem;
+		gap: 0.3rem;
 	}
+}
+
+/* La página de contacto: dónde, teléfono y correo, cada uno con su icono en
+   el color de la cabecera. Salen de los campos de la página (ProgrammeBlock). */
+.evt-ev__contacto {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev__contacto > div::before {
+	content: "";
+	display: block;
+	width: 60px;
+	height: 60px;
+	margin: 0 auto 1rem;
+	background: var(--evt-fondo);
+	mask: var(--evt-icono) center / contain no-repeat;
+}
+
+.evt-ev__contacto p {
+	margin: 0 0 1rem;
+}
+
+.evt-ev__contacto-lugar {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z\'/%3E%3C/svg%3E");
+}
+
+.evt-ev__contacto-telefono {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M16 1H8a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-5H8V4h8z\'/%3E%3C/svg%3E");
+}
+
+.evt-ev__contacto-correo {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z\'/%3E%3C/svg%3E");
+}
+
+/* «Descargar programa»: el botón gris grande con su icono, centrado. */
+.evt-ev__descarga {
+	margin: 0 0 var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev .evt-ev__descargar {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	padding: 0.6rem 1.2rem;
+	border-radius: var(--evt-radio);
+	background: var(--evt-tinta);
+	color: var(--evt-papel);
+	font-size: var(--evt-t-menudo);
+	text-decoration: none;
+}
+
+.evt-ev .evt-ev__descargar:hover {
+	background: var(--evt-titulos);
+}
+
+/* Los logos corporativos, en fila al pie de la portada. */
+.evt-ev__bloque--logos {
+	padding-block: calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev__logos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--evt-espacio) * 1.5);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__logos img {
+	display: block;
+	max-height: 110px;
+	width: auto;
 }
 
 /* Una tabla nunca empuja la página: se desplaza ella sola. */
@@ -24612,9 +25695,9 @@ body .swal2-container { z-index: 100010; }
 /* ─── el pie institucional ────────────────────────────────────────────── */
 
 .evt-ev__pie {
-	background: var(--evt-suave);
-	border-top: 1px solid var(--evt-borde);
-	padding-block: var(--evt-espacio);
+	background: var(--evt-pie);
+	color: var(--evt-pie-texto);
+	padding-block: 0.9rem;
 	font-size: var(--evt-t-menudo);
 }
 
@@ -24626,7 +25709,7 @@ body .swal2-container { z-index: 100010; }
 }
 
 .evt-ev__pie a {
-	color: var(--evt-tinta);
+	color: inherit;
 	text-decoration: none;
 }
 
@@ -24644,7 +25727,7 @@ body .swal2-container { z-index: 100010; }
 /* ─── impresión ───────────────────────────────────────────────────────── */
 
 @media print {
-	.evt-ev__nav,
+	.evt-ev__barra,
 	.evt-ev__saltar,
 	.evt-ev__acciones {
 		display: none;
@@ -26041,6 +27124,74 @@ body .swal2-container { z-index: 100010; }
 				return;
 			}
 		}
+	} );
+}() );
+',
+  'js/evt-evento.js' => '/*
+ * evt-evento.js — las pestañas del programa en la página pública de un evento.
+ *
+ * Sin guion, los días salen uno debajo de otro y se leen igual. Con él, cada
+ * panel `.evt-ev__dia-panel` es una pestaña con el rótulo de su `<h2>`, y las
+ * flechas, Inicio y Fin se mueven entre ellas como manda el patrón de pestañas
+ * de WAI-ARIA.
+ */
+( function () {
+	document.querySelectorAll( \'[data-evt-pestanas]\' ).forEach( function ( caja, n ) {
+		var paneles = Array.prototype.slice.call( caja.querySelectorAll( \':scope > .evt-ev__dia-panel\' ) );
+		if ( paneles.length < 2 ) {
+			return;
+		}
+		var lista = document.createElement( \'div\' );
+		lista.className = \'evt-ev__pestanas\';
+		lista.setAttribute( \'role\', \'tablist\' );
+		lista.setAttribute( \'aria-label\', \'Días del programa\' );
+
+		var botones = paneles.map( function ( panel, i ) {
+			var rotulo = panel.querySelector( \'.evt-ev__dia\' );
+			var boton = document.createElement( \'button\' );
+			boton.type = \'button\';
+			boton.id = \'evt-pestana-\' + n + \'-\' + i;
+			boton.textContent = rotulo ? rotulo.textContent : String( i + 1 );
+			boton.setAttribute( \'role\', \'tab\' );
+			boton.setAttribute( \'aria-controls\', panel.id = panel.id || \'evt-dia-\' + n + \'-\' + i );
+			panel.setAttribute( \'role\', \'tabpanel\' );
+			panel.setAttribute( \'aria-labelledby\', boton.id );
+			panel.tabIndex = 0;
+			lista.appendChild( boton );
+			return boton;
+		} );
+
+		function elige( i, foco ) {
+			botones.forEach( function ( boton, j ) {
+				boton.setAttribute( \'aria-selected\', i === j ? \'true\' : \'false\' );
+				boton.tabIndex = i === j ? 0 : -1;
+				paneles[ j ].hidden = i !== j;
+			} );
+			if ( foco ) {
+				botones[ i ].focus();
+			}
+		}
+
+		lista.addEventListener( \'click\', function ( e ) {
+			var i = botones.indexOf( e.target.closest( \'[role="tab"]\' ) );
+			if ( i >= 0 ) {
+				elige( i, false );
+			}
+		} );
+		lista.addEventListener( \'keydown\', function ( e ) {
+			var i = botones.indexOf( document.activeElement );
+			var ultimo = botones.length - 1;
+			var destino = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: ultimo }[ e.key ];
+			if ( i < 0 || undefined === destino ) {
+				return;
+			}
+			e.preventDefault();
+			elige( ( destino + botones.length ) % botones.length, true );
+		} );
+
+		caja.classList.add( \'evt-ev__programa--pestanas\' );
+		caja.insertBefore( lista, caja.firstChild );
+		elige( 0, false );
 	} );
 }() );
 ',

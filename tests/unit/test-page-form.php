@@ -295,6 +295,53 @@ class Test_Page_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Una página de contacto guarda su dirección, teléfono, correo y mapa, y los pinta.
+	 *
+	 * Campos y no HTML en el texto: es lo que rellena quien organiza.
+	 */
+	public function test_a_contact_page_keeps_and_paints_its_details() {
+		$area     = $this->area( 'Innovación' );
+		$yo       = $this->organiser( array( $area ) );
+		$evento   = $this->event( $yo, array( $area ) );
+		$contacto = $this->event_page( $evento, 'contacto', array( 'post_title' => 'Contacto' ) );
+		$programa = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+
+		$campos = array(
+			'evt_title'                    => 'Contacto',
+			EventMetaKeys::CONTACT_ADDRESS => "Sede norte\nCalle Mayor, 1\n\nSede sur\nCalle Menor, 2",
+			EventMetaKeys::CONTACT_PHONE   => '922 000 000',
+			EventMetaKeys::CONTACT_EMAIL   => 'no es un correo',
+			EventMetaKeys::CONTACT_MAP     => 'javascript:alert(1)',
+		);
+		$this->submit( $yo, array_merge( $campos, array( 'evt_page_id' => (string) $contacto ) ) );
+		$this->submit(
+			$yo,
+			array_merge(
+				$campos,
+				array(
+					'evt_page_id' => (string) $programa,
+					'evt_title'   => 'Programa',
+				)
+			)
+		);
+
+		$this->assertStringContainsString( 'Calle Menor, 2', get_post_meta( $contacto, EventMetaKeys::CONTACT_ADDRESS, true ) );
+		$this->assertSame( '922 000 000', get_post_meta( $contacto, EventMetaKeys::CONTACT_PHONE, true ) );
+		$this->assertFalse( metadata_exists( 'post', $contacto, EventMetaKeys::CONTACT_EMAIL ), 'un correo que no es correo no se guarda' );
+		$this->assertFalse( metadata_exists( 'post', $contacto, EventMetaKeys::CONTACT_MAP ), 'ni un enlace que no es web' );
+		$this->assertFalse( metadata_exists( 'post', $programa, EventMetaKeys::CONTACT_PHONE ), 'solo las páginas de contacto' );
+
+		update_post_meta( $contacto, EventMetaKeys::CONTACT_EMAIL, 'info@example.org' );
+		$this->acting_as( 0 );
+		$html = \Evt\PublicFront\Block\ProgrammeBlock::html( \Evt\PublicFront\EventView::model( $contacto ) );
+
+		$this->assertStringContainsString( 'class="evt-ev__contacto"', $html );
+		$this->assertSame( 2, substr_count( $html, '<p>Sede' ), 'una línea en blanco separa las sedes' );
+		$this->assertStringContainsString( 'Sede norte<br />Calle Mayor, 1', $html );
+		$this->assertStringContainsString( 'href="mailto:info@example.org"', $html );
+	}
+
+	/**
 	 * El tipo no se cambia al editar, ni siquiera mandándolo a mano.
 	 *
 	 * Es la regla de la ADR-0019 y su razón es de dominio: cada tipo trae sus

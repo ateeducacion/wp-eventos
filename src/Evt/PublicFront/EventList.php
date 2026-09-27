@@ -59,6 +59,26 @@ final class EventList {
 	public const FILTER_DRAFT = 'draft';
 
 	/**
+	 * Filtro por defecto: lo publicado que todavía se trabaja.
+	 *
+	 * Ni borradores ni históricos: es lo que quien organiza abre a diario. Los
+	 * demás siguen a un clic, con su número al lado.
+	 */
+	public const FILTER_ACTIVE = 'active';
+
+	/**
+	 * The four states offered as buttons, in order.
+	 *
+	 * @var array<string, string>
+	 */
+	public const SEGMENTS = array(
+		self::FILTER_ACTIVE   => 'Activos',
+		self::FILTER_DRAFT    => 'Borradores',
+		self::FILTER_ARCHIVED => 'Históricos',
+		'all'                 => 'Todos',
+	);
+
+	/**
 	 * Filtro de los eventos que están en la papelera.
 	 *
 	 * Va en la misma lista que los demás filtros porque para quien mira es una
@@ -306,6 +326,7 @@ final class EventList {
 	 */
 	public static function state_filters(): array {
 		return array(
+			self::FILTER_ACTIVE           => 'Activos',
 			'all'                         => 'Todos',
 			EventMetaKeys::STATE_UPCOMING => 'Próximos',
 			EventMetaKeys::STATE_OPEN     => 'Abiertos',
@@ -353,14 +374,14 @@ final class EventList {
 	 * @return array{area:int, type:int, course:int, state:string, search:string, page:int, view:string}
 	 */
 	public static function selection(): array {
-		$estado = self::input( self::VAR_STATE, 'all' );
+		$estado = self::input( self::VAR_STATE, self::FILTER_ACTIVE );
 		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
 			'type'   => max( 0, (int) self::input( self::VAR_TYPE ) ),
 			'course' => max( 0, (int) self::input( self::VAR_COURSE ) ),
-			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : 'all',
+			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_ACTIVE,
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
 			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
@@ -383,7 +404,7 @@ final class EventList {
 			self::VAR_AREA   => $s['area'] > 0 ? (string) $s['area'] : '',
 			self::VAR_TYPE   => $s['type'] > 0 ? (string) $s['type'] : '',
 			self::VAR_COURSE => $s['course'] > 0 ? (string) $s['course'] : '',
-			self::VAR_STATE  => 'all' !== $s['state'] ? (string) $s['state'] : '',
+			self::VAR_STATE  => self::FILTER_ACTIVE !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
 			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
@@ -454,6 +475,14 @@ final class EventList {
 				? 'La papelera está vacía: no hay ningún evento esperando a que lo restauren.'
 				: self::empty_text( $filtrando, $todas );
 			$m['reset_url']  = $filtrando ? self::url( $s, self::no_filters() ) : '';
+		}
+
+		// El filtro por defecto también acota: sin activos pero con borradores
+		// o históricos, decir «todavía no hay ningún evento» sería mentir.
+		$estado = (string) $s['state'];
+		if ( array() === $m['rows'] && ! $en_papelera && 'all' !== $estado && $m['counts']['all'] > 0 && '' === $s['search'] ) {
+			$m['empty_text'] = sprintf( 'No hay ningún evento en «%s». Los tiene todos en «Todos».', self::state_filters()[ $estado ] );
+			$m['reset_url']  = self::url( $s, array( 'state' => 'all' ) );
 		}
 
 		return $m;
@@ -953,6 +982,9 @@ final class EventList {
 		if ( self::FILTER_DRAFT === $filter ) {
 			return 'draft' === $row['status'];
 		}
+		if ( self::FILTER_ACTIVE === $filter ) {
+			return 'draft' !== $row['status'] && self::FILTER_TRASH !== $row['status'] && true !== $row['archived'];
+		}
 		return $filter === $row['state'];
 	}
 
@@ -1013,7 +1045,7 @@ final class EventList {
 	 */
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
-			|| 'all' !== $s['state'] || '' !== $s['search'];
+			|| self::FILTER_ACTIVE !== $s['state'] || '' !== $s['search'];
 	}
 
 	/**
@@ -1026,7 +1058,7 @@ final class EventList {
 			'area'   => 0,
 			'type'   => 0,
 			'course' => 0,
-			'state'  => 'all',
+			'state'  => self::FILTER_ACTIVE,
 			'search' => '',
 			'page'   => 1,
 		);

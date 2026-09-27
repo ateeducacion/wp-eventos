@@ -101,6 +101,20 @@ final class EventMetaKeys {
 	public const HEADER_TEXT = 'evt_header_text';
 
 	/**
+	 * Color de acento, hexadecimal: títulos de las tarjetas, «Acerca de» y rayas.
+	 */
+	public const ACCENT = 'evt_accent';
+
+	/**
+	 * ID del adjunto que hace de fondo de la cabecera, detrás del color.
+	 *
+	 * No es el banner: el banner sustituye la cabecera entera de la portada;
+	 * este fondo va debajo del título, de la entradilla y de la ilustración, y
+	 * sale en todas las páginas del evento.
+	 */
+	public const HEADER_BG_IMAGE_ID = 'evt_header_bg_image_id';
+
+	/**
 	 * Tipografía de los títulos.
 	 */
 	public const TITLE_FONT = 'evt_title_font';
@@ -137,6 +151,49 @@ final class EventMetaKeys {
 	 * Separador al pie de la cabecera del evento.
 	 */
 	public const SEPARATOR = 'evt_separator';
+
+	/**
+	 * Cómo se reparte el programa por días: en pestañas o en acordeón.
+	 */
+	public const PROGRAMME_LAYOUT = 'evt_programme_layout';
+
+	/**
+	 * El programa en acordeón: un desplegable por día y sede.
+	 */
+	public const LAYOUT_ACCORDION = 'accordion';
+
+	/**
+	 * ID del adjunto con el programa en PDF, para el botón «Descargar programa».
+	 */
+	public const PROGRAMME_FILE_ID = 'evt_programme_file_id';
+
+	/**
+	 * Los logos corporativos del pie de la portada: JSON, `[{id, url}, …]`.
+	 *
+	 * Una lista y no cinco campos sueltos: hay eventos con dos logos y eventos
+	 * con doce.
+	 */
+	public const SPONSORS = 'evt_sponsors';
+
+	/**
+	 * Página de contacto: dirección, una o varias sedes separadas por una línea en blanco.
+	 */
+	public const CONTACT_ADDRESS = 'evt_contact_address';
+
+	/**
+	 * Página de contacto: teléfonos, uno por línea.
+	 */
+	public const CONTACT_PHONE = 'evt_contact_phone';
+
+	/**
+	 * Página de contacto: correo.
+	 */
+	public const CONTACT_EMAIL = 'evt_contact_email';
+
+	/**
+	 * Página de contacto: enlace al mapa de la sede.
+	 */
+	public const CONTACT_MAP = 'evt_contact_map';
 
 	/**
 	 * CSS a medida de esta página. Se guarda en crudo: es código, no texto.
@@ -227,6 +284,8 @@ final class EventMetaKeys {
 			self::SIGNUP_FORM_ID,
 			self::HEADER_BG,
 			self::HEADER_TEXT,
+			self::ACCENT,
+			self::HEADER_BG_IMAGE_ID,
 			self::TITLE_FONT,
 			self::BODY_FONT,
 			self::LOGO_ID,
@@ -234,6 +293,13 @@ final class EventMetaKeys {
 			self::POSTER_ID,
 			self::IMAGE_SHAPE,
 			self::SEPARATOR,
+			self::PROGRAMME_LAYOUT,
+			self::PROGRAMME_FILE_ID,
+			self::SPONSORS,
+			self::CONTACT_ADDRESS,
+			self::CONTACT_PHONE,
+			self::CONTACT_EMAIL,
+			self::CONTACT_MAP,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -363,6 +429,21 @@ final class EventMetaKeys {
 			'mountains' => 'Montañas',
 			'graph'     => 'Gráfica',
 			'arrow'     => 'Flecha',
+		);
+	}
+
+	/**
+	 * Closed vocabulary of programme layouts.
+	 *
+	 * Las dos que ofrece hoy el formulario anterior. El valor vacío son las
+	 * pestañas, que es lo que usan casi todos los eventos.
+	 *
+	 * @return array<string, string> slug => etiqueta.
+	 */
+	public static function programme_layouts(): array {
+		return array(
+			''                     => 'Pestañas por día',
+			self::LAYOUT_ACCORDION => 'Acordeón',
 		);
 	}
 

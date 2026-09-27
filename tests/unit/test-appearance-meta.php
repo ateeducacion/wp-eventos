@@ -59,6 +59,9 @@ class Test_Appearance_Meta extends WP_UnitTestCase {
 			EventMetaKeys::POSTER_ID,
 			EventMetaKeys::IMAGE_SHAPE,
 			EventMetaKeys::SEPARATOR,
+			EventMetaKeys::ACCENT,
+			EventMetaKeys::HEADER_BG_IMAGE_ID,
+			EventMetaKeys::PROGRAMME_LAYOUT,
 		);
 		foreach ( $claves as $clave ) {
 			$this->assertArrayHasKey( $clave, $esquema, $clave );
@@ -90,6 +93,23 @@ class Test_Appearance_Meta extends WP_UnitTestCase {
 		// Y un color válido guardado antes se borra al mandar uno que no vale.
 		update_post_meta( $evento, EventMetaKeys::HEADER_TEXT, 'azul' );
 		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::HEADER_TEXT, true ) );
+	}
+
+	/**
+	 * El acento es un color como los otros, y el diseño del programa, de la lista.
+	 */
+	public function test_the_accent_and_the_programme_layout_are_checked() {
+		$evento = $this->un_evento();
+
+		update_post_meta( $evento, EventMetaKeys::ACCENT, 'turquesa' );
+		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::ACCENT, true ) );
+		update_post_meta( $evento, EventMetaKeys::ACCENT, '#00aed6' );
+		$this->assertSame( '#00aed6', get_post_meta( $evento, EventMetaKeys::ACCENT, true ) );
+
+		update_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, 'carrusel' );
+		$this->assertSame( '', get_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, true ), 'fuera de la lista, las pestañas' );
+		update_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, EventMetaKeys::LAYOUT_ACCORDION );
+		$this->assertSame( EventMetaKeys::LAYOUT_ACCORDION, get_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, true ) );
 	}
 
 	// ─── tipografías ───────────────────────────────────────────────────────

@@ -226,7 +226,7 @@ class Test_Event_Layout extends WP_UnitTestCase {
 		EventLayout::add_block( 'pronto', $pintar( '[pronto]' ), 1 );
 
 		$this->assertSame(
-			array( 'pronto', 'contenido', 'fichas', 'cartel', 'inscripcion', 'secciones', 'destacados', 'tarde' ),
+			array( 'pronto', 'contenido', 'fichas', 'cartel', 'inscripcion', 'secciones', 'destacados', 'logos', 'tarde' ),
 			array_keys( EventLayout::blocks() )
 		);
 
@@ -329,7 +329,7 @@ class Test_Event_Layout extends WP_UnitTestCase {
 		$css = EventView::stylesheet();
 
 		$this->assertNotSame( '', $css, 'la hoja del evento se lee' );
-		$this->assertStringContainsString( 'repeat(auto-fit, minmax(min(230px, 100%), 1fr))', $css );
+		$this->assertStringContainsString( 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', $css );
 		$this->assertStringContainsString( 'clamp(', $css, 'tipografía fluida' );
 		$this->assertStringContainsString( '--evt-espacio', $css, 'el gutter, definido una vez' );
 		$this->assertSame( 1, substr_count( $css, 'padding-inline: var(--evt-espacio)' ), 'y aplicado en un solo sitio' );

@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -278,6 +278,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) | La gestión se agrupa en un menú lateral y los eventos se publican en una línea del tiempo | Propuesta | 2026-09-27 | [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) |
 | [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa | Propuesta | 2026-09-27 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) |
 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md) | Las inscripciones se corrigen y se borran desde el taller; no hay aforo del evento ni lista de admitidos | Propuesta | 2026-09-27 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
+| [ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) | La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas | Propuesta | 2026-09-27 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -586,3 +587,12 @@ deja corregir una inscripción desde «Participantes» (núcleo, respuestas y
 taller, con su aforo) y borrarla de forma definitiva tecleando el correo de la
 persona. Tras revisar el sistema anterior, no añade aforo del evento ni listas
 de admitidos: nunca fueron una función, solo un texto o un PDF subido a mano.
+
+**La página pública como la de siempre, 2026-09-27: ADR-0044.** La
+[ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) acerca el
+marco de la página pública al del sistema anterior, medido sobre las páginas
+publicadas: cada sección pinta sus propios colores con un degradado, su
+ilustración y su entradilla; el evento gana un color de acento y una imagen de
+fondo de cabecera; el programa va en pestañas por día o en acordeón, conserva
+la clase `programa-estandar` y deja fuera lo que no tiene fecha. El logo de
+quien publica y el color del pie entran por `evt_chrome`, vacíos por defecto.

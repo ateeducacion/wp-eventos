@@ -13,6 +13,7 @@ use Evt\Meta\ProgrammeMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Assets;
 use Evt\PublicFront\Programme;
 
 /**
@@ -24,7 +25,8 @@ use Evt\PublicFront\Programme;
  * - `ponentes`: la lista de ponentes, y la ficha de uno;
  * - `programa`: la parrilla, por día y por sede;
  * - `actividades`: las actividades con su descripción, y la ficha de una;
- * - `multimedia`: las actividades que tienen vídeo, con el vídeo.
+ * - `multimedia`: las actividades que tienen vídeo, con el vídeo;
+ * - `contacto`: dónde, teléfono y correo, en tres columnas.
  *
  * Y la portada, «Personas comunicadoras»: los ponentes destacados. Lo que la
  * sección tenga escrito sale antes, en el bloque de contenido.
@@ -85,7 +87,9 @@ final class ProgrammeBlock {
 				$ponente = self::entry( $evento, $ficha, SpeakerPostType::POST_TYPE );
 				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
 			case 'programa':
-				return self::grid( $evento );
+				return self::download( $evento ) . self::grid( $evento );
+			case 'contacto':
+				return self::contact( $pagina );
 			case 'actividades':
 				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
 				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
@@ -221,43 +225,154 @@ final class ProgrammeBlock {
 	}
 
 	/**
-	 * The parrilla: by day and, inside, by sede.
+	 * The parrilla: one panel per day and sede, in tabs or in an accordion.
+	 *
+	 * Como hoy: una pestaña por día y sede, o un desplegable si el evento eligió
+	 * acordeón. Sin guion las pestañas son los días uno debajo de otro, que se
+	 * leen igual; el acordeón es `<details>` y no necesita ninguno.
+	 *
+	 * Lo que no tiene fecha no sale: hoy no hay pestaña donde ponerlo.
+	 *
+	 * La clase `programa-estandar` es la que tenía la parrilla del sistema
+	 * anterior. El CSS a medida de los eventos que escribieron su programa a
+	 * mano la esconde, y tiene que seguir haciéndolo.
 	 *
 	 * @param int $evento Event.
 	 * @return string
 	 */
 	private static function grid( int $evento ): string {
-		$dias = self::published_grid( Programme::grid( $evento ) );
+		$dias = array_filter(
+			self::published_grid( Programme::grid( $evento ) ),
+			static function ( array $dia ): bool {
+				return '' !== (string) $dia['date'];
+			}
+		);
 		if ( array() === $dias ) {
 			return '';
 		}
-		$fichas = self::section( $evento, 'actividades' );
+		$fichas     = self::section( $evento, 'actividades' );
+		$acordeon   = EventMetaKeys::LAYOUT_ACCORDION === (string) get_post_meta( $evento, EventMetaKeys::PROGRAMME_LAYOUT, true );
+		$primero    = true;
+		$contenedor = $acordeon ? 'evt-ev__programa evt-ev__programa--acordeon' : 'evt-ev__programa';
 
 		ob_start();
+		?>
+		<div class="<?php echo esc_attr( $contenedor . ' programa-estandar' ); ?>"<?php echo $acordeon ? '' : ' data-evt-pestanas'; ?>>
+		<?php
 		foreach ( $dias as $dia ) {
 			foreach ( (array) $dia['venues'] as $sede ) {
-				$rotulo = implode( ' – ', array_filter( array( (string) $sede['venue'], '' !== (string) $dia['date'] ? DateRange::of( (string) $dia['date'], (string) $dia['date'] ) : 'Sin fecha' ) ) );
+				$rotulo = implode( ' – ', array_filter( array( (string) $sede['venue'], DateRange::of( (string) $dia['date'], (string) $dia['date'] ) ) ) );
 				?>
-				<h2 class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></h2>
+				<?php if ( $acordeon ) : ?>
+					<details class="evt-ev__dia-panel" name="evt-programa"<?php echo $primero ? ' open' : ''; ?>>
+						<summary class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></summary>
+				<?php else : ?>
+					<section class="evt-ev__dia-panel">
+						<h2 class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></h2>
+				<?php endif; ?>
 				<ol class="evt-ev__parrilla">
 					<?php foreach ( (array) $sede['rows'] as $fila ) : ?>
-						<li class="evt-ev__hueco">
-							<span class="evt-ev__hora"><?php echo esc_html( self::hours( $fila ) ); ?></span>
-							<div>
-								<span class="evt-ev__tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></span>
+						<li class="<?php echo esc_attr( 'evt-ev__hueco evt-ev__hueco--' . sanitize_html_class( (string) $fila['kind'] ) ); ?>">
+							<span class="evt-ev__tipo">
+								<?php echo esc_html( (string) $fila['kind_label'] ); ?>
 								<?php if ( '' !== (string) $fila['room'] ) : ?>
 									<span class="evt-ev__sala"><?php echo esc_html( (string) $fila['room'] ); ?></span>
 								<?php endif; ?>
+							</span>
+							<div class="evt-ev__que">
 								<h3><?php echo self::link( (string) $fila['title'], $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $fila['id'] ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></h3>
 								<?php echo self::people( $evento, $fila, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 							</div>
+							<span class="evt-ev__hora"><?php echo esc_html( self::hours( $fila ) ); ?></span>
 						</li>
 					<?php endforeach; ?>
 				</ol>
+				<?php echo $acordeon ? '</details>' : '</section>'; ?>
 				<?php
+				$primero = false;
 			}
 		}
-		return (string) ob_get_clean();
+		?>
+		</div>
+		<?php
+		return (string) ob_get_clean() . ( $acordeon ? '' : self::tabs_script() );
+	}
+
+	/**
+	 * The contact details: where, phone and e-mail, each in its column.
+	 *
+	 * Tres columnas con su icono, como hoy. La que no tiene dato no sale.
+	 *
+	 * @param int $pagina Contact page.
+	 * @return string Empty when nothing was filled in.
+	 */
+	private static function contact( int $pagina ): string {
+		$dato = static function ( string $clave ) use ( $pagina ): string {
+			return trim( (string) get_post_meta( $pagina, $clave, true ) );
+		};
+		// Una línea en blanco separa sedes; un salto, renglones.
+		$parrafos = static function ( string $texto ): string {
+			$html = '';
+			foreach ( preg_split( '/\R\s*\R/', $texto ) as $bloque ) {
+				$lineas = array_filter( array_map( 'trim', preg_split( '/\R/', $bloque ) ) );
+				if ( array() !== $lineas ) {
+					$html .= '<p>' . implode( '<br />', array_map( 'esc_html', $lineas ) ) . '</p>';
+				}
+			}
+			return $html;
+		};
+
+		$columnas  = '';
+		$direccion = $parrafos( $dato( EventMetaKeys::CONTACT_ADDRESS ) );
+		$mapa      = $dato( EventMetaKeys::CONTACT_MAP );
+		if ( '' !== $mapa ) {
+			$direccion .= '<p><a href="' . esc_url( $mapa ) . '">Ver en el mapa</a></p>';
+		}
+		if ( '' !== $direccion ) {
+			$columnas .= '<div class="evt-ev__contacto-lugar"><h3 class="screen-reader-text">Dirección</h3>' . $direccion . '</div>';
+		}
+		$telefono = $parrafos( $dato( EventMetaKeys::CONTACT_PHONE ) );
+		if ( '' !== $telefono ) {
+			$columnas .= '<div class="evt-ev__contacto-telefono"><h3 class="screen-reader-text">Teléfono</h3>' . $telefono . '</div>';
+		}
+		$correo = sanitize_email( $dato( EventMetaKeys::CONTACT_EMAIL ) );
+		if ( '' !== $correo ) {
+			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
+		}
+
+		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+	}
+
+	/**
+	 * «Descargar programa»: the PDF of the programme, after the written text.
+	 *
+	 * Como siempre: un botón grande con su icono, centrado, antes de la parrilla.
+	 *
+	 * @param int $evento Event.
+	 * @return string Empty when there is no PDF.
+	 */
+	private static function download( int $evento ): string {
+		$id  = (int) get_post_meta( $evento, EventMetaKeys::PROGRAMME_FILE_ID, true );
+		$url = $id > 0 ? (string) wp_get_attachment_url( $id ) : '';
+		if ( '' === $url ) {
+			return '';
+		}
+		return '<p class="evt-ev__descarga"><a class="evt-ev__descargar" href="' . esc_url( $url ) . '" download>'
+			. '<svg viewBox="0 -960 960 960" width="40" height="40" aria-hidden="true" focusable="false"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>'
+			. '<span>Descargar programa</span></a></p>';
+	}
+
+	/**
+	 * The few lines that turn the day panels into tabs.
+	 *
+	 * En línea y no encolado: el documento de la página del evento lo escribimos
+	 * nosotros entero, y la hoja ya va igual. Con un solo panel no hay pestañas.
+	 *
+	 * @return string
+	 */
+	private static function tabs_script(): string {
+		$js = Assets::contents( 'js/evt-evento.js' );
+		return '' !== $js ? '<script>' . $js . '</script>' : '';
 	}
 
 	/**

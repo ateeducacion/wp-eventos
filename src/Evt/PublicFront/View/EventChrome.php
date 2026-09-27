@@ -69,6 +69,11 @@ final class EventChrome {
 			'org'            => '',
 			'credit'         => '',
 			'footer_links'   => array(),
+			// El logo de quien publica, arriba a la izquierda, y el color del pie.
+			'brand_logo'     => '',
+			'brand_alt'      => '',
+			'brand_url'      => '',
+			'footer_bg'      => '',
 			// Aviso de cookies: las tres piezas que lo pintan.
 			'consent_css'    => '',
 			'consent_js'     => '',
@@ -133,31 +138,50 @@ final class EventChrome {
 	}
 
 	/**
-	 * The navigation between the sections of the event.
+	 * The top bar: the logo of whoever publishes, and the sections of the event.
 	 *
-	 * Con una sola entrada no hay entre qué navegar y no se pinta: un menú de
-	 * un elemento es ruido.
+	 * El logo es de quien despliega ({@see chrome()}): sin configurar no sale.
+	 * El menú, con una sola entrada, tampoco: un menú de un elemento es ruido.
 	 *
 	 * @param array<int, array{label:string, url:string, current:bool}> $items Menu entries.
 	 * @return string
 	 */
 	public static function nav( array $items ): string {
-		if ( count( $items ) < 2 ) {
+		$chrome = self::chrome();
+		$logo   = (string) $chrome['brand_logo'];
+		$menu   = count( $items ) >= 2;
+		if ( '' === $logo && ! $menu ) {
 			return '';
 		}
 
 		ob_start();
 		?>
-		<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
-			<ul class="evt-ev__ancho nav">
-				<?php foreach ( $items as $item ) : ?>
-					<li class="nav-item">
-						<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-							<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
-					</li>
-				<?php endforeach; ?>
-			</ul>
-		</nav>
+		<div class="evt-ev__barra">
+			<div class="evt-ev__ancho">
+				<?php if ( '' !== $logo ) : ?>
+					<?php $url = (string) $chrome['brand_url']; ?>
+					<?php if ( '' !== $url ) : ?>
+						<a class="evt-ev__marca" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener">
+					<?php else : ?>
+						<span class="evt-ev__marca">
+					<?php endif; ?>
+					<img src="<?php echo esc_url( $logo ); ?>" alt="<?php echo esc_attr( (string) $chrome['brand_alt'] ); ?>" />
+					<?php echo '' !== $url ? '</a>' : '</span>'; ?>
+				<?php endif; ?>
+				<?php if ( $menu ) : ?>
+					<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
+						<ul class="nav">
+							<?php foreach ( $items as $item ) : ?>
+								<li class="nav-item">
+									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
+										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					</nav>
+				<?php endif; ?>
+			</div>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -185,6 +209,12 @@ final class EventChrome {
 			<div class="evt-ev__portada evt-ev__portada--banner">
 				<img class="evt-ev__banner" src="<?php echo esc_url( $banner ); ?>"
 					alt="<?php echo esc_attr( (string) $look['header_banner_alt'] ); ?>" />
+				<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+					<?php // Con banner no hay portada de color donde poner los botones: el de gestionar va debajo. ?>
+					<p class="evt-ev__ancho evt-ev__acciones">
+						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+					</p>
+				<?php endif; ?>
 				<div class="screen-reader-text">
 					<h1><?php echo esc_html( (string) $m['title'] ); ?></h1>
 					<?php
@@ -205,54 +235,67 @@ final class EventChrome {
 			return (string) ob_get_clean();
 		}
 
+		$raiz    = ! empty( $m['is_root'] );
+		$dibujo  = (string) ( $m['illustration'] ?? '' );
+		$entrada = (string) ( $m['intro'] ?? '' );
+		$clases  = 'evt-ev__portada' . ( '' !== $dibujo ? ' evt-ev__portada--dibujo' : '' );
+
 		ob_start();
 		?>
-		<div class="evt-ev__portada">
-			<div class="evt-ev__ancho">
-				<?php if ( '' !== (string) $look['logo'] ) : ?>
-					<img class="evt-ev__logo" src="<?php echo esc_url( (string) $look['logo'] ); ?>"
-						alt="<?php echo esc_attr( (string) $look['logo_alt'] ); ?>" />
-				<?php endif; ?>
-
-				<?php if ( empty( $m['is_root'] ) && '' !== (string) $m['event_url'] ) : ?>
-					<p class="evt-ev__madre">
-						<a href="<?php echo esc_url( (string) $m['event_url'] ); ?>"><?php echo esc_html( (string) $m['event_title'] ); ?></a>
-					</p>
-				<?php endif; ?>
-
-				<h1 class="evt-ev__titulo"><?php echo esc_html( (string) $m['title'] ); ?></h1>
-
-				<?php if ( '' !== (string) $m['tagline'] ) : ?>
-					<p class="evt-ev__lema"><?php echo esc_html( (string) $m['tagline'] ); ?></p>
-				<?php endif; ?>
-
-				<div class="evt-ev__linea" aria-hidden="true"></div>
-
-				<?php if ( '' !== (string) $m['dates'] || '' !== (string) $m['venue'] ) : ?>
-					<p class="evt-ev__datos">
-						<?php if ( '' !== (string) $m['dates'] ) : ?>
-							<span><?php echo esc_html( (string) $m['dates'] ); ?></span>
-						<?php endif; ?>
-						<?php if ( '' !== (string) $m['venue'] ) : ?>
-							<span><?php echo esc_html( (string) $m['venue'] ); ?></span>
-						<?php endif; ?>
-					</p>
-				<?php endif; ?>
-
-				<p class="evt-ev__acciones">
-					<?php if ( '' !== (string) $m['state_label'] ) : ?>
-						<span class="evt-ev__estado"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+		<div class="<?php echo esc_attr( $clases ); ?>">
+			<div class="evt-ev__ancho evt-ev__portada-rejilla">
+				<div class="evt-ev__portada-texto">
+					<?php if ( $raiz && '' !== (string) $look['logo'] ) : ?>
+						<img class="evt-ev__logo" src="<?php echo esc_url( (string) $look['logo'] ); ?>"
+							alt="<?php echo esc_attr( (string) $look['logo_alt'] ); ?>" />
 					<?php endif; ?>
-					<?php if ( '' !== (string) $m['hashtag'] ) : ?>
-						<span class="evt-ev__hashtag">#<?php echo esc_html( (string) $m['hashtag'] ); ?></span>
+
+					<h1 class="evt-ev__titulo"><?php echo esc_html( (string) $m['title'] ); ?></h1>
+
+					<?php if ( $raiz && '' !== (string) $m['tagline'] ) : ?>
+						<p class="evt-ev__lema"><?php echo esc_html( (string) $m['tagline'] ); ?></p>
 					<?php endif; ?>
-					<?php if ( '' !== (string) $signup['url'] ) : ?>
-						<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+
+					<div class="evt-ev__linea" aria-hidden="true"></div>
+
+					<?php if ( $raiz && ( '' !== (string) $m['dates'] || '' !== (string) $m['venue'] ) ) : ?>
+						<p class="evt-ev__datos">
+							<?php if ( '' !== (string) $m['dates'] ) : ?>
+								<strong><?php echo esc_html( (string) $m['dates'] ); ?></strong>
+							<?php endif; ?>
+							<?php if ( '' !== (string) $m['venue'] ) : ?>
+								<em><?php echo esc_html( (string) $m['venue'] ); ?></em>
+							<?php endif; ?>
+						</p>
 					<?php endif; ?>
-					<?php if ( '' !== (string) $m['manage_url'] ) : ?>
-						<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+
+					<?php if ( ! $raiz && '' !== $entrada ) : ?>
+						<p class="evt-ev__entrada"><?php echo esc_html( $entrada ); ?></p>
 					<?php endif; ?>
-				</p>
+
+					<?php if ( $raiz || '' !== (string) $m['manage_url'] ) : ?>
+						<p class="evt-ev__acciones">
+							<?php if ( $raiz && '' !== (string) $m['state_label'] ) : ?>
+								<span class="evt-ev__estado"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( $raiz && '' !== (string) $m['hashtag'] ) : ?>
+								<span class="evt-ev__hashtag">#<?php echo esc_html( (string) $m['hashtag'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( $raiz && '' !== (string) $signup['url'] ) : ?>
+								<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $m['edit_url'] ?? '' ) ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['edit_url'] ); ?>">Editar esta página</a>
+							<?php endif; ?>
+							<?php if ( '' !== (string) $m['manage_url'] ) : ?>
+								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
+							<?php endif; ?>
+						</p>
+					<?php endif; ?>
+				</div>
+				<?php if ( '' !== $dibujo ) : ?>
+					<img class="evt-ev__dibujo" src="<?php echo esc_url( $dibujo ); ?>" alt="" />
+				<?php endif; ?>
 			</div>
 			<?php echo self::separator( (string) $look['separator'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- silueta de la lista cerrada, escapada dentro. ?>
 		</div>

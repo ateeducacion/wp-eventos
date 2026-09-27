@@ -282,6 +282,11 @@ class Test_Event_List extends WP_UnitTestCase {
 
 		$this->acting_as( $coord );
 		$m = EventList::model();
+		$this->assertSame( 3, $m['total'], 'por defecto, «Activos»: sin el borrador' );
+		$this->assertSame( 3, $m['counts'][ EventList::FILTER_ACTIVE ] );
+
+		$_GET[ EventList::VAR_STATE ] = 'all';
+		$m                            = EventList::model();
 
 		$this->assertSame( 4, $m['total'] );
 		$this->assertSame( 4, $m['counts']['all'] );
@@ -299,10 +304,10 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertSame( array( 'En borrador' ), $this->titulos( $m ) );
 		$this->assertSame( 'draft', $m['rows'][0]['status'] );
 
-		// Un estado inventado no acota nada: se cae a «todos».
+		// Un estado inventado se cae al de por defecto: «Activos».
 		$_GET[ EventList::VAR_STATE ] = 'lo-que-sea';
-		$this->assertSame( 'all', EventList::model()['selection']['state'] );
-		$this->assertSame( 4, EventList::model()['total'] );
+		$this->assertSame( EventList::FILTER_ACTIVE, EventList::model()['selection']['state'] );
+		$this->assertSame( 3, EventList::model()['total'] );
 	}
 
 	/**
@@ -580,8 +585,9 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertSame( 'restaurado', $this->query_arg( (string) $url, EventList::VAR_NOTICE ) );
 
 		$this->acting_as( $uid );
-		$m = EventList::model();
-		$this->assertSame( array( $evento ), $this->ids( $m ), 'y vuelve al listado normal' );
+		$_GET[ EventList::VAR_STATE ] = EventList::FILTER_DRAFT;
+		$m                            = EventList::model();
+		$this->assertSame( array( $evento ), $this->ids( $m ), 'y vuelve al listado normal, entre los borradores' );
 		$this->assertSame( 0, $m['counts'][ EventList::FILTER_TRASH ] );
 	}
 
@@ -681,10 +687,14 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->event( $yo, array( $area ), array( \Evt\Meta\EventMetaKeys::ARCHIVED => '1' ), array( 'post_title' => 'Congreso cerrado' ) );
 
 		$this->acting_as( $yo );
-		$m    = EventList::model();
-		$html = \Evt\PublicFront\View\EventListView::html( $m );
+		$_GET[ EventList::VAR_STATE ] = 'all';
+		$m                            = EventList::model();
+		$html                         = \Evt\PublicFront\View\EventListView::html( $m );
 
 		$this->assertSame( EventList::VIEW_GRID, $m['selection']['view'] );
+		$this->assertStringContainsString( '>Activos', $html, 'los cuatro filtros de estado, en la barra' );
+		$this->assertStringContainsString( '>Borradores', $html );
+		$this->assertStringContainsString( '>Históricos', $html );
 		$this->assertStringContainsString( 'class="evt-rejilla"', $html );
 		$this->assertStringContainsString( 'evt-ficha__cartel--vacio', $html );
 		$this->assertStringContainsString( 'evt-ficha evt-ficha--borrador', $html, 'el borrador, más claro' );

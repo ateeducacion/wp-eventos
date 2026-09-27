@@ -70,6 +70,7 @@ return array(
 	'PublicFront/Block/ProgrammeBlock.php',
 	'PublicFront/Block/SectionsBlock.php',
 	'PublicFront/Block/SignupBlock.php',
+	'PublicFront/Block/SponsorsBlock.php',
 	'PublicFront/EventLayout.php',
 	'PublicFront/EventView.php',
 	'PublicFront/View/EventChrome.php',

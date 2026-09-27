@@ -21,6 +21,10 @@
 	/* Los colores de la cabecera, que es lo que cada evento elige. */
 	--evt-fondo: #0a3d62;
 	--evt-texto: #ffffff;
+	/* El acento: títulos de tarjeta, «Acerca de», rayas. Sin él, el de la cabecera. */
+	--evt-acento: var(--evt-fondo);
+	/* Una imagen detrás del color de la cabecera, `url(…)`; ninguna por defecto. */
+	--evt-fondo-img: none;
 
 	/* Las dos tipografías. Vacías = las del navegador. */
 	--evt-tipo-titulo: system-ui, -apple-system, "Segoe UI", Roboto, "Open Sans", Arial, sans-serif;
@@ -28,15 +32,30 @@
 
 	/* La página. */
 	--evt-papel: #ffffff;
-	--evt-tinta: #1d2b36;
+	/* El gris del texto y el casi negro de los títulos, los de siempre. */
+	--evt-tinta: #666666;
+	--evt-titulos: #333333;
 	--evt-suave: #f5f9fb;
 	--evt-borde: rgba(0, 0, 0, 0.12);
-	--evt-enlace: #1155aa;
+	--evt-enlace: #1d6fa5;
 	--evt-foco: #b8860b;
 	--evt-sombra: 0 2px 12px rgba(0, 0, 0, 0.14);
 
-	/* Medidas. El gutter se define AQUÍ y en ningún otro sitio. */
-	--evt-ancho: 1080px;
+	/* El programa: la raya entre huecos y el color de cada familia de tipos,
+	   los de siempre. */
+	--evt-raya: #7193bc;
+	--evt-tipo-charla: #4a70a0;
+	--evt-tipo-practica: #8a5d00;
+	--evt-tipo-taller: #3d7a4f;
+	--evt-tipo-protocolo: #721f37;
+
+	/* El pie: color de quien despliega; sin él, el suave de la página. */
+	--evt-pie: var(--evt-suave);
+	--evt-pie-texto: var(--evt-tinta);
+
+	/* Medidas. El gutter se define AQUÍ y en ningún otro sitio. El ancho es el
+	   80 % de la ventana hasta 1080 px, como la página de siempre. */
+	--evt-ancho: min(1080px, 80vw + 2 * var(--evt-espacio));
 	--evt-espacio: clamp(1rem, 4vw, 2rem);
 	--evt-radio: 0.4rem;
 
@@ -44,11 +63,12 @@
 	--evt-forma: 0;
 
 	/* Tipografía fluida: un solo sitio donde se decide cada escalón. */
-	--evt-t-titulo: clamp(1.9rem, 1.2rem + 3.2vw, 2.9rem);
+	--evt-t-titulo: clamp(2rem, 1.2rem + 3vw, 2.875rem);
 	--evt-t-lema: clamp(1.05rem, 0.95rem + 0.6vw, 1.35rem);
-	--evt-t-h2: clamp(1.4rem, 1.2rem + 1vw, 1.9rem);
-	--evt-t-texto: clamp(1rem, 0.97rem + 0.15vw, 1.08rem);
-	--evt-t-menudo: 0.9rem;
+	--evt-t-h2: clamp(1.6rem, 1.2rem + 1.6vw, 2.5rem);
+	--evt-t-texto: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+	--evt-t-portada: clamp(1.05rem, 0.95rem + 0.4vw, 1.25rem);
+	--evt-t-menudo: 0.875rem;
 }
 
 /* ─── el documento ────────────────────────────────────────────────────── */
@@ -80,8 +100,15 @@
 .evt-ev h2,
 .evt-ev h3,
 .evt-ev h4 {
+	color: var(--evt-titulos);
 	font-family: var(--evt-tipo-titulo);
-	line-height: 1.25;
+	font-weight: 500;
+	line-height: 1.3;
+}
+
+/* El nombre del evento en el «Acerca de» de la portada, y lo que lo pida. */
+.evt-ev .evt-ev__acento {
+	color: var(--evt-acento);
 }
 
 .evt-ev a {
@@ -137,51 +164,98 @@
 	white-space: nowrap;
 }
 
-/* ─── navegación entre secciones ──────────────────────────────────────── */
+/* ─── la barra de arriba: logo y secciones ────────────────────────────── */
 
-.evt-ev__nav {
+.evt-ev__barra {
 	background: var(--evt-papel);
-	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__barra > div {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 2rem;
+	min-height: 90px;
+}
+
+.evt-ev__marca img {
+	display: block;
+	max-height: 90px;
+	width: auto;
 }
 
 .evt-ev__nav ul {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
 	margin: 0;
-	padding-block: 0.5rem;
+	padding: 0.5rem 0;
 	list-style: none;
 }
 
 .evt-ev__nav a {
 	display: block;
-	padding: 0.5rem 0.9rem;
-	border-radius: var(--evt-radio);
+	padding: 0.35rem 0.6rem;
 	color: var(--evt-tinta);
-	font-weight: 600;
+	font-family: var(--evt-tipo-texto);
+	font-size: 0.8125rem;
 	text-decoration: none;
+	text-transform: uppercase;
 }
 
-.evt-ev__nav a:hover {
-	background: var(--evt-suave);
-}
-
+.evt-ev__nav a:hover,
 .evt-ev__nav [aria-current="page"] {
-	background: var(--evt-fondo);
-	color: var(--evt-texto);
+	color: var(--evt-titulos);
+	box-shadow: inset 0 -2px 0 var(--evt-acento);
 }
 
 /* ─── portada de la cabecera ──────────────────────────────────────────── */
 
 .evt-ev__portada {
 	position: relative;
-	background: var(--evt-fondo);
+	background-color: var(--evt-fondo);
+	background-image: var(--evt-fondo-img);
+	background-position: top left;
+	background-blend-mode: darken;
 	color: var(--evt-texto);
-	padding-block: calc(var(--evt-espacio) * 1.6) calc(var(--evt-espacio) * 2.4);
+	padding-block: 0.6rem 100px;
 }
 
 .evt-ev__portada a {
 	color: inherit;
+}
+
+/* En una sección el título va en el gris de los títulos, que el degradado
+   empieza en blanco; su color es para la entradilla y la raya. */
+.evt-ev:not(.evt-ev--portada) .evt-ev__portada .evt-ev__titulo {
+	color: var(--evt-titulos);
+}
+
+/* Las secciones: de blanco arriba a su color abajo, como siempre. La portada
+   del evento se queda con el color liso. */
+.evt-ev:not(.evt-ev--portada) .evt-ev__portada {
+	/* Sin color de base: la fusión `darken` de la imagen se comería el blanco. */
+	background-color: transparent;
+	background-image: var(--evt-fondo-img), linear-gradient(180deg, var(--evt-papel), var(--evt-fondo));
+}
+
+/* Texto a la izquierda e ilustración a la derecha; en estrecho, una columna. */
+.evt-ev__portada-rejilla {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	align-items: start;
+}
+
+.evt-ev__portada .evt-ev__titulo,
+.evt-ev__portada .evt-ev__lema {
+	color: inherit;
+}
+
+.evt-ev__dibujo {
+	justify-self: center;
+	max-height: 400px;
+	width: auto;
 }
 
 .evt-ev__portada--banner {
@@ -198,17 +272,12 @@
 .evt-ev__logo {
 	max-height: 90px;
 	width: auto;
-	margin-bottom: 1rem;
-}
-
-.evt-ev__madre {
-	margin: 0 0 0.4rem;
-	font-size: var(--evt-t-menudo);
-	opacity: 0.9;
+	margin-top: 1rem;
 }
 
 .evt-ev__titulo {
 	margin: 0;
+	padding-top: 2.5rem;
 	font-size: var(--evt-t-titulo);
 	font-weight: 500;
 }
@@ -223,16 +292,23 @@
 .evt-ev__linea {
 	width: 90px;
 	height: 2px;
-	margin: 1.2rem 0;
+	margin: 1.4rem 0;
 	background: currentColor;
-	opacity: 0.7;
 }
 
 .evt-ev__datos {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.25rem 0.9rem;
+	flex-direction: column;
 	margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.4;
+}
+
+.evt-ev__entrada {
+	margin: 0;
+	font-size: 1.125rem;
+	font-style: italic;
+	line-height: 1.3;
 }
 
 .evt-ev__acciones {
@@ -263,10 +339,12 @@
 	display: inline-block;
 	padding: 0.45rem 1rem;
 	border: 1px solid currentColor;
-	border-radius: var(--evt-radio);
+	border-radius: 0;
 	font-size: var(--evt-t-menudo);
 	font-weight: 700;
+	letter-spacing: 1px;
 	text-decoration: none;
+	text-transform: uppercase;
 }
 
 .evt-ev__acciones .evt-ev__boton {
@@ -299,7 +377,45 @@
 	padding-block: calc(var(--evt-espacio) * 1.4);
 }
 
-.evt-ev__bloque + .evt-ev__bloque {
+/* La portada: la presentación en dos tercios y el cartel en el otro, como
+   siempre. Con `flex-wrap` y bases, no con una media query: en estrecho el
+   cartel baja solo. Todo lo demás ocupa la fila entera. */
+.evt-ev--portada .evt-ev__main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: calc(var(--evt-espacio) * 1.4) calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev--portada .evt-ev__main > * {
+	flex: 1 1 100%;
+	margin-top: 0;
+}
+
+.evt-ev--portada .evt-ev__main > .evt-ev__bloque--contenido {
+	flex: 2 1 28rem;
+	font-size: var(--evt-t-portada);
+	line-height: 1.5;
+}
+
+.evt-ev--portada .evt-ev__main > .evt-ev__bloque--cartel {
+	flex: 1 1 14rem;
+}
+
+.evt-ev--portada .evt-ev__bloque--contenido h2 {
+	font-size: var(--evt-t-h2);
+}
+
+.evt-ev--portada .evt-ev__bloque--contenido h2::after {
+	content: "";
+	display: block;
+	width: 90px;
+	height: 3px;
+	margin-top: 1.2rem;
+	background: var(--evt-acento);
+}
+
+.evt-ev__main > .evt-ev__bloque + .evt-ev__bloque {
 	margin-top: calc(var(--evt-espacio) * 1.4);
 }
 
@@ -309,9 +425,11 @@
 }
 
 /* Toda rejilla de la página, con o sin Bootstrap: mide el contenedor. */
+/* `auto-fill` y no `auto-fit`: con dos secciones, dos tarjetas del ancho de
+   siempre —cuatro por fila— y no dos que se estiran hasta ocuparlo todo. */
 .evt-ev__rejilla {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 	gap: var(--evt-espacio);
 }
 
@@ -327,11 +445,14 @@
 .evt-ev__tarjeta img {
 	display: block;
 	width: 100%;
+	aspect-ratio: 1;
+	object-fit: contain;
 }
 
 .evt-ev__tarjeta h3 {
 	margin: 0;
 	padding: 0.9rem 1rem 0;
+	color: var(--evt-acento);
 	font-size: 1.25rem;
 	font-weight: 700;
 	text-align: center;
@@ -463,9 +584,47 @@
 .evt-ev__dia {
 	margin: calc(var(--evt-espacio) * 1.2) 0 0.6rem;
 	padding-bottom: 0.3rem;
-	border-bottom: 2px solid var(--evt-fondo);
+	border-bottom: 2px solid var(--evt-acento);
 	font-size: 1.2rem;
 	text-transform: uppercase;
+}
+
+/* Las pestañas del programa, cuando hay guion que las monte. */
+.evt-ev__pestanas {
+	display: flex;
+	flex-wrap: wrap;
+	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__pestanas button {
+	padding: 0.6rem 1.2rem;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	background: var(--evt-suave);
+	color: var(--evt-tinta);
+	font: inherit;
+	font-size: var(--evt-t-menudo);
+	cursor: pointer;
+}
+
+.evt-ev__pestanas [aria-selected="true"] {
+	border-color: var(--evt-borde);
+	background: var(--evt-papel);
+	color: var(--evt-titulos);
+	font-weight: 700;
+}
+
+.evt-ev__programa--pestanas .evt-ev__dia-panel {
+	padding: 1rem 0;
+}
+
+/* El acordeón: un `<details>` por día, sin guion. */
+.evt-ev__programa--acordeon summary {
+	cursor: pointer;
+}
+
+.evt-ev__programa--acordeon details[open] summary {
+	margin-bottom: 0.6rem;
 }
 
 .evt-ev__parrilla,
@@ -474,25 +633,6 @@
 	margin: 0;
 	padding: 0;
 	list-style: none;
-}
-
-.evt-ev__hueco {
-	display: grid;
-	grid-template-columns: 8.5rem minmax(0, 1fr);
-	gap: 1rem;
-	padding: 0.8rem 0;
-	border-bottom: 1px solid var(--evt-borde);
-}
-
-.evt-ev__hueco h3,
-.evt-ev__actividad h3 {
-	margin: 0.2rem 0;
-	font-size: 1.1rem;
-}
-
-.evt-ev__hora {
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
 }
 
 .evt-ev__tipo,
@@ -509,6 +649,75 @@
 .evt-ev__sala {
 	font-weight: 400;
 	text-transform: none;
+}
+
+/* Cada hueco del programa: tipo, qué y cuándo, en tres columnas, y el color
+   del tipo en las tres, como siempre. */
+.evt-ev__hueco {
+	--evt-tipo-color: var(--evt-tinta);
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+	gap: 0 2rem;
+	padding: 1.6rem 0;
+	border-bottom: 2px solid var(--evt-raya);
+	color: var(--evt-tipo-color);
+}
+
+.evt-ev__hueco--conferencia,
+.evt-ev__hueco--ponencia {
+	--evt-tipo-color: var(--evt-tipo-charla);
+}
+
+.evt-ev__hueco--practicas {
+	--evt-tipo-color: var(--evt-tipo-practica);
+}
+
+.evt-ev__hueco--taller,
+.evt-ev__hueco--panel {
+	--evt-tipo-color: var(--evt-tipo-taller);
+}
+
+.evt-ev__hueco--descanso,
+.evt-ev__hueco--inauguracion,
+.evt-ev__hueco--clausura {
+	--evt-tipo-color: var(--evt-tipo-protocolo);
+}
+
+.evt-ev__hueco h3,
+.evt-ev__actividad h3 {
+	margin: 0 0 0.4rem;
+	font-size: 1.1rem;
+}
+
+.evt-ev__hueco h3 {
+	color: inherit;
+	font-family: var(--evt-tipo-texto);
+	font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+	font-weight: 700;
+}
+
+.evt-ev__hueco .evt-ev__que {
+	color: var(--evt-tinta);
+}
+
+.evt-ev__hueco .evt-ev__tipo {
+	margin: 0;
+	font-size: 1.3rem;
+	letter-spacing: 0;
+	text-transform: none;
+	opacity: 1;
+}
+
+.evt-ev__hueco .evt-ev__sala {
+	display: block;
+	color: var(--evt-tinta);
+	font-size: var(--evt-t-menudo);
+}
+
+.evt-ev__hora {
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
 }
 
 .evt-ev__actividades {
@@ -555,8 +764,88 @@
 @media (max-width: 600px) {
 	.evt-ev__hueco {
 		grid-template-columns: minmax(0, 1fr);
-		gap: 0.2rem;
+		gap: 0.3rem;
 	}
+}
+
+/* La página de contacto: dónde, teléfono y correo, cada uno con su icono en
+   el color de la cabecera. Salen de los campos de la página (ProgrammeBlock). */
+.evt-ev__contacto {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev__contacto > div::before {
+	content: "";
+	display: block;
+	width: 60px;
+	height: 60px;
+	margin: 0 auto 1rem;
+	background: var(--evt-fondo);
+	mask: var(--evt-icono) center / contain no-repeat;
+}
+
+.evt-ev__contacto p {
+	margin: 0 0 1rem;
+}
+
+.evt-ev__contacto-lugar {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E");
+}
+
+.evt-ev__contacto-telefono {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 1H8a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-5H8V4h8z'/%3E%3C/svg%3E");
+}
+
+.evt-ev__contacto-correo {
+	--evt-icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z'/%3E%3C/svg%3E");
+}
+
+/* «Descargar programa»: el botón gris grande con su icono, centrado. */
+.evt-ev__descarga {
+	margin: 0 0 var(--evt-espacio);
+	text-align: center;
+}
+
+.evt-ev .evt-ev__descargar {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	padding: 0.6rem 1.2rem;
+	border-radius: var(--evt-radio);
+	background: var(--evt-tinta);
+	color: var(--evt-papel);
+	font-size: var(--evt-t-menudo);
+	text-decoration: none;
+}
+
+.evt-ev .evt-ev__descargar:hover {
+	background: var(--evt-titulos);
+}
+
+/* Los logos corporativos, en fila al pie de la portada. */
+.evt-ev__bloque--logos {
+	padding-block: calc(var(--evt-espacio) * 2);
+}
+
+.evt-ev__logos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--evt-espacio) * 1.5);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__logos img {
+	display: block;
+	max-height: 110px;
+	width: auto;
 }
 
 /* Una tabla nunca empuja la página: se desplaza ella sola. */
@@ -570,9 +859,9 @@
 /* ─── el pie institucional ────────────────────────────────────────────── */
 
 .evt-ev__pie {
-	background: var(--evt-suave);
-	border-top: 1px solid var(--evt-borde);
-	padding-block: var(--evt-espacio);
+	background: var(--evt-pie);
+	color: var(--evt-pie-texto);
+	padding-block: 0.9rem;
 	font-size: var(--evt-t-menudo);
 }
 
@@ -584,7 +873,7 @@
 }
 
 .evt-ev__pie a {
-	color: var(--evt-tinta);
+	color: inherit;
 	text-decoration: none;
 }
 
@@ -602,7 +891,7 @@
 /* ─── impresión ───────────────────────────────────────────────────────── */
 
 @media print {
-	.evt-ev__nav,
+	.evt-ev__barra,
 	.evt-ev__saltar,
 	.evt-ev__acciones {
 		display: none;
