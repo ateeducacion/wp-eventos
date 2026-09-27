@@ -101,7 +101,7 @@ final class TimelineView {
 		ob_start();
 		?>
 		<li class="<?php echo esc_attr( $clases ); ?>">
-			<a class="evt-linea__cartel" href="<?php echo esc_url( (string) $ev['url'] ); ?>" tabindex="-1" aria-hidden="true" style="--evt-linea-color: <?php echo esc_attr( (string) $ev['color'] ); ?>" draggable="false">
+			<a class="evt-linea__cartel" href="<?php echo esc_url( (string) $ev['url'] ); ?>" tabindex="-1" aria-hidden="true" style="--evt-linea-color: <?php echo esc_attr( (string) $ev['color'] ); ?>; --evt-linea-tinta: <?php echo esc_attr( (string) ( $ev['ink'] ?? '#fff' ) ); ?>" draggable="false">
 				<?php if ( '' !== (string) $ev['poster'] ) : ?>
 					<img src="<?php echo esc_url( (string) $ev['poster'] ); ?>" alt="" loading="lazy" draggable="false">
 				<?php else : ?>

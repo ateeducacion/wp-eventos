@@ -124,6 +124,84 @@ class Test_Event_List extends WP_UnitTestCase {
 	}
 
 	/**
+	 * El desplegable de ámbitos: cada uno una vez, en árbol, y los que tocan.
+	 *
+	 * Administración ve todos los del sitio, tengan eventos o no; el resto,
+	 * solo aquellos en los que tiene eventos. Un evento con dos ámbitos no
+	 * crea un tercero. Elegir un ámbito trae también lo de los que cuelgan de él.
+	 */
+	public function test_the_area_dropdown_is_a_tree_of_single_areas() {
+		$madre = $this->area( 'Centros de formación' );
+		$hija  = (int) self::factory()->term->create(
+			array(
+				'taxonomy' => EventTaxonomies::AREA,
+				'name'     => 'Centro de la costa',
+				'parent'   => $madre,
+			)
+		);
+		$otra  = $this->area( 'Área de idiomas' );
+		$vacia = $this->area( 'Sin eventos' );
+		$admin = $this->administrator();
+
+		$abajo = $this->event( $admin, array( $hija ), array(), array( 'post_title' => 'En la hija' ) );
+		$dos   = $this->event( $admin, array( $hija, $otra ), array(), array( 'post_title' => 'En dos ámbitos' ) );
+
+		$this->acting_as( $admin );
+		$m = EventList::model();
+		$this->assertSame(
+			array(
+				$otra  => 'Área de idiomas',
+				$madre => 'Centros de formación',
+				$hija  => '— Centro de la costa',
+				$vacia => 'Sin eventos',
+			),
+			array_intersect_key( $m['options']['area'], array_flip( array( $otra, $madre, $hija, $vacia ) ) ),
+			'orden alfabético sin tildes, las hijas bajo su madre'
+		);
+		$this->assertSame( count( $m['options']['area'] ), count( array_unique( $m['options']['area'] ) ), 'ninguno repetido ni combinado' );
+
+		$_GET[ EventList::VAR_AREA ] = (string) $madre;
+		$this->assertEqualSets( array( $abajo, $dos ), $this->ids( EventList::model() ), 'la madre trae lo de sus hijas' );
+		$_GET[ EventList::VAR_AREA ] = '';
+
+		// Quien organiza la madre ve la madre y la hija en las que tiene
+		// eventos, y no el otro ámbito del evento compartido.
+		$this->event( $admin, array( $madre ), array(), array( 'post_title' => 'En la madre' ) );
+		$this->acting_as( $this->organiser( array( $madre ) ) );
+		$this->assertSame(
+			array(
+				$madre => 'Centros de formación',
+				$hija  => '— Centro de la costa',
+			),
+			EventList::model()['options']['area']
+		);
+	}
+
+	/**
+	 * La tarjeta enseña la destacada cuando el cartel es un PDF.
+	 */
+	public function test_a_pdf_poster_falls_back_to_the_featured_image() {
+		$evento = $this->event( $this->administrator(), array( $this->area() ), array( EventMetaKeys::HEADER_BG => '#f5f5f5' ) );
+		$pdf    = self::factory()->attachment->create(
+			array(
+				'post_mime_type' => 'application/pdf',
+				'post_parent'    => $evento,
+			)
+		);
+		$imagen = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $evento );
+		update_post_meta( $evento, EventMetaKeys::POSTER_ID, $pdf );
+
+		$this->assertSame( $pdf, \Evt\PublicFront\Timeline::poster_id( $evento ), 'sin destacada, el PDF, por si tiene vista previa' );
+		$this->assertSame( array( '#f5f5f5', '#000000' ), \Evt\PublicFront\Timeline::colours( $evento ), 'sobre un fondo claro, tinta oscura' );
+
+		set_post_thumbnail( $evento, $imagen );
+		$this->assertSame( $imagen, \Evt\PublicFront\Timeline::poster_id( $evento ) );
+
+		update_post_meta( $evento, EventMetaKeys::POSTER_ID, $imagen );
+		$this->assertSame( $imagen, \Evt\PublicFront\Timeline::poster_id( $evento ), 'un cartel que es imagen manda' );
+	}
+
+	/**
 	 * Un evento recién creado todavía no tiene área, y quien lo creó lo sigue viendo.
 	 */
 	public function test_a_brand_new_event_stays_in_sight_of_whoever_created_it() {

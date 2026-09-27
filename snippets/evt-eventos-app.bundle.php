@@ -7610,8 +7610,11 @@ final class EventList {
 		$todas   = EventAccess::can_edit_all_areas( $user_id );
 		$m       = array_merge( $m, self::chrome( $user_id, $todas ) );
 
-		$rows         = self::collect( $user_id );
-		$m['options'] = self::options( $rows );
+		$rows                 = self::collect( $user_id );
+		$m['options']         = self::options( $rows );
+		$m['options']['area'] = self::area_tree(
+			$todas ? null : array_values( array_intersect( array_keys( $m['options']['area'] ), EventAccess::scope_areas( $user_id ) ) )
+		);
 
 		$s        = self::sanitise( self::selection(), $m['options'] );
 		$rows     = self::narrow( $rows, $s );
@@ -7871,8 +7874,7 @@ final class EventList {
 			$rows[ $i ]['draft']    = in_array( (string) $row['status'], array( 'draft', 'pending', 'future' ), true );
 			$cartel                 = Timeline::poster_id( $id );
 			$rows[ $i ]['poster']   = $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '';
-			$fondo                  = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
-			$rows[ $i ]['color']    = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
+			list( $rows[ $i ]['color'], $rows[ $i ]['ink'] ) = Timeline::colours( $id );
 		}
 
 		return $rows;
@@ -8030,9 +8032,86 @@ final class EventList {
 
 
 
+
+
+
+
+
+	private static function area_tree( ?array $ids ): array {
+		if ( array() === $ids ) {
+			return array();
+		}
+		$args = array(
+			'taxonomy'   => EventTaxonomies::AREA,
+			'hide_empty' => false,
+		);
+		if ( null !== $ids ) {
+			$args['include'] = $ids;
+		}
+		$terms = get_terms( $args );
+		if ( ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$presentes = array_map( 'intval', wp_list_pluck( $terms, 'term_id' ) );
+		$hijas     = array();
+		foreach ( $terms as $term ) {
+			$madre             = in_array( (int) $term->parent, $presentes, true ) ? (int) $term->parent : 0;
+			$hijas[ $madre ][] = $term;
+		}
+		foreach ( $hijas as &$grupo ) {
+			usort(
+				$grupo,
+				static function ( \WP_Term $a, \WP_Term $b ): int {
+					return strcasecmp( remove_accents( $a->name ), remove_accents( $b->name ) );
+				}
+			);
+		}
+		unset( $grupo );
+
+		$out     = array();
+		$recorre = static function ( int $madre, int $nivel ) use ( &$recorre, &$out, $hijas ): void {
+			foreach ( $hijas[ $madre ] ?? array() as $term ) {
+				$out[ (int) $term->term_id ] = str_repeat( '— ', $nivel ) . $term->name;
+				$recorre( (int) $term->term_id, $nivel + 1 );
+			}
+		};
+		$recorre( 0, 0 );
+		return $out;
+	}
+
+
+
+
+
+
+
+	private static function area_and_below( int $term_id ): array {
+		static $cache = array();
+		if ( ! isset( $cache[ $term_id ] ) ) {
+			$hijas             = get_term_children( $term_id, EventTaxonomies::AREA );
+			$cache[ $term_id ] = array_fill_keys( array_merge( array( $term_id ), is_array( $hijas ) ? array_map( 'intval', $hijas ) : array() ), true );
+		}
+		return $cache[ $term_id ];
+	}
+
+
+
+
+
+
+
+
 	private static function in_scope( array $row, array $s ): bool {
 		foreach ( self::AXES as $eje => $clave ) {
-			if ( $s[ $eje ] > 0 && ! isset( $row[ $clave ][ $s[ $eje ] ] ) ) {
+			if ( $s[ $eje ] <= 0 ) {
+				continue;
+			}
+
+			$vale = 'area' === $eje
+				? array() !== array_intersect_key( $row[ $clave ], self::area_and_below( (int) $s[ $eje ] ) )
+				: isset( $row[ $clave ][ $s[ $eje ] ] );
+			if ( ! $vale ) {
 				return false;
 			}
 		}
@@ -8404,10 +8483,11 @@ final class EventListView {
 			return sprintf( '<img class="%1$s" src="%2$s" alt="" loading="lazy">', esc_attr( $clase ), esc_url( (string) $row['poster'] ) );
 		}
 		return sprintf(
-			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s" aria-hidden="true"><span>%3$s</span></span>',
+			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s; --evt-cartel-tinta: %4$s" aria-hidden="true"><span>%3$s</span></span>',
 			esc_attr( $clase ),
 			esc_attr( (string) $row['color'] ),
-			esc_html( (string) $row['title'] )
+			esc_html( (string) $row['title'] ),
+			esc_attr( (string) ( $row['ink'] ?? '#fff' ) )
 		);
 	}
 
@@ -8604,7 +8684,7 @@ final class EventListView {
 		$s      = $m['selection'];
 		$pagina = (int) $m['page'];
 		?>
-		<nav aria-label="Páginas de eventos">
+		<nav class="evt-paginas" aria-label="Páginas de eventos">
 			<p class="evt-acciones">
 				<?php if ( $pagina > 1 ) : ?>
 					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
@@ -20958,7 +21038,7 @@ final class TimelineView {
 		ob_start();
 		?>
 		<li class="<?php echo esc_attr( $clases ); ?>">
-			<a class="evt-linea__cartel" href="<?php echo esc_url( (string) $ev['url'] ); ?>" tabindex="-1" aria-hidden="true" style="--evt-linea-color: <?php echo esc_attr( (string) $ev['color'] ); ?>" draggable="false">
+			<a class="evt-linea__cartel" href="<?php echo esc_url( (string) $ev['url'] ); ?>" tabindex="-1" aria-hidden="true" style="--evt-linea-color: <?php echo esc_attr( (string) $ev['color'] ); ?>; --evt-linea-tinta: <?php echo esc_attr( (string) ( $ev['ink'] ?? '#fff' ) ); ?>" draggable="false">
 				<?php if ( '' !== (string) $ev['poster'] ) : ?>
 					<img src="<?php echo esc_url( (string) $ev['poster'] ); ?>" alt="" loading="lazy" draggable="false">
 				<?php else : ?>
@@ -20998,6 +21078,7 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventState;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
+use Evt\PublicFront\View\EventChrome;
 use Evt\PublicFront\View\TimelineView;
 
 
@@ -21190,7 +21271,7 @@ final class Timeline {
 		$cartel   = self::poster_id( $id );
 		$abierta  = ! $historia && SignupForm::is_open( $id );
 		$pagina   = $abierta ? SignupForm::page( $id ) : 0;
-		$fondo    = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
+		$colores  = self::colours( $id );
 
 		return array(
 			'id'          => $id,
@@ -21203,7 +21284,8 @@ final class Timeline {
 			'done'        => $historia || EventMetaKeys::STATE_FINISHED === $estado,
 			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '',
 			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
-			'color'       => is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b',
+			'color'       => $colores[0],
+			'ink'         => $colores[1],
 			'signup_url'  => $pagina > 0 ? (string) get_permalink( $pagina ) : '',
 		);
 	}
@@ -21214,9 +21296,30 @@ final class Timeline {
 
 
 
+
+
+
+
 	public static function poster_id( int $event_id ): int {
 		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
-		return $cartel > 0 ? $cartel : (int) get_post_thumbnail_id( $event_id );
+		if ( $cartel > 0 && wp_attachment_is_image( $cartel ) ) {
+			return $cartel;
+		}
+		$destacada = (int) get_post_thumbnail_id( $event_id );
+		return $destacada > 0 ? $destacada : $cartel;
+	}
+
+
+
+
+
+
+
+	public static function colours( int $event_id ): array {
+		$fondo = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
+		$fondo = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
+		$tinta = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
+		return array( $fondo, EventChrome::readable_ink( $fondo, is_string( $tinta ) ? $tinta : '' ) );
 	}
 
 
@@ -22981,7 +23084,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: var(--evt-cartel, var(--evt-pri));
-  color: #fff;
+  color: var(--evt-cartel-tinta, #fff);
 }
 .evt-ficha__cartel--vacio span,
 .evt-mini-cartel--vacio span {
@@ -23013,7 +23116,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border-radius: 4px;
   object-fit: cover;
   background: var(--evt-cartel, var(--evt-pri));
-  color: #fff;
+  color: var(--evt-cartel-tinta, #fff);
   font-size: 0;
 }
 .evt-tabla__titulo { font-weight: 600; }
@@ -23314,6 +23417,13 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 .evt-fila--papelera > td { opacity: .65; }
 .evt-fila--borrador > td:last-child,
 .evt-fila--papelera > td:last-child { opacity: 1; }
+
+/* La paginación del listado, centrada bajo la cuadrícula, que también lo está. */
+.evt-paginas .evt-acciones {
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+}
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -24161,7 +24271,7 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 	justify-content: center;
 	min-height: 150px;
 	background: var(--evt-linea-color, var(--evt-linea-azul));
-	color: #fff;
+	color: var(--evt-linea-tinta, #fff);
 	text-decoration: none;
 }
 

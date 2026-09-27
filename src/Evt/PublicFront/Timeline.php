@@ -12,6 +12,7 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventState;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
+use Evt\PublicFront\View\EventChrome;
 use Evt\PublicFront\View\TimelineView;
 
 /**
@@ -204,7 +205,7 @@ final class Timeline {
 		$cartel   = self::poster_id( $id );
 		$abierta  = ! $historia && SignupForm::is_open( $id );
 		$pagina   = $abierta ? SignupForm::page( $id ) : 0;
-		$fondo    = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
+		$colores  = self::colours( $id );
 
 		return array(
 			'id'          => $id,
@@ -217,20 +218,42 @@ final class Timeline {
 			'done'        => $historia || EventMetaKeys::STATE_FINISHED === $estado,
 			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '',
 			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
-			'color'       => is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b',
+			'color'       => $colores[0],
+			'ink'         => $colores[1],
 			'signup_url'  => $pagina > 0 ? (string) get_permalink( $pagina ) : '',
 		);
 	}
 
 	/**
-	 * The poster of an event, or its featured image when it has none.
+	 * The image that stands for an event: its poster, or its featured image.
+	 *
+	 * Un cartel en PDF no se puede pintar en una tarjeta (ADR-0042): va la
+	 * destacada, y si tampoco hay, el PDF, por si WordPress le sacó vista
+	 * previa al subirlo.
 	 *
 	 * @param int $event_id Event.
 	 * @return int Attachment ID, 0 for none.
 	 */
 	public static function poster_id( int $event_id ): int {
 		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
-		return $cartel > 0 ? $cartel : (int) get_post_thumbnail_id( $event_id );
+		if ( $cartel > 0 && wp_attachment_is_image( $cartel ) ) {
+			return $cartel;
+		}
+		$destacada = (int) get_post_thumbnail_id( $event_id );
+		return $destacada > 0 ? $destacada : $cartel;
+	}
+
+	/**
+	 * Background of an event without image, and the ink that reads on it.
+	 *
+	 * @param int $event_id Event.
+	 * @return array{0:string, 1:string} Fondo y tinta.
+	 */
+	public static function colours( int $event_id ): array {
+		$fondo = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
+		$fondo = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
+		$tinta = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
+		return array( $fondo, EventChrome::readable_ink( $fondo, is_string( $tinta ) ? $tinta : '' ) );
 	}
 
 	/**
