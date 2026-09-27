@@ -1337,3 +1337,10 @@ body:has(.evt-cajon) { overflow: hidden; }
 .evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
 body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 
+
+/* Un campo y su botón en la misma fila, a la misma altura; la ayuda, debajo. */
+.evt-campo-con-boton { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.evt-campo-con-boton > select,
+.evt-campo-con-boton > input { flex: 1 1 16rem; width: auto; }
+.evt-campo-con-boton > .btn,
+.evt-campo-con-boton > .evt-btn { flex: 0 0 auto; }

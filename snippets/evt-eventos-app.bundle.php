@@ -14980,22 +14980,18 @@ final class EventSectionsPanel {
 		<form class="evt-form evt-tarjeta" method="get" action="<?php echo esc_url( $accion ); ?>" data-evt-marco>
 			<h2>Añadir sección</h2>
 			<p>Elija qué va a ser la página nueva. El tipo decide los textos por defecto y el icono con que sale en la portada del evento.</p>
-			<div class="evt-form-fila">
-				<div>
-					<label for="evt-add-tipo">Tipo de sección</label>
-					<select id="evt-add-tipo" name="<?php echo esc_attr( EventWorkspace::ARG_TYPE ); ?>">
-						<?php foreach ( (array) $m['section_types'] as $slug => $rotulo ) : ?>
-							<option value="<?php echo esc_attr( (string) $slug ); ?>"><?php echo esc_html( (string) $rotulo ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<small>Si ninguna encaja, elija «Otra» y póngale el título que quiera.</small>
-				</div>
-				<div class="evt-acciones">
-					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-						<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
-					</button>
-				</div>
+			<label for="evt-add-tipo">Tipo de sección</label>
+			<div class="evt-campo-con-boton">
+				<select id="evt-add-tipo" name="<?php echo esc_attr( EventWorkspace::ARG_TYPE ); ?>">
+					<?php foreach ( (array) $m['section_types'] as $slug => $rotulo ) : ?>
+						<option value="<?php echo esc_attr( (string) $slug ); ?>"><?php echo esc_html( (string) $rotulo ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
+				</button>
 			</div>
+			<small>Si ninguna encaja, elija «Otra» y póngale el título que quiera.</small>
 			<?php foreach ( $ocultos as $clave => $valor ) : ?>
 				<input type="hidden" name="<?php echo esc_attr( (string) $clave ); ?>" value="<?php echo esc_attr( (string) $valor ); ?>" />
 			<?php endforeach; ?>
@@ -22113,6 +22109,13 @@ body:has(.evt-cajon) { overflow: hidden; }
 .evt-cajon__marco { flex: 1 1 auto; width: 100%; border: 0; background: var(--evt-fondo); }
 body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 
+
+/* Un campo y su botón en la misma fila, a la misma altura; la ayuda, debajo. */
+.evt-campo-con-boton { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.evt-campo-con-boton > select,
+.evt-campo-con-boton > input { flex: 1 1 16rem; width: auto; }
+.evt-campo-con-boton > .btn,
+.evt-campo-con-boton > .evt-btn { flex: 0 0 auto; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
