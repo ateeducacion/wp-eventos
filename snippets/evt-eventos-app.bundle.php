@@ -2291,6 +2291,7 @@ namespace Evt\Access;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
+use Evt\PostType\RegistrationPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\Taxonomy\EventTaxonomies;
 
@@ -2346,6 +2347,7 @@ final class EventAccess {
 		add_filter( 'map_meta_cap', array( self::class, 'map_meta_cap' ), 10, 4 );
 		add_filter( 'rest_pre_insert_evt_event', array( self::class, 'validate_rest_areas' ), 10, 2 );
 		add_action( 'admin_init', array( self::class, 'validate_admin_areas' ) );
+		add_filter( 'wp_insert_post_data', array( self::class, 'guard_parent' ), 10, 2 );
 		add_action( 'save_post_' . EventPostType::POST_TYPE, array( self::class, 'stamp_area' ), 20 );
 		add_action( 'save_post_' . SpeakerPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
 		add_action( 'save_post_' . ActivityPostType::POST_TYPE, array( self::class, 'stamp_area' ) );
@@ -2360,11 +2362,17 @@ final class EventAccess {
 
 
 
+
+
+
+
+
 	public static function scoped_types(): array {
 		return array(
-			EventPostType::POST_TYPE    => 'edit_evt_events',
-			SpeakerPostType::POST_TYPE  => 'edit_evt_speakers',
-			ActivityPostType::POST_TYPE => 'edit_evt_activities',
+			EventPostType::POST_TYPE        => 'edit_evt_events',
+			SpeakerPostType::POST_TYPE      => 'edit_evt_speakers',
+			ActivityPostType::POST_TYPE     => 'edit_evt_activities',
+			RegistrationPostType::POST_TYPE => 'edit_evt_registrations',
 		);
 	}
 
@@ -2638,6 +2646,48 @@ final class EventAccess {
 		}
 		$_POST['tax_input'][ EventTaxonomies::AREA ] = $final;
 
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function guard_parent( array $data, array $postarr ): array {
+		$tipo    = (string) ( $data['post_type'] ?? '' );
+		$user_id = get_current_user_id();
+
+		if ( $user_id <= 0 || ! isset( self::scoped_types()[ $tipo ] ) ) {
+			return $data;
+		}
+		$post_id = absint( $postarr['ID'] ?? 0 );
+		$antes   = $post_id > 0 ? (int) get_post_field( 'post_parent', $post_id ) : 0;
+		$pedido  = (int) ( $data['post_parent'] ?? 0 );
+		if ( $pedido === $antes ) {
+			return $data;
+		}
+		if ( RegistrationPostType::POST_TYPE === $tipo ) {
+			if ( $post_id > 0 ) {
+				$data['post_parent'] = $antes;
+			}
+			return $data;
+		}
+		if ( $pedido > 0 && ! self::can_edit( $user_id, $pedido ) ) {
+			$data['post_parent'] = $antes;
+		}
+		return $data;
 	}
 
 
