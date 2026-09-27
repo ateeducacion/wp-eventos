@@ -1171,6 +1171,20 @@ final class RegistrationMetaKeys {
 
 
 
+	public const SIGNUP_START = 'evt_signup_start';
+	public const SIGNUP_END   = 'evt_signup_end';
+
+
+
+
+
+
+
+	public const SIGNUP_PUBLIC = 'evt_signup_public';
+
+
+
+
 	public const SIGNUP_QUESTIONS = 'evt_signup_questions';
 
 
@@ -1224,6 +1238,9 @@ final class RegistrationMetaKeys {
 	public static function signup_keys(): array {
 		return array(
 			self::SIGNUP_OPEN,
+			self::SIGNUP_START,
+			self::SIGNUP_END,
+			self::SIGNUP_PUBLIC,
 			self::SIGNUP_QUESTIONS,
 			self::WORKSHOP_OPEN,
 			self::WORKSHOP_START,
@@ -4445,6 +4462,18 @@ final class RegistrationMetaRegistration {
 	public static function signup_schema(): array {
 		return array(
 			RegistrationMetaKeys::SIGNUP_OPEN      => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
+			RegistrationMetaKeys::SIGNUP_START     => array(
+				'type'     => 'string',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
+			),
+			RegistrationMetaKeys::SIGNUP_END       => array(
+				'type'     => 'string',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
+			),
+			RegistrationMetaKeys::SIGNUP_PUBLIC    => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
@@ -10237,6 +10266,7 @@ final class RegistrationFiles {
 
 namespace Evt\PublicFront;
 
+use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
 
@@ -10345,10 +10375,14 @@ final class SignupForm {
 
 
 	private static function signup( int $event_id, array $raw ): void {
-		if ( ! self::is_open( $event_id ) ) {
+		$porque = self::closed_because( $event_id );
+		if ( '' === $porque ) {
+			$porque = self::login_needed( $event_id );
+		}
+		if ( '' !== $porque ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'La inscripción de este evento no está abierta.',
+				'message' => $porque,
 			);
 			return;
 		}
@@ -10362,7 +10396,8 @@ final class SignupForm {
 
 
 
-		$ficheros = RegistrationFiles::submitted( Registrations::questions( $event_id ) );
+
+		$ficheros = RegistrationFiles::submitted( is_user_logged_in() ? Registrations::questions( $event_id ) : array() );
 
 		if ( ! $v['ok'] || ! $ficheros['ok'] ) {
 			$porque       = RegistrationFiles::why( $ficheros['errors'] );
@@ -10510,8 +10545,84 @@ final class SignupForm {
 
 
 
+
+
+
+
 	public static function is_open( int $event_id ): bool {
-		return (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true );
+		return '' === self::closed_because( $event_id );
+	}
+
+
+
+
+
+
+
+	public static function closed_because( int $event_id ): string {
+		$cerrada = 'La inscripción de este evento no está abierta.';
+		if ( 'publish' !== get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id )
+			|| ! get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ) ) {
+			return $cerrada;
+		}
+
+		$hoy   = current_time( 'Y-m-d' );
+		$desde = (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true );
+		$hasta = (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true );
+		if ( '' !== $desde && $hoy < $desde ) {
+			return 'La inscripción de este evento se abre el ' . self::day( $desde ) . '.';
+		}
+		if ( '' !== $hasta && $hoy > $hasta ) {
+			return 'El plazo de inscripción de este evento terminó el ' . self::day( $hasta ) . '.';
+		}
+		return '';
+	}
+
+
+
+
+
+
+
+	public static function is_public( int $event_id ): bool {
+		return (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, true );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function login_needed( int $event_id ): string {
+		if ( is_user_logged_in() ) {
+			return '';
+		}
+		if ( ! self::is_public( $event_id ) ) {
+			return 'Para inscribirse en este evento hay que iniciar sesión.';
+		}
+		foreach ( Registrations::questions( $event_id ) as $pregunta ) {
+			if ( 'file' === $pregunta['type'] && ! empty( $pregunta['required'] ) ) {
+				return 'Esta inscripción pide adjuntar un documento, y para eso hay que iniciar sesión.';
+			}
+		}
+		return '';
+	}
+
+
+
+
+
+
+
+	private static function day( string $ymd ): string {
+		$fecha = \DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, wp_timezone() );
+		return false === $fecha ? $ymd : wp_date( 'j/n/Y', $fecha->getTimestamp() );
 	}
 
 
@@ -11952,6 +12063,9 @@ final class EventWorkspace {
 		$m['q_locked'] = Registrations::has_any( $event_id );
 		$m['signup']   = array(
 			'open'            => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ),
+			'start'           => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true ),
+			'end'             => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true ),
+			'public'          => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, true ),
 			'workshop_open'   => (bool) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ),
 			'workshop_start'  => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, true ),
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
@@ -11973,8 +12087,12 @@ final class EventWorkspace {
 	private static function save_signup( int $event_id, string $destino ): void {
 		$abierta  = self::field( 'evt_signup_open' );
 		$talleres = self::field( 'evt_workshop_open' );
+		$publica  = self::field( 'evt_signup_public' );
 
 		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, '' !== $abierta );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, self::field( 'evt_signup_start' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, self::field( 'evt_signup_end' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, '' !== $publica );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
@@ -13905,7 +14023,7 @@ final class EventSignupPanel {
 			$event_id
 		);
 
-		$html .= self::windows( $ajustes );
+		$html .= self::windows( $ajustes, $preguntas );
 		$html .= self::consent( $ajustes );
 		$html .= self::questions( $preguntas, (array) $m['q_types'], (bool) $m['q_locked'] );
 
@@ -13921,10 +14039,25 @@ final class EventSignupPanel {
 
 
 
-	private static function windows( array $a ): string {
+
+	private static function windows( array $a, array $preguntas ): string {
 		$html  = '<fieldset class="evt-campos"><legend>Plazos</legend>';
 		$html .= self::toggle( 'evt_signup_open', 'La inscripción está abierta', (bool) $a['open'] );
-		$html .= '<p class="evt-ayuda">Mientras esté cerrada, la página de inscripción lo dice y no acepta a nadie.</p>';
+		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-desde">Desde</label>'
+			. '<input type="date" id="evt-ins-desde" name="evt_signup_start" value="' . esc_attr( (string) $a['start'] ) . '"></p>';
+		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-hasta">Hasta</label>'
+			. '<input type="date" id="evt-ins-hasta" name="evt_signup_end" value="' . esc_attr( (string) $a['end'] ) . '"></p>';
+		$html .= '<p class="evt-ayuda">Solo se acepta a alguien con el interruptor puesto, dentro de las fechas '
+			. '—son opcionales— y con el evento publicado y sin marcar como histórico. Fuera de eso, '
+			. 'la página de inscripción dice por qué está cerrada.</p>';
+
+		$html .= self::toggle( 'evt_signup_public', 'Inscripción pública: también sin iniciar sesión', (bool) $a['public'] );
+		$html .= '<p class="evt-ayuda">Apagada, solo se inscribe quien ha iniciado sesión.</p>';
+		if ( (bool) $a['public'] && self::has_file_question( $preguntas ) ) {
+			$html .= '<p class="evt-aviso evt-aviso--aviso">Quien se inscriba <strong>sin iniciar sesión no puede adjuntar '
+				. 'archivos</strong>: las preguntas de archivo no le salen, y si alguna es obligatoria tendrá que '
+				. 'iniciar sesión para inscribirse.</p>';
+		}
 
 
 
@@ -13938,6 +14071,16 @@ final class EventSignupPanel {
 			. 'y un taller lleno deja de poder elegirse.</p>';
 
 		return $html . '</fieldset>';
+	}
+
+
+
+
+
+
+
+	private static function has_file_question( array $preguntas ): bool {
+		return in_array( 'file', array_column( $preguntas, 'type' ), true );
 	}
 
 
@@ -16962,8 +17105,18 @@ final class SignupBlock {
 			return $aviso . self::mine( $evento, $mia );
 		}
 
-		if ( ! SignupForm::is_open( $evento ) ) {
-			return $aviso . '<p class="evt-ins__cerrada">La inscripción de este evento no está abierta.</p>';
+		$cerrada = SignupForm::closed_because( $evento );
+		if ( '' !== $cerrada ) {
+			return $aviso . '<p class="evt-ins__cerrada">' . esc_html( $cerrada ) . '</p>';
+		}
+
+		$sesion = SignupForm::login_needed( $evento );
+		if ( '' !== $sesion ) {
+			return $aviso . sprintf(
+				'<p class="evt-ins__cerrada">%1$s</p><p><a class="evt-btn evt-btn--primario" href="%2$s">Iniciar sesión</a></p>',
+				esc_html( $sesion ),
+				esc_url( wp_login_url( (string) get_permalink() ) )
+			);
 		}
 
 		return $aviso . self::form( $evento );
@@ -17168,9 +17321,23 @@ final class SignupBlock {
 			return '';
 		}
 
-		$html = '<fieldset class="evt-ins__preguntas"><legend>Sobre este evento</legend>';
+
+
+		$anonimo = ! is_user_logged_in();
+		$sin_doc = false;
+		$html    = '<fieldset class="evt-ins__preguntas"><legend>Sobre este evento</legend>';
 		foreach ( $preguntas as $pregunta ) {
+			if ( $anonimo && 'file' === $pregunta['type'] ) {
+				$sin_doc = true;
+				continue;
+			}
 			$html .= self::question( $pregunta );
+		}
+		if ( $sin_doc ) {
+			$html .= sprintf(
+				'<p class="evt-ayuda">Para adjuntar documentos a su inscripción, <a href="%s">inicie sesión</a>.</p>',
+				esc_url( wp_login_url( (string) get_permalink() ) )
+			);
 		}
 		return $html . '</fieldset>';
 	}

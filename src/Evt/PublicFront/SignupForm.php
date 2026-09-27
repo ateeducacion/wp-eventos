@@ -7,6 +7,7 @@
 
 namespace Evt\PublicFront;
 
+use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
 use Evt\Meta\RegistrationMetaKeys;
 
@@ -115,10 +116,14 @@ final class SignupForm {
 	 * @return void
 	 */
 	private static function signup( int $event_id, array $raw ): void {
-		if ( ! self::is_open( $event_id ) ) {
+		$porque = self::closed_because( $event_id );
+		if ( '' === $porque ) {
+			$porque = self::login_needed( $event_id );
+		}
+		if ( '' !== $porque ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'La inscripción de este evento no está abierta.',
+				'message' => $porque,
 			);
 			return;
 		}
@@ -132,7 +137,8 @@ final class SignupForm {
 		// Los ficheros se comprueban **antes** de crear nada: si una pregunta
 		// obligatoria viene sin documento, o el que viene no pasa la política,
 		// no llega a existir ninguna inscripción (ADR-0036).
-		$ficheros = RegistrationFiles::submitted( Registrations::questions( $event_id ) );
+		// Sin sesión no se recoge ningún fichero, venga lo que venga en la petición.
+		$ficheros = RegistrationFiles::submitted( is_user_logged_in() ? Registrations::questions( $event_id ) : array() );
 
 		if ( ! $v['ok'] || ! $ficheros['ok'] ) {
 			$porque       = RegistrationFiles::why( $ficheros['errors'] );
@@ -277,11 +283,87 @@ final class SignupForm {
 	/**
 	 * Whether the signup form of an event is open.
 	 *
+	 * Abierta es todo a la vez: el interruptor puesto, dentro de plazo si tiene
+	 * fechas, el evento publicado y sin marcar como histórico. Un borrador o
+	 * un evento cerrado no apuntan a nadie aunque se quedara el interruptor.
+	 *
 	 * @param int $event_id Event post ID.
 	 * @return bool
 	 */
 	public static function is_open( int $event_id ): bool {
-		return (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true );
+		return '' === self::closed_because( $event_id );
+	}
+
+	/**
+	 * Why nobody may sign up to this event right now, '' when they may.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return string Spanish message for the visitor.
+	 */
+	public static function closed_because( int $event_id ): string {
+		$cerrada = 'La inscripción de este evento no está abierta.';
+		if ( 'publish' !== get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id )
+			|| ! get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ) ) {
+			return $cerrada;
+		}
+
+		$hoy   = current_time( 'Y-m-d' );
+		$desde = (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true );
+		$hasta = (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true );
+		if ( '' !== $desde && $hoy < $desde ) {
+			return 'La inscripción de este evento se abre el ' . self::day( $desde ) . '.';
+		}
+		if ( '' !== $hasta && $hoy > $hasta ) {
+			return 'El plazo de inscripción de este evento terminó el ' . self::day( $hasta ) . '.';
+		}
+		return '';
+	}
+
+	/**
+	 * Whether people who have not logged in may sign up to this event.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return bool
+	 */
+	public static function is_public( int $event_id ): bool {
+		return (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, true );
+	}
+
+	/**
+	 * Why the current visitor has to log in first, '' when they need not.
+	 *
+	 * Adjuntar un documento pide sesión siempre: sin ella no hay a quién
+	 * pedirle cuentas de lo que se sube. Por eso, en una inscripción pública,
+	 * una pregunta de archivo **obligatoria** también manda a iniciar sesión.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return string Spanish message for the visitor.
+	 */
+	public static function login_needed( int $event_id ): string {
+		if ( is_user_logged_in() ) {
+			return '';
+		}
+		if ( ! self::is_public( $event_id ) ) {
+			return 'Para inscribirse en este evento hay que iniciar sesión.';
+		}
+		foreach ( Registrations::questions( $event_id ) as $pregunta ) {
+			if ( 'file' === $pregunta['type'] && ! empty( $pregunta['required'] ) ) {
+				return 'Esta inscripción pide adjuntar un documento, y para eso hay que iniciar sesión.';
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * A stored Y-m-d date, as people read it.
+	 *
+	 * @param string $ymd Date.
+	 * @return string
+	 */
+	private static function day( string $ymd ): string {
+		$fecha = \DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, wp_timezone() );
+		return false === $fecha ? $ymd : wp_date( 'j/n/Y', $fecha->getTimestamp() );
 	}
 
 	/**

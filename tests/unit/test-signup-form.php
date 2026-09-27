@@ -47,6 +47,7 @@ class Test_Signup_Form extends WP_UnitTestCase {
 			array( 'post_title' => 'Jornadas de prueba' )
 		);
 		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_OPEN, true );
+		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_PUBLIC, true );
 		update_post_meta( $evento, RegistrationMetaKeys::CONSENT_VERSION, 3 );
 
 		$seccion = $this->event_page(
