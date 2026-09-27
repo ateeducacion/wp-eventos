@@ -7,6 +7,7 @@
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
 
 /**
@@ -53,7 +54,7 @@ final class EventSignupPanel {
 		$html .= self::consent( $ajustes );
 		$html .= self::questions( $preguntas, (array) $m['q_types'], (bool) $m['q_locked'] );
 
-		$html .= '<p class="evt-panel__enviar"><button type="submit" class="evt-btn evt-btn--primario">Guardar</button></p>';
+		$html .= '<p class="evt-panel__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar</button></p>';
 		$html .= '</form>';
 
 		return $html;

@@ -211,6 +211,38 @@ class Test_Signup_Form extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Segundo', $html );
 	}
 
+	/**
+	 * El formulario lleva las clases de Bootstrap 5, que es lo que carga la
+	 * página del evento: sin ellas los campos salían sin estilo.
+	 */
+	public function test_the_form_uses_bootstrap_classes() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta(
+			$evento,
+			RegistrationMetaKeys::SIGNUP_QUESTIONS,
+			wp_slash(
+				(string) wp_json_encode(
+					array(
+						array(
+							'id'      => 'qturno0000001',
+							'label'   => 'Turno',
+							'type'    => 'one',
+							'options' => array( 'Primero', 'Segundo' ),
+						),
+					)
+				)
+			)
+		);
+
+		$html = $this->pintar( $evento );
+
+		$this->assertStringContainsString( 'class="form-control" type="text" id="evt-ins-name"', $html );
+		$this->assertStringContainsString( 'class="form-select" id="evt-ins-centre"', $html );
+		$this->assertStringContainsString( 'class="form-check-input" type="radio"', $html );
+		$this->assertStringContainsString( 'class="form-check-input" type="checkbox" id="evt-ins-consent"', $html );
+		$this->assertStringContainsString( 'class="' . \Evt\PublicFront\Assets::button_class( true ) . '">Inscribirme', $html );
+	}
+
 	// ─── lo que hace ───────────────────────────────────────────────────────
 
 	/**

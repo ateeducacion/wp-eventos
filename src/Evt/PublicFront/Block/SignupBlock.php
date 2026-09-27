@@ -8,6 +8,7 @@
 namespace Evt\PublicFront\Block;
 
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\PublicFront\Assets;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\RegistrationFiles;
@@ -65,15 +66,16 @@ final class SignupBlock {
 
 		$cerrada = SignupForm::closed_because( $evento );
 		if ( '' !== $cerrada ) {
-			return $aviso . '<p class="evt-ins__cerrada">' . esc_html( $cerrada ) . '</p>';
+			return $aviso . '<p class="evt-ins__cerrada alert alert-info">' . esc_html( $cerrada ) . '</p>';
 		}
 
 		$sesion = SignupForm::login_needed( $evento );
 		if ( '' !== $sesion ) {
 			return $aviso . sprintf(
-				'<p class="evt-ins__cerrada">%1$s</p><p><a class="evt-btn evt-btn--primario" href="%2$s">Iniciar sesión</a></p>',
+				'<p class="evt-ins__cerrada alert alert-info">%1$s</p><p><a class="%3$s" href="%2$s">Iniciar sesión</a></p>',
 				esc_html( $sesion ),
-				esc_url( wp_login_url( (string) get_permalink() ) )
+				esc_url( wp_login_url( (string) get_permalink() ) ),
+				esc_attr( Assets::button_class( true ) )
 			);
 		}
 
@@ -90,9 +92,14 @@ final class SignupBlock {
 		if ( null === $aviso ) {
 			return '';
 		}
+		$tonos = array(
+			'error'   => 'danger',
+			'success' => 'success',
+		);
 		return sprintf(
-			'<p class="evt-aviso evt-aviso--%1$s" role="alert">%2$s</p>',
+			'<p class="evt-aviso evt-aviso--%1$s alert alert-%2$s" role="alert">%3$s</p>',
 			esc_attr( $aviso['level'] ),
+			esc_attr( $tonos[ $aviso['level'] ] ?? 'info' ),
 			esc_html( $aviso['message'] )
 		);
 	}
@@ -110,7 +117,7 @@ final class SignupBlock {
 		$html  = '<form class="evt-ins" method="post" enctype="multipart/form-data">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
 
-		$html .= '<fieldset class="evt-ins__nucleo"><legend>Sus datos</legend>';
+		$html .= '<fieldset class="evt-ins__nucleo"><legend class="h5">Sus datos</legend>';
 		foreach ( self::core_fields() as $nombre => $campo ) {
 			$html .= self::field( $nombre, $campo );
 		}
@@ -126,7 +133,7 @@ final class SignupBlock {
 			$html .= Captcha::widget();
 		}
 
-		$html .= '<p class="evt-ins__enviar"><button type="submit" class="evt-btn evt-btn--primario">Inscribirme</button></p>';
+		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Inscribirme</button></p>';
 		$html .= '</form>';
 
 		return $html;
@@ -144,10 +151,10 @@ final class SignupBlock {
 		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		$html  = '<div class="evt-ins evt-ins--mia">';
-		$html .= '<p class="evt-ins__hecha">Su inscripción está registrada, ' . esc_html( $nombre ) . '.</p>';
+		$html .= '<p class="evt-ins__hecha alert alert-success">Su inscripción está registrada, ' . esc_html( $nombre ) . '.</p>';
 
 		if ( ! SignupForm::workshops_open( $evento ) ) {
-			$html .= '<p class="evt-ins__cerrada">El plazo para elegir taller no está abierto.</p>';
+			$html .= '<p class="evt-ins__cerrada alert alert-info">El plazo para elegir taller no está abierto.</p>';
 			return $html . '</div>';
 		}
 
@@ -158,7 +165,7 @@ final class SignupBlock {
 		$html .= self::hidden( $evento, SignupForm::OP_WORKSHOP );
 		$html .= sprintf( '<input type="hidden" name="%1$s" value="%2$s">', esc_attr( SignupForm::FIELD_TOKEN ), esc_attr( $token ) );
 		$html .= self::workshops( $evento, $mia );
-		$html .= '<p class="evt-ins__enviar"><button type="submit" class="evt-btn evt-btn--primario">Guardar el taller</button></p>';
+		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar el taller</button></p>';
 		$html .= '</form></div>';
 
 		return $html;
@@ -232,8 +239,8 @@ final class SignupBlock {
 	private static function field( string $nombre, array $campo ): string {
 		$id = 'evt-ins-' . $nombre;
 		return sprintf(
-			'<p class="evt-campo"><label for="%1$s">%2$s%3$s</label>'
-				. '<input type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s></p>',
+			'<p class="evt-campo mb-3"><label class="form-label" for="%1$s">%2$s%3$s</label>'
+				. '<input class="form-control" type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s></p>',
 			esc_attr( $id ),
 			esc_html( $campo['label'] ),
 			$campo['required'] ? ' <span class="evt-campo__obl" aria-hidden="true">*</span>' : '',
@@ -256,12 +263,12 @@ final class SignupBlock {
 	private static function centre(): string {
 		$centros = Registrations::centres();
 		if ( array() === $centros ) {
-			return '<p class="evt-aviso evt-aviso--error">No hay catálogo de centros configurado, '
+			return '<p class="evt-aviso evt-aviso--error alert alert-danger">No hay catálogo de centros configurado, '
 				. 'así que no se puede completar la inscripción. Avise a quien organiza el evento.</p>';
 		}
 
-		$html = '<p class="evt-campo"><label for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'
-			. '<select id="evt-ins-centre" name="centre" required><option value="">Elija su centro</option>';
+		$html = '<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'
+			. '<select class="form-select" id="evt-ins-centre" name="centre" required><option value="">Elija su centro</option>';
 		foreach ( $centros as $codigo => $denominacion ) {
 			$html .= sprintf(
 				'<option value="%1$s">%2$s</option>',
@@ -288,7 +295,7 @@ final class SignupBlock {
 		// dice por qué. Las obligatorias ya mandaron a iniciar sesión antes.
 		$anonimo = ! is_user_logged_in();
 		$sin_doc = false;
-		$html    = '<fieldset class="evt-ins__preguntas"><legend>Sobre este evento</legend>';
+		$html    = '<fieldset class="evt-ins__preguntas"><legend class="h5">Sobre este evento</legend>';
 		foreach ( $preguntas as $pregunta ) {
 			if ( $anonimo && 'file' === $pregunta['type'] ) {
 				$sin_doc = true;
@@ -298,7 +305,7 @@ final class SignupBlock {
 		}
 		if ( $sin_doc ) {
 			$html .= sprintf(
-				'<p class="evt-ayuda">Para adjuntar documentos a su inscripción, <a href="%s">inicie sesión</a>.</p>',
+				'<p class="evt-ayuda form-text">Para adjuntar documentos a su inscripción, <a href="%s">inicie sesión</a>.</p>',
 				esc_url( wp_login_url( (string) get_permalink() ) )
 			);
 		}
@@ -318,7 +325,7 @@ final class SignupBlock {
 
 		if ( 'check' === $p['type'] ) {
 			return sprintf(
-				'<p class="evt-campo evt-campo--casilla"><label for="%1$s"><input type="checkbox" id="%1$s" name="%2$s" value="1"%3$s> %4$s</label></p>',
+				'<div class="evt-campo evt-campo--casilla form-check mb-3"><input class="form-check-input" type="checkbox" id="%1$s" name="%2$s" value="1"%3$s> <label class="form-check-label" for="%1$s">%4$s</label></div>',
 				esc_attr( $id ),
 				esc_attr( $name ),
 				$p['required'] ? ' required' : '',
@@ -328,9 +335,9 @@ final class SignupBlock {
 
 		if ( 'file' === $p['type'] ) {
 			return sprintf(
-				'<p class="evt-campo evt-campo--fichero"><label for="%1$s">%2$s</label>'
-					. '<input type="file" id="%1$s" name="%3$s" accept="%4$s"%5$s>'
-					. '<small>Un solo documento, de hasta %6$s. Se admiten PDF, JPG, PNG, DOCX y ODT.</small></p>',
+				'<p class="evt-campo evt-campo--fichero mb-3"><label class="form-label" for="%1$s">%2$s</label>'
+					. '<input class="form-control" type="file" id="%1$s" name="%3$s" accept="%4$s"%5$s>'
+					. '<small class="form-text">Un solo documento, de hasta %6$s. Se admiten PDF, JPG, PNG, DOCX y ODT.</small></p>',
 				esc_attr( $id ),
 				$rotulo,
 				esc_attr( RegistrationFiles::FIELD . '[' . $p['id'] . ']' ),
@@ -342,7 +349,7 @@ final class SignupBlock {
 
 		if ( 'text' === $p['type'] ) {
 			return sprintf(
-				'<p class="evt-campo"><label for="%1$s">%2$s</label><input type="text" id="%1$s" name="%3$s" maxlength="250"%4$s></p>',
+				'<p class="evt-campo mb-3"><label class="form-label" for="%1$s">%2$s</label><input class="form-control" type="text" id="%1$s" name="%3$s" maxlength="250"%4$s></p>',
 				esc_attr( $id ),
 				$rotulo,
 				esc_attr( $name ),
@@ -351,15 +358,15 @@ final class SignupBlock {
 		}
 
 		$varias = 'many' === $p['type'];
-		$html   = '<fieldset class="evt-campo evt-campo--opciones"><legend>' . $rotulo . '</legend>';
+		$html   = '<fieldset class="evt-campo evt-campo--opciones mb-3"><legend class="form-label fs-6">' . $rotulo . '</legend>';
 		foreach ( (array) $p['options'] as $i => $opcion ) {
 			$html .= sprintf(
-				'<label class="evt-opcion"><input type="%1$s" name="%2$s" value="%3$s"> %3$s</label>',
+				'<div class="evt-opcion form-check"><input class="form-check-input" type="%1$s" id="%4$s" name="%2$s" value="%3$s"> <label class="form-check-label" for="%4$s">%3$s</label></div>',
 				$varias ? 'checkbox' : 'radio',
 				esc_attr( $varias ? $name . '[]' : $name ),
-				esc_attr( $opcion )
+				esc_attr( $opcion ),
+				esc_attr( $id . '-' . $i )
 			);
-			unset( $i );
 		}
 		return $html . '</fieldset>';
 	}
@@ -382,15 +389,15 @@ final class SignupBlock {
 
 		$opciones = Registrations::choices( $evento, $mia );
 		if ( array() === $opciones ) {
-			return '<p class="evt-ins__sin-talleres">Ahora mismo no queda ningún taller con plazas libres.</p>';
+			return '<p class="evt-ins__sin-talleres alert alert-warning">Ahora mismo no queda ningún taller con plazas libres.</p>';
 		}
 
-		$html  = '<fieldset class="evt-ins__talleres"><legend>Taller</legend>';
-		$html .= '<label class="evt-opcion"><input type="radio" name="evt_workshop" value="0"' . ( 0 === $mia ? ' checked' : '' ) . '> No elijo taller</label>';
+		$html  = '<fieldset class="evt-ins__talleres mb-3"><legend class="h5">Taller</legend>';
+		$html .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="evt_workshop" value="0"' . ( 0 === $mia ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
 		foreach ( $opciones as $taller ) {
 			$libres = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
 			$html  .= sprintf(
-				'<label class="evt-opcion"><input type="radio" name="evt_workshop" value="%1$d"%2$s> %3$s%4$s</label>',
+				'<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-%1$d" name="evt_workshop" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%4$s</label></div>',
 				$taller['id'],
 				$taller['mine'] ? ' checked' : '',
 				esc_html( $taller['title'] ),
@@ -412,7 +419,7 @@ final class SignupBlock {
 		$privacidad = (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, true );
 		$imagen     = (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_IMAGE, true );
 
-		$html = '<fieldset class="evt-ins__consentimiento"><legend>Protección de datos</legend>';
+		$html = '<fieldset class="evt-ins__consentimiento"><legend class="h5">Protección de datos</legend>';
 		foreach ( array(
 			'Información sobre el tratamiento de sus datos' => $privacidad,
 			'Consentimiento informado' => $imagen,
@@ -420,15 +427,16 @@ final class SignupBlock {
 			if ( '' === trim( $texto ) ) {
 				continue;
 			}
-			$html .= '<details class="evt-consent__doc"><summary>' . esc_html( $titulo ) . '</summary>'
+			$html .= '<details class="evt-consent__doc mb-2"><summary>' . esc_html( $titulo ) . '</summary>'
 				. wp_kses_post( $texto ) . '</details>';
 		}
 
-		$html .= '<p class="evt-campo evt-campo--casilla"><label for="evt-ins-consent">'
-			. '<input type="checkbox" id="evt-ins-consent" name="consent" value="1" required> '
+		$html .= '<div class="evt-campo evt-campo--casilla form-check mb-3">'
+			. '<input class="form-check-input" type="checkbox" id="evt-ins-consent" name="consent" value="1" required> '
+			. '<label class="form-check-label" for="evt-ins-consent">'
 			. 'He leído la información sobre el tratamiento de mis datos y el consentimiento informado, y los acepto '
 			. '<span class="evt-campo__obl" aria-hidden="true">*</span></label>'
-			. '<small>Obligatorio para inscribirse. Se guarda la versión exacta que ha aceptado y el momento.</small></p>';
+			. '<div class="form-text">Obligatorio para inscribirse. Se guarda la versión exacta que ha aceptado y el momento.</div></div>';
 
 		return $html . '</fieldset>';
 	}
