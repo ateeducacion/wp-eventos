@@ -725,9 +725,11 @@
 		if ( 'Escape' !== e.key ) {
 			return;
 		}
-		var cajon = document.querySelector( '[data-evt-cajon]' );
-		if ( cajon && cajon.getAttribute( 'data-evt-cajon-cerrar' ) ) {
-			window.location.href = cajon.getAttribute( 'data-evt-cajon-cerrar' );
+		// Se pulsa la «✕» del propio panel: es un enlace normal, y así no se
+		// lleva a `location` ningún texto sacado del documento.
+		var cerrar = document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' );
+		if ( cerrar ) {
+			cerrar.click();
 		}
 	} );
 
