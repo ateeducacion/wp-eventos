@@ -185,6 +185,58 @@ class Test_Programme_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Un panel por día y sede, con la clase de siempre y el guion de las pestañas.
+	 *
+	 * La clase `programa-estandar` es la que esconde el CSS a medida de los
+	 * eventos que escribieron su programa a mano: si se pierde, sale dos veces.
+	 */
+	public function test_the_programme_is_one_tab_per_day_and_keeps_its_old_class() {
+		$this->actividad();
+		$this->actividad( array( 'date' => '2026-11-27' ) );
+		$pagina = $this->event_page( $this->evento, 'programa' );
+
+		$html = ProgrammeBlock::html( $this->modelo( $pagina ) );
+
+		$this->assertStringContainsString( 'programa-estandar', $html );
+		$this->assertStringContainsString( 'data-evt-pestanas', $html );
+		$this->assertSame( 2, substr_count( $html, 'class="evt-ev__dia-panel"' ) );
+		$this->assertStringContainsString( '<script>', $html, 'el guion de las pestañas va con la parrilla' );
+		$this->assertStringContainsString( 'evt-ev__hueco--conferencia', $html, 'el color va por tipo' );
+	}
+
+	/**
+	 * En acordeón, un desplegable por día, el primero abierto y sin guion.
+	 */
+	public function test_the_accordion_layout_is_one_details_per_day() {
+		update_post_meta( $this->evento, EventMetaKeys::PROGRAMME_LAYOUT, EventMetaKeys::LAYOUT_ACCORDION );
+		$this->actividad();
+		$this->actividad( array( 'date' => '2026-11-27' ) );
+		$pagina = $this->event_page( $this->evento, 'programa' );
+
+		$html = ProgrammeBlock::html( $this->modelo( $pagina ) );
+
+		$this->assertSame( 2, substr_count( $html, '<details class="evt-ev__dia-panel" name="evt-programa"' ) );
+		$this->assertSame( 1, substr_count( $html, ' open>' ), 'solo el primero abierto' );
+		$this->assertStringNotContainsString( 'data-evt-pestanas', $html );
+		$this->assertStringNotContainsString( '<script>', $html );
+	}
+
+	/**
+	 * Lo que no tiene fecha no sale en el programa: no hay pestaña donde ponerlo.
+	 */
+	public function test_an_activity_without_a_date_is_not_in_the_programme() {
+		$this->actividad(
+			array(
+				'title' => 'Taller suelto',
+				'date'  => '',
+			)
+		);
+		$pagina = $this->event_page( $this->evento, 'programa' );
+
+		$this->assertSame( '', ProgrammeBlock::html( $this->modelo( $pagina ) ) );
+	}
+
+	/**
 	 * Multimedia solo enseña las actividades que tienen vídeo.
 	 */
 	public function test_the_multimedia_page_only_lists_activities_with_video() {

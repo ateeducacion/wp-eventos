@@ -334,6 +334,112 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Una sección con colores propios los usa; lo que deja vacío lo pone el evento.
+	 */
+	public function test_a_section_paints_its_own_look_over_the_event() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		update_post_meta( $seccion, EventMetaKeys::HEADER_BG, '#119f70' );
+
+		$this->acting_as( 0 );
+		$look = EventView::model( $seccion )['appearance'];
+
+		$this->assertSame( '#119f70', $look['bg'], 'el color de la sección' );
+		$this->assertStringContainsString( 'Montserrat', $look['title_font'], 'la tipografía, la del evento' );
+		$this->assertSame( '#0a3d62', EventView::model( $evento )['appearance']['bg'], 'la portada no se entera' );
+	}
+
+	/**
+	 * La cabecera de una sección: su ilustración a la derecha y su entradilla.
+	 *
+	 * El logo del evento es de la portada; en las secciones no se repite.
+	 */
+	public function test_a_section_header_has_its_illustration_and_its_intro() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$dibujo  = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $seccion );
+		set_post_thumbnail( $seccion, $dibujo );
+		update_post_meta( $evento, EventMetaKeys::LOGO_ID, $dibujo );
+
+		$this->acting_as( 0 );
+		$interna = EventChrome::cover( EventView::model( $seccion ) );
+		$portada = EventChrome::cover( EventView::model( $evento ) );
+
+		$this->assertStringContainsString( 'evt-ev__dibujo', $interna );
+		$this->assertStringContainsString( 'Consulta el programa oficial.', $interna, 'el texto por defecto de su tipo' );
+		$this->assertStringNotContainsString( 'evt-ev__logo', $interna );
+		$this->assertStringContainsString( 'evt-ev__logo', $portada );
+		$this->assertStringNotContainsString( 'evt-ev__dibujo', $portada );
+	}
+
+	/**
+	 * El acento y el fondo de la cabecera son tokens, como los colores.
+	 */
+	public function test_the_accent_and_the_header_background_are_tokens() {
+		$area   = $this->area( 'Innovación' );
+		$evento = $this->evento_con_aspecto( $this->administrator(), $area );
+		$fondo  = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $evento );
+		update_post_meta( $evento, EventMetaKeys::ACCENT, '#00aed6' );
+		update_post_meta( $evento, EventMetaKeys::HEADER_BG_IMAGE_ID, $fondo );
+
+		$this->acting_as( 0 );
+		$tokens = EventLayout::tokens( EventView::model( $evento ) );
+
+		$this->assertStringContainsString( '--evt-acento:#00aed6', $tokens );
+		$this->assertStringContainsString( '--evt-fondo-img:url(', $tokens );
+		$this->assertStringContainsString( 'canola', $tokens );
+	}
+
+	/**
+	 * En una sección el texto va sobre el blanco del degradado: se mide ahí.
+	 */
+	public function test_a_section_measures_the_contrast_against_white() {
+		$area    = $this->area( 'Innovación' );
+		$evento  = $this->evento_con_aspecto( $this->administrator(), $area );
+		$seccion = $this->event_page( $evento, 'contacto', array( 'post_title' => 'Contacto' ) );
+		update_post_meta( $seccion, EventMetaKeys::HEADER_TEXT, '#f1c232' );
+
+		$this->acting_as( 0 );
+		$tokens = EventLayout::tokens( EventView::model( $seccion ) );
+
+		$this->assertStringContainsString( '--evt-texto:#000000', $tokens, 'amarillo sobre blanco no se lee' );
+	}
+
+	/**
+	 * El logo de quien publica, arriba a la izquierda, solo si se configura.
+	 */
+	public function test_the_brand_logo_comes_from_the_chrome_filter() {
+		$items = array(
+			array(
+				'label'   => 'Inicio',
+				'url'     => 'https://example.org/',
+				'current' => true,
+			),
+		);
+		$this->assertSame( '', EventChrome::nav( $items ), 'sin logo y sin menú no hay barra' );
+
+		$pon = static function ( array $c ): array {
+			return array_merge(
+				$c,
+				array(
+					'brand_logo' => 'https://example.org/logo.png',
+					'brand_alt'  => 'Organización',
+					'brand_url'  => 'https://example.org/',
+				)
+			);
+		};
+		add_filter( EventChrome::HOOK, $pon, 99 );
+		$html = EventChrome::nav( $items );
+		remove_filter( EventChrome::HOOK, $pon, 99 );
+
+		$this->assertStringContainsString( 'class="evt-ev__marca"', $html );
+		$this->assertStringContainsString( 'alt="Organización"', $html );
+		$this->assertStringNotContainsString( '<nav', $html, 'un menú de una entrada no se pinta' );
+	}
+
+	/**
 	 * Lo que no es un color ni una tipografía de la lista no viste nada.
 	 */
 	public function test_a_broken_appearance_paints_the_default_one() {

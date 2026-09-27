@@ -180,6 +180,9 @@ final class EventLayout {
 	 */
 	public static function render( array $m ): string {
 		$clases = array( 'evt-ev' );
+		if ( ! empty( $m['is_root'] ) ) {
+			$clases[] = 'evt-ev--portada';
+		}
 		if ( '' !== (string) $m['section_type'] ) {
 			$clases[] = 'evt-ev--' . sanitize_html_class( (string) $m['section_type'] );
 		}
@@ -282,12 +285,20 @@ final class EventLayout {
 	public static function tokens( array $m ): string {
 		$look = (array) $m['appearance'];
 
-		$fondo  = (string) $look['bg'];
+		$fondo = (string) $look['bg'];
+		$pie   = (string) sanitize_hex_color( (string) EventChrome::chrome()['footer_bg'] );
+		// En una sección el texto va sobre la parte blanca del degradado, no
+		// sobre su color: el contraste se mide contra lo que tiene detrás.
+		$sobre  = empty( $m['is_root'] ) && ! empty( $m['event_id'] ) ? '#ffffff' : $fondo;
 		$tokens = array(
 			'--evt-fondo'       => $fondo,
-			'--evt-texto'       => '' !== $fondo ? EventChrome::readable_ink( $fondo, (string) $look['fg'] ) : (string) $look['fg'],
+			'--evt-texto'       => '' !== $sobre ? EventChrome::readable_ink( $sobre, (string) $look['fg'] ) : (string) $look['fg'],
+			'--evt-acento'      => (string) $look['accent'],
+			'--evt-fondo-img'   => '' !== (string) $look['header_bg_image'] ? 'url("' . esc_url( (string) $look['header_bg_image'] ) . '")' : '',
 			'--evt-tipo-titulo' => (string) $look['title_font'],
 			'--evt-tipo-texto'  => (string) $look['body_font'],
+			'--evt-pie'         => $pie,
+			'--evt-pie-texto'   => '' !== $pie ? EventChrome::readable_ink( $pie, '' ) : '',
 			'--evt-forma'       => EventMetaKeys::SHAPE_CIRCLE === (string) $look['shape'] ? '50%' : '',
 		);
 

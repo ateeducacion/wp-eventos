@@ -39,97 +39,109 @@ final class EventMetaRegistration {
 	 */
 	public static function schema(): array {
 		return array(
-			EventMetaKeys::SECTION_TYPE     => array(
+			EventMetaKeys::SECTION_TYPE       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_section_type' ),
 			),
-			EventMetaKeys::START_DATE       => array(
+			EventMetaKeys::START_DATE         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::END_DATE         => array(
+			EventMetaKeys::END_DATE           => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_date' ),
 			),
-			EventMetaKeys::VENUE            => array(
+			EventMetaKeys::VENUE              => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::TAGLINE          => array(
+			EventMetaKeys::TAGLINE            => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::HASHTAG          => array(
+			EventMetaKeys::HASHTAG            => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_hashtag' ),
 			),
-			EventMetaKeys::INTRO            => array(
+			EventMetaKeys::INTRO              => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			EventMetaKeys::SIGNUP_SHOW      => array(
+			EventMetaKeys::SIGNUP_SHOW        => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			EventMetaKeys::SIGNUP_LABEL     => array(
+			EventMetaKeys::SIGNUP_LABEL       => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			EventMetaKeys::SIGNUP_URL       => array(
+			EventMetaKeys::SIGNUP_URL         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
-			EventMetaKeys::SIGNUP_FORM_ID   => array(
+			EventMetaKeys::SIGNUP_FORM_ID     => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::HEADER_BG        => array(
+			EventMetaKeys::HEADER_BG          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::HEADER_TEXT      => array(
+			EventMetaKeys::HEADER_TEXT        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_color' ),
 			),
-			EventMetaKeys::TITLE_FONT       => array(
+			EventMetaKeys::ACCENT             => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_color' ),
+			),
+			EventMetaKeys::HEADER_BG_IMAGE_ID => array(
+				'type'     => 'integer',
+				'sanitize' => array( self::class, 'sanitize_id' ),
+			),
+			EventMetaKeys::TITLE_FONT         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::BODY_FONT        => array(
+			EventMetaKeys::BODY_FONT          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_font' ),
 			),
-			EventMetaKeys::LOGO_ID          => array(
+			EventMetaKeys::LOGO_ID            => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::HEADER_BANNER_ID => array(
+			EventMetaKeys::HEADER_BANNER_ID   => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::POSTER_ID        => array(
+			EventMetaKeys::POSTER_ID          => array(
 				'type'     => 'integer',
 				'sanitize' => array( self::class, 'sanitize_id' ),
 			),
-			EventMetaKeys::IMAGE_SHAPE      => array(
+			EventMetaKeys::IMAGE_SHAPE        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_image_shape' ),
 			),
-			EventMetaKeys::SEPARATOR        => array(
+			EventMetaKeys::SEPARATOR          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_separator' ),
 			),
-			EventMetaKeys::CUSTOM_CSS       => array(
+			EventMetaKeys::PROGRAMME_LAYOUT   => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_programme_layout' ),
+			),
+			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
 				'auth'     => array( self::class, 'auth_custom_css' ),
 			),
-			EventMetaKeys::CUSTOM_JS        => array(
+			EventMetaKeys::CUSTOM_JS          => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_js' ),
 				'auth'     => array( self::class, 'auth_custom_js' ),
 			),
-			EventMetaKeys::ARCHIVED         => array(
+			EventMetaKeys::ARCHIVED           => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 				'auth'     => array( self::class, 'auth_archived' ),
@@ -386,5 +398,15 @@ final class EventMetaRegistration {
 	 */
 	public static function sanitize_separator( $value ): string {
 		return EventMetaKeys::in_list( $value, EventMetaKeys::separators(), '' );
+	}
+
+	/**
+	 * Keep only a known programme layout.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_programme_layout( $value ): string {
+		return EventMetaKeys::in_list( $value, EventMetaKeys::programme_layouts(), '' );
 	}
 }

@@ -1387,14 +1387,16 @@ final class EventWorkspace {
 	 */
 	private static function save_look( int $event_id, string $destino ): void {
 		$listas = array(
-			EventMetaKeys::TITLE_FONT  => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
-			EventMetaKeys::BODY_FONT   => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
-			EventMetaKeys::IMAGE_SHAPE => array( EventMetaKeys::image_shapes(), EventMetaKeys::SHAPE_SQUARE ),
-			EventMetaKeys::SEPARATOR   => array( EventMetaKeys::separators(), '' ),
+			EventMetaKeys::TITLE_FONT       => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
+			EventMetaKeys::BODY_FONT        => array( EventMetaKeys::fonts(), EventMetaKeys::FONT_DEFAULT ),
+			EventMetaKeys::IMAGE_SHAPE      => array( EventMetaKeys::image_shapes(), EventMetaKeys::SHAPE_SQUARE ),
+			EventMetaKeys::SEPARATOR        => array( EventMetaKeys::separators(), '' ),
+			EventMetaKeys::PROGRAMME_LAYOUT => array( EventMetaKeys::programme_layouts(), '' ),
 		);
 
 		update_post_meta( $event_id, EventMetaKeys::HEADER_BG, self::field( EventMetaKeys::HEADER_BG ) );
 		update_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, self::field( EventMetaKeys::HEADER_TEXT ) );
+		update_post_meta( $event_id, EventMetaKeys::ACCENT, self::field( EventMetaKeys::ACCENT ) );
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
@@ -1404,6 +1406,7 @@ final class EventWorkspace {
 		$subidas = array(
 			self::save_image( $event_id, 'evt_logo', EventMetaKeys::LOGO_ID ),
 			self::save_image( $event_id, 'evt_header_banner', EventMetaKeys::HEADER_BANNER_ID, 1920 ),
+			self::save_image( $event_id, 'evt_header_bg_image', EventMetaKeys::HEADER_BG_IMAGE_ID ),
 			self::save_image( $event_id, 'evt_poster', EventMetaKeys::POSTER_ID ),
 			self::save_image( $event_id, 'evt_featured', '' ),
 		);
@@ -2089,6 +2092,7 @@ final class EventWorkspace {
 		$m['media']         = array(
 			'logo'          => (int) self::meta( $event_id, EventMetaKeys::LOGO_ID ),
 			'header_banner' => (int) self::meta( $event_id, EventMetaKeys::HEADER_BANNER_ID ),
+			'header_bg'     => (int) self::meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID ),
 			'poster'        => (int) self::meta( $event_id, EventMetaKeys::POSTER_ID ),
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
@@ -2259,26 +2263,28 @@ final class EventWorkspace {
 			// Con 0, `get_the_title()` cae en el post global —que en esta
 			// pantalla es la página «Evento» del aplicativo— y el alta abriría
 			// con el título ya escrito. Al crear, el título está vacío.
-			self::FIELD_TITLE             => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
-			self::FIELD_AREA              => implode( ',', EventAccess::post_areas( $event_id ) ),
-			self::FIELD_TYPE              => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
-			self::FIELD_COURSE            => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
-			EventMetaKeys::TAGLINE        => self::meta( $event_id, EventMetaKeys::TAGLINE ),
-			EventMetaKeys::HASHTAG        => self::meta( $event_id, EventMetaKeys::HASHTAG ),
-			EventMetaKeys::INTRO          => self::meta( $event_id, EventMetaKeys::INTRO ),
-			EventMetaKeys::START_DATE     => self::meta( $event_id, EventMetaKeys::START_DATE ),
-			EventMetaKeys::END_DATE       => self::meta( $event_id, EventMetaKeys::END_DATE ),
-			EventMetaKeys::VENUE          => self::meta( $event_id, EventMetaKeys::VENUE ),
-			EventMetaKeys::SIGNUP_SHOW    => '' === self::meta( $event_id, EventMetaKeys::SIGNUP_SHOW ) ? '' : '1',
-			EventMetaKeys::SIGNUP_LABEL   => self::meta( $event_id, EventMetaKeys::SIGNUP_LABEL ),
-			EventMetaKeys::SIGNUP_URL     => self::meta( $event_id, EventMetaKeys::SIGNUP_URL ),
-			EventMetaKeys::SIGNUP_FORM_ID => self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID ),
-			EventMetaKeys::HEADER_BG      => self::meta( $event_id, EventMetaKeys::HEADER_BG ),
-			EventMetaKeys::HEADER_TEXT    => self::meta( $event_id, EventMetaKeys::HEADER_TEXT ),
-			EventMetaKeys::TITLE_FONT     => self::meta( $event_id, EventMetaKeys::TITLE_FONT ),
-			EventMetaKeys::BODY_FONT      => self::meta( $event_id, EventMetaKeys::BODY_FONT ),
-			EventMetaKeys::IMAGE_SHAPE    => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
-			EventMetaKeys::SEPARATOR      => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
+			self::FIELD_TITLE               => $event_id > 0 ? (string) get_the_title( $event_id ) : '',
+			self::FIELD_AREA                => implode( ',', EventAccess::post_areas( $event_id ) ),
+			self::FIELD_TYPE                => (string) self::first_term( $event_id, EventTaxonomies::TYPE ),
+			self::FIELD_COURSE              => (string) self::first_term( $event_id, EventTaxonomies::COURSE ),
+			EventMetaKeys::TAGLINE          => self::meta( $event_id, EventMetaKeys::TAGLINE ),
+			EventMetaKeys::HASHTAG          => self::meta( $event_id, EventMetaKeys::HASHTAG ),
+			EventMetaKeys::INTRO            => self::meta( $event_id, EventMetaKeys::INTRO ),
+			EventMetaKeys::START_DATE       => self::meta( $event_id, EventMetaKeys::START_DATE ),
+			EventMetaKeys::END_DATE         => self::meta( $event_id, EventMetaKeys::END_DATE ),
+			EventMetaKeys::VENUE            => self::meta( $event_id, EventMetaKeys::VENUE ),
+			EventMetaKeys::SIGNUP_SHOW      => '' === self::meta( $event_id, EventMetaKeys::SIGNUP_SHOW ) ? '' : '1',
+			EventMetaKeys::SIGNUP_LABEL     => self::meta( $event_id, EventMetaKeys::SIGNUP_LABEL ),
+			EventMetaKeys::SIGNUP_URL       => self::meta( $event_id, EventMetaKeys::SIGNUP_URL ),
+			EventMetaKeys::SIGNUP_FORM_ID   => self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID ),
+			EventMetaKeys::HEADER_BG        => self::meta( $event_id, EventMetaKeys::HEADER_BG ),
+			EventMetaKeys::HEADER_TEXT      => self::meta( $event_id, EventMetaKeys::HEADER_TEXT ),
+			EventMetaKeys::ACCENT           => self::meta( $event_id, EventMetaKeys::ACCENT ),
+			EventMetaKeys::TITLE_FONT       => self::meta( $event_id, EventMetaKeys::TITLE_FONT ),
+			EventMetaKeys::BODY_FONT        => self::meta( $event_id, EventMetaKeys::BODY_FONT ),
+			EventMetaKeys::IMAGE_SHAPE      => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
+			EventMetaKeys::SEPARATOR        => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
+			EventMetaKeys::PROGRAMME_LAYOUT => self::meta( $event_id, EventMetaKeys::PROGRAMME_LAYOUT ),
 		);
 
 		// Lo tecleado manda sobre lo guardado, pero solo en los campos que

@@ -50,6 +50,8 @@ final class EventAppearancePanel {
 		// cabecera que nadie eligió: se arranca del azul del sitio.
 		$v[ EventMetaKeys::HEADER_BG ]   = self::color( (string) $v[ EventMetaKeys::HEADER_BG ], '#1b4f8a' );
 		$v[ EventMetaKeys::HEADER_TEXT ] = self::color( (string) $v[ EventMetaKeys::HEADER_TEXT ], '#ffffff' );
+		// Sin acento elegido, el de siempre: el color de la cabecera.
+		$v[ EventMetaKeys::ACCENT ] = self::color( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ), (string) $v[ EventMetaKeys::HEADER_BG ] );
 
 		// Los trozos se arman antes de la plantilla y se escapan dentro de cada
 		// ayudante: así la plantilla es HTML de leer y cada `echo` es de una
@@ -68,6 +70,13 @@ final class EventAppearancePanel {
 			'Color del texto',
 			(string) $v[ EventMetaKeys::HEADER_TEXT ],
 			'Sobre fondos oscuros, blanco (#ffffff); sobre claros, casi negro (#1b1b1b).'
+		);
+		$color_acento  = self::color_field(
+			'evt-accent',
+			EventMetaKeys::ACCENT,
+			'Color de acento',
+			(string) $v[ EventMetaKeys::ACCENT ],
+			'El de los títulos de las tarjetas, el «Acerca de» y las rayas bajo los títulos.'
 		);
 		$sel_titulo    = self::select(
 			'evt-title-font',
@@ -101,6 +110,14 @@ final class EventAppearancePanel {
 			(string) $v[ EventMetaKeys::SEPARATOR ],
 			'La silueta con la que termina la banda de arriba. «Sin separador» deja el corte recto.'
 		);
+		$sel_programa  = self::select(
+			'evt-programme-layout',
+			EventMetaKeys::PROGRAMME_LAYOUT,
+			'Diseño del programa',
+			EventMetaKeys::programme_layouts(),
+			(string) ( $v[ EventMetaKeys::PROGRAMME_LAYOUT ] ?? '' ),
+			'Cómo se reparten los días en la página del programa.'
+		);
 		$img_logo      = self::image_field(
 			'evt_logo',
 			'Logo acompañante',
@@ -115,6 +132,13 @@ final class EventAppearancePanel {
 			'Sustituye la cabecera solo en la portada. Al menos 1920 píxeles de ancho.',
 			$subir,
 			1920
+		);
+		$img_fondo     = self::image_field(
+			'evt_header_bg_image',
+			'Fondo de la cabecera',
+			self::image_of( (int) ( $medios['header_bg'] ?? 0 ) ),
+			'Detrás del título en todas las páginas del evento, sobre el color de fondo.',
+			$subir
 		);
 		$img_cartel    = self::image_field(
 			'evt_poster',
@@ -142,11 +166,14 @@ final class EventAppearancePanel {
 			<div class="evt-apariencia">
 			<div class="evt-apariencia__ajustes">
 			<fieldset class="evt-tarjeta">
-				<legend>Colores de la cabecera</legend>
+				<legend>Colores</legend>
 
 				<div class="evt-form-fila">
 					<div><?php echo $color_bg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 					<div><?php echo $color_txt; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+				</div>
+				<div class="evt-form-fila">
+					<div><?php echo $color_acento; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 				</div>
 			</fieldset>
 
@@ -160,6 +187,9 @@ final class EventAppearancePanel {
 				<div class="evt-form-fila">
 					<div><?php echo $sel_forma; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 					<div><?php echo $sel_sep; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+				</div>
+				<div class="evt-form-fila">
+					<div><?php echo $sel_programa; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 				</div>
 			</fieldset>
 
@@ -177,6 +207,7 @@ final class EventAppearancePanel {
 					<?php echo $img_cartel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 					<?php echo $img_logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 					<?php echo $img_banner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php echo $img_fondo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 					<?php echo $img_destacada; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 				</div>
 			</fieldset>

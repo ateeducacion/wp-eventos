@@ -469,7 +469,7 @@ final class EventView {
 		$end      = (string) get_post_meta( $event_id, EventMetaKeys::END_DATE, true );
 		$is_root  = $event_id === $post_id;
 		$estado   = EventState::of( $start, $end );
-		$look     = self::appearance( $event_id );
+		$look     = self::appearance( $event_id, $post_id );
 
 		$m = array(
 			'page_id'      => $post_id,
@@ -498,6 +498,10 @@ final class EventView {
 			'signup'       => self::signup( $event_id ),
 			'nav'          => self::nav( $event_id, $post_id ),
 			'cards'        => $is_root ? self::cards( $event_id ) : array(),
+			// La ilustración grande a la derecha del título de una sección: la
+			// misma imagen que su tarjeta en la portada.
+			'intro'        => $is_root ? '' : self::section_intro( $post_id ),
+			'illustration' => $is_root ? '' : self::card_image( $post_id, (string) get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ), 'medium_large' ),
 			'content'      => $content,
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
@@ -545,6 +549,8 @@ final class EventView {
 			'signup'       => self::signup( 0 ),
 			'nav'          => array(),
 			'cards'        => array(),
+			'intro'        => '',
+			'illustration' => '',
 			'content'      => $content,
 			'description'  => '',
 			'image'        => '',
@@ -624,13 +630,20 @@ final class EventView {
 	/**
 	 * The appearance of the event, ready to become CSS custom properties.
 	 *
+	 * Una sección puede llevar sus propios colores, separador, logo, forma y
+	 * tipografías ({@see PageForm::LOOK_KEYS}): lo que tenga manda y lo que deje
+	 * vacío lo pone el evento. Hoy cada sección tiene su cabecera de color.
+	 *
 	 * @param int $event_id Event (0 = none, everything by default).
+	 * @param int $page_id  Page being viewed; 0 or the event itself = the event alone.
 	 * @return array<string, string>
 	 */
-	private static function appearance( int $event_id ): array {
+	private static function appearance( int $event_id, int $page_id = 0 ): array {
 		$vacia = array(
 			'bg'                => '',
 			'fg'                => '',
+			'accent'            => '',
+			'header_bg_image'   => '',
 			'title_font'        => '',
 			'body_font'         => '',
 			'logo'              => '',
@@ -648,12 +661,21 @@ final class EventView {
 			return $vacia;
 		}
 
-		$bg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
-		$fg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
-		$logo     = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$lee = static function ( string $clave ) use ( $event_id, $page_id ) {
+			$propio = $page_id > 0 && $page_id !== $event_id && in_array( $clave, PageForm::LOOK_KEYS, true )
+				? get_post_meta( $page_id, $clave, true )
+				: '';
+			return '' !== (string) $propio && '0' !== (string) $propio ? $propio : get_post_meta( $event_id, $clave, true );
+		};
+
+		$bg       = sanitize_hex_color( (string) $lee( EventMetaKeys::HEADER_BG ) );
+		$fg       = sanitize_hex_color( (string) $lee( EventMetaKeys::HEADER_TEXT ) );
+		$acento   = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::ACCENT, true ) );
+		$fondo    = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BG_IMAGE_ID, true );
+		$logo     = (int) $lee( EventMetaKeys::LOGO_ID );
 		$banner   = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
 		$cartel   = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
-		$imagenes = array_filter( array( $logo, $banner, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
+		$imagenes = array_filter( array( $logo, $banner, $fondo, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
 		if ( $imagenes ) {
 			_prime_post_caches( $imagenes, false, true );
 		}
@@ -667,8 +689,10 @@ final class EventView {
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
 			'fg'                => is_string( $fg ) ? $fg : '',
-			'title_font'        => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::TITLE_FONT, true ) ),
-			'body_font'         => self::font_stack( (string) get_post_meta( $event_id, EventMetaKeys::BODY_FONT, true ) ),
+			'accent'            => is_string( $acento ) ? $acento : '',
+			'header_bg_image'   => $fondo > 0 ? (string) wp_get_attachment_image_url( $fondo, 'full' ) : '',
+			'title_font'        => self::font_stack( (string) $lee( EventMetaKeys::TITLE_FONT ) ),
+			'body_font'         => self::font_stack( (string) $lee( EventMetaKeys::BODY_FONT ) ),
 			'logo'              => $logo > 0 ? (string) wp_get_attachment_image_url( $logo, 'medium' ) : '',
 			'logo_alt'          => $logo > 0 ? (string) get_post_meta( $logo, '_wp_attachment_image_alt', true ) : '',
 			'header_banner'     => $banner > 0 ? (string) wp_get_attachment_image_url( $banner, 'full' ) : '',
@@ -680,12 +704,12 @@ final class EventView {
 			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
 			'poster_file'       => $pdf,
 			'shape'             => EventMetaKeys::in_list(
-				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
+				$lee( EventMetaKeys::IMAGE_SHAPE ),
 				EventMetaKeys::image_shapes(),
 				EventMetaKeys::SHAPE_SQUARE
 			),
 			'separator'         => EventMetaKeys::in_list(
-				get_post_meta( $event_id, EventMetaKeys::SEPARATOR, true ),
+				$lee( EventMetaKeys::SEPARATOR ),
 				EventMetaKeys::separators()
 			),
 		);
@@ -769,6 +793,23 @@ final class EventView {
 	}
 
 	/**
+	 * The short text of a section: its own, or the default of its type.
+	 *
+	 * El mismo de su tarjeta en la portada, y el que sale bajo su título.
+	 *
+	 * @param int $post_id Section.
+	 * @return string
+	 */
+	private static function section_intro( int $post_id ): string {
+		$texto = trim( (string) get_post_meta( $post_id, EventMetaKeys::INTRO, true ) );
+		if ( '' !== $texto ) {
+			return wp_strip_all_tags( $texto );
+		}
+		$tipo = EventMetaKeys::in_list( get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ), EventMetaKeys::section_types() );
+		return self::DEFAULT_INTRO[ $tipo ] ?? '';
+	}
+
+	/**
 	 * The image of one card: the featured image of the section.
 	 *
 	 * Hoy, cuando no hay imagen, se apunta a un fichero por tipo subido a la
@@ -777,10 +818,11 @@ final class EventView {
 	 *
 	 * @param int    $post_id Section.
 	 * @param string $type    Section type.
+	 * @param string $size    Image size.
 	 * @return string Empty when there is none: la tarjeta sale sin imagen.
 	 */
-	private static function card_image( int $post_id, string $type ): string {
-		$url = (string) get_the_post_thumbnail_url( $post_id, 'medium' );
+	private static function card_image( int $post_id, string $type, string $size = 'medium' ): string {
+		$url = (string) get_the_post_thumbnail_url( $post_id, $size );
 		if ( '' !== $url ) {
 			return $url;
 		}
