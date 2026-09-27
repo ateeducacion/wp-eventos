@@ -1,178 +1,35 @@
-# Eventos — entorno de desarrollo
+# Eventos
 
 [![CI](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml/badge.svg)](https://github.com/ateeducacion/wp-eventos/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ateeducacion/wp-eventos/graph/badge.svg?token=oYuGLf1luI)](https://codecov.io/gh/ateeducacion/wp-eventos)
 [![Probar en WordPress Playground](https://img.shields.io/badge/Probar%20en%20WordPress%20Playground-3858E9?logo=wordpress&logoColor=white)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ateeducacion/wp-eventos/main/blueprint.json)
 
-Entorno de desarrollo del aplicativo de **eventos** (encuentros, jornadas y
-congresos): WordPress + **Code Snippets** + **Members** + **WPFront User Role
-Editor**, con el dominio en tres tipos de contenido —`evt_event`,
-`evt_speaker`, `evt_activity`— y el código modular de `src/Evt/` empaquetado en
-un único snippet con `make bundle`.
+Un aplicativo para WordPress que gestiona **encuentros, jornadas y congresos**:
+cada evento con su portada y sus secciones (programa, ponentes, inscripción,
+contacto…), su programa por días y sedes, sus ponentes, las inscripciones con
+elección de taller y aforo, y un taller de gestión donde cada ámbito organiza
+solo lo suyo.
 
-Dónde se despliega **no está en el repositorio**: va en el `.env`, que no se
-sube ([ADR-0030](docs/adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
+No es un plugin: se instala pegando un único **Code Snippet**, generado desde
+`src/Evt/`.
 
-**[Pruébalo sin instalar nada](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ateeducacion/wp-eventos/main/blueprint.json)**: el botón de arriba abre
-[`blueprint.json`](blueprint.json) en WordPress Playground —WordPress entero
-compilado a WebAssembly, corriendo en la pestaña del navegador—. Levanta el
-sitio con los tres plugins, sincroniza los snippets, crea los roles, el
-vocabulario, las páginas y los datos de demostración, y **aterriza en el
-aplicativo**, no en el escritorio: en «Gestión de eventos», que es lo que se
-viene a ver.
+## Pruébalo sin instalar nada
 
-Lleva también el mu-plugin de desarrollo, así que desde la barra superior se
-puede **cambiar de cuenta** —`organizacion`, `organizacion2`, `organizacion3`,
-`coordinacion`— y ver el aplicativo con cada rol y cada ámbito, que es la mitad de
-lo que hay que probar aquí. Volver a la propia cuenta se hace desde la misma
-barra.
+**[Abrir en WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ateeducacion/wp-eventos/main/blueprint.json)**:
+WordPress entero corriendo en una pestaña del navegador. Tarda un par de
+minutos, no toca nada de tu equipo y al cerrar la pestaña no queda rastro.
 
-Tarda un par de minutos la primera vez y **no toca nada de tu máquina**: al
-cerrar la pestaña no queda rastro. En cada PR sale además su propio enlace, con
-el código de esa rama.
+Monta el sitio con los plugins que hacen falta, carga el aplicativo, crea las
+cuentas de prueba y varios eventos de demostración —con programa, ponentes e
+inscripciones— y te deja en **«Gestión de eventos»**. Desde la barra superior
+puedes **cambiar de cuenta** para ver el aplicativo con cada rol y cada ámbito.
 
-> **Este repositorio NO es un plugin de WordPress.** No lleva cabecera de
-> plugin, ni `readme.txt`, ni `register_activation_hook()`, ni rutas de plugin.
-> Versiona, prueba y sincroniza el material que en producción se activa como
-> Code Snippet(s). El artefacto de producción es un fichero PHP que acaba en
-> Code Snippets —lo empuja `npm run snippets`—, porque es lo único que ese
-> WordPress permite desplegar.
-
-## Qué viene a sustituir
-
-Conviene decirlo sin adornos, porque explica casi todas las decisiones de
-diseño. Hoy el aplicativo de eventos es un **formulario de 146 campos** cuya
-acción «Crear Página» genera una `page` jerárquica por cada sección del evento.
-El contenido de esa página no lo escribe nadie: lo interpola una **vista del
-gestor de formularios, 42 KB con 193 bloques condicionales anidados** —un motor
-de plantillas dentro de un campo de texto, sin control de versiones, sin tests
-y sin forma de revisar un cambio—. La jerarquía del sitio depende de un
-fragmento de código de siete líneas, pegado a mano, que lee `post_parent` de
-`$_POST` sin comprobar nada.
-
-Alrededor de eso: 163 páginas sin convención de slugs (hay `programa-ed`,
-`programacomunicacion2021`, `cjle2021-programa`, `programa_`, `programa-8616`…,
-la firma de la creación manual); **una sola taxonomía**, `convocatoria`, con 50
-términos que mezclan cuatro dimensiones distintas (estado, tipología, curso
-escolar y área organizadora) y que se separan con cuatro listas de exclusión de
-IDs mantenidas a mano; **el área modelada como rol**, de modo que cada área
-nueva es un rol nuevo y ningún rol sabe expresar «los eventos de esta área»;
-y ni uno solo de esos roles de área tiene una capacidad de escritura, porque
-las áreas no editan WordPress: rellenan el formulario desde el frontal.
-
-Este repositorio se lleva a `src/Evt/` **la estructura**: el evento y sus
-páginas satélite pasan a `evt_event` jerárquico (mismo árbol, mismas URL), las
-cuatro dimensiones de `convocatoria` se separan en `evt_area`, `evt_type` y
-`evt_course`, y el área deja de ser un rol para ser un término asignado al
-usuario, con un único guardián de permisos.
-
-Lo que **no** se lleva, y con una ADR que lo justifica: las **inscripciones y
-la selección de talleres siguen en el gestor de formularios que ya hay**. Hay
-un formulario por evento y todas sus entradas están vivas; migrarlas no es
-parte de la fase 1.
-
-## Fuente de verdad
-
-| Ruta | Contenido |
-|------|-----------|
-| `src/Evt/` | Aplicativo modular (editar aquí) |
-| `src/Evt/load-order.php` | Orden de carga: lista única, la usan bootstrap y el bundler |
-| `snippets/` | Snippets sueltos + `evt-eventos-app.bundle.php` generado (`make bundle`) |
-| `docs/` | REQ / SDD / ADR |
-
-## Modelo de datos (fase 1)
-
-| Tipo de contenido | Qué es | Hoy |
-|---|---|---|
-| `evt_event` | **Jerárquico**: la raíz es el evento y las hijas son sus páginas satélite (programa, ponentes, inscripción, contacto…), con la sección en la meta `evt_section_type` | `page` jerárquica |
-| `evt_speaker` | Ponente o persona comunicadora | Entradas de un formulario |
-| `evt_activity` | Actividad del programa: ponencia, mesa redonda, comunicación, taller | Entradas de otro formulario |
-
-El catálogo de centros educativos no es un CPT: es un dato maestro externo
-que se mantiene en una copia local cacheada (`evt_centres_catalogue`, `autoload = false`),
-sincronizada periódicamente desde `manifest.json` y `centros.min.json`. Las inscripciones
-guardan el código oficial en `evt_reg_centre_code` y la denominación como snapshot
-histórico en `evt_reg_centre` (ADR-0037).
-
-| Taxonomía | Eje | Ejemplos |
-|---|---|---|
-| `evt_area` | Ámbito organizativo jerárquico. **Es el eje de permisos**; el slug persiste por compatibilidad | `ambito-1`, `subambito-1`, `ambito-2` |
-| `evt_type` | Tipología | `jornadas`, `encuentro`, `congreso`, `taller` |
-| `evt_course` | Curso escolar | `2025-2026` |
-
-Que `evt_event` sea jerárquico y sustituya 1:1 a la `page` de hoy es lo que
-**conserva las URL** de los eventos ya publicados.
-
-## Roles
-
-El actor recomendado es el Editor nativo; el aplicativo solo crea el rol de compatibilidad:
-
-| Rol | Etiqueta | Quién |
-|---|---|---|
-| `editor` | Editor | Edita eventos, secciones y contenidos relacionados de su ámbito y descendientes; puede compartir un evento con otros ámbitos |
-| `evt_organiser` | Organización de eventos | Rol anterior, conservado temporalmente para cuentas existentes con el mismo acotado |
-| `administrator` | Administrador | Todo, en todos los ámbitos; asigna el ámbito de cada persona y gestiona el árbol |
-
-**Por qué el CSS sí y el JavaScript no.** Porque el CSS cambia cómo se ve una
-página y el JavaScript ejecuta código en el navegador de cada visitante. No son
-el mismo riesgo, y por eso son dos capacidades distintas —`evt_edit_custom_css`
-y `evt_edit_custom_js`— y no una
-([ADR-0014](docs/adr/ADR-0014-css-del-area-javascript-de-administracion.md)).
-
-El ámbito del usuario es la meta `evt_area`: un único término asignado por
-administración, más todos sus descendientes. El formato persistente sigue siendo
-una lista de IDs; una lista histórica con varios ámbitos no otorga acceso hasta
-que administración la resuelva. Un evento sí puede llevar varios ámbitos:
-cualquiera de ellos puede editarlo. Es **fail-closed**: sin ámbito válido y sin
-`evt_edit_all_areas`, no se edita nada. `evt_organiser` lo crea el snippet suelto
-`snippets/roles-and-profiles.php`; `administrator` es el de siempre de
-WordPress y solo se le cuelgan las capacidades del aplicativo. El detalle
-completo, capacidad a capacidad, está en
-[docs/roles-y-permisos.md](docs/roles-y-permisos.md).
-
-En REST, un Editor crea primero el evento en borrador y después lo publica:
-así los hooks de publicación ya encuentran su ámbito. Si omite `evt_area` al
-crear, recibe su ámbito directo; si lo omite al actualizar, conserva los
-organizadores actuales. Administración puede crear contenido huérfano para
-repararlo.
-
-## Requisitos
-
-- **Docker** (wp-env)
-- **Node.js 22** (ver `.nvmrc`)
-- **PHP 8.1+** y **Composer** (lint / tests en el host)
-
-El entorno de desarrollo y pruebas usa **PHP 8.3**, fijado en `.wp-env.json` y
-en los workflows de CI; el mínimo de compatibilidad de Composer sigue en 8.1.
-
-## Inicio rápido
-
-> **¿Es tu primera vez y no vienes de desarrollo?** Empieza por
-> [Empezar a trabajar en este proyecto](docs/desarrollo-para-empezar.md):
-> qué instalar en macOS y en Windows, cómo levantar el entorno y cómo se
-> propone un cambio (rama → `make check` → PR → revisión del equipo).
-
-```bash
-git clone https://github.com/ateeducacion/wp-eventos.git
-cd wp-eventos
-make install
-make up
-```
-
-- Sitio: <http://localhost:8798> (`admin` / `password`)
-- Eventos: <http://localhost:8798/wp-admin/edit.php?post_type=evt_event>
-- Ponentes: <http://localhost:8798/wp-admin/edit.php?post_type=evt_speaker>
-- Actividades: <http://localhost:8798/wp-admin/edit.php?post_type=evt_activity>
-
-Los puertos son **8798** (desarrollo) y **8799** (tests), fuera de los que usan
-por defecto otros entornos de la casa a propósito: así pueden estar varios
-arriba a la vez.
+Cada PR trae además su propio enlace, con el código de esa rama.
 
 ### Usuarios de prueba
 
-Los crea `scripts/seed-demo.php` (que es la fuente de verdad de esta tabla) en
-`make provision`, `make up` y en los dos blueprints de Playground. La
-contraseña es `password` en todos.
+La contraseña es `password` en todos. Los crea `scripts/seed-demo.php`, que es
+la fuente de verdad de esta tabla.
 
 | Usuario | Rol | Ámbito en el perfil |
 |---------|-----|-------------------|
@@ -181,115 +38,44 @@ contraseña es `password` en todos.
 | `organizacion` | `evt_organiser` | Ámbito 1 |
 | `organizacion2` | `evt_organiser` | Ámbito 1 |
 | `organizacion3` | `evt_organiser` | Ámbito 2 |
-| `editor-ambito` | `editor` | Ámbito 1: puede editar eventos de Subámbito 1 y Subámbito 2 |
-| `editor-ambito2` | `editor` | Ámbito 2: puede editar el evento compartido, sin acceder a los demás del Ámbito 1 |
-| `editor-subambito` | `editor` | Subámbito 1: no puede editar Subámbito 2 |
+| `editor-ambito` | `editor` | Ámbito 1: edita los eventos de Subámbito 1 y Subámbito 2 |
+| `editor-ambito2` | `editor` | Ámbito 2: edita el evento compartido, no los demás del Ámbito 1 |
+| `editor-subambito` | `editor` | Subámbito 1: no edita Subámbito 2 |
 
-La cuenta `coordinacion` conserva el nombre de cuando existía un rol de
-coordinación (`evt_coordinator`, retirado el 2026-09-13); hoy permite comprobar
-la compatibilidad de `evt_organiser` con un único ámbito. Quien necesite acceso
-global entra como `admin`.
+## Requisitos
 
-Flujo sugerido: entra como `editor-ambito` y comprueba que puede editar los
-eventos de Subámbito 1 y Subámbito 2. Con `editor-subambito`, el de Subámbito 1
-se abre y el de Subámbito 2 no aparece ni se abre por enlace directo. El
-«Evento compartido de demostración» lo organizan Subámbito 1 y Ámbito 2:
-`editor-subambito` y `editor-ambito2` pueden modificar su propia participación
-sin quitar la ajena.
-
-Para cambiar de usuario sin cerrar sesión, **WPFront User Role Editor** (menú
-«Switch To» en Usuarios), igual que en producción.
-
-## Comandos
-
-| Comando | Qué hace |
-|---------|----------|
-| `make help` | Lista los targets |
-| `make install` | Composer + npm |
-| `make up` | Arranca wp-env y lo provisiona |
-| `make down` / `make destroy` | Para / destruye el entorno |
-| `make clean` | Resetea desarrollo y tests y vuelve a provisionar |
-| `make logs` / `make shell` | Logs del entorno / shell en el contenedor CLI |
-| `make provision` | Bundle + snippets + roles + páginas + datos de demostración |
-| `make bundle` | Regenera `snippets/evt-eventos-app.bundle.php` desde `src/Evt/` |
-| `make sync-snippets` | Sincroniza `snippets/*.php` → Code Snippets |
-| `make snippet-check` | Comprueba que los snippets sobreviven al guardado (doble eval) |
-| `make test` | PHPUnit (admite `FILE=…` y `FILTER=…`) |
-| `make skills-sync` | Copia `.agents/skills/` sobre `.claude/skills/` |
-| `make capturas` | Recorre las pantallas y deja `capturas/informe.html` (admite `ONLY=desktop` / `ONLY=mobile`) |
-| `make check-plugin` | Pasa WordPress Plugin Check sobre el código de los snippets |
-| `make test-browser` | Los tres escalones de la confirmación en un navegador real |
-| `make coverage` | Cobertura de `src/Evt` (reinicia wp-env con Xdebug) |
-| `make lint` / `make fix` | PHPCS / PHPCBF |
-| `make phpmd` | PHP Mess Detector |
-| `make check-provision` | Comprueba que la provisión propaga los fallos |
-| `make check` | `lint` + `phpmd` + `check-provision` + `test` |
-| `make release` | Etiqueta la versión del CHANGELOG y publica la release |
-| `make playground` | WordPress Playground local, sin Docker |
-
-### Flujo de desarrollo del aplicativo
-
-```bash
-# 1. Editar solo src/Evt/
-# 2. Empaquetar y recargar en WordPress
-make bundle && make sync-snippets
-```
-
-No edites a mano `snippets/*.bundle.php`: se regenera.
-
-## Mapa del repositorio
-
-| Ruta | Contenido |
-|------|-----------|
-| `src/Evt/` | Aplicativo: CPT, taxonomías, meta, acceso y escritorio |
-| `build/pack-snippet.php` | Empaquetador `src/Evt/` → snippet único |
-| `snippets/` | Snippets sueltos (roles) y el bundle generado |
-| `scripts/` | Provisión idempotente (`wp eval-file` y Playground) |
-| `scripts/mu-plugins/` | mu-plugin **solo de desarrollo** |
-| `tests/` | PHPUnit sobre un WordPress vivo |
-| `docs/adr/`, `docs/sdd/` | Decisiones y diseño |
-| `.agents/skills/` | Skills de agentes (`.claude/skills/` las enlaza) |
-| `CHANGELOG.md` | Versión y cambios; `make bundle` lee de ahí el `@version` |
-| `blueprint.json` / `blueprint-local.json` | Playground remoto / local |
-| `.wp-env.json` / `Makefile` | Docker / comandos |
-| `.env.dist` | Plantilla de configuración de despliegue (copiar a `.env`) |
-| `.local/` | Material descargado de producción. **No versionado**: lleva datos personales |
-
-## Plugins del entorno
-
-| Plugin | Uso |
-|--------|-----|
-| Code Snippets | Ejecuta el bundle y los snippets auxiliares |
-| Members | Ver y ajustar `evt_organiser` y las capacidades `evt_*` del administrador |
-| WPFront User Role Editor | Los mismos roles y el cambio de usuario para probar |
-| SQL Buddy | Inspección de datos en local |
-
-**El gestor de formularios no se instala en el entorno.** En producción
-convive con el aplicativo (las inscripciones siguen ahí), pero nada de
-`src/Evt/` depende de él y los tests no lo cargan.
-
-## Cobertura
-
-El suelo es el **90 %**, y bloquea en los dos ejes: el del parche —lo que se
-toca en un PR va con sus tests— y el del proyecto —no se compensa tocando
-poco—. Está en [`codecov.yml`](codecov.yml) y la decisión, con su porqué y lo
-que se descubrió al subirla, en la
-[ADR-0011](docs/adr/ADR-0011-ci-y-politica-de-pruebas.md).
-
-En local se mide con `make coverage`, que reinicia wp-env con Xdebug.
+- **Docker** (wp-env)
+- **Node.js 22** (ver `.nvmrc`)
+- **PHP 8.1+** y **Composer**, para el lint y los tests en tu equipo
 
 [![Mapa de cobertura](https://codecov.io/gh/ateeducacion/wp-eventos/graphs/tree.svg?token=oYuGLf1luI)](https://codecov.io/gh/ateeducacion/wp-eventos)
 
-Cada rectángulo es un fichero de `src/Evt` y su tamaño son sus líneas; el color
-va de rojo a verde según lo cubierto. Sirve para lo que un porcentaje no dice:
-**dónde** está lo que no se prueba. `src/Evt/App.php` no sale porque está
-excluido de la medición —su cuerpo corre en el arranque, antes de que PHPUnit
-empiece a medir, y lo que hace se comprueba en `test-load-order.php`—.
+Cada rectángulo es un fichero de `src/Evt`, del tamaño de sus líneas, y el
+color va de rojo a verde según lo cubierto por los tests. El suelo es el 90 %.
 
-## Documentación
+## En tu equipo
 
-- [`docs/desarrollo-para-empezar.md`](docs/desarrollo-para-empezar.md) — guía
-  paso a paso para quien no viene de desarrollo
-- `docs/adr/registro.md` — índice de decisiones
-- `docs/sdd/registro.md` — índice de diseño
-- [`AGENTS.md`](AGENTS.md) — instrucciones para agentes de código y convenciones
+```bash
+git clone https://github.com/ateeducacion/wp-eventos.git
+cd wp-eventos
+make install
+make up
+```
+
+Sitio en <http://localhost:8798> (`admin` / `password`). Tras cambiar algo en
+`src/Evt/`: `make bundle && make sync-snippets`. Antes de proponer un cambio:
+`make check`.
+
+> **¿No vienes de desarrollo?** Empieza por
+> [Empezar a trabajar en este proyecto](docs/desarrollo-para-empezar.md): qué
+> instalar en macOS y en Windows, cómo levantar el entorno y cómo se propone un
+> cambio.
+
+## Más documentación
+
+- [Cómo está hecho](docs/arquitectura.md): qué sustituye, dónde está el código,
+  el modelo de datos, los roles, los comandos y la cobertura.
+- [Roles y permisos](docs/roles-y-permisos.md), capacidad a capacidad.
+- [Decisiones (ADR)](docs/adr/registro.md) y [diseño (SDD)](docs/sdd/registro.md).
+- [AGENTS.md](AGENTS.md): convenciones del repositorio, para personas y agentes.
+- [CHANGELOG](CHANGELOG.md).

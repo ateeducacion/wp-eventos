@@ -76,6 +76,7 @@ de demostración, que son las que se corrigen y se borran.
 | `scripts/lib/snippet-sync.php` | Librería de sincronización con Code Snippets |
 | `scripts/mu-plugins/` | mu-plugin solo de desarrollo |
 | `tests/` | PHPUnit sobre un WordPress vivo |
+| `docs/arquitectura.md` | Cómo está hecho: qué sustituye, modelo de datos, roles, comandos y cobertura. El README remite ahí |
 | `docs/adr/`, `docs/sdd/` | ADR y SDD |
 | `.agents/skills/` | Skills de agentes (`.claude/skills/` enlaza las propias) |
 | `CHANGELOG.md` | Versión y cambios; `make bundle` lee de ahí el `@version` |
