@@ -238,6 +238,135 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Los caminos que no hacen nada: una inscripción que no es de este
+	 * evento o ya no existe, y un taller que no es del evento.
+	 */
+	public function test_what_does_not_belong_is_refused() {
+		$id    = $this->inscripcion();
+		$ajena = 987654;
+
+		$this->enviar( EventWorkspace::OP_REG_SAVE, $ajena, array( 'evt_rg_name' => 'X' ) );
+		$this->assertSame( 'error', $this->aviso()['tipo'] );
+		$this->enviar( EventWorkspace::OP_REG_DELETE, $ajena, array( EventWorkspace::FIELD_CONFIRM_EMAIL => 'ana@example.org' ) );
+		$this->assertSame( 'error', $this->aviso()['tipo'] );
+
+		// Una actividad que no es taller no se elige como taller.
+		$charla = Programme::save_activity(
+			$this->evento,
+			0,
+			array(
+				'title'    => 'Charla',
+				'kind'     => 'ponencia',
+				'date'     => '2026-10-28',
+				'start'    => '',
+				'end'      => '',
+				'venue'    => '',
+				'room'     => '',
+				'seats'    => 0,
+				'summary'  => '',
+				'speakers' => array(),
+			)
+		);
+		$this->enviar(
+			EventWorkspace::OP_REG_SAVE,
+			$id,
+			array(
+				'evt_rg_tax_id'   => '12345678Z',
+				'evt_rg_name'     => 'Ana',
+				'evt_rg_surname'  => 'Martín',
+				'evt_rg_email'    => 'ana@example.org',
+				'evt_rg_centre'   => '38000001',
+				'evt_rg_workshop' => (string) $charla,
+			)
+		);
+		$this->assertStringContainsString( 'no es de este evento', $this->aviso()['texto'] );
+		$this->assertSame( 0, (int) get_post_meta( $id, RegistrationMetaKeys::REG_WORKSHOP, true ) );
+	}
+
+	/**
+	 * El panel lateral pinta cada tipo de pregunta con su respuesta, y el taller.
+	 */
+	public function test_the_form_paints_every_question_and_the_workshop() {
+		update_post_meta(
+			$this->evento,
+			RegistrationMetaKeys::SIGNUP_QUESTIONS,
+			wp_json_encode(
+				array(
+					array(
+						'id'       => 'qcomer01',
+						'label'    => 'Se queda a comer',
+						'type'     => 'check',
+						'options'  => array(),
+						'required' => false,
+					),
+					array(
+						'id'       => 'qetapa01',
+						'label'    => 'Etapa',
+						'type'     => 'one',
+						'options'  => array( 'Infantil', 'Primaria' ),
+						'required' => false,
+					),
+					array(
+						'id'       => 'qalerg01',
+						'label'    => 'Alergias',
+						'type'     => 'many',
+						'options'  => array( 'Gluten', 'Lactosa' ),
+						'required' => false,
+					),
+					array(
+						'id'       => 'qnotas01',
+						'label'    => 'Observaciones',
+						'type'     => 'text',
+						'options'  => array(),
+						'required' => false,
+					),
+					array(
+						'id'       => 'qdocum01',
+						'label'    => 'Documento',
+						'type'     => 'file',
+						'options'  => array(),
+						'required' => false,
+					),
+				)
+			)
+		);
+		$taller = $this->taller( 20 );
+		$v      = Registrations::validate(
+			$this->evento,
+			array(
+				'tax_id'  => '12345678Z',
+				'name'    => 'Ana',
+				'surname' => 'Martín',
+				'email'   => 'ana@example.org',
+				'centre'  => '38000001',
+				'consent' => '1',
+			),
+			array(
+				'qcomer01'    => '1',
+				'qetapa01'    => 'Primaria',
+				'qalerg01' => array( 'Gluten' ),
+				'qnotas01'    => 'Llega tarde',
+			)
+		);
+		$id     = Registrations::create( $this->evento, $v['core'], $v['answers'] );
+		Registrations::seat( $this->evento, $id, $taller );
+
+		$this->acting_as( $this->admin );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $this->evento;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_PEOPLE;
+		$_GET[ EventWorkspace::ARG_ROW ]   = (string) $id;
+		$html                              = EventWorkspaceView::html( EventWorkspace::model() );
+
+		$this->assertMatchesRegularExpression( '/name="evt_rg_answers\[qcomer01\]" value="1"\s+checked/', $html, 'la casilla, marcada' );
+		$this->assertMatchesRegularExpression( '/value="Primaria"\s+selected/', $html, 'la opción elegida' );
+		$this->assertMatchesRegularExpression( '/value="Gluten"\s+checked/', $html, 'las varias opciones' );
+		$this->assertStringContainsString( 'value="Llega tarde"', $html );
+		$this->assertStringNotContainsString( 'evt_rg_answers[qdocum01]', $html, 'la de archivo no se corrige' );
+		$this->assertMatchesRegularExpression( '/value="' . $taller . '"\s+selected/', $html, 'su taller, elegido' );
+		$this->assertStringContainsString( 'Taller de radio (1 de 20)', $html );
+	}
+
+	/**
 	 * El panel pinta el lápiz, el borrado con su correo y el panel lateral.
 	 */
 	public function test_the_panel_offers_correct_and_delete() {
