@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -274,6 +274,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) | El catálogo de centros educativos es un dato maestro externo y se cachea localmente | Aceptada | 2026-09-20 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md) |
 | [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md) | Ámbitos organizativos jerárquicos para la edición | Aceptada | 2026-09-20 | [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) |
 | [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) | Inscribirse pide sesión salvo que el evento la abra, y adjuntar la pide siempre | Propuesta | 2026-09-27 | [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
+| [ADR-0040](ADR-0040-captcha-altcha-para-la-inscripcion-sin-sesion.md) | La inscripción sin sesión pasa por ALTCHA, con el servidor escrito aquí | Propuesta | 2026-09-27 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -548,3 +549,12 @@ fechas opcionales), y con el evento publicado y sin marcar como histórico. La
 añade un interruptor por evento, apagado por defecto, para abrir la inscripción
 a quien no ha iniciado sesión. Adjuntar un archivo pide sesión siempre. El
 captcha queda para otra ADR.
+
+**ALTCHA en la inscripción sin sesión, 2026-09-27: ADR-0040.** La
+[ADR-0040](ADR-0040-captcha-altcha-para-la-inscripcion-sin-sesion.md) pide a
+quien se inscribe sin sesión una prueba de trabajo de ALTCHA:
+- el componente viene de jsDelivr, con SRI;
+- el desafío y su comprobación están escritos aquí, en formato v1 y firmados con
+  HMAC;
+- no hay terceros, cookies ni claves que guardar;
+- cada solución vale una sola vez.

@@ -120,6 +120,9 @@ final class SignupForm {
 		if ( '' === $porque ) {
 			$porque = self::login_needed( $event_id );
 		}
+		if ( '' === $porque && ! is_user_logged_in() && Captcha::enabled() && ! Captcha::verify( (string) ( $raw[ Captcha::FIELD ] ?? '' ) ) ) {
+			$porque = 'Marque la casilla «No soy un robot» y espere a que diga «Verificado» antes de enviar.';
+		}
 		if ( '' !== $porque ) {
 			self::$notice = array(
 				'level'   => 'error',
