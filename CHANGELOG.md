@@ -34,6 +34,10 @@ en el subsitio `eventos` se hace después.
 
 ### Corregido
 
+- **En «Mis eventos» y en la línea del tiempo, un evento con el cartel en PDF salía sin imagen.** Ahora sale su imagen destacada. Y el nombre del evento que no tiene ninguna imagen se escribe en un color que se lee sobre el de su cabecera, también cuando es claro
+- **El filtro de ámbitos de «Mis eventos» es una lista única y en árbol:** cada ámbito sale una vez, con sus subámbitos sangrados debajo, y elegir uno trae también lo de sus subámbitos. Administración ve todos los ámbitos del sitio; el resto, los de su ámbito en los que tiene eventos
+- La paginación de «Mis eventos» sale centrada bajo la cuadrícula
+
 - **Las tipografías elegidas en «Apariencia» no se cargaban:** se guardaban, pero ningún fichero las traía, y solo se veían en el ordenador que las tuviera instaladas. Ahora se cargan desde jsDelivr, con SRI y la versión clavada, como el resto de librerías
 
 - **La URL pública de un evento respondía «Página no encontrada» tras provisionar de cero.** Las reglas de enlaces permanentes se guardan al instalar WordPress, cuando el aplicativo todavía no existe, y nada las refrescaba: el botón «Ver la página» del taller llevaba a un 404 hasta que alguien entrara en Ajustes → Enlaces permanentes. `scripts/setup-pages.php` las regenera al terminar

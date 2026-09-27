@@ -415,8 +415,11 @@ final class EventList {
 		$todas   = EventAccess::can_edit_all_areas( $user_id );
 		$m       = array_merge( $m, self::chrome( $user_id, $todas ) );
 
-		$rows         = self::collect( $user_id );
-		$m['options'] = self::options( $rows );
+		$rows                 = self::collect( $user_id );
+		$m['options']         = self::options( $rows );
+		$m['options']['area'] = self::area_tree(
+			$todas ? null : array_values( array_intersect( array_keys( $m['options']['area'] ), EventAccess::scope_areas( $user_id ) ) )
+		);
 
 		$s        = self::sanitise( self::selection(), $m['options'] );
 		$rows     = self::narrow( $rows, $s );
@@ -676,8 +679,7 @@ final class EventList {
 			$rows[ $i ]['draft']    = in_array( (string) $row['status'], array( 'draft', 'pending', 'future' ), true );
 			$cartel                 = Timeline::poster_id( $id );
 			$rows[ $i ]['poster']   = $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '';
-			$fondo                  = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
-			$rows[ $i ]['color']    = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
+			list( $rows[ $i ]['color'], $rows[ $i ]['ink'] ) = Timeline::colours( $id );
 		}
 
 		return $rows;
@@ -829,6 +831,76 @@ final class EventList {
 	}
 
 	/**
+	 * The áreas of the dropdown, each once, as a tree.
+	 *
+	 * Administración ve todas las del sitio; el resto, las de su ámbito y sus
+	 * subámbitos en las que tiene algún evento —no el otro ámbito de un evento
+	 * compartido, que no es suyo—. Cada una sale una vez —un evento con dos áreas
+	 * no hace una tercera— y las hijas debajo de su madre, sangradas, cuando
+	 * la madre también está en la lista.
+	 *
+	 * @param int[]|null $ids Terms to offer; null for every área.
+	 * @return array<int, string> term_id => rótulo sangrado, en orden de árbol.
+	 */
+	private static function area_tree( ?array $ids ): array {
+		if ( array() === $ids ) {
+			return array();
+		}
+		$args = array(
+			'taxonomy'   => EventTaxonomies::AREA,
+			'hide_empty' => false,
+		);
+		if ( null !== $ids ) {
+			$args['include'] = $ids;
+		}
+		$terms = get_terms( $args );
+		if ( ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$presentes = array_map( 'intval', wp_list_pluck( $terms, 'term_id' ) );
+		$hijas     = array();
+		foreach ( $terms as $term ) {
+			$madre             = in_array( (int) $term->parent, $presentes, true ) ? (int) $term->parent : 0;
+			$hijas[ $madre ][] = $term;
+		}
+		foreach ( $hijas as &$grupo ) {
+			usort(
+				$grupo,
+				static function ( \WP_Term $a, \WP_Term $b ): int {
+					return strcasecmp( remove_accents( $a->name ), remove_accents( $b->name ) );
+				}
+			);
+		}
+		unset( $grupo );
+
+		$out     = array();
+		$recorre = static function ( int $madre, int $nivel ) use ( &$recorre, &$out, $hijas ): void {
+			foreach ( $hijas[ $madre ] ?? array() as $term ) {
+				$out[ (int) $term->term_id ] = str_repeat( '— ', $nivel ) . $term->name;
+				$recorre( (int) $term->term_id, $nivel + 1 );
+			}
+		};
+		$recorre( 0, 0 );
+		return $out;
+	}
+
+	/**
+	 * An área and every área under it.
+	 *
+	 * @param int $term_id Área.
+	 * @return array<int, true> term_id => true.
+	 */
+	private static function area_and_below( int $term_id ): array {
+		static $cache = array();
+		if ( ! isset( $cache[ $term_id ] ) ) {
+			$hijas             = get_term_children( $term_id, EventTaxonomies::AREA );
+			$cache[ $term_id ] = array_fill_keys( array_merge( array( $term_id ), is_array( $hijas ) ? array_map( 'intval', $hijas ) : array() ), true );
+		}
+		return $cache[ $term_id ];
+	}
+
+	/**
 	 * Dropdowns and text search: everything but the state filter.
 	 *
 	 * @param array<string, mixed> $row Row.
@@ -837,7 +909,14 @@ final class EventList {
 	 */
 	private static function in_scope( array $row, array $s ): bool {
 		foreach ( self::AXES as $eje => $clave ) {
-			if ( $s[ $eje ] > 0 && ! isset( $row[ $clave ][ $s[ $eje ] ] ) ) {
+			if ( $s[ $eje ] <= 0 ) {
+				continue;
+			}
+			// Un ámbito incluye a los que cuelgan de él, como en el acotado.
+			$vale = 'area' === $eje
+				? array() !== array_intersect_key( $row[ $clave ], self::area_and_below( (int) $s[ $eje ] ) )
+				: isset( $row[ $clave ][ $s[ $eje ] ] );
+			if ( ! $vale ) {
 				return false;
 			}
 		}

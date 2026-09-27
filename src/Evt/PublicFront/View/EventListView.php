@@ -191,10 +191,11 @@ final class EventListView {
 			return sprintf( '<img class="%1$s" src="%2$s" alt="" loading="lazy">', esc_attr( $clase ), esc_url( (string) $row['poster'] ) );
 		}
 		return sprintf(
-			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s" aria-hidden="true"><span>%3$s</span></span>',
+			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s; --evt-cartel-tinta: %4$s" aria-hidden="true"><span>%3$s</span></span>',
 			esc_attr( $clase ),
 			esc_attr( (string) $row['color'] ),
-			esc_html( (string) $row['title'] )
+			esc_html( (string) $row['title'] ),
+			esc_attr( (string) ( $row['ink'] ?? '#fff' ) )
 		);
 	}
 
@@ -391,7 +392,7 @@ final class EventListView {
 		$s      = $m['selection'];
 		$pagina = (int) $m['page'];
 		?>
-		<nav aria-label="Páginas de eventos">
+		<nav class="evt-paginas" aria-label="Páginas de eventos">
 			<p class="evt-acciones">
 				<?php if ( $pagina > 1 ) : ?>
 					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"

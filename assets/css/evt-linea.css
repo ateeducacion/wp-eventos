@@ -228,7 +228,7 @@
 	justify-content: center;
 	min-height: 150px;
 	background: var(--evt-linea-color, var(--evt-linea-azul));
-	color: #fff;
+	color: var(--evt-linea-tinta, #fff);
 	text-decoration: none;
 }
 

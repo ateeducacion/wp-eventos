@@ -1046,7 +1046,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: var(--evt-cartel, var(--evt-pri));
-  color: #fff;
+  color: var(--evt-cartel-tinta, #fff);
 }
 .evt-ficha__cartel--vacio span,
 .evt-mini-cartel--vacio span {
@@ -1078,7 +1078,7 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border-radius: 4px;
   object-fit: cover;
   background: var(--evt-cartel, var(--evt-pri));
-  color: #fff;
+  color: var(--evt-cartel-tinta, #fff);
   font-size: 0;
 }
 .evt-tabla__titulo { font-weight: 600; }
@@ -1379,3 +1379,10 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 .evt-fila--papelera > td { opacity: .65; }
 .evt-fila--borrador > td:last-child,
 .evt-fila--papelera > td:last-child { opacity: 1; }
+
+/* La paginación del listado, centrada bajo la cuadrícula, que también lo está. */
+.evt-paginas .evt-acciones {
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+}
