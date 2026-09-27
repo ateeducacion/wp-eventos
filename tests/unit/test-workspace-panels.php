@@ -69,6 +69,21 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	}
 
 	/**
+	 * «Datos del evento» abre con «Publicación» y su interruptor.
+	 */
+	public function test_the_data_panel_shows_the_publish_switch() {
+		$admin  = $this->administrator();
+		$evento = $this->event( $admin, array( $this->area() ) );
+		$this->acting_as( $admin );
+
+		$html = $this->pintar( $evento, EventWorkspace::PANEL_SETTINGS );
+
+		$this->assertStringContainsString( 'evt-publicacion', $html );
+		$this->assertStringContainsString( 'value="' . EventWorkspace::OP_UNPUBLISH . '"', $html );
+		$this->assertStringContainsString( 'data-evt-switch', $html );
+	}
+
+	/**
 	 * Lo que se pinta de una pestaña.
 	 *
 	 * @param int    $evento Event ID.

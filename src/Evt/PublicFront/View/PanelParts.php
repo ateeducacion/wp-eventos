@@ -170,6 +170,59 @@ final class PanelParts {
 	}
 
 	/**
+	 * The publish state of an event as a switch, with its form.
+	 *
+	 * Un interruptor y no un enlace: lo que se quiere saber de un vistazo es si
+	 * el evento se ve fuera, y lo que se quiere hacer es cambiarlo. Con
+	 * JavaScript se envía solo al tocarlo; sin JavaScript queda el botón de al
+	 * lado, que hace exactamente lo mismo. Lo usan el listado, sus tarjetas y
+	 * «Datos del evento»: cada uno pone su operación y su nonce.
+	 *
+	 * Publicar el evento **no publica sus páginas**: cada una tiene su estado y
+	 * se publica desde el taller.
+	 *
+	 * Un evento histórico se queda como estaba: el interruptor sale apagado,
+	 * sin formulario, y dice por qué.
+	 *
+	 * @param bool                  $publicado Whether it is published now.
+	 * @param array<string, string> $campos    Hidden fields, name => value.
+	 * @param string                $nonce     Nonce action.
+	 * @param string                $campo     Nonce field name.
+	 * @param bool                  $historico Whether the event is closed for good.
+	 * @return string
+	 */
+	public static function publish_switch( bool $publicado, array $campos, string $nonce, string $campo, bool $historico = false ): string {
+		$rotulo = $publicado ? 'Despublicar este evento' : 'Publicar este evento';
+		if ( $historico ) {
+			$motivo = 'Es histórico: se queda como está, publicado o en borrador.';
+			return '<span class="evt-switch evt-switch--fijo"><label class="evt-switch-caja" title="' . esc_attr( $motivo ) . '" data-bs-toggle="tooltip">'
+				. '<input type="checkbox" class="evt-switch-input" disabled' . ( $publicado ? ' checked' : '' ) . ' />'
+				. '<span class="evt-switch-pista" aria-hidden="true"></span>'
+				. '<span class="evt-switch-txt">' . esc_html( $publicado ? 'Publicado' : 'Borrador' ) . '</span>'
+				. '<span class="screen-reader-text">' . esc_html( $motivo ) . '</span></label></span>';
+		}
+
+		ob_start();
+		?>
+		<form class="evt-accion evt-switch" method="post" action="">
+			<?php wp_nonce_field( $nonce, $campo, false ); ?>
+			<?php foreach ( $campos as $nombre => $valor ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $nombre ); ?>" value="<?php echo esc_attr( $valor ); ?>" />
+			<?php endforeach; ?>
+			<label class="evt-switch-caja" title="<?php echo esc_attr( $rotulo ); ?>" data-bs-toggle="tooltip">
+				<input type="checkbox" class="evt-switch-input" data-evt-switch
+					<?php checked( $publicado, true ); ?> />
+				<span class="evt-switch-pista" aria-hidden="true"></span>
+				<span class="evt-switch-txt"><?php echo esc_html( $publicado ? 'Publicado' : 'Borrador' ); ?></span>
+				<span class="screen-reader-text"><?php echo esc_html( $rotulo ); ?></span>
+			</label>
+			<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-switch-boton' ); ?>"><?php echo esc_html( $publicado ? 'Despublicar' : 'Publicar' ); ?></button>
+		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * «Papelera (N)» with what was sent to it, when there is something.
 	 *
 	 * Ponentes y actividades comparten papelera porque lo que se busca ahí es

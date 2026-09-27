@@ -229,8 +229,15 @@ final class EventListView {
 						<p class="evt-ficha__dato"><?php echo esc_html( self::names( $row['areas'] ) ); ?></p>
 						<?php if ( $dentro ) : ?>
 							<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-						<?php elseif ( '' !== (string) $row['view_url'] ) : ?>
-							<a class="evt-ficha__ver" href="<?php echo esc_url( (string) $row['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $row['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+						<?php else : ?>
+							<div class="evt-ficha__pie">
+								<?php if ( true === $row['can_pub'] ) : ?>
+									<?php echo self::publish_switch( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+								<?php else : ?>
+									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>"><?php echo esc_html( EventList::status_labels()[ $row['status'] ] ?? (string) $row['status'] ); ?></span>
+								<?php endif; ?>
+								<?php echo self::row_icons( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+							</div>
 						<?php endif; ?>
 					</div>
 				</li>
@@ -321,15 +328,7 @@ final class EventListView {
 								<?php if ( $dentro ) : ?>
 									<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 								<?php else : ?>
-									<span class="evt-acciones">
-										<?php
-										echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Abrir el taller de este evento' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-										$mirar = 'publish' === (string) $row['status']
-											? 'Ver la página del evento'
-											: 'Previsualizar el evento, que está en borrador';
-										echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-										?>
-									</span>
+									<?php echo self::row_icons( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -341,15 +340,23 @@ final class EventListView {
 	}
 
 	/**
-	 * The publish state as a switch.
+	 * Edit and view, as the two icon buttons of a row or a card.
 	 *
-	 * Un interruptor y no un enlace: lo que se quiere saber de un vistazo es si
-	 * el evento se ve fuera, y lo que se quiere hacer es cambiarlo. Con
-	 * JavaScript se envía solo al soltarlo; sin JavaScript queda el botón de al
-	 * lado, que hace exactamente lo mismo.
-	 *
-	 * Publicar el evento **no publica sus páginas**: cada una tiene su estado y
-	 * se publica desde el taller.
+	 * @param array<string, mixed> $row One row of the model.
+	 * @return string
+	 */
+	private static function row_icons( array $row ): string {
+		$mirar = 'publish' === (string) $row['status']
+			? 'Ver la página del evento'
+			: 'Previsualizar el evento, que está en borrador';
+		return '<span class="evt-acciones">'
+			. PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar )
+			. PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' )
+			. '</span>';
+	}
+
+	/**
+	 * The publish switch of one row, posting to the list.
 	 *
 	 * @param array<string, mixed> $row One row of the model.
 	 * @return string
@@ -358,25 +365,16 @@ final class EventListView {
 		$id        = (int) $row['id'];
 		$publicado = 'publish' === (string) $row['status'];
 		$op        = $publicado ? 'unpublish' : 'publish';
-		$rotulo    = $publicado ? 'Despublicar este evento' : 'Publicar este evento';
-
-		ob_start();
-		?>
-		<form class="evt-accion evt-switch" method="post" action="">
-			<?php wp_nonce_field( EventList::nonce_action( $op ), EventList::nonce_name( $id ), false ); ?>
-			<input type="hidden" name="<?php echo esc_attr( EventList::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventList::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<label class="evt-switch-caja" title="<?php echo esc_attr( $rotulo ); ?>" data-bs-toggle="tooltip">
-				<input type="checkbox" class="evt-switch-input" data-evt-switch
-					<?php checked( $publicado, true ); ?> />
-				<span class="evt-switch-pista" aria-hidden="true"></span>
-				<span class="evt-switch-txt"><?php echo esc_html( $publicado ? 'Publicado' : 'Borrador' ); ?></span>
-				<span class="screen-reader-text"><?php echo esc_html( $rotulo ); ?></span>
-			</label>
-			<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-switch-boton' ); ?>"><?php echo esc_html( $publicado ? 'Despublicar' : 'Publicar' ); ?></button>
-		</form>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::publish_switch(
+			$publicado,
+			array(
+				EventList::FIELD_DO    => $op,
+				EventList::FIELD_EVENT => (string) $id,
+			),
+			EventList::nonce_action( $op ),
+			EventList::nonce_name( $id ),
+			true === $row['archived']
+		);
 	}
 
 	/**

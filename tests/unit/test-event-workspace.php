@@ -773,6 +773,48 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * «Datos del evento» publica y despublica, y solo quien puede publicar.
+	 */
+	public function test_the_data_panel_publishes_and_unpublishes_the_event() {
+		$area   = $this->area( 'Innovación' );
+		$admin  = $this->administrator();
+		$evento = $this->event( $admin, array( $area ), array(), array( 'post_status' => 'draft' ) );
+		$pagina = $this->event_page( $evento, 'programa', array( 'post_status' => 'draft' ) );
+
+		$this->submit( $admin, EventWorkspace::OP_PUBLISH, $evento );
+		$this->assertSame( 'publish', get_post_status( $evento ) );
+		$this->assertSame( 'draft', get_post_status( $pagina ), 'sus páginas siguen como estaban' );
+		$this->assertSame( 'ok', $this->flash( $admin )['tipo'] );
+
+		$this->submit( $admin, EventWorkspace::OP_UNPUBLISH, $evento );
+		$this->assertSame( 'draft', get_post_status( $evento ) );
+
+		// Un histórico se queda como estaba, también para administración.
+		update_post_meta( $evento, EventMetaKeys::ARCHIVED, '1' );
+		$this->submit( $admin, EventWorkspace::OP_PUBLISH, $evento );
+		$this->assertSame( 'draft', get_post_status( $evento ) );
+		$this->assertSame( 'error', $this->flash( $admin )['tipo'] );
+		delete_post_meta( $evento, EventMetaKeys::ARCHIVED );
+
+		// Un perfil que edita pero no publica, no publica.
+		$editor = $this->organiser( array( $area ) );
+		add_filter(
+			'user_has_cap',
+			static function ( $caps, $pedidas, $args ) use ( $editor ) {
+				if ( (int) ( $args[1] ?? 0 ) === $editor ) {
+					$caps['publish_evt_events'] = false;
+				}
+				return $caps;
+			},
+			10,
+			3
+		);
+		$this->submit( $editor, EventWorkspace::OP_PUBLISH, $evento );
+		$this->assertSame( 'draft', get_post_status( $evento ) );
+		$this->assertSame( 'error', $this->flash( $editor )['tipo'] );
+	}
+
+	/**
 	 * Un cartel en PDF que ya estaba no se pierde al guardar la apariencia.
 	 *
 	 * Llega así de la migración (ADR-0042): el selector no deja elegirlo, pero

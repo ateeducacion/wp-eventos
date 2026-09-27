@@ -491,6 +491,8 @@ body.evt-app .evt-hoja {
 .evt-switch-input:checked + .evt-switch-pista::after { transform: translateX(16px); }
 .evt-switch-input:focus-visible + .evt-switch-pista { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-switch-input:disabled + .evt-switch-pista { opacity: .6; }
+/* El de un histórico: se ve el estado, no se toca. */
+.evt-switch--fijo .evt-switch-caja { cursor: not-allowed; }
 .evt-switch-txt { font-size: 13px; color: var(--evt-texto-2); }
 
 @media ( prefers-reduced-motion: reduce ) {
@@ -1055,16 +1057,28 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   line-height: 1.25;
   text-align: center;
 }
-.evt-ficha__cuerpo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
+.evt-ficha__cuerpo { display: flex; flex: 1 1 auto; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
 .evt-ficha__chapas { display: flex; flex-wrap: wrap; gap: 4px; }
 .evt-ficha__titulo { margin: 0; font-size: 1rem; line-height: 1.3; }
 .evt-ficha__enlace { color: inherit; text-decoration: none; }
-/* Toda la tarjeta abre el taller; «Ver la página» queda por encima. */
+/* Toda la tarjeta abre el taller; el pie —publicar, ver, editar— queda por encima. */
 .evt-ficha__enlace::after { content: ""; position: absolute; inset: 0; }
 .evt-ficha__enlace:focus-visible { outline: none; }
 .evt-ficha:has(.evt-ficha__enlace:focus-visible) { outline: 3px solid var(--evt-pri); outline-offset: 2px; }
 .evt-ficha__dato { margin: 0; color: var(--evt-texto-2); font-size: .85rem; }
-.evt-ficha__ver { position: relative; z-index: 1; align-self: flex-start; margin-top: 4px; font-size: .85rem; }
+/* El pie va abajo del todo, para que las tarjetas de una fila lo alineen. */
+.evt-ficha__pie {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--evt-linea);
+}
 .evt-ficha .evt-accion { position: relative; z-index: 1; }
 
 .evt-tabla__cartel { width: 64px; }
@@ -1370,10 +1384,12 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 }
 .evt-ficha--historico .evt-ficha__banda { background: #2b3036; }
 .evt-ficha--papelera .evt-ficha__banda { background: var(--evt-mal); }
+/* Se apaga lo que cuenta el evento, no el pie: publicarlo es justo lo que
+   se viene a hacer con un borrador. */
 .evt-ficha--borrador .evt-ficha__cartel,
-.evt-ficha--borrador .evt-ficha__cuerpo,
+.evt-ficha--borrador .evt-ficha__cuerpo > :not(.evt-ficha__pie),
 .evt-ficha--papelera .evt-ficha__cartel,
-.evt-ficha--papelera .evt-ficha__cuerpo { opacity: .6; }
+.evt-ficha--papelera .evt-ficha__cuerpo > :not(.evt-ficha__pie) { opacity: .6; }
 .evt-ficha--historico .evt-ficha__cartel { filter: grayscale(1); opacity: .8; }
 .evt-fila--borrador > td,
 .evt-fila--papelera > td { opacity: .65; }
@@ -1386,3 +1402,14 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
   align-items: center;
   margin-top: 1.5rem;
 }
+
+/* «Publicación», encima de los datos del evento. */
+.evt-publicacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.evt-publicacion h2 { margin: 0; font-size: 1.05rem; }
+.evt-publicacion .evt-sub { margin: 2px 0 0; }

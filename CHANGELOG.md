@@ -37,6 +37,9 @@ en el subsitio `eventos` se hace después.
 - **En «Mis eventos» y en la línea del tiempo, un evento con el cartel en PDF salía sin imagen.** Ahora sale su imagen destacada. Y el nombre del evento que no tiene ninguna imagen se escribe en un color que se lee sobre el de su cabecera, también cuando es claro
 - **El filtro de ámbitos de «Mis eventos» es una lista única y en árbol:** cada ámbito sale una vez, con sus subámbitos sangrados debajo, y elegir uno trae también lo de sus subámbitos. Administración ve todos los ámbitos del sitio; el resto, los de su ámbito en los que tiene eventos
 - La paginación de «Mis eventos» sale centrada bajo la cuadrícula
+- **«Datos del evento» publica y despublica el evento**, con el mismo interruptor que el listado, en su propia tarjeta «Publicación» encima de los datos: no hace falta volver a «Mis eventos». Publicar el evento no toca sus páginas
+- **En cuadrícula, cada tarjeta lleva su pie:** el interruptor de publicado/borrador y los botones de ver (ojo) y editar (lápiz), como en la lista
+- **Un evento histórico no se publica ni se despublica:** se queda como estaba. El interruptor sale apagado en el listado, en las tarjetas y en «Datos», y el servidor rechaza el cambio aunque llegue a mano, también para administración
 
 - **Las tipografías elegidas en «Apariencia» no se cargaban:** se guardaban, pero ningún fichero las traía, y solo se veían en el ordenador que las tuviera instaladas. Ahora se cargan desde jsDelivr, con SRI y la versión clavada, como el resto de librerías
 
