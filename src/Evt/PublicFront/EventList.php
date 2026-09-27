@@ -31,6 +31,17 @@ use Evt\Taxonomy\EventTaxonomies;
  */
 final class EventList {
 
+	/**
+	 * Each filter axis and the row key that holds its terms.
+	 *
+	 * @var array<string, string>
+	 */
+	private const AXES = array(
+		'area'   => 'areas',
+		'type'   => 'types',
+		'course' => 'courses',
+	);
+
 	public const SHORTCODE = 'evt_event_list';
 
 	/**
@@ -213,8 +224,7 @@ final class EventList {
 		$user_id  = get_current_user_id();
 		$publicar = 'publish' === $op;
 
-		if ( EventPostType::POST_TYPE !== get_post_type( $event_id )
-			|| 0 !== (int) get_post_field( 'post_parent', $event_id )
+		if ( ! EventPostType::is_root( $event_id )
 			|| 'trash' === get_post_status( $event_id )
 			|| ! EventAccess::can_publish( $user_id, $event_id )
 			|| ! EventAccess::can_edit( $user_id, $event_id ) ) {
@@ -256,8 +266,7 @@ final class EventList {
 	 */
 	private static function may_restore( int $user_id, int $post_id ): bool {
 		return 'trash' === get_post_status( $post_id )
-			&& EventPostType::POST_TYPE === get_post_type( $post_id )
-			&& 0 === (int) get_post_field( 'post_parent', $post_id )
+			&& EventPostType::is_root( $post_id )
 			&& EventAccess::can_edit( $user_id, $post_id );
 	}
 
@@ -760,17 +769,7 @@ final class EventList {
 	 */
 	private static function terms( int $post_id, string $taxonomy ): array {
 		$terms = get_the_terms( $post_id, $taxonomy );
-		if ( ! is_array( $terms ) ) {
-			return array();
-		}
-
-		$out = array();
-		foreach ( $terms as $term ) {
-			if ( $term instanceof \WP_Term ) {
-				$out[ (int) $term->term_id ] = (string) $term->name;
-			}
-		}
-		return $out;
+		return is_array( $terms ) ? wp_list_pluck( $terms, 'name', 'term_id' ) : array();
 	}
 
 	/**
@@ -783,19 +782,13 @@ final class EventList {
 	 * @return array<string, array<int, string>>
 	 */
 	private static function options( array $rows ): array {
-		$out  = array(
+		$out = array(
 			'area'   => array(),
 			'type'   => array(),
 			'course' => array(),
 		);
-		$ejes = array(
-			'area'   => 'areas',
-			'type'   => 'types',
-			'course' => 'courses',
-		);
-
 		foreach ( $rows as $row ) {
-			foreach ( $ejes as $eje => $clave ) {
+			foreach ( self::AXES as $eje => $clave ) {
 				foreach ( $row[ $clave ] as $term_id => $nombre ) {
 					$out[ $eje ][ $term_id ] = $nombre;
 				}
@@ -818,13 +811,7 @@ final class EventList {
 	 * @return bool
 	 */
 	private static function in_scope( array $row, array $s ): bool {
-		$ejes = array(
-			'area'   => 'areas',
-			'type'   => 'types',
-			'course' => 'courses',
-		);
-
-		foreach ( $ejes as $eje => $clave ) {
+		foreach ( self::AXES as $eje => $clave ) {
 			if ( $s[ $eje ] > 0 && ! isset( $row[ $clave ][ $s[ $eje ] ] ) ) {
 				return false;
 			}

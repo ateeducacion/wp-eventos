@@ -223,19 +223,11 @@ final class EventWorkspace {
 		self::PANEL_CODE,
 		self::OP_ARCHIVE,
 		self::OP_UNARCHIVE,
-		'up',
-		'down',
-		'publish',
-		'unpublish',
-		'delete',
-		'restore',
 		self::OP_SPEAKER,
 		self::OP_ACTIVITY,
 		self::OP_EXPORT,
-		'sp_up',
-		'sp_down',
-		'row_delete',
-		'row_restore',
+		...self::ROW_OPS,
+		...self::PROGRAMME_OPS,
 	);
 
 	/**
@@ -606,8 +598,7 @@ final class EventWorkspace {
 			Shell::leave( $destino );
 			return;
 		}
-		if ( EventPostType::POST_TYPE !== get_post_type( $event_id )
-			|| (int) get_post_field( 'post_parent', $event_id ) > 0 ) {
+		if ( ! EventPostType::is_root( $event_id ) ) {
 			self::set_flash( 'error', 'Eso no es un evento: la marca de histórico se pone en el evento entero, no en una de sus páginas.' );
 			Shell::leave( $destino );
 			return;
@@ -697,39 +688,13 @@ final class EventWorkspace {
 	/**
 	 * Move one satellite page one place up or down.
 	 *
-	 * Se renumera la lista entera en vez de intercambiar dos `menu_order`: las
-	 * páginas heredadas del sistema anterior traen muchas el mismo número —o
-	 * ninguno—, así que un intercambio dejaría el orden igual que estaba. Son
-	 * un puñado de filas por evento.
-	 *
 	 * @param int $event_id   Event post ID.
 	 * @param int $section_id Satellite page post ID.
 	 * @param int $delta      -1 to move up, 1 to move down.
 	 * @return void
 	 */
 	private static function reorder( int $event_id, int $section_id, int $delta ): void {
-		$ids   = array_map( 'intval', wp_list_pluck( self::children( $event_id ), 'ID' ) );
-		$desde = array_search( $section_id, $ids, true );
-		if ( false === $desde ) {
-			return;
-		}
-		$hasta = (int) $desde + $delta;
-		if ( $hasta < 0 || $hasta >= count( $ids ) ) {
-			return;
-		}
-
-		$movida        = $ids[ $desde ];
-		$ids[ $desde ] = $ids[ $hasta ];
-		$ids[ $hasta ] = $movida;
-
-		foreach ( $ids as $posicion => $id ) {
-			wp_update_post(
-				array(
-					'ID'         => $id,
-					'menu_order' => ( $posicion + 1 ) * 10,
-				)
-			);
-		}
+		Programme::move( wp_list_pluck( self::children( $event_id ), 'ID' ), $section_id, $delta );
 	}
 
 	/**
@@ -1434,12 +1399,6 @@ final class EventWorkspace {
 	}
 
 	/**
-	 * One submitted text field, trimmed and sanitised.
-	 *
-	 * @param string $nombre Field name.
-	 * @return string
-	 */
-	/**
 	 * What the signup tab shows: the questions and the two windows.
 	 *
 	 * @param array<string, mixed> $m        Model so far.
@@ -2094,28 +2053,21 @@ final class EventWorkspace {
 	 * @return array<string, array<int, string>>
 	 */
 	private static function term_lists( int $user_id ): array {
-		$solo = EventAccess::can_edit_all_areas( $user_id )
-			? array()
-			: EventAccess::scope_areas( $user_id );
-
 		return array(
-			'area'   => self::term_options( EventTaxonomies::AREA, $solo ),
+			// Ya acotada al ámbito de quien mira: es la misma lista del escritorio.
+			'area'   => EventTaxonomies::area_options( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
 	}
 
 	/**
-	 * Terms of one taxonomy, optionally narrowed to a handful.
+	 * Every term of one taxonomy.
 	 *
 	 * @param string $taxonomy Taxonomy name.
-	 * @param int[]  $solo     Term IDs to keep; empty for all of them.
 	 * @return array<int, string> term_id => nombre.
 	 */
-	private static function term_options( string $taxonomy, array $solo = array() ): array {
-		if ( EventTaxonomies::AREA === $taxonomy ) {
-			return EventTaxonomies::area_options();
-		}
+	private static function term_options( string $taxonomy ): array {
 		$terms = get_terms(
 			array(
 				'taxonomy'   => $taxonomy,
@@ -2123,10 +2075,7 @@ final class EventWorkspace {
 				'fields'     => 'id=>name',
 			)
 		);
-		if ( ! is_array( $terms ) ) {
-			return array();
-		}
-		return array() === $solo ? $terms : array_intersect_key( $terms, array_flip( $solo ) );
+		return is_array( $terms ) ? $terms : array();
 	}
 
 	/**

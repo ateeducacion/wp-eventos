@@ -25,25 +25,6 @@ use Evt\PublicFront\Shell;
 final class EventSectionsPanel {
 
 	/**
-	 * What `wp_kses()` lets through for an inline icon.
-	 *
-	 * @var array<string, array<string, bool>>
-	 */
-	private const SVG = array(
-		'svg'  => array(
-			'viewbox'     => true,
-			'width'       => true,
-			'height'      => true,
-			'aria-hidden' => true,
-			'focusable'   => true,
-		),
-		'path' => array(
-			'fill' => true,
-			'd'    => true,
-		),
-	);
-
-	/**
 	 * The publish state of one section, as a switch.
 	 *
 	 * El mismo interruptor que el listado de eventos, y por el mismo motivo:
@@ -208,7 +189,7 @@ final class EventSectionsPanel {
 								<td data-rotulo="Acciones">
 									<span class="evt-acciones">
 										<?php
-										$boton = self::action_form( $m, (int) $fila['id'], 'restore', 'Restaurar', 'Restaurar la sección, en borrador', $clases );
+										$boton = self::action_form( $m, (int) $fila['id'], 'restore', 'restaurar', 'Restaurar la sección, en borrador', $clases );
 										echo $boton; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 										?>
 									</span>
@@ -364,24 +345,8 @@ final class EventSectionsPanel {
 	 * @return string
 	 */
 	private static function action_form( array $m, int $id, string $op, string $icono, string $titulo, string $clases, bool $apagado = false, string $confirmar = '' ): string {
-		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
-
-		ob_start();
-		?>
-		<form class="evt-accion" method="post" action=""<?php echo $pregunta; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapado arriba. ?>>
-			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_SECTION ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<button type="submit" class="<?php echo esc_attr( $clases . ' evt-icono' ); ?>"
-				title="<?php echo esc_attr( $titulo ); ?>" data-bs-toggle="tooltip"
-				<?php disabled( $apagado, true ); ?>>
-				<?php echo wp_kses( Shell::icon( $icono ), self::SVG ); ?>
-				<span class="screen-reader-text"><?php echo esc_html( $titulo ); ?></span>
-			</button>
-		</form>
-		<?php
-		return (string) ob_get_clean();
+		// El mismo botón que las filas de ponentes y actividades; la fila viaja en su propio campo.
+		return PanelParts::action( $m, $id, $op, $icono, $titulo, $clases, '', $apagado, $confirmar, EventWorkspace::FIELD_SECTION );
 	}
 
 	/**

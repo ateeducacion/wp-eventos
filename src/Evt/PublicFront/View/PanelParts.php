@@ -54,12 +54,13 @@ final class PanelParts {
 	 * @param string               $icono     Icon name for {@see Shell::icon()}.
 	 * @param string               $titulo    What the button does, in Spanish.
 	 * @param string               $clases    Button classes.
-	 * @param string               $panel     Tab to come back to.
+	 * @param string               $panel     Tab to come back to; empty for none.
 	 * @param bool                 $apagado   Whether the button is disabled.
 	 * @param string               $confirmar Question to ask before submitting.
+	 * @param string               $id_field  Field that carries the row ID.
 	 * @return string
 	 */
-	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '' ): string {
+	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '', string $id_field = EventWorkspace::FIELD_ROW ): string {
 		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
 
 		ob_start();
@@ -68,8 +69,10 @@ final class PanelParts {
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::ARG_PANEL ); ?>" value="<?php echo esc_attr( $panel ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( $id_field ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<?php if ( '' !== $panel ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( EventWorkspace::ARG_PANEL ); ?>" value="<?php echo esc_attr( $panel ); ?>" />
+			<?php endif; ?>
 			<button type="submit" class="<?php echo esc_attr( $clases . ' evt-icono' ); ?>"
 				title="<?php echo esc_attr( $titulo ); ?>" data-bs-toggle="tooltip"
 				<?php disabled( $apagado, true ); ?>>
