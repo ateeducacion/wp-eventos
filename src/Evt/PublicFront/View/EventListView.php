@@ -32,42 +32,175 @@ final class EventListView {
 		ob_start();
 		?>
 		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shell::notice escapa su texto. ?>
-		<?php if ( ! empty( $m['can_create'] ) ) : ?>
-			<p class="evt-acciones">
-				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
-					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
-					Crear evento
-				</a>
-			</p>
-		<?php endif; ?>
-		<?php self::counts( $m ); ?>
+		<?php self::toolbar( $m ); ?>
 		<?php self::trash_bar( $m ); ?>
-		<?php self::filters( $m ); ?>
-		<?php self::table( $m ); ?>
+		<?php if ( array() === $m['rows'] ) : ?>
+			<div class="evt-vacio evt-tarjeta">
+				<p><?php echo esc_html( (string) $m['empty_text'] ); ?></p>
+				<?php if ( '' !== (string) $m['reset_url'] ) : ?>
+					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['reset_url'] ); ?>">Quitar el filtro</a>
+				<?php endif; ?>
+			</div>
+		<?php elseif ( EventList::VIEW_LIST === (string) $m['selection']['view'] ) : ?>
+			<?php self::table( $m ); ?>
+		<?php else : ?>
+			<?php self::grid( $m ); ?>
+		<?php endif; ?>
+		<p class="evt-vacio evt-tarjeta" data-evt-filtro-vacio hidden>Ningún evento de esta página se llama así. Pulse Intro para buscar en todos.</p>
 		<?php self::pagination( $m ); ?>
 		<?php
 		return Shell::render( 'Eventos', (string) $m['subtitle'], (string) ob_get_clean() );
 	}
 
 	/**
-	 * The four figures that say how the área is doing.
+	 * The one line of tools: filter by name, by área, the layout and «Crear».
+	 *
+	 * Pocos eventos por área: con el nombre y el ámbito basta. El nombre filtra
+	 * mientras se escribe (JavaScript) y, al pulsar Intro, busca en todas las
+	 * páginas (servidor); los dos caminos llegan a lo mismo.
 	 *
 	 * @param array<string, mixed> $m Model.
 	 * @return void
 	 */
-	private static function counts( array $m ): void {
-		$fichas = array(
-			'all'                         => 'Eventos',
-			EventMetaKeys::STATE_UPCOMING => 'Próximos',
-			EventMetaKeys::STATE_OPEN     => 'Abiertos',
-			EventList::FILTER_DRAFT       => 'En borrador',
-		);
+	private static function toolbar( array $m ): void {
+		$s     = $m['selection'];
+		$vista = (string) $s['view'];
 		?>
-		<ul class="evt-cifras">
-			<?php foreach ( $fichas as $clave => $rotulo ) : ?>
-				<li class="evt-cifra">
-					<strong><?php echo esc_html( (string) ( $m['counts'][ $clave ] ?? 0 ) ); ?></strong>
-					<span><?php echo esc_html( $rotulo ); ?></span>
+		<div class="evt-herramientas">
+			<form class="evt-herramientas__filtros" method="get" action="" role="search">
+				<?php if ( (int) $m['page_id'] > 0 ) : ?>
+					<input type="hidden" name="page_id" value="<?php echo esc_attr( (string) $m['page_id'] ); ?>" />
+				<?php endif; ?>
+				<?php if ( EventList::VIEW_LIST === $vista ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_VIEW ); ?>" value="<?php echo esc_attr( EventList::VIEW_LIST ); ?>" />
+				<?php endif; ?>
+				<?php if ( EventList::FILTER_TRASH === (string) $s['state'] ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( EventList::FILTER_TRASH ); ?>" />
+				<?php endif; ?>
+				<label class="screen-reader-text" for="evt-buscar">Filtrar por nombre</label>
+				<input class="form-control evt-herramientas__buscar" type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
+					value="<?php echo esc_attr( (string) $s['search'] ); ?>"
+					placeholder="Filtrar por nombre" autocomplete="off" data-evt-filtro />
+				<?php if ( ! empty( $m['area_filter'] ) ) : ?>
+					<label class="screen-reader-text" for="evt-area">Ámbito</label>
+					<select class="form-select evt-herramientas__ambito" id="evt-area" name="<?php echo esc_attr( EventList::VAR_AREA ); ?>" data-evt-autoenvio>
+						<option value="0">Todos mis ámbitos</option>
+						<?php foreach ( (array) $m['options']['area'] as $term_id => $nombre ) : ?>
+							<option value="<?php echo esc_attr( (string) $term_id ); ?>" <?php selected( (int) $s['area'], (int) $term_id ); ?>><?php echo esc_html( $nombre ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				<?php endif; ?>
+				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
+			</form>
+			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
+				<?php
+				foreach ( array(
+					EventList::VIEW_GRID => 'Cuadrícula',
+					EventList::VIEW_LIST => 'Lista',
+				) as $clave => $rotulo ) :
+					$activa = $clave === $vista;
+					?>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
+						href="
+						<?php
+						echo esc_url(
+							EventList::url(
+								$s,
+								array(
+									'view' => $clave,
+									'page' => (int) $s['page'],
+								)
+							)
+						);
+						?>
+								"
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?></a>
+				<?php endforeach; ?>
+			</div>
+			<?php if ( ! empty( $m['can_create'] ) ) : ?>
+				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
+					Crear evento
+				</a>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The badges of one event: its state by the dates, and borrador / histórico.
+	 *
+	 * @param array<string, mixed> $row Row.
+	 * @return string
+	 */
+	private static function badges( array $row ): string {
+		$estados = EventMetaKeys::states();
+		$html    = sprintf(
+			'<span class="%1$s">%2$s</span>',
+			esc_attr( Assets::state_class( (string) $row['state'] ) ),
+			esc_html( $estados[ $row['state'] ] ?? '—' )
+		);
+		if ( ! empty( $row['draft'] ) ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_DRAFT ) ) . '">Borrador</span>';
+		}
+		if ( ! empty( $row['archived'] ) ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_ARCHIVED ) ) . '" title="Cerrado a edición: se consulta y se exporta, pero no se cambia.">Histórico</span>';
+		}
+		if ( EventList::FILTER_TRASH === (string) $row['status'] ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_TRASH ) ) . '">En la papelera</span>';
+		}
+		return $html;
+	}
+
+	/**
+	 * The poster, or a block with the colour of the event and its name.
+	 *
+	 * @param array<string, mixed> $row   Row.
+	 * @param string               $clase CSS class.
+	 * @return string
+	 */
+	private static function poster( array $row, string $clase ): string {
+		if ( '' !== (string) $row['poster'] ) {
+			return sprintf( '<img class="%1$s" src="%2$s" alt="" loading="lazy">', esc_attr( $clase ), esc_url( (string) $row['poster'] ) );
+		}
+		return sprintf(
+			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s" aria-hidden="true"><span>%3$s</span></span>',
+			esc_attr( $clase ),
+			esc_attr( (string) $row['color'] ),
+			esc_html( (string) $row['title'] )
+		);
+	}
+
+	/**
+	 * Cards with the poster.
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return void
+	 */
+	private static function grid( array $m ): void {
+		$dentro = EventList::FILTER_TRASH === (string) $m['selection']['state'];
+		?>
+		<ul class="evt-rejilla">
+			<?php foreach ( $m['rows'] as $row ) : ?>
+				<li class="evt-ficha" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+					<?php echo self::poster( (array) $row, 'evt-ficha__cartel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<div class="evt-ficha__cuerpo">
+						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+						<h2 class="evt-ficha__titulo">
+							<?php if ( '' !== (string) $row['url'] ) : ?>
+								<a class="evt-ficha__enlace" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
+							<?php else : ?>
+								<?php echo esc_html( (string) $row['title'] ); ?>
+							<?php endif; ?>
+						</h2>
+						<p class="evt-ficha__dato"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></p>
+						<p class="evt-ficha__dato"><?php echo esc_html( self::names( $row['areas'] ) ); ?></p>
+						<?php if ( $dentro ) : ?>
+							<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+						<?php elseif ( '' !== (string) $row['view_url'] ) : ?>
+							<a class="evt-ficha__ver" href="<?php echo esc_url( (string) $row['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $row['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+						<?php endif; ?>
+					</div>
 				</li>
 			<?php endforeach; ?>
 		</ul>
@@ -105,164 +238,71 @@ final class EventListView {
 	}
 
 	/**
-	 * The filter bar: text, área, tipología, curso and state.
-	 *
-	 * @param array<string, mixed> $m Model.
-	 * @return void
-	 */
-	private static function filters( array $m ): void {
-		$s      = $m['selection'];
-		$listas = array(
-			'area'   => array(
-				'var'     => EventList::VAR_AREA,
-				'label'   => 'Ámbito',
-				'any'     => 'Todos los ámbitos',
-				'choices' => $m['options']['area'],
-			),
-			'type'   => array(
-				'var'     => EventList::VAR_TYPE,
-				'label'   => 'Tipología',
-				'any'     => 'Todas las tipologías',
-				'choices' => $m['options']['type'],
-			),
-			'course' => array(
-				'var'     => EventList::VAR_COURSE,
-				'label'   => 'Curso escolar',
-				'any'     => 'Todos los cursos',
-				'choices' => $m['options']['course'],
-			),
-		);
-		if ( empty( $m['area_filter'] ) ) {
-			unset( $listas['area'] );
-		}
-		?>
-		<form class="evt-form evt-tarjeta" method="get" action="">
-			<?php if ( (int) $m['page_id'] > 0 ) : ?>
-				<input type="hidden" name="page_id" value="<?php echo esc_attr( (string) $m['page_id'] ); ?>" />
-			<?php endif; ?>
-			<div class="evt-form-fila">
-				<div>
-					<label for="evt-buscar">Buscar</label>
-					<input type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
-						value="<?php echo esc_attr( (string) $s['search'] ); ?>"
-						placeholder="Título del evento…" autocomplete="off" />
-				</div>
-				<?php foreach ( $listas as $eje => $lista ) : ?>
-					<div>
-						<label for="evt-<?php echo esc_attr( $eje ); ?>"><?php echo esc_html( $lista['label'] ); ?></label>
-						<select id="evt-<?php echo esc_attr( $eje ); ?>" name="<?php echo esc_attr( $lista['var'] ); ?>">
-							<option value="0"><?php echo esc_html( $lista['any'] ); ?></option>
-							<?php foreach ( $lista['choices'] as $term_id => $nombre ) : ?>
-								<option value="<?php echo esc_attr( (string) $term_id ); ?>" <?php selected( (int) $s[ $eje ], (int) $term_id ); ?>>
-									<?php echo esc_html( $nombre ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-				<?php endforeach; ?>
-				<div>
-					<label for="evt-estado">Estado</label>
-					<select id="evt-estado" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>">
-						<?php foreach ( EventList::state_filters() as $clave => $rotulo ) : ?>
-							<option value="<?php echo esc_attr( $clave ); ?>" <?php selected( (string) $s['state'], $clave ); ?>>
-								<?php echo esc_html( $rotulo ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
-			</div>
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class() ); ?>" type="submit">Filtrar</button>
-				<?php if ( '' !== (string) $m['reset_url'] ) : ?>
-					<a href="<?php echo esc_url( (string) $m['reset_url'] ); ?>">Quitar los filtros</a>
-				<?php endif; ?>
-			</p>
-		</form>
-		<?php
-	}
-
-	/**
-	 * The table itself, or why it is empty.
+	 * The table: the same events, one per line, with the publish switch.
 	 *
 	 * @param array<string, mixed> $m Model.
 	 * @return void
 	 */
 	private static function table( array $m ): void {
-		$estados = EventMetaKeys::states();
 		$publica = EventList::status_labels();
 		$dentro  = EventList::FILTER_TRASH === (string) $m['selection']['state'];
 		?>
 		<div class="evt-tabla-caja">
-			<?php if ( array() === $m['rows'] ) : ?>
-				<p class="evt-vacio"><?php echo esc_html( (string) $m['empty_text'] ); ?></p>
-			<?php else : ?>
-				<table class="evt-tabla">
-					<thead>
-						<tr>
-							<th scope="col">Evento</th>
-							<th scope="col">Ámbito</th>
-							<th scope="col">Tipología</th>
-							<th scope="col">Curso</th>
-							<th scope="col">Fechas</th>
-							<th scope="col">Estado</th>
-							<th scope="col">Publicación</th>
-							<th scope="col" class="evt-num">Secciones</th>
-							<th scope="col">Acciones</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $m['rows'] as $row ) : ?>
-							<tr>
-								<td data-rotulo="Evento">
-									<?php if ( '' !== (string) $row['url'] ) : ?>
-										<a href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
-									<?php else : ?>
-										<?php echo esc_html( (string) $row['title'] ); ?>
-									<?php endif; ?>
-								</td>
-								<td data-rotulo="Ámbito"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
-								<td data-rotulo="Tipología"><?php echo esc_html( self::names( $row['types'] ) ); ?></td>
-								<td data-rotulo="Curso"><?php echo esc_html( self::names( $row['courses'] ) ); ?></td>
-								<td data-rotulo="Fechas"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></td>
-								<td data-rotulo="Estado">
-									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['state'] ) ); ?>">
-										<?php echo esc_html( $estados[ $row['state'] ] ?? '—' ); ?>
+			<table class="evt-tabla">
+				<thead>
+					<tr>
+						<th scope="col"><span class="screen-reader-text">Cartel</span></th>
+						<th scope="col">Evento</th>
+						<th scope="col">Fechas</th>
+						<th scope="col">Ámbito</th>
+						<th scope="col">Publicación</th>
+						<th scope="col" class="evt-num">Páginas</th>
+						<th scope="col"><span class="screen-reader-text">Acciones</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $m['rows'] as $row ) : ?>
+						<tr data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+							<td class="evt-tabla__cartel"><?php echo self::poster( (array) $row, 'evt-mini-cartel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></td>
+							<td data-rotulo="Evento">
+								<?php if ( '' !== (string) $row['url'] ) : ?>
+									<a class="evt-tabla__titulo" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
+								<?php else : ?>
+									<span class="evt-tabla__titulo"><?php echo esc_html( (string) $row['title'] ); ?></span>
+								<?php endif; ?>
+								<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+							</td>
+							<td data-rotulo="Fechas"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></td>
+							<td data-rotulo="Ámbito"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
+							<td data-rotulo="Publicación">
+								<?php if ( $dentro || true !== $row['can_pub'] ) : ?>
+									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>">
+										<?php echo esc_html( $publica[ $row['status'] ] ?? (string) $row['status'] ); ?>
 									</span>
-									<?php if ( ! empty( $row['archived'] ) ) : ?>
-										<span class="<?php echo esc_attr( Assets::state_class( EventList::FILTER_ARCHIVED ) ); ?>"
-											title="Cerrado a edición: se consulta y se exporta, pero no se cambia.">Histórico</span>
-									<?php endif; ?>
-								</td>
-								<td data-rotulo="Publicación">
-									<?php if ( $dentro || true !== $row['can_pub'] ) : ?>
-										<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>">
-											<?php echo esc_html( $publica[ $row['status'] ] ?? (string) $row['status'] ); ?>
-										</span>
-									<?php else : ?>
-										<?php echo self::publish_switch( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-									<?php endif; ?>
-								</td>
-								<td class="evt-num" data-rotulo="Secciones"><?php echo esc_html( (string) $row['sections'] ); ?></td>
-								<td data-rotulo="Acciones">
-									<?php if ( $dentro ) : ?>
-										<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-									<?php else : ?>
-										<span class="evt-acciones">
-											<?php
-											echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-											$mirar = 'publish' === (string) $row['status']
-												? 'Ver la página del evento'
-												: 'Previsualizar el evento, que está en borrador';
-											echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-											?>
-										</span>
-									<?php endif; ?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			<?php endif; ?>
+								<?php else : ?>
+									<?php echo self::publish_switch( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+								<?php endif; ?>
+							</td>
+							<td class="evt-num" data-rotulo="Páginas"><?php echo esc_html( (string) $row['sections'] ); ?></td>
+							<td data-rotulo="Acciones">
+								<?php if ( $dentro ) : ?>
+									<?php echo self::restore_form( (int) $row['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+								<?php else : ?>
+									<span class="evt-acciones">
+										<?php
+										echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Abrir el taller de este evento' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+										$mirar = 'publish' === (string) $row['status']
+											? 'Ver la página del evento'
+											: 'Previsualizar el evento, que está en borrador';
+										echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+										?>
+									</span>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
 		</div>
 		<?php
 	}

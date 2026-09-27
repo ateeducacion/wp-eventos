@@ -115,6 +115,18 @@ final class EventList {
 	public const VAR_PAGE = 'evt_page';
 
 	/**
+	 * Query var of the layout: cards with the poster or a table.
+	 */
+	public const VAR_VIEW = 'evt_vista';
+
+	/**
+	 * The two layouts. Cards by default: with few events per área, the
+	 * poster is what tells them apart at a glance.
+	 */
+	public const VIEW_GRID = 'cuadricula';
+	public const VIEW_LIST = 'lista';
+
+	/**
 	 * Query var other screens use to say what just happened.
 	 */
 	public const VAR_NOTICE = 'evt_notice';
@@ -336,10 +348,11 @@ final class EventList {
 	/**
 	 * What the URL is asking for.
 	 *
-	 * @return array{area:int, type:int, course:int, state:string, search:string, page:int}
+	 * @return array{area:int, type:int, course:int, state:string, search:string, page:int, view:string}
 	 */
 	public static function selection(): array {
 		$estado = self::input( self::VAR_STATE, 'all' );
+		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
@@ -348,6 +361,7 @@ final class EventList {
 			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : 'all',
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
+			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
 		);
 	}
 
@@ -370,6 +384,7 @@ final class EventList {
 			self::VAR_STATE  => 'all' !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
+			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
 		);
 
 		return Shell::url(
@@ -636,6 +651,11 @@ final class EventList {
 	private static function with_sections( array $rows ): array {
 		$secciones = self::section_counts( array_map( 'intval', array_column( $rows, 'id' ) ) );
 		$user_id   = get_current_user_id();
+		// Los carteles de la página en una consulta, no dos por tarjeta.
+		$carteles = array_filter( array_map( array( Timeline::class, 'poster_id' ), array_map( 'intval', array_column( $rows, 'id' ) ) ) );
+		if ( $carteles ) {
+			_prime_post_caches( $carteles, false, true );
+		}
 
 		foreach ( $rows as $i => $row ) {
 			$id       = (int) $row['id'];
@@ -653,6 +673,11 @@ final class EventList {
 				? ''
 				: ( 'publish' === $row['status'] ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) );
 			$rows[ $i ]['can_pub']  = EventAccess::can_publish( $user_id, $id );
+			$rows[ $i ]['draft']    = in_array( (string) $row['status'], array( 'draft', 'pending', 'future' ), true );
+			$cartel                 = Timeline::poster_id( $id );
+			$rows[ $i ]['poster']   = $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '';
+			$fondo                  = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
+			$rows[ $i ]['color']    = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
 		}
 
 		return $rows;

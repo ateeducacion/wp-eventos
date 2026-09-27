@@ -581,4 +581,58 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertTrue( shortcode_exists( EventList::SHORTCODE ) );
 		$this->assertNotFalse( has_action( 'init', array( EventList::class, 'handle' ) ) );
 	}
+
+	// ─── cuadrícula y lista ────────────────────────────────────────────────
+
+	/**
+	 * Por defecto, tarjetas con el cartel —o su color y su nombre— y las
+	 * chapas de borrador e histórico; cada una lleva su nombre para filtrar.
+	 */
+	public function test_the_grid_is_the_default_and_carries_badges() {
+		$area = $this->area( 'Innovación' );
+		$yo   = $this->administrator();
+		$this->event(
+			$yo,
+			array( $area ),
+			array(),
+			array(
+				'post_title'  => 'Jornada en borrador',
+				'post_status' => 'draft',
+			)
+		);
+		$this->event( $yo, array( $area ), array( \Evt\Meta\EventMetaKeys::ARCHIVED => '1' ), array( 'post_title' => 'Congreso cerrado' ) );
+
+		$this->acting_as( $yo );
+		$m    = EventList::model();
+		$html = \Evt\PublicFront\View\EventListView::html( $m );
+
+		$this->assertSame( EventList::VIEW_GRID, $m['selection']['view'] );
+		$this->assertStringContainsString( 'class="evt-rejilla"', $html );
+		$this->assertStringContainsString( 'evt-ficha__cartel--vacio', $html );
+		$this->assertStringContainsString( '>Borrador</span>', $html );
+		$this->assertStringContainsString( '>Histórico</span>', $html );
+		$this->assertStringContainsString( 'data-evt-buscar="jornada en borrador"', $html );
+		$this->assertStringContainsString( 'data-evt-filtro', $html );
+		$this->assertStringNotContainsString( 'evt_filter_type', $html, 'ni tipología ni curso en la barra' );
+	}
+
+	/**
+	 * Con `?evt_vista=lista`, la tabla con el interruptor de publicar, y los
+	 * enlaces conservan la vista elegida.
+	 */
+	public function test_the_list_view_is_a_table_and_links_keep_it() {
+		$area = $this->area( 'Innovación' );
+		$yo   = $this->administrator();
+		$this->event( $yo, array( $area ), array(), array( 'post_title' => 'Encuentro' ) );
+
+		$this->acting_as( $yo );
+		$_GET[ EventList::VAR_VIEW ] = EventList::VIEW_LIST;
+		$m                           = EventList::model();
+		$html                        = \Evt\PublicFront\View\EventListView::html( $m );
+		unset( $_GET[ EventList::VAR_VIEW ] );
+
+		$this->assertStringContainsString( 'class="evt-tabla"', $html );
+		$this->assertStringContainsString( 'data-evt-switch', $html );
+		$this->assertStringContainsString( EventList::VAR_VIEW . '=' . EventList::VIEW_LIST, EventList::url( $m['selection'], array( 'page' => 2 ) ) );
+	}
 }

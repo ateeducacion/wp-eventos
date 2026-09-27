@@ -6839,6 +6839,18 @@ final class EventList {
 
 
 
+	public const VAR_VIEW = 'evt_vista';
+
+
+
+
+
+	public const VIEW_GRID = 'cuadricula';
+	public const VIEW_LIST = 'lista';
+
+
+
+
 	public const VAR_NOTICE = 'evt_notice';
 
 
@@ -7062,6 +7074,7 @@ final class EventList {
 
 	public static function selection(): array {
 		$estado = self::input( self::VAR_STATE, 'all' );
+		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
@@ -7070,6 +7083,7 @@ final class EventList {
 			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : 'all',
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
+			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
 		);
 	}
 
@@ -7092,6 +7106,7 @@ final class EventList {
 			self::VAR_STATE  => 'all' !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
+			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
 		);
 
 		return Shell::url(
@@ -7359,6 +7374,11 @@ final class EventList {
 		$secciones = self::section_counts( array_map( 'intval', array_column( $rows, 'id' ) ) );
 		$user_id   = get_current_user_id();
 
+		$carteles = array_filter( array_map( array( Timeline::class, 'poster_id' ), array_map( 'intval', array_column( $rows, 'id' ) ) ) );
+		if ( $carteles ) {
+			_prime_post_caches( $carteles, false, true );
+		}
+
 		foreach ( $rows as $i => $row ) {
 			$id       = (int) $row['id'];
 			$papelera = self::FILTER_TRASH === $row['status'];
@@ -7375,6 +7395,11 @@ final class EventList {
 				? ''
 				: ( 'publish' === $row['status'] ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) );
 			$rows[ $i ]['can_pub']  = EventAccess::can_publish( $user_id, $id );
+			$rows[ $i ]['draft']    = in_array( (string) $row['status'], array( 'draft', 'pending', 'future' ), true );
+			$cartel                 = Timeline::poster_id( $id );
+			$rows[ $i ]['poster']   = $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '';
+			$fondo                  = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
+			$rows[ $i ]['color']    = is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b';
 		}
 
 		return $rows;
@@ -7747,18 +7772,21 @@ final class EventListView {
 		ob_start();
 		?>
 		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); ?>
-		<?php if ( ! empty( $m['can_create'] ) ) : ?>
-			<p class="evt-acciones">
-				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
-					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
-					Crear evento
-				</a>
-			</p>
-		<?php endif; ?>
-		<?php self::counts( $m ); ?>
+		<?php self::toolbar( $m ); ?>
 		<?php self::trash_bar( $m ); ?>
-		<?php self::filters( $m ); ?>
-		<?php self::table( $m ); ?>
+		<?php if ( array() === $m['rows'] ) : ?>
+			<div class="evt-vacio evt-tarjeta">
+				<p><?php echo esc_html( (string) $m['empty_text'] ); ?></p>
+				<?php if ( '' !== (string) $m['reset_url'] ) : ?>
+					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['reset_url'] ); ?>">Quitar el filtro</a>
+				<?php endif; ?>
+			</div>
+		<?php elseif ( EventList::VIEW_LIST === (string) $m['selection']['view'] ) : ?>
+			<?php self::table( $m ); ?>
+		<?php else : ?>
+			<?php self::grid( $m ); ?>
+		<?php endif; ?>
+		<p class="evt-vacio evt-tarjeta" data-evt-filtro-vacio hidden>Ningún evento de esta página se llama así. Pulse Intro para buscar en todos.</p>
 		<?php self::pagination( $m ); ?>
 		<?php
 		return Shell::render( 'Eventos', (string) $m['subtitle'], (string) ob_get_clean() );
@@ -7770,19 +7798,149 @@ final class EventListView {
 
 
 
-	private static function counts( array $m ): void {
-		$fichas = array(
-			'all'                         => 'Eventos',
-			EventMetaKeys::STATE_UPCOMING => 'Próximos',
-			EventMetaKeys::STATE_OPEN     => 'Abiertos',
-			EventList::FILTER_DRAFT       => 'En borrador',
-		);
+
+
+
+
+	private static function toolbar( array $m ): void {
+		$s     = $m['selection'];
+		$vista = (string) $s['view'];
 		?>
-		<ul class="evt-cifras">
-			<?php foreach ( $fichas as $clave => $rotulo ) : ?>
-				<li class="evt-cifra">
-					<strong><?php echo esc_html( (string) ( $m['counts'][ $clave ] ?? 0 ) ); ?></strong>
-					<span><?php echo esc_html( $rotulo ); ?></span>
+		<div class="evt-herramientas">
+			<form class="evt-herramientas__filtros" method="get" action="" role="search">
+				<?php if ( (int) $m['page_id'] > 0 ) : ?>
+					<input type="hidden" name="page_id" value="<?php echo esc_attr( (string) $m['page_id'] ); ?>" />
+				<?php endif; ?>
+				<?php if ( EventList::VIEW_LIST === $vista ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_VIEW ); ?>" value="<?php echo esc_attr( EventList::VIEW_LIST ); ?>" />
+				<?php endif; ?>
+				<?php if ( EventList::FILTER_TRASH === (string) $s['state'] ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>" value="<?php echo esc_attr( EventList::FILTER_TRASH ); ?>" />
+				<?php endif; ?>
+				<label class="screen-reader-text" for="evt-buscar">Filtrar por nombre</label>
+				<input class="form-control evt-herramientas__buscar" type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
+					value="<?php echo esc_attr( (string) $s['search'] ); ?>"
+					placeholder="Filtrar por nombre" autocomplete="off" data-evt-filtro />
+				<?php if ( ! empty( $m['area_filter'] ) ) : ?>
+					<label class="screen-reader-text" for="evt-area">Ámbito</label>
+					<select class="form-select evt-herramientas__ambito" id="evt-area" name="<?php echo esc_attr( EventList::VAR_AREA ); ?>" data-evt-autoenvio>
+						<option value="0">Todos mis ámbitos</option>
+						<?php foreach ( (array) $m['options']['area'] as $term_id => $nombre ) : ?>
+							<option value="<?php echo esc_attr( (string) $term_id ); ?>" <?php selected( (int) $s['area'], (int) $term_id ); ?>><?php echo esc_html( $nombre ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				<?php endif; ?>
+				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
+			</form>
+			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
+				<?php
+				foreach ( array(
+					EventList::VIEW_GRID => 'Cuadrícula',
+					EventList::VIEW_LIST => 'Lista',
+				) as $clave => $rotulo ) :
+					$activa = $clave === $vista;
+					?>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
+						href="
+						<?php
+						echo esc_url(
+							EventList::url(
+								$s,
+								array(
+									'view' => $clave,
+									'page' => (int) $s['page'],
+								)
+							)
+						);
+						?>
+								"
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?></a>
+				<?php endforeach; ?>
+			</div>
+			<?php if ( ! empty( $m['can_create'] ) ) : ?>
+				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
+					Crear evento
+				</a>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+
+
+
+
+
+
+	private static function badges( array $row ): string {
+		$estados = EventMetaKeys::states();
+		$html    = sprintf(
+			'<span class="%1$s">%2$s</span>',
+			esc_attr( Assets::state_class( (string) $row['state'] ) ),
+			esc_html( $estados[ $row['state'] ] ?? '—' )
+		);
+		if ( ! empty( $row['draft'] ) ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_DRAFT ) ) . '">Borrador</span>';
+		}
+		if ( ! empty( $row['archived'] ) ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_ARCHIVED ) ) . '" title="Cerrado a edición: se consulta y se exporta, pero no se cambia.">Histórico</span>';
+		}
+		if ( EventList::FILTER_TRASH === (string) $row['status'] ) {
+			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_TRASH ) ) . '">En la papelera</span>';
+		}
+		return $html;
+	}
+
+
+
+
+
+
+
+
+	private static function poster( array $row, string $clase ): string {
+		if ( '' !== (string) $row['poster'] ) {
+			return sprintf( '<img class="%1$s" src="%2$s" alt="" loading="lazy">', esc_attr( $clase ), esc_url( (string) $row['poster'] ) );
+		}
+		return sprintf(
+			'<span class="%1$s %1$s--vacio" style="--evt-cartel: %2$s" aria-hidden="true"><span>%3$s</span></span>',
+			esc_attr( $clase ),
+			esc_attr( (string) $row['color'] ),
+			esc_html( (string) $row['title'] )
+		);
+	}
+
+
+
+
+
+
+
+	private static function grid( array $m ): void {
+		$dentro = EventList::FILTER_TRASH === (string) $m['selection']['state'];
+		?>
+		<ul class="evt-rejilla">
+			<?php foreach ( $m['rows'] as $row ) : ?>
+				<li class="evt-ficha" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+					<?php echo self::poster( (array) $row, 'evt-ficha__cartel' ); ?>
+					<div class="evt-ficha__cuerpo">
+						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); ?></div>
+						<h2 class="evt-ficha__titulo">
+							<?php if ( '' !== (string) $row['url'] ) : ?>
+								<a class="evt-ficha__enlace" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
+							<?php else : ?>
+								<?php echo esc_html( (string) $row['title'] ); ?>
+							<?php endif; ?>
+						</h2>
+						<p class="evt-ficha__dato"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></p>
+						<p class="evt-ficha__dato"><?php echo esc_html( self::names( $row['areas'] ) ); ?></p>
+						<?php if ( $dentro ) : ?>
+							<?php echo self::restore_form( (int) $row['id'] ); ?>
+						<?php elseif ( '' !== (string) $row['view_url'] ) : ?>
+							<a class="evt-ficha__ver" href="<?php echo esc_url( (string) $row['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $row['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+						<?php endif; ?>
+					</div>
 				</li>
 			<?php endforeach; ?>
 		</ul>
@@ -7825,159 +7983,66 @@ final class EventListView {
 
 
 
-	private static function filters( array $m ): void {
-		$s      = $m['selection'];
-		$listas = array(
-			'area'   => array(
-				'var'     => EventList::VAR_AREA,
-				'label'   => 'Ámbito',
-				'any'     => 'Todos los ámbitos',
-				'choices' => $m['options']['area'],
-			),
-			'type'   => array(
-				'var'     => EventList::VAR_TYPE,
-				'label'   => 'Tipología',
-				'any'     => 'Todas las tipologías',
-				'choices' => $m['options']['type'],
-			),
-			'course' => array(
-				'var'     => EventList::VAR_COURSE,
-				'label'   => 'Curso escolar',
-				'any'     => 'Todos los cursos',
-				'choices' => $m['options']['course'],
-			),
-		);
-		if ( empty( $m['area_filter'] ) ) {
-			unset( $listas['area'] );
-		}
-		?>
-		<form class="evt-form evt-tarjeta" method="get" action="">
-			<?php if ( (int) $m['page_id'] > 0 ) : ?>
-				<input type="hidden" name="page_id" value="<?php echo esc_attr( (string) $m['page_id'] ); ?>" />
-			<?php endif; ?>
-			<div class="evt-form-fila">
-				<div>
-					<label for="evt-buscar">Buscar</label>
-					<input type="search" id="evt-buscar" name="<?php echo esc_attr( EventList::VAR_SEARCH ); ?>"
-						value="<?php echo esc_attr( (string) $s['search'] ); ?>"
-						placeholder="Título del evento…" autocomplete="off" />
-				</div>
-				<?php foreach ( $listas as $eje => $lista ) : ?>
-					<div>
-						<label for="evt-<?php echo esc_attr( $eje ); ?>"><?php echo esc_html( $lista['label'] ); ?></label>
-						<select id="evt-<?php echo esc_attr( $eje ); ?>" name="<?php echo esc_attr( $lista['var'] ); ?>">
-							<option value="0"><?php echo esc_html( $lista['any'] ); ?></option>
-							<?php foreach ( $lista['choices'] as $term_id => $nombre ) : ?>
-								<option value="<?php echo esc_attr( (string) $term_id ); ?>" <?php selected( (int) $s[ $eje ], (int) $term_id ); ?>>
-									<?php echo esc_html( $nombre ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-				<?php endforeach; ?>
-				<div>
-					<label for="evt-estado">Estado</label>
-					<select id="evt-estado" name="<?php echo esc_attr( EventList::VAR_STATE ); ?>">
-						<?php foreach ( EventList::state_filters() as $clave => $rotulo ) : ?>
-							<option value="<?php echo esc_attr( $clave ); ?>" <?php selected( (string) $s['state'], $clave ); ?>>
-								<?php echo esc_html( $rotulo ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
-			</div>
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class() ); ?>" type="submit">Filtrar</button>
-				<?php if ( '' !== (string) $m['reset_url'] ) : ?>
-					<a href="<?php echo esc_url( (string) $m['reset_url'] ); ?>">Quitar los filtros</a>
-				<?php endif; ?>
-			</p>
-		</form>
-		<?php
-	}
-
-
-
-
-
-
-
 	private static function table( array $m ): void {
-		$estados = EventMetaKeys::states();
 		$publica = EventList::status_labels();
 		$dentro  = EventList::FILTER_TRASH === (string) $m['selection']['state'];
 		?>
 		<div class="evt-tabla-caja">
-			<?php if ( array() === $m['rows'] ) : ?>
-				<p class="evt-vacio"><?php echo esc_html( (string) $m['empty_text'] ); ?></p>
-			<?php else : ?>
-				<table class="evt-tabla">
-					<thead>
-						<tr>
-							<th scope="col">Evento</th>
-							<th scope="col">Ámbito</th>
-							<th scope="col">Tipología</th>
-							<th scope="col">Curso</th>
-							<th scope="col">Fechas</th>
-							<th scope="col">Estado</th>
-							<th scope="col">Publicación</th>
-							<th scope="col" class="evt-num">Secciones</th>
-							<th scope="col">Acciones</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $m['rows'] as $row ) : ?>
-							<tr>
-								<td data-rotulo="Evento">
-									<?php if ( '' !== (string) $row['url'] ) : ?>
-										<a href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
-									<?php else : ?>
-										<?php echo esc_html( (string) $row['title'] ); ?>
-									<?php endif; ?>
-								</td>
-								<td data-rotulo="Ámbito"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
-								<td data-rotulo="Tipología"><?php echo esc_html( self::names( $row['types'] ) ); ?></td>
-								<td data-rotulo="Curso"><?php echo esc_html( self::names( $row['courses'] ) ); ?></td>
-								<td data-rotulo="Fechas"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></td>
-								<td data-rotulo="Estado">
-									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['state'] ) ); ?>">
-										<?php echo esc_html( $estados[ $row['state'] ] ?? '—' ); ?>
+			<table class="evt-tabla">
+				<thead>
+					<tr>
+						<th scope="col"><span class="screen-reader-text">Cartel</span></th>
+						<th scope="col">Evento</th>
+						<th scope="col">Fechas</th>
+						<th scope="col">Ámbito</th>
+						<th scope="col">Publicación</th>
+						<th scope="col" class="evt-num">Páginas</th>
+						<th scope="col"><span class="screen-reader-text">Acciones</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $m['rows'] as $row ) : ?>
+						<tr data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+							<td class="evt-tabla__cartel"><?php echo self::poster( (array) $row, 'evt-mini-cartel' ); ?></td>
+							<td data-rotulo="Evento">
+								<?php if ( '' !== (string) $row['url'] ) : ?>
+									<a class="evt-tabla__titulo" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
+								<?php else : ?>
+									<span class="evt-tabla__titulo"><?php echo esc_html( (string) $row['title'] ); ?></span>
+								<?php endif; ?>
+								<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); ?></div>
+							</td>
+							<td data-rotulo="Fechas"><?php echo esc_html( self::dates( (string) $row['start'], (string) $row['end'] ) ); ?></td>
+							<td data-rotulo="Ámbito"><?php echo esc_html( self::names( $row['areas'] ) ); ?></td>
+							<td data-rotulo="Publicación">
+								<?php if ( $dentro || true !== $row['can_pub'] ) : ?>
+									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>">
+										<?php echo esc_html( $publica[ $row['status'] ] ?? (string) $row['status'] ); ?>
 									</span>
-									<?php if ( ! empty( $row['archived'] ) ) : ?>
-										<span class="<?php echo esc_attr( Assets::state_class( EventList::FILTER_ARCHIVED ) ); ?>"
-											title="Cerrado a edición: se consulta y se exporta, pero no se cambia.">Histórico</span>
-									<?php endif; ?>
-								</td>
-								<td data-rotulo="Publicación">
-									<?php if ( $dentro || true !== $row['can_pub'] ) : ?>
-										<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>">
-											<?php echo esc_html( $publica[ $row['status'] ] ?? (string) $row['status'] ); ?>
-										</span>
-									<?php else : ?>
-										<?php echo self::publish_switch( (array) $row ); ?>
-									<?php endif; ?>
-								</td>
-								<td class="evt-num" data-rotulo="Secciones"><?php echo esc_html( (string) $row['sections'] ); ?></td>
-								<td data-rotulo="Acciones">
-									<?php if ( $dentro ) : ?>
-										<?php echo self::restore_form( (int) $row['id'] ); ?>
-									<?php else : ?>
-										<span class="evt-acciones">
-											<?php
-											echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' ); 
-											$mirar = 'publish' === (string) $row['status']
-												? 'Ver la página del evento'
-												: 'Previsualizar el evento, que está en borrador';
-											echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); 
-											?>
-										</span>
-									<?php endif; ?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			<?php endif; ?>
+								<?php else : ?>
+									<?php echo self::publish_switch( (array) $row ); ?>
+								<?php endif; ?>
+							</td>
+							<td class="evt-num" data-rotulo="Páginas"><?php echo esc_html( (string) $row['sections'] ); ?></td>
+							<td data-rotulo="Acciones">
+								<?php if ( $dentro ) : ?>
+									<?php echo self::restore_form( (int) $row['id'] ); ?>
+								<?php else : ?>
+									<span class="evt-acciones">
+										<?php
+										echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Abrir el taller de este evento' ); 
+										$mirar = 'publish' === (string) $row['status']
+											? 'Ver la página del evento'
+											: 'Previsualizar el evento, que está en borrador';
+										echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); 
+										?>
+									</span>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
 		</div>
 		<?php
 	}
@@ -19522,6 +19587,394 @@ final class Home {
 
 
 
+namespace Evt\PublicFront\View;
+
+
+
+
+final class TimelineView {
+
+
+
+
+
+
+
+	public static function html( array $m ): string {
+		ob_start();
+		?>
+		<div class="evt-linea" data-actual="<?php echo esc_attr( (string) (int) $m['current'] ); ?>">
+			<div class="evt-linea__barra">
+				<p class="evt-linea__ayuda">Arrastre la línea hacia la derecha para ver los eventos que ya pasaron.</p>
+				<div class="evt-linea__botones">
+					<button class="evt-linea__boton" type="button" data-evt-linea="atras" aria-label="Mes anterior">&lsaquo;</button>
+					<button class="evt-linea__boton evt-linea__boton--hoy" type="button" data-evt-linea="hoy">Hoy</button>
+					<button class="evt-linea__boton" type="button" data-evt-linea="adelante" aria-label="Mes siguiente">&rsaquo;</button>
+				</div>
+			</div>
+			<div class="evt-linea__pista" tabindex="0" role="region" aria-label="Línea del tiempo de eventos">
+				<ol class="evt-linea__meses">
+					<?php foreach ( (array) $m['months'] as $mes ) : ?>
+						<?php echo self::month( (array) $mes ); ?>
+					<?php endforeach; ?>
+				</ol>
+			</div>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function month( array $mes ): string {
+		$eventos = (array) $mes['events'];
+		$clases  = array( 'evt-linea__mes' );
+		if ( true === $mes['current'] ) {
+			$clases[] = 'evt-linea__mes--actual';
+		}
+		if ( true === $mes['past'] ) {
+			$clases[] = 'evt-linea__mes--pasado';
+		}
+		if ( array() !== $eventos ) {
+			$clases[] = 'evt-linea__mes--con-eventos';
+		}
+
+		ob_start();
+		?>
+		<li class="<?php echo esc_attr( implode( ' ', $clases ) ); ?>" data-mes="<?php echo esc_attr( (string) $mes['key'] ); ?>">
+			<h2 class="evt-linea__rotulo">
+				<span class="evt-linea__nombre"><?php echo esc_html( (string) $mes['name'] ); ?></span>
+				<span class="evt-linea__anio"><?php echo esc_html( (string) $mes['year'] ); ?></span>
+				<?php if ( true === $mes['current'] ) : ?>
+					<span class="evt-linea__chapa evt-linea__chapa--actual">Este mes</span>
+				<?php endif; ?>
+				<?php if ( '' !== (string) $mes['course'] ) : ?>
+					<span class="evt-linea__chapa">Curso <?php echo esc_html( (string) $mes['course'] ); ?></span>
+				<?php endif; ?>
+			</h2>
+			<span class="evt-linea__marca" aria-hidden="true"><span class="evt-linea__punto"></span><span class="evt-linea__trazo"></span></span>
+			<?php if ( array() === $eventos ) : ?>
+				<p class="evt-linea__vacio">Sin eventos este mes.</p>
+			<?php else : ?>
+				<ul class="evt-linea__eventos">
+					<?php foreach ( $eventos as $ev ) : ?>
+						<?php echo self::event( (array) $ev ); ?>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+		</li>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function event( array $ev ): string {
+		$clases = 'evt-linea__evento' . ( true === $ev['done'] ? ' evt-linea__evento--pasado' : '' );
+
+		ob_start();
+		?>
+		<li class="<?php echo esc_attr( $clases ); ?>">
+			<a class="evt-linea__cartel" href="<?php echo esc_url( (string) $ev['url'] ); ?>" tabindex="-1" aria-hidden="true" style="--evt-linea-color: <?php echo esc_attr( (string) $ev['color'] ); ?>" draggable="false">
+				<?php if ( '' !== (string) $ev['poster'] ) : ?>
+					<img src="<?php echo esc_url( (string) $ev['poster'] ); ?>" alt="" loading="lazy" draggable="false">
+				<?php else : ?>
+					<span class="evt-linea__sin-cartel"><?php echo esc_html( (string) $ev['title'] ); ?></span>
+				<?php endif; ?>
+			</a>
+			<div class="evt-linea__datos">
+				<span class="evt-linea__fechas"><?php echo esc_html( (string) $ev['dates'] ); ?></span>
+				<h3 class="evt-linea__titulo"><a href="<?php echo esc_url( (string) $ev['url'] ); ?>" draggable="false"><?php echo esc_html( (string) $ev['title'] ); ?></a></h3>
+				<?php if ( '' !== (string) $ev['venue'] ) : ?>
+					<span class="evt-linea__sede"><?php echo esc_html( (string) $ev['venue'] ); ?></span>
+				<?php endif; ?>
+				<span class="evt-linea__estados">
+					<span class="evt-linea__estado evt-linea__estado--<?php echo esc_attr( (string) $ev['state'] ); ?>"><?php echo esc_html( (string) $ev['state_label'] ); ?></span>
+					<?php if ( '' !== (string) $ev['signup_url'] ) : ?>
+						<a class="evt-linea__inscribirse" href="<?php echo esc_url( (string) $ev['signup_url'] ); ?>" draggable="false">Inscribirse</a>
+					<?php endif; ?>
+				</span>
+			</div>
+		</li>
+		<?php
+		return (string) ob_get_clean();
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
+use Evt\Access\EventAccess;
+use Evt\Domain\DateRange;
+use Evt\Domain\EventState;
+use Evt\Meta\EventMetaKeys;
+use Evt\PostType\EventPostType;
+use Evt\PublicFront\View\TimelineView;
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class Timeline {
+
+	public const SHORTCODE = 'evt_timeline';
+
+
+
+
+	public const SLUG = 'eventos';
+
+
+
+
+
+
+	public static function register(): void {
+		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
+	}
+
+
+
+
+
+
+
+
+
+	public static function enqueue(): void {
+		if ( is_admin() || ! is_singular() ) {
+			return;
+		}
+		$post = get_post();
+		if ( ! $post instanceof \WP_Post || ! has_shortcode( (string) $post->post_content, self::SHORTCODE ) ) {
+			return;
+		}
+		self::enqueue_assets();
+	}
+
+
+
+
+
+
+	public static function enqueue_assets(): void {
+
+		if ( ! wp_style_is( 'evt-linea', 'registered' ) ) {
+			wp_register_style( 'evt-linea', false, array(), null );
+			wp_add_inline_style( 'evt-linea', Assets::contents( 'css/evt-linea.css' ) );
+			wp_register_script( 'evt-linea', false, array(), null, true );
+			wp_add_inline_script( 'evt-linea', Assets::contents( 'js/evt-linea.js' ) );
+		}
+
+		wp_enqueue_style( 'evt-linea' );
+		wp_enqueue_script( 'evt-linea' );
+	}
+
+
+
+
+
+
+
+	public static function render( $atts = array() ): string {
+		unset( $atts );
+		self::enqueue_assets();
+		return TimelineView::html( self::model() );
+	}
+
+
+
+
+
+
+
+	public static function model( string $today = '' ): array {
+		$today   = '' !== $today ? $today : current_time( 'Y-m-d' );
+		$eventos = self::events( $today );
+
+		$actual = substr( $today, 0, 7 );
+		$claves = array_merge( array( self::shift( $actual, -1 ), self::shift( $actual, 1 ) ), array_keys( $eventos ) );
+		sort( $claves );
+		$desde = (string) reset( $claves );
+		$hasta = (string) end( $claves );
+
+		$meses = array();
+		for ( $mes = $desde; $mes <= $hasta; $mes = self::shift( $mes, 1 ) ) {
+			$meses[] = array(
+				'key'     => $mes,
+				'name'    => self::month_name( (int) substr( $mes, 5, 2 ) ),
+				'year'    => substr( $mes, 0, 4 ),
+				'current' => $mes === $actual,
+				'past'    => $mes < $actual,
+
+
+				'course'  => '09' === substr( $mes, 5, 2 ) ? substr( $mes, 0, 4 ) . '-' . ( (int) substr( $mes, 0, 4 ) + 1 ) : '',
+				'events'  => $eventos[ $mes ] ?? array(),
+			);
+		}
+
+		$indice = 0;
+		foreach ( $meses as $i => $mes ) {
+			if ( $mes['current'] ) {
+				$indice = $i;
+			}
+		}
+
+		return array(
+			'months'  => $meses,
+			'current' => $indice,
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function events( string $today ): array {
+		$posts = get_posts(
+			array(
+				'post_type'              => EventPostType::POST_TYPE,
+				'post_parent'            => 0,
+				'post_status'            => 'publish',
+				'numberposts'            => -1,
+				'meta_key'               => EventMetaKeys::START_DATE, 
+				'orderby'                => 'meta_value',
+				'order'                  => 'ASC',
+				'update_post_term_cache' => false,
+				'suppress_filters'       => false,
+			)
+		);
+		if ( ! is_array( $posts ) ) {
+			return array();
+		}
+
+		$carteles = array();
+		foreach ( $posts as $post ) {
+			$carteles[] = self::poster_id( (int) $post->ID );
+		}
+		$carteles = array_filter( $carteles );
+		if ( $carteles ) {
+			_prime_post_caches( $carteles, false, true );
+		}
+
+		$por_mes = array();
+		foreach ( $posts as $post ) {
+			$id     = (int) $post->ID;
+			$inicio = (string) get_post_meta( $id, EventMetaKeys::START_DATE, true );
+			if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $inicio ) ) {
+				continue;
+			}
+			$fin = (string) get_post_meta( $id, EventMetaKeys::END_DATE, true );
+
+			$por_mes[ substr( $inicio, 0, 7 ) ][] = self::row( $post, $inicio, $fin, $today );
+		}
+		return $por_mes;
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function row( \WP_Post $post, string $inicio, string $fin, string $today ): array {
+		$id       = (int) $post->ID;
+		$estado   = EventState::of( $inicio, $fin, $today );
+		$historia = EventAccess::is_archived( $id );
+		$cartel   = self::poster_id( $id );
+		$abierta  = ! $historia && SignupForm::is_open( $id );
+		$pagina   = $abierta ? SignupForm::page( $id ) : 0;
+		$fondo    = sanitize_hex_color( (string) get_post_meta( $id, EventMetaKeys::HEADER_BG, true ) );
+
+		return array(
+			'id'          => $id,
+			'title'       => '' !== trim( (string) $post->post_title ) ? (string) $post->post_title : 'Evento sin título',
+			'url'         => (string) get_permalink( $id ),
+			'dates'       => DateRange::of( $inicio, $fin ),
+			'venue'       => (string) get_post_meta( $id, EventMetaKeys::VENUE, true ),
+			'state'       => $historia ? 'archived' : $estado,
+			'state_label' => $historia ? 'Histórico' : EventState::label( $estado ),
+			'done'        => $historia || EventMetaKeys::STATE_FINISHED === $estado,
+			'poster'      => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'medium' ) : '',
+			'poster_alt'  => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
+			'color'       => is_string( $fondo ) && '' !== $fondo ? $fondo : '#12395b',
+			'signup_url'  => $pagina > 0 ? (string) get_permalink( $pagina ) : '',
+		);
+	}
+
+
+
+
+
+
+
+	public static function poster_id( int $event_id ): int {
+		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
+		return $cartel > 0 ? $cartel : (int) get_post_thumbnail_id( $event_id );
+	}
+
+
+
+
+
+
+
+
+	private static function shift( string $ym, int $delta ): string {
+		$total = (int) substr( $ym, 0, 4 ) * 12 + (int) substr( $ym, 5, 2 ) - 1 + $delta;
+		return sprintf( '%04d-%02d', intdiv( $total, 12 ), $total % 12 + 1 );
+	}
+
+
+
+
+
+
+
+	private static function month_name( int $mes ): string {
+		$nombres = array( 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' );
+		return $nombres[ $mes - 1 ] ?? '';
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\Admin;
 
 use Evt\Access\EventAccess;
@@ -20052,6 +20505,7 @@ use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\SignupForm;
+use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
@@ -20121,6 +20575,9 @@ final class App {
 		EventWorkspace::register();
 		PageForm::register();
 		Home::register();
+
+
+		Timeline::register();
 
 
 
@@ -20759,6 +21216,8 @@ body.evt-app .evt-hoja {
 .evt-state-finalizado { background: var(--evt-sup-2); color: var(--evt-texto-2); }
 .evt-state-draft { background: var(--evt-esp-cont); color: var(--evt-esp); }
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
+.evt-state-archived { background: #2b3036; color: #fff; }
+.evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
 
 /* --- avisos -------------------------------------------------------------- */
 
@@ -21123,6 +21582,119 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 @media (prefers-reduced-motion: reduce) {
   .evt-app * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* --- listado de eventos: herramientas, cuadrícula y lista ----------------- */
+
+/*
+ * Una sola línea de herramientas: el nombre, el ámbito, cómo verlo y crear.
+ * Con pocos eventos por área no hace falta más (ADR-0041).
+ */
+.evt-herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.evt-herramientas__filtros {
+  display: flex;
+  flex: 1 1 420px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.evt-herramientas__buscar { flex: 1 1 240px; min-width: 0; }
+.evt-herramientas__ambito { flex: 0 1 240px; width: auto; }
+/* Con guion el nombre filtra al escribir y el ámbito se envía solo. */
+.evt-app-js .evt-herramientas__aplicar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.evt-sin-bootstrap .evt-herramientas input,
+.evt-sin-bootstrap .evt-herramientas select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #c3cad2;
+  border-radius: 8px;
+  background: var(--evt-sup);
+  font: inherit;
+}
+.evt-segmentos { display: inline-flex; }
+.evt-sin-bootstrap .evt-segmento {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--evt-pri);
+  color: var(--evt-pri);
+  text-decoration: none;
+}
+.evt-sin-bootstrap .evt-segmento:first-child { border-radius: 8px 0 0 8px; }
+.evt-sin-bootstrap .evt-segmento:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.evt-sin-bootstrap .evt-segmento.active { background: var(--evt-pri); color: #fff; }
+
+.evt-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.evt-ficha {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--evt-r);
+  background: var(--evt-sup);
+  box-shadow: var(--evt-e1);
+  transition: box-shadow .15s;
+}
+.evt-ficha:hover, .evt-ficha:focus-within { box-shadow: var(--evt-e3); }
+.evt-ficha[hidden] { display: none; }
+.evt-ficha__cartel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--evt-cartel, var(--evt-pri));
+  color: #fff;
+}
+.evt-ficha__cartel--vacio span,
+.evt-mini-cartel--vacio span {
+  padding: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+.evt-ficha__cuerpo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
+.evt-ficha__chapas { display: flex; flex-wrap: wrap; gap: 4px; }
+.evt-ficha__titulo { margin: 0; font-size: 1rem; line-height: 1.3; }
+.evt-ficha__enlace { color: inherit; text-decoration: none; }
+/* Toda la tarjeta abre el taller; «Ver la página» queda por encima. */
+.evt-ficha__enlace::after { content: ""; position: absolute; inset: 0; }
+.evt-ficha__enlace:focus-visible { outline: none; }
+.evt-ficha:has(.evt-ficha__enlace:focus-visible) { outline: 3px solid var(--evt-pri); outline-offset: 2px; }
+.evt-ficha__dato { margin: 0; color: var(--evt-texto-2); font-size: .85rem; }
+.evt-ficha__ver { position: relative; z-index: 1; align-self: flex-start; margin-top: 4px; font-size: .85rem; }
+.evt-ficha .evt-accion { position: relative; z-index: 1; }
+
+.evt-tabla__cartel { width: 64px; }
+.evt-mini-cartel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--evt-cartel, var(--evt-pri));
+  color: #fff;
+  font-size: 0;
+}
+.evt-tabla__titulo { font-weight: 600; }
+.evt-tabla tr[hidden] { display: none; }
+
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -21552,6 +22124,338 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 	}
 }
 ',
+  'css/evt-linea.css' => '/*
+ * La línea del tiempo pública (`[evt_timeline]`, ADR-0041).
+ *
+ * Va dentro del tema del sitio, así que no cuenta con Bootstrap ni con la
+ * hoja del aplicativo: todo lo que necesita está aquí, bajo `.evt-linea`,
+ * y no toca nada de fuera.
+ */
+.evt-linea {
+	--evt-linea-azul: #1d4e89;
+	--evt-linea-azul-claro: #dbe5f1;
+	--evt-linea-gris: #c5ccd5;
+	--evt-linea-texto: #1f2328;
+	--evt-linea-suave: #5b6570;
+	--evt-linea-ancho: 380px;
+	color: var(--evt-linea-texto);
+	font-size: 1rem;
+	line-height: 1.45;
+}
+
+.evt-linea__barra {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.evt-linea__ayuda {
+	margin: 0;
+	color: var(--evt-linea-suave);
+	font-size: .95rem;
+}
+
+.evt-linea__botones {
+	display: flex;
+	gap: 6px;
+}
+
+.evt-linea__boton {
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 14px;
+	border: 1px solid var(--evt-linea-azul);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--evt-linea-azul);
+	font: inherit;
+	font-size: 1.1rem;
+	cursor: pointer;
+}
+
+.evt-linea__boton:hover,
+.evt-linea__boton:focus-visible {
+	background: var(--evt-linea-azul);
+	color: #fff;
+}
+
+.evt-linea__boton--hoy {
+	font-size: .95rem;
+	font-weight: 600;
+}
+
+/* Sin guion los botones no hacen nada: no se enseñan. */
+.evt-linea:not(.evt-linea--viva) .evt-linea__botones {
+	display: none;
+}
+
+.evt-linea__pista {
+	overflow-x: auto;
+	overflow-y: hidden;
+	scroll-snap-type: x proximity;
+	padding: 8px 0 20px;
+	outline-offset: 4px;
+}
+
+.evt-linea--viva .evt-linea__pista {
+	cursor: grab;
+}
+
+.evt-linea--arrastrando .evt-linea__pista {
+	cursor: grabbing;
+	scroll-snap-type: none;
+	user-select: none;
+}
+
+.evt-linea__meses {
+	display: flex;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-linea__mes {
+	flex: 0 0 var(--evt-linea-ancho);
+	scroll-snap-align: start;
+	display: flex;
+	flex-direction: column;
+}
+
+.evt-linea__rotulo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	min-height: 2.5rem;
+	margin: 0;
+	padding: 0 20px 10px;
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.evt-linea__mes--pasado .evt-linea__nombre {
+	color: var(--evt-linea-suave);
+}
+
+.evt-linea__anio {
+	color: var(--evt-linea-suave);
+	font-size: .85rem;
+	font-weight: 400;
+}
+
+.evt-linea__chapa {
+	padding: 2px 8px;
+	border: 1px solid #d0d6de;
+	border-radius: 999px;
+	font-size: .75rem;
+	font-weight: 600;
+}
+
+.evt-linea__chapa--actual {
+	border-color: var(--evt-linea-azul);
+	background: var(--evt-linea-azul);
+	color: #fff;
+}
+
+/* La marca del mes sobre la línea y el tramo hasta el siguiente. */
+.evt-linea__marca {
+	display: flex;
+	align-items: center;
+	height: 22px;
+}
+
+.evt-linea__punto {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	margin-left: 25px;
+	border-radius: 50%;
+	background: var(--evt-linea-gris);
+}
+
+.evt-linea__mes--con-eventos .evt-linea__punto {
+	width: 14px;
+	height: 14px;
+	margin-left: 23px;
+	border: 3px solid var(--evt-linea-azul);
+	background: #fff;
+}
+
+.evt-linea__mes--actual .evt-linea__punto {
+	width: 20px;
+	height: 20px;
+	margin-left: 20px;
+	border: 0;
+	background: var(--evt-linea-azul);
+	box-shadow: 0 0 0 5px var(--evt-linea-azul-claro);
+}
+
+.evt-linea__trazo {
+	flex: 1 1 auto;
+	height: 2px;
+	margin-left: 8px;
+	background: #9fb3cc;
+}
+
+.evt-linea__mes--pasado .evt-linea__trazo {
+	background: var(--evt-linea-gris);
+}
+
+.evt-linea__vacio {
+	margin: 16px 20px 0;
+	color: var(--evt-linea-suave);
+	font-size: .9rem;
+}
+
+.evt-linea__eventos {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin: 16px 20px 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-linea__evento {
+	display: grid;
+	grid-template-columns: 110px minmax(0, 1fr);
+	overflow: hidden;
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(20, 28, 38, .12);
+}
+
+.evt-linea__evento--pasado {
+	opacity: .75;
+}
+
+.evt-linea__cartel {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 150px;
+	background: var(--evt-linea-color, var(--evt-linea-azul));
+	color: #fff;
+	text-decoration: none;
+}
+
+.evt-linea__cartel img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.evt-linea__sin-cartel {
+	padding: 10px;
+	font-size: .8rem;
+	font-weight: 600;
+	line-height: 1.25;
+	text-align: center;
+}
+
+.evt-linea__datos {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding: 12px 14px;
+}
+
+.evt-linea__fechas {
+	color: var(--evt-linea-azul);
+	font-size: .85rem;
+	font-weight: 600;
+}
+
+.evt-linea__titulo {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.3;
+}
+
+.evt-linea__titulo a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.evt-linea__titulo a:hover,
+.evt-linea__titulo a:focus-visible {
+	text-decoration: underline;
+}
+
+.evt-linea__sede {
+	color: var(--evt-linea-suave);
+	font-size: .85rem;
+}
+
+.evt-linea__estados {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin-top: auto;
+	padding-top: 4px;
+}
+
+.evt-linea__estado {
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: #e9eef4;
+	font-size: .75rem;
+	font-weight: 600;
+}
+
+.evt-linea__estado--upcoming {
+	background: #d9edf7;
+	color: #0b4a63;
+}
+
+.evt-linea__estado--open {
+	background: #d8efe0;
+	color: #185b30;
+}
+
+.evt-linea__estado--archived {
+	background: #2b3036;
+	color: #fff;
+}
+
+.evt-linea__inscribirse {
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--evt-linea-azul);
+	color: #fff;
+	font-size: .8rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.evt-linea__inscribirse:hover,
+.evt-linea__inscribirse:focus-visible {
+	background: #143a66;
+	color: #fff;
+}
+
+@media (max-width: 600px) {
+	.evt-linea {
+		--evt-linea-ancho: 86vw;
+	}
+
+	.evt-linea__pista {
+		scroll-snap-type: x mandatory;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.evt-linea__pista {
+		scroll-behavior: auto;
+	}
+}
+',
   'js/evt-app.js' => '/*
  * Lo mínimo que las pantallas del aplicativo no pueden hacer sin guion.
  *
@@ -21566,6 +22470,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
  */
 ( function () {
 	\'use strict\';
+
+	// Lo que solo tiene sentido con guion se enseña o se esconde con esta clase.
+	document.documentElement.classList.add( \'evt-app-js\' );
 
 	/* --- 1. Confirmar antes de borrar ------------------------------------ */
 
@@ -22206,6 +23113,162 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 			boton.hidden = true;
 		} );
 	} );
+
+	/* --- 7. El listado de eventos: filtrar por nombre mientras se escribe -- */
+
+	/*
+	 * `data-evt-filtro` en el campo; `data-evt-buscar="<nombre normalizado>"`
+	 * en cada tarjeta o fila. Se esconden las que no contienen lo escrito, sin
+	 * tildes ni mayúsculas, que es como el servidor normaliza el nombre. Solo
+	 * filtra la página que se ve: Intro envía el formulario y busca en todas.
+	 */
+	function normalizar( texto ) {
+		return String( texto ).normalize( \'NFD\' ).replace( /[̀-ͯ]/g, \'\' ).toLowerCase().trim();
+	}
+
+	document.addEventListener( \'input\', function ( e ) {
+		var campo = e.target.closest ? e.target.closest( \'[data-evt-filtro]\' ) : null;
+		if ( ! campo ) {
+			return;
+		}
+		var busca = normalizar( campo.value );
+		var elementos = document.querySelectorAll( \'[data-evt-buscar]\' );
+		var visibles = 0;
+		Array.prototype.forEach.call( elementos, function ( el ) {
+			var sale = \'\' === busca || -1 !== normalizar( el.getAttribute( \'data-evt-buscar\' ) ).indexOf( busca );
+			el.hidden = ! sale;
+			if ( sale ) {
+				visibles++;
+			}
+		} );
+		var vacio = document.querySelector( \'[data-evt-filtro-vacio]\' );
+		if ( vacio ) {
+			vacio.hidden = 0 !== visibles || 0 === elementos.length;
+		}
+	} );
+
+	/* Un desplegable con `data-evt-autoenvio` envía su formulario al cambiar. */
+	document.addEventListener( \'change\', function ( e ) {
+		var lista = e.target.closest ? e.target.closest( \'[data-evt-autoenvio]\' ) : null;
+		if ( lista && lista.form ) {
+			lista.form.submit();
+		}
+	} );
+}() );
+',
+  'js/evt-linea.js' => '/*
+ * La línea del tiempo pública (`[evt_timeline]`, ADR-0041).
+ *
+ * Todo es mejora sobre algo que ya funciona sin guion: la tira se desplaza
+ * con la barra, la rueda o el dedo. Aquí se añade que abra en el mes actual,
+ * los botones ‹ Hoy › y arrastrar con el ratón.
+ */
+( function () {
+	\'use strict\';
+
+	var UMBRAL = 5;
+
+	function iniciar( linea ) {
+		var pista = linea.querySelector( \'.evt-linea__pista\' );
+		var meses = linea.querySelectorAll( \'.evt-linea__mes\' );
+		if ( ! pista || ! meses.length ) {
+			return;
+		}
+		linea.classList.add( \'evt-linea--viva\' );
+
+		var actual = parseInt( linea.getAttribute( \'data-actual\' ), 10 ) || 0;
+		var suave = window.matchMedia && ! window.matchMedia( \'(prefers-reduced-motion: reduce)\' ).matches;
+
+		function ancho() {
+			return meses[ 0 ].getBoundingClientRect().width || 1;
+		}
+
+		// El mes anterior a la izquierda: se abre viendo de dónde se viene.
+		function irAHoy( animado ) {
+			var destino = Math.max( 0, actual - ( ancho() * 3 <= pista.clientWidth ? 1 : 0 ) );
+			pista.scrollTo( { left: destino * ancho(), behavior: animado && suave ? \'smooth\' : \'auto\' } );
+		}
+
+		linea.addEventListener( \'click\', function ( evento ) {
+			var boton = evento.target.closest( \'[data-evt-linea]\' );
+			if ( ! boton ) {
+				return;
+			}
+			var que = boton.getAttribute( \'data-evt-linea\' );
+			if ( \'hoy\' === que ) {
+				irAHoy( true );
+				return;
+			}
+			pista.scrollBy( { left: ( \'atras\' === que ? -1 : 1 ) * ancho(), behavior: suave ? \'smooth\' : \'auto\' } );
+		} );
+
+		/*
+		 * Arrastrar con el ratón. Con el dedo ya se desplaza solo, así que
+		 * solo se atiende al puntero de ratón. Un clic que no llega a mover
+		 * nada sigue siendo un clic y abre el evento.
+		 */
+		var inicioX = 0;
+		var inicioScroll = 0;
+		var agarrado = false;
+		var movido = false;
+
+		pista.addEventListener( \'pointerdown\', function ( evento ) {
+			if ( \'mouse\' !== evento.pointerType || 0 !== evento.button ) {
+				return;
+			}
+			agarrado = true;
+			movido = false;
+			inicioX = evento.clientX;
+			inicioScroll = pista.scrollLeft;
+		} );
+
+		pista.addEventListener( \'pointermove\', function ( evento ) {
+			if ( ! agarrado ) {
+				return;
+			}
+			var dx = evento.clientX - inicioX;
+			if ( ! movido && Math.abs( dx ) < UMBRAL ) {
+				return;
+			}
+			if ( ! movido ) {
+				movido = true;
+				linea.classList.add( \'evt-linea--arrastrando\' );
+				pista.setPointerCapture( evento.pointerId );
+			}
+			pista.scrollLeft = inicioScroll - dx;
+		} );
+
+		function soltar() {
+			agarrado = false;
+			linea.classList.remove( \'evt-linea--arrastrando\' );
+		}
+		pista.addEventListener( \'pointerup\', soltar );
+		pista.addEventListener( \'pointercancel\', soltar );
+
+		// Tras arrastrar, el clic que cierra el gesto no abre nada.
+		pista.addEventListener( \'click\', function ( evento ) {
+			if ( movido ) {
+				evento.preventDefault();
+				evento.stopPropagation();
+				movido = false;
+			}
+		}, true );
+
+		irAHoy( false );
+	}
+
+	function arrancar() {
+		var lineas = document.querySelectorAll( \'.evt-linea\' );
+		for ( var i = 0; i < lineas.length; i++ ) {
+			iniciar( lineas[ i ] );
+		}
+	}
+
+	if ( \'loading\' === document.readyState ) {
+		document.addEventListener( \'DOMContentLoaded\', arrancar );
+	} else {
+		arrancar();
+	}
 }() );
 ',
 ) );

@@ -13,6 +13,9 @@
 ( function () {
 	'use strict';
 
+	// Lo que solo tiene sentido con guion se enseña o se esconde con esta clase.
+	document.documentElement.classList.add( 'evt-app-js' );
+
 	/* --- 1. Confirmar antes de borrar ------------------------------------ */
 
 	/*
@@ -651,5 +654,46 @@
 		Array.prototype.forEach.call( botones, function ( boton ) {
 			boton.hidden = true;
 		} );
+	} );
+
+	/* --- 7. El listado de eventos: filtrar por nombre mientras se escribe -- */
+
+	/*
+	 * `data-evt-filtro` en el campo; `data-evt-buscar="<nombre normalizado>"`
+	 * en cada tarjeta o fila. Se esconden las que no contienen lo escrito, sin
+	 * tildes ni mayúsculas, que es como el servidor normaliza el nombre. Solo
+	 * filtra la página que se ve: Intro envía el formulario y busca en todas.
+	 */
+	function normalizar( texto ) {
+		return String( texto ).normalize( 'NFD' ).replace( /[̀-ͯ]/g, '' ).toLowerCase().trim();
+	}
+
+	document.addEventListener( 'input', function ( e ) {
+		var campo = e.target.closest ? e.target.closest( '[data-evt-filtro]' ) : null;
+		if ( ! campo ) {
+			return;
+		}
+		var busca = normalizar( campo.value );
+		var elementos = document.querySelectorAll( '[data-evt-buscar]' );
+		var visibles = 0;
+		Array.prototype.forEach.call( elementos, function ( el ) {
+			var sale = '' === busca || -1 !== normalizar( el.getAttribute( 'data-evt-buscar' ) ).indexOf( busca );
+			el.hidden = ! sale;
+			if ( sale ) {
+				visibles++;
+			}
+		} );
+		var vacio = document.querySelector( '[data-evt-filtro-vacio]' );
+		if ( vacio ) {
+			vacio.hidden = 0 !== visibles || 0 === elementos.length;
+		}
+	} );
+
+	/* Un desplegable con `data-evt-autoenvio` envía su formulario al cambiar. */
+	document.addEventListener( 'change', function ( e ) {
+		var lista = e.target.closest ? e.target.closest( '[data-evt-autoenvio]' ) : null;
+		if ( lista && lista.form ) {
+			lista.form.submit();
+		}
 	} );
 }() );
