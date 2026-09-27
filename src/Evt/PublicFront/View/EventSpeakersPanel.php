@@ -38,7 +38,7 @@ final class EventSpeakersPanel {
 				<h2 class="evt-panel-titulo">Ponentes</h2>
 				<p class="evt-sub">En este orden salen en la página de ponentes y en el programa.</p>
 			</div>
-			<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
+			<a data-evt-abrir-cajon class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
 				href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS, array( EventWorkspace::ARG_NEW => '1' ) ) ); ?>">
 				<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir ponente
 			</a>
@@ -46,18 +46,18 @@ final class EventSpeakersPanel {
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
-		<?php if ( true === $m['drawer'] ) : ?>
-			<?php
-			$editar = array() !== (array) $m['edit_values'];
-			$cajon  = PanelParts::drawer(
-				$editar ? 'Editar ponente' : 'Añadir ponente',
-				self::form( $m ),
-				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
-				(array) $m['flash']
-			);
-			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-			?>
-		<?php endif; ?>
+		<?php
+		$edita = array() !== (array) $m['edit_values'];
+		$cajon = PanelParts::drawer(
+			$edita ? 'Editar ponente' : 'Añadir ponente',
+			self::form( $m ),
+			EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
+			(array) $m['flash'],
+			true === $m['drawer'],
+			$edita
+		);
+		echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -110,7 +110,7 @@ final class EventSpeakersPanel {
 
 			<div class="evt-form-campo">
 				<label for="evt-sp-name">Nombre y apellidos</label>
-				<input type="text" id="evt-sp-name" name="evt_sp_name" required autofocus
+				<input type="text" id="evt-sp-name" name="evt_sp_name" required
 					value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
 				<small>Como quiera que salga en la web del evento.</small>
 			</div>
@@ -141,7 +141,7 @@ final class EventSpeakersPanel {
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 		<?php

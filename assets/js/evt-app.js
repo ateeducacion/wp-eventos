@@ -697,40 +697,112 @@
 		}
 	} );
 
-	/* --- 8. El panel lateral: se cierra con Escape ------------------------ */
+	/* --- 8. El panel lateral: se abre y se cierra deslizándose ------------ */
 
 	/*
 	 * La hoja del aplicativo se centra con `transform`, y eso hace de ella la
 	 * caja de referencia de todo lo `position: fixed` que lleve dentro: el
 	 * panel quedaría debajo de la cabecera y del pie. Se lleva al final del
 	 * `<body>`, que es donde un panel sobre la página tiene que estar.
+	 *
+	 * El de alta ya está en la página, escondido: «Añadir» lo abre sin
+	 * recargar. Cerrar lo esconde; el de edición, que trae los datos de una
+	 * ficha, recarga la pestaña para no dejar esos datos en el alta. Sin
+	 * guion, los mismos enlaces lo hacen todo por la dirección.
 	 */
-	function sacarCajon() {
-		var piezas = document.querySelectorAll( '[data-evt-cajon], .evt-cajon-fondo' );
-		Array.prototype.forEach.call( piezas, function ( pieza ) {
-			document.body.appendChild( pieza );
-		} );
-		var primero = document.querySelector( '[data-evt-cajon] input:not([type=hidden]), [data-evt-cajon] textarea, [data-evt-cajon] select' );
+	function piezasCajon() {
+		return {
+			cajon: document.querySelector( '[data-evt-cajon]' ),
+			fondo: document.querySelector( '.evt-cajon-fondo' )
+		};
+	}
+
+	function enfocarCajon( cajon ) {
+		var primero = cajon.querySelector( 'input:not([type=hidden]), textarea, select' );
 		if ( primero ) {
 			primero.focus();
 		}
 	}
-	if ( 'loading' === document.readyState ) {
-		document.addEventListener( 'DOMContentLoaded', sacarCajon );
-	} else {
-		sacarCajon();
+
+	function abrirCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return false;
+		}
+		p.cajon.classList.remove( 'evt-cajon--saliendo' );
+		p.cajon.hidden = false;
+		if ( p.fondo ) {
+			p.fondo.classList.remove( 'evt-cajon--saliendo' );
+			p.fondo.hidden = false;
+		}
+		enfocarCajon( p.cajon );
+		return true;
 	}
+
+	function cerrarCajon( destino ) {
+		var p = piezasCajon();
+		if ( ! p.cajon || p.cajon.hidden ) {
+			return;
+		}
+		var recargar = p.cajon.hasAttribute( 'data-evt-cajon-edita' );
+		var reducido = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		p.cajon.classList.add( 'evt-cajon--saliendo' );
+		if ( p.fondo ) {
+			p.fondo.classList.add( 'evt-cajon--saliendo' );
+		}
+		window.setTimeout( function () {
+			if ( recargar && destino ) {
+				window.location.assign( destino.href );
+				return;
+			}
+			p.cajon.hidden = true;
+			if ( p.fondo ) {
+				p.fondo.hidden = true;
+			}
+			// La dirección deja de pedir el alta: recargar no la vuelve a abrir.
+			if ( destino && window.history && window.history.replaceState ) {
+				window.history.replaceState( null, '', destino.href );
+			}
+		}, reducido ? 0 : 200 );
+	}
+
+	function prepararCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return;
+		}
+		if ( p.fondo ) {
+			document.body.appendChild( p.fondo );
+		}
+		document.body.appendChild( p.cajon );
+		if ( ! p.cajon.hidden ) {
+			enfocarCajon( p.cajon );
+		}
+	}
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', prepararCajon );
+	} else {
+		prepararCajon();
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var abrir = e.target.closest ? e.target.closest( '[data-evt-abrir-cajon]' ) : null;
+		if ( abrir && abrirCajon() ) {
+			e.preventDefault();
+			return;
+		}
+		var cerrar = e.target.closest ? e.target.closest( '[data-evt-cerrar-cajon]' ) : null;
+		if ( cerrar ) {
+			e.preventDefault();
+			cerrarCajon( cerrar );
+		}
+	} );
 
 	document.addEventListener( 'keydown', function ( e ) {
 		if ( 'Escape' !== e.key ) {
 			return;
 		}
-		// Se pulsa la «✕» del propio panel: es un enlace normal, y así no se
-		// lleva a `location` ningún texto sacado del documento.
-		var cerrar = document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' );
-		if ( cerrar ) {
-			cerrar.click();
-		}
+		cerrarCajon( document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' ) );
 	} );
 
 	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */

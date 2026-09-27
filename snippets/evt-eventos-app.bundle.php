@@ -13250,14 +13250,20 @@ final class PanelParts {
 
 
 
-	public static function drawer( string $titulo, string $cuerpo, string $cerrar, array $flash = array() ): string {
+
+
+
+
+
+
+	public static function drawer( string $titulo, string $cuerpo, string $cerrar, array $flash = array(), bool $abierto = true, bool $edita = false ): string {
 		ob_start();
 		?>
-		<a class="evt-cajon-fondo" href="<?php echo esc_url( $cerrar ); ?>" tabindex="-1" aria-hidden="true"></a>
-		<section class="evt-cajon" role="dialog" aria-modal="true" aria-labelledby="evt-cajon-titulo" data-evt-cajon>
+		<a class="evt-cajon-fondo" href="<?php echo esc_url( $cerrar ); ?>" tabindex="-1" aria-hidden="true" data-evt-cerrar-cajon <?php echo $abierto ? '' : 'hidden'; ?>></a>
+		<section class="evt-cajon" role="dialog" aria-modal="true" aria-labelledby="evt-cajon-titulo" data-evt-cajon<?php echo $edita ? ' data-evt-cajon-edita' : ''; ?> <?php echo $abierto ? '' : 'hidden'; ?>>
 			<header class="evt-cajon__cabecera">
 				<h2 class="evt-cajon__titulo" id="evt-cajon-titulo"><?php echo esc_html( $titulo ); ?></h2>
-				<a class="evt-cajon__cerrar" href="<?php echo esc_url( $cerrar ); ?>" aria-label="Cerrar sin guardar">&times;</a>
+				<a class="evt-cajon__cerrar" href="<?php echo esc_url( $cerrar ); ?>" aria-label="Cerrar sin guardar" data-evt-cerrar-cajon>&times;</a>
 			</header>
 			<div class="evt-cajon__cuerpo">
 				<?php if ( 'error' === (string) ( $flash['tipo'] ?? '' ) && '' !== (string) ( $flash['texto'] ?? '' ) ) : ?>
@@ -13478,7 +13484,7 @@ final class EventSpeakersPanel {
 				<h2 class="evt-panel-titulo">Ponentes</h2>
 				<p class="evt-sub">En este orden salen en la página de ponentes y en el programa.</p>
 			</div>
-			<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
+			<a data-evt-abrir-cajon class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
 				href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS, array( EventWorkspace::ARG_NEW => '1' ) ) ); ?>">
 				<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir ponente
 			</a>
@@ -13486,18 +13492,18 @@ final class EventSpeakersPanel {
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); ?>
 
-		<?php if ( true === $m['drawer'] ) : ?>
-			<?php
-			$editar = array() !== (array) $m['edit_values'];
-			$cajon  = PanelParts::drawer(
-				$editar ? 'Editar ponente' : 'Añadir ponente',
-				self::form( $m ),
-				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
-				(array) $m['flash']
-			);
-			echo $cajon; 
-			?>
-		<?php endif; ?>
+		<?php
+		$edita = array() !== (array) $m['edit_values'];
+		$cajon = PanelParts::drawer(
+			$edita ? 'Editar ponente' : 'Añadir ponente',
+			self::form( $m ),
+			EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
+			(array) $m['flash'],
+			true === $m['drawer'],
+			$edita
+		);
+		echo $cajon; 
+		?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -13550,7 +13556,7 @@ final class EventSpeakersPanel {
 
 			<div class="evt-form-campo">
 				<label for="evt-sp-name">Nombre y apellidos</label>
-				<input type="text" id="evt-sp-name" name="evt_sp_name" required autofocus
+				<input type="text" id="evt-sp-name" name="evt_sp_name" required
 					value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
 				<small>Como quiera que salga en la web del evento.</small>
 			</div>
@@ -13581,7 +13587,7 @@ final class EventSpeakersPanel {
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 		<?php
@@ -13740,7 +13746,7 @@ final class EventProgrammePanel {
 					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? '' : ' active'; ?>" href="<?php echo esc_url( $base ); ?>" <?php echo $solo ? '' : 'aria-current="true"'; ?>>Todo</a>
 					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_ONLY, 'talleres', $base ) ); ?>" <?php echo $solo ? 'aria-current="true"' : ''; ?>>Solo talleres</a>
 				</div>
-				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
+				<a data-evt-abrir-cajon class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
 					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir actividad
 				</a>
 			</div>
@@ -13754,17 +13760,18 @@ final class EventProgrammePanel {
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); ?>
 
-		<?php if ( true === $m['drawer'] ) : ?>
-			<?php
-			$cajon = PanelParts::drawer(
-				array() !== (array) $m['edit_values'] ? 'Editar actividad' : 'Añadir actividad',
-				self::form( $m ),
-				$base,
-				(array) $m['flash']
-			);
-			echo $cajon; 
-			?>
-		<?php endif; ?>
+		<?php
+		$edita = array() !== (array) $m['edit_values'];
+		$cajon = PanelParts::drawer(
+			$edita ? 'Editar actividad' : 'Añadir actividad',
+			self::form( $m ),
+			EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ),
+			(array) $m['flash'],
+			true === $m['drawer'],
+			$edita
+		);
+		echo $cajon; 
+		?>
 
 		<?php if ( array() === $dias ) : ?>
 			<div class="evt-tabla-caja">
@@ -13984,7 +13991,7 @@ final class EventProgrammePanel {
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
 					<label for="evt-ac-title">Título</label>
-					<input type="text" id="evt-ac-title" name="evt_ac_title" required autofocus
+					<input type="text" id="evt-ac-title" name="evt_ac_title" required
 						value="<?php echo esc_attr( (string) ( $valores['title'] ?? '' ) ); ?>" />
 				</div>
 				<div class="evt-form-campo">
@@ -14059,7 +14066,7 @@ final class EventProgrammePanel {
 					<?php echo esc_html( $editar ? 'Guardar actividad' : 'Añadir actividad' ); ?>
 				</button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 		<?php
@@ -20766,7 +20773,8 @@ final class App {
   --evt-adm-borde: #a67c00;
   --evt-adm-texto: #4a3a05;
   --evt-adm-marca: #6b5200;
-  --evt-ancho: 1128px;
+  /* Ancho completo, con margen a los lados (ADR-0041). */
+  --evt-ancho: 100vw;
 }
 
 /* --- página plana -------------------------------------------------------- */
@@ -21023,8 +21031,8 @@ html:has(> body.evt-app) { overflow-x: clip; }
 /* Al romper la columna del tema, la hoja pasa a ser de ancho completo: el
    centrado del contenido lo hace este relleno lateral. */
 body.evt-app .evt-hoja {
-  padding-left: max(24px, calc(50% - var(--evt-ancho) / 2));
-  padding-right: max(24px, calc(50% - var(--evt-ancho) / 2));
+  padding-left: max(32px, calc(50% - var(--evt-ancho) / 2));
+  padding-right: max(32px, calc(50% - var(--evt-ancho) / 2));
 }
 
 .evt-hoja .evt-tabs { margin: 0 0 28px; }
@@ -21349,7 +21357,7 @@ body.evt-app .evt-hoja {
   min-height: 44px;
   padding: 0 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--evt-pri-cont);
   color: var(--evt-pri);
   font: inherit;
@@ -21370,7 +21378,7 @@ body.evt-app {
   --bs-link-color: #1b4f8a;
   --bs-link-hover-color: #123a68;
 }
-body.evt-app .btn { border-radius: 999px; min-height: 44px; font-weight: 600; }
+body.evt-app .btn { border-radius: 8px; min-height: 44px; font-weight: 600; }
 body.evt-app .btn-primary {
   --bs-btn-bg: var(--evt-pri);
   --bs-btn-border-color: var(--evt-pri);
@@ -21830,6 +21838,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border-radius: var(--evt-r);
 }
 .evt-taller__grupo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 12px 10px 6px;
   font-size: 11.5px;
   font-weight: 700;
@@ -21838,6 +21849,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-texto-2);
 }
 .evt-taller__grupo:first-child { margin-top: 0; }
+/* La raya tras el nombre del grupo: dice que es una sección y la separa. */
+.evt-taller__grupo::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--evt-linea); }
 .evt-taller__lista { margin: 0 0 6px; padding: 0; list-style: none; }
 .evt-taller__enlace {
   display: flex;
@@ -22013,6 +22026,21 @@ body:has(.evt-cajon) { overflow: hidden; }
 }
 .evt-app .form-check-input:checked { background-color: var(--evt-pri); border-color: var(--evt-pri); }
 .evt-app .form-check-input:focus { border-color: var(--evt-pri); box-shadow: 0 0 0 .25rem rgba(27, 79, 138, .25); }
+
+/* El panel lateral entra y sale deslizándose. */
+.evt-cajon[hidden], .evt-cajon-fondo[hidden] { display: none; }
+@keyframes evt-cajon-entra { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes evt-cajon-sale { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes evt-fondo-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes evt-fondo-sale { from { opacity: 1; } to { opacity: 0; } }
+.evt-cajon { animation: evt-cajon-entra .22s ease-out; }
+.evt-cajon-fondo { animation: evt-fondo-entra .22s ease-out; }
+.evt-cajon.evt-cajon--saliendo { animation: evt-cajon-sale .2s ease-in forwards; }
+.evt-cajon-fondo.evt-cajon--saliendo { animation: evt-fondo-sale .2s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .evt-cajon, .evt-cajon-fondo, .evt-cajon.evt-cajon--saliendo, .evt-cajon-fondo.evt-cajon--saliendo { animation: none; }
+}
+
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -23488,40 +23516,112 @@ body:has(.evt-cajon) { overflow: hidden; }
 		}
 	} );
 
-	/* --- 8. El panel lateral: se cierra con Escape ------------------------ */
+	/* --- 8. El panel lateral: se abre y se cierra deslizándose ------------ */
 
 	/*
 	 * La hoja del aplicativo se centra con `transform`, y eso hace de ella la
 	 * caja de referencia de todo lo `position: fixed` que lleve dentro: el
 	 * panel quedaría debajo de la cabecera y del pie. Se lleva al final del
 	 * `<body>`, que es donde un panel sobre la página tiene que estar.
+	 *
+	 * El de alta ya está en la página, escondido: «Añadir» lo abre sin
+	 * recargar. Cerrar lo esconde; el de edición, que trae los datos de una
+	 * ficha, recarga la pestaña para no dejar esos datos en el alta. Sin
+	 * guion, los mismos enlaces lo hacen todo por la dirección.
 	 */
-	function sacarCajon() {
-		var piezas = document.querySelectorAll( \'[data-evt-cajon], .evt-cajon-fondo\' );
-		Array.prototype.forEach.call( piezas, function ( pieza ) {
-			document.body.appendChild( pieza );
-		} );
-		var primero = document.querySelector( \'[data-evt-cajon] input:not([type=hidden]), [data-evt-cajon] textarea, [data-evt-cajon] select\' );
+	function piezasCajon() {
+		return {
+			cajon: document.querySelector( \'[data-evt-cajon]\' ),
+			fondo: document.querySelector( \'.evt-cajon-fondo\' )
+		};
+	}
+
+	function enfocarCajon( cajon ) {
+		var primero = cajon.querySelector( \'input:not([type=hidden]), textarea, select\' );
 		if ( primero ) {
 			primero.focus();
 		}
 	}
-	if ( \'loading\' === document.readyState ) {
-		document.addEventListener( \'DOMContentLoaded\', sacarCajon );
-	} else {
-		sacarCajon();
+
+	function abrirCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return false;
+		}
+		p.cajon.classList.remove( \'evt-cajon--saliendo\' );
+		p.cajon.hidden = false;
+		if ( p.fondo ) {
+			p.fondo.classList.remove( \'evt-cajon--saliendo\' );
+			p.fondo.hidden = false;
+		}
+		enfocarCajon( p.cajon );
+		return true;
 	}
+
+	function cerrarCajon( destino ) {
+		var p = piezasCajon();
+		if ( ! p.cajon || p.cajon.hidden ) {
+			return;
+		}
+		var recargar = p.cajon.hasAttribute( \'data-evt-cajon-edita\' );
+		var reducido = window.matchMedia && window.matchMedia( \'(prefers-reduced-motion: reduce)\' ).matches;
+		p.cajon.classList.add( \'evt-cajon--saliendo\' );
+		if ( p.fondo ) {
+			p.fondo.classList.add( \'evt-cajon--saliendo\' );
+		}
+		window.setTimeout( function () {
+			if ( recargar && destino ) {
+				window.location.assign( destino.href );
+				return;
+			}
+			p.cajon.hidden = true;
+			if ( p.fondo ) {
+				p.fondo.hidden = true;
+			}
+			// La dirección deja de pedir el alta: recargar no la vuelve a abrir.
+			if ( destino && window.history && window.history.replaceState ) {
+				window.history.replaceState( null, \'\', destino.href );
+			}
+		}, reducido ? 0 : 200 );
+	}
+
+	function prepararCajon() {
+		var p = piezasCajon();
+		if ( ! p.cajon ) {
+			return;
+		}
+		if ( p.fondo ) {
+			document.body.appendChild( p.fondo );
+		}
+		document.body.appendChild( p.cajon );
+		if ( ! p.cajon.hidden ) {
+			enfocarCajon( p.cajon );
+		}
+	}
+	if ( \'loading\' === document.readyState ) {
+		document.addEventListener( \'DOMContentLoaded\', prepararCajon );
+	} else {
+		prepararCajon();
+	}
+
+	document.addEventListener( \'click\', function ( e ) {
+		var abrir = e.target.closest ? e.target.closest( \'[data-evt-abrir-cajon]\' ) : null;
+		if ( abrir && abrirCajon() ) {
+			e.preventDefault();
+			return;
+		}
+		var cerrar = e.target.closest ? e.target.closest( \'[data-evt-cerrar-cajon]\' ) : null;
+		if ( cerrar ) {
+			e.preventDefault();
+			cerrarCajon( cerrar );
+		}
+	} );
 
 	document.addEventListener( \'keydown\', function ( e ) {
 		if ( \'Escape\' !== e.key ) {
 			return;
 		}
-		// Se pulsa la «✕» del propio panel: es un enlace normal, y así no se
-		// lleva a `location` ningún texto sacado del documento.
-		var cerrar = document.querySelector( \'[data-evt-cajon] .evt-cajon__cerrar\' );
-		if ( cerrar ) {
-			cerrar.click();
-		}
+		cerrarCajon( document.querySelector( \'[data-evt-cajon] .evt-cajon__cerrar\' ) );
 	} );
 
 	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */

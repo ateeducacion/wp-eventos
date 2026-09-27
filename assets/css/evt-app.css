@@ -46,7 +46,8 @@
   --evt-adm-borde: #a67c00;
   --evt-adm-texto: #4a3a05;
   --evt-adm-marca: #6b5200;
-  --evt-ancho: 1128px;
+  /* Ancho completo, con margen a los lados (ADR-0041). */
+  --evt-ancho: 100vw;
 }
 
 /* --- página plana -------------------------------------------------------- */
@@ -303,8 +304,8 @@ html:has(> body.evt-app) { overflow-x: clip; }
 /* Al romper la columna del tema, la hoja pasa a ser de ancho completo: el
    centrado del contenido lo hace este relleno lateral. */
 body.evt-app .evt-hoja {
-  padding-left: max(24px, calc(50% - var(--evt-ancho) / 2));
-  padding-right: max(24px, calc(50% - var(--evt-ancho) / 2));
+  padding-left: max(32px, calc(50% - var(--evt-ancho) / 2));
+  padding-right: max(32px, calc(50% - var(--evt-ancho) / 2));
 }
 
 .evt-hoja .evt-tabs { margin: 0 0 28px; }
@@ -629,7 +630,7 @@ body.evt-app .evt-hoja {
   min-height: 44px;
   padding: 0 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--evt-pri-cont);
   color: var(--evt-pri);
   font: inherit;
@@ -650,7 +651,7 @@ body.evt-app {
   --bs-link-color: #1b4f8a;
   --bs-link-hover-color: #123a68;
 }
-body.evt-app .btn { border-radius: 999px; min-height: 44px; font-weight: 600; }
+body.evt-app .btn { border-radius: 8px; min-height: 44px; font-weight: 600; }
 body.evt-app .btn-primary {
   --bs-btn-bg: var(--evt-pri);
   --bs-btn-border-color: var(--evt-pri);
@@ -1110,6 +1111,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   border-radius: var(--evt-r);
 }
 .evt-taller__grupo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 12px 10px 6px;
   font-size: 11.5px;
   font-weight: 700;
@@ -1118,6 +1122,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-texto-2);
 }
 .evt-taller__grupo:first-child { margin-top: 0; }
+/* La raya tras el nombre del grupo: dice que es una sección y la separa. */
+.evt-taller__grupo::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--evt-linea); }
 .evt-taller__lista { margin: 0 0 6px; padding: 0; list-style: none; }
 .evt-taller__enlace {
   display: flex;
@@ -1293,3 +1299,18 @@ body:has(.evt-cajon) { overflow: hidden; }
 }
 .evt-app .form-check-input:checked { background-color: var(--evt-pri); border-color: var(--evt-pri); }
 .evt-app .form-check-input:focus { border-color: var(--evt-pri); box-shadow: 0 0 0 .25rem rgba(27, 79, 138, .25); }
+
+/* El panel lateral entra y sale deslizándose. */
+.evt-cajon[hidden], .evt-cajon-fondo[hidden] { display: none; }
+@keyframes evt-cajon-entra { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes evt-cajon-sale { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes evt-fondo-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes evt-fondo-sale { from { opacity: 1; } to { opacity: 0; } }
+.evt-cajon { animation: evt-cajon-entra .22s ease-out; }
+.evt-cajon-fondo { animation: evt-fondo-entra .22s ease-out; }
+.evt-cajon.evt-cajon--saliendo { animation: evt-cajon-sale .2s ease-in forwards; }
+.evt-cajon-fondo.evt-cajon--saliendo { animation: evt-fondo-sale .2s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .evt-cajon, .evt-cajon-fondo, .evt-cajon.evt-cajon--saliendo, .evt-cajon-fondo.evt-cajon--saliendo { animation: none; }
+}
+

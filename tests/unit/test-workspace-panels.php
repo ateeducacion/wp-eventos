@@ -170,7 +170,7 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	 */
 	public function test_the_speakers_panel_paints_the_form() {
 		$evento = $this->evento();
-		$this->assertStringNotContainsString( 'name="evt_sp_name"', $this->pintar( $evento, EventWorkspace::PANEL_SPEAKERS ), 'sin pedirlo, la lista sin formulario' );
+		$this->assertMatchesRegularExpression( '/data-evt-cajon\s+hidden/', $this->pintar( $evento, EventWorkspace::PANEL_SPEAKERS ), 'sin pedirlo, el panel de alta está en la página pero escondido' );
 		$html = $this->pintar_alta( $evento, EventWorkspace::PANEL_SPEAKERS );
 
 		$this->assertStringContainsString( 'data-evt-cajon', $html, 'el alta va en el panel lateral' );
@@ -251,13 +251,13 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->actividad(
 			$evento,
 			array(
-				'title' => 'Mesa redonda',
+				'title' => 'Debate de clausura',
 				'kind'  => 'mesa',
 			)
 		);
 
 		$todo = $this->pintar( $evento, EventWorkspace::PANEL_PROGRAMME );
-		$this->assertStringContainsString( 'Mesa redonda', $todo );
+		$this->assertStringContainsString( 'Debate de clausura', $todo );
 		$this->assertStringContainsString( '0 de 12 plazas', $todo, 'el aforo y la ocupación en la fila del taller' );
 
 		$_GET[ EventWorkspace::ARG_ONLY ] = 'talleres';
@@ -265,7 +265,7 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		unset( $_GET[ EventWorkspace::ARG_ONLY ] );
 
 		$this->assertStringContainsString( 'Taller de robótica', $solo );
-		$this->assertStringNotContainsString( 'Mesa redonda', $solo, 'solo talleres' );
+		$this->assertStringNotContainsString( 'Debate de clausura', $solo, 'solo talleres' );
 		unset( $taller );
 	}
 

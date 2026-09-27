@@ -49,7 +49,7 @@ final class EventProgrammePanel {
 					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? '' : ' active'; ?>" href="<?php echo esc_url( $base ); ?>" <?php echo $solo ? '' : 'aria-current="true"'; ?>>Todo</a>
 					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_ONLY, 'talleres', $base ) ); ?>" <?php echo $solo ? 'aria-current="true"' : ''; ?>>Solo talleres</a>
 				</div>
-				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
+				<a data-evt-abrir-cajon class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
 					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir actividad
 				</a>
 			</div>
@@ -63,17 +63,18 @@ final class EventProgrammePanel {
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
-		<?php if ( true === $m['drawer'] ) : ?>
-			<?php
-			$cajon = PanelParts::drawer(
-				array() !== (array) $m['edit_values'] ? 'Editar actividad' : 'Añadir actividad',
-				self::form( $m ),
-				$base,
-				(array) $m['flash']
-			);
-			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-			?>
-		<?php endif; ?>
+		<?php
+		$edita = array() !== (array) $m['edit_values'];
+		$cajon = PanelParts::drawer(
+			$edita ? 'Editar actividad' : 'Añadir actividad',
+			self::form( $m ),
+			EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ),
+			(array) $m['flash'],
+			true === $m['drawer'],
+			$edita
+		);
+		echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		?>
 
 		<?php if ( array() === $dias ) : ?>
 			<div class="evt-tabla-caja">
@@ -293,7 +294,7 @@ final class EventProgrammePanel {
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
 					<label for="evt-ac-title">Título</label>
-					<input type="text" id="evt-ac-title" name="evt_ac_title" required autofocus
+					<input type="text" id="evt-ac-title" name="evt_ac_title" required
 						value="<?php echo esc_attr( (string) ( $valores['title'] ?? '' ) ); ?>" />
 				</div>
 				<div class="evt-form-campo">
@@ -368,7 +369,7 @@ final class EventProgrammePanel {
 					<?php echo esc_html( $editar ? 'Guardar actividad' : 'Añadir actividad' ); ?>
 				</button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 		<?php

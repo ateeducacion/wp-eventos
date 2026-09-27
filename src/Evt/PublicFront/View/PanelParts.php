@@ -53,20 +53,26 @@ final class PanelParts {
 	 * abre y se cierra igual, y con guion además se cierra con Escape.
 	 * El error de un guardado fallido se enseña dentro, que es donde se mira.
 	 *
+	 * El de alta va siempre en la página, escondido: con guion, «Añadir» lo
+	 * abre deslizándose sin recargar. El de edición llega abierto del
+	 * servidor, porque trae los datos de la ficha.
+	 *
 	 * @param string               $titulo  Heading.
 	 * @param string               $cuerpo  Built, escaped HTML of the form.
 	 * @param string               $cerrar  URL that closes it.
 	 * @param array<string, mixed> $flash   The last notice, shown when it is an error.
+	 * @param bool                 $abierto Whether it is shown on arrival.
+	 * @param bool                 $edita   Whether it edits a row: closing it then reloads the tab.
 	 * @return string
 	 */
-	public static function drawer( string $titulo, string $cuerpo, string $cerrar, array $flash = array() ): string {
+	public static function drawer( string $titulo, string $cuerpo, string $cerrar, array $flash = array(), bool $abierto = true, bool $edita = false ): string {
 		ob_start();
 		?>
-		<a class="evt-cajon-fondo" href="<?php echo esc_url( $cerrar ); ?>" tabindex="-1" aria-hidden="true"></a>
-		<section class="evt-cajon" role="dialog" aria-modal="true" aria-labelledby="evt-cajon-titulo" data-evt-cajon>
+		<a class="evt-cajon-fondo" href="<?php echo esc_url( $cerrar ); ?>" tabindex="-1" aria-hidden="true" data-evt-cerrar-cajon <?php echo $abierto ? '' : 'hidden'; ?>></a>
+		<section class="evt-cajon" role="dialog" aria-modal="true" aria-labelledby="evt-cajon-titulo" data-evt-cajon<?php echo $edita ? ' data-evt-cajon-edita' : ''; ?> <?php echo $abierto ? '' : 'hidden'; ?>>
 			<header class="evt-cajon__cabecera">
 				<h2 class="evt-cajon__titulo" id="evt-cajon-titulo"><?php echo esc_html( $titulo ); ?></h2>
-				<a class="evt-cajon__cerrar" href="<?php echo esc_url( $cerrar ); ?>" aria-label="Cerrar sin guardar">&times;</a>
+				<a class="evt-cajon__cerrar" href="<?php echo esc_url( $cerrar ); ?>" aria-label="Cerrar sin guardar" data-evt-cerrar-cajon>&times;</a>
 			</header>
 			<div class="evt-cajon__cuerpo">
 				<?php if ( 'error' === (string) ( $flash['tipo'] ?? '' ) && '' !== (string) ( $flash['texto'] ?? '' ) ) : ?>
