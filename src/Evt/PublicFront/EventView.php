@@ -627,11 +627,15 @@ final class EventView {
 			return $vacia;
 		}
 
-		$bg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
-		$fg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
-		$logo   = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
-		$banner = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
-		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
+		$bg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
+		$fg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
+		$logo     = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$banner   = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
+		$cartel   = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
+		$imagenes = array_filter( array( $logo, $banner, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
+		if ( $imagenes ) {
+			_prime_post_caches( $imagenes, false, true );
+		}
 
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
@@ -776,17 +780,24 @@ final class EventView {
 
 		$paginas = get_posts(
 			array(
-				'post_type'        => EventPostType::POST_TYPE,
-				'post_parent'      => $event_id,
-				'post_status'      => 'publish',
-				'orderby'          => 'menu_order title',
-				'order'            => 'ASC',
-				'numberposts'      => 100,
-				'suppress_filters' => false,
+				'post_type'              => EventPostType::POST_TYPE,
+				'post_parent'            => $event_id,
+				'post_status'            => 'publish',
+				'orderby'                => 'menu_order title',
+				'order'                  => 'ASC',
+				'numberposts'            => 100,
+				'suppress_filters'       => false,
+				// Nadie lee las taxonomías de las secciones: el área es del evento.
+				'update_post_term_cache' => false,
 			)
 		);
 
 		self::$sections[ $event_id ] = is_array( $paginas ) ? $paginas : array();
+		// Una consulta para todas las imágenes de las tarjetas, no dos por tarjeta.
+		$imagenes = array_filter( array_map( 'get_post_thumbnail_id', self::$sections[ $event_id ] ) );
+		if ( $imagenes ) {
+			_prime_post_caches( $imagenes, false, true );
+		}
 		return self::$sections[ $event_id ];
 	}
 }

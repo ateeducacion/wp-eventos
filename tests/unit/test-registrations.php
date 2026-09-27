@@ -394,6 +394,40 @@ class Test_Registrations extends WP_UnitTestCase {
 		$this->assertSame( 0, Registrations::by_token( $evento, str_repeat( 'a', 40 ) ) );
 	}
 
+	/**
+	 * «¿Hay alguien inscrito?» mira solo su evento.
+	 */
+	public function test_has_any_looks_at_its_own_event_only() {
+		$evento = $this->un_evento();
+		$vacio  = $this->event( $this->administrator() );
+		$this->assertFalse( Registrations::has_any( $evento ) );
+
+		$this->inscribir( $evento );
+
+		$this->assertTrue( Registrations::has_any( $evento ) );
+		$this->assertFalse( Registrations::has_any( $vacio ) );
+		$this->assertFalse( Registrations::has_any( 0 ) );
+	}
+
+	/**
+	 * Lo que se enseña como ocupado en la lista es lo que cuenta el candado.
+	 */
+	public function test_choices_counts_the_same_seats_as_the_lock() {
+		$evento = $this->un_evento();
+		$taller = $this->taller( $evento, 3 );
+		$otro   = $this->taller( $evento, 3, 'Otro taller' );
+		$a      = $this->inscribir( $evento, array( 'email' => 'a@example.org' ) );
+		$b      = $this->inscribir( $evento, array( 'email' => 'b@example.org' ) );
+		Registrations::seat( $evento, $a, $taller );
+		Registrations::seat( $evento, $b, $taller );
+
+		$ocupados = wp_list_pluck( Registrations::choices( $evento ), 'taken', 'id' );
+
+		$this->assertSame( Registrations::taken( $evento, $taller ), $ocupados[ $taller ] );
+		$this->assertSame( 2, $ocupados[ $taller ] );
+		$this->assertSame( 0, $ocupados[ $otro ] );
+	}
+
 	// ─── el aforo ──────────────────────────────────────────────────────────
 
 	/**

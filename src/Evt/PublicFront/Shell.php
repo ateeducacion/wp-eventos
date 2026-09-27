@@ -314,12 +314,22 @@ final class Shell {
 		if ( ! $post instanceof \WP_Post ) {
 			return '';
 		}
-		foreach ( self::SHORTCODES as $seccion => $codigo ) {
-			if ( has_shortcode( (string) $post->post_content, $codigo ) ) {
-				return $seccion;
+		// Se llama una vez por cada etiqueta <link> y <script> que se imprime:
+		// sin memoria, son cinco pasadas de la expresión de shortcodes por
+		// etiqueta sobre todo el contenido.
+		static $memo = array();
+		$contenido   = (string) $post->post_content;
+		$clave       = md5( $contenido );
+		if ( ! isset( $memo[ $clave ] ) ) {
+			$memo[ $clave ] = '';
+			foreach ( self::SHORTCODES as $seccion => $codigo ) {
+				if ( has_shortcode( $contenido, $codigo ) ) {
+					$memo[ $clave ] = $seccion;
+					break;
+				}
 			}
 		}
-		return '';
+		return $memo[ $clave ];
 	}
 
 	/**
