@@ -173,6 +173,8 @@ final class EventView {
 		add_action( 'template_redirect', array( self::class, 'render' ), self::PRIORITY );
 		add_action( 'wp_head', array( self::class, 'print_stylesheet' ), self::HEAD_PRIORITY );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'drop_page_assets' ), self::DROP_PRIORITY );
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_fonts' ) );
+		Fonts::register();
 		// Y una red por si algo se encola más tarde: el tema imprime una hoja
 		// «late» en el pie, y al escribir la etiqueta se descarta.
 		add_filter( 'style_loader_tag', array( self::class, 'drop_page_tag' ), 10, 3 );
@@ -242,6 +244,24 @@ final class EventView {
 
 		echo EventLayout::render( self::current_model() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- documento montado escapado.
 		Shell::leave();
+	}
+
+	/**
+	 * Load the two typefaces of the event being viewed.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_fonts(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$evento = EventAccess::root_id( (int) get_queried_object_id() );
+		Fonts::enqueue(
+			array(
+				(string) get_post_meta( $evento, EventMetaKeys::TITLE_FONT, true ),
+				(string) get_post_meta( $evento, EventMetaKeys::BODY_FONT, true ),
+			)
+		);
 	}
 
 	/**
@@ -620,6 +640,7 @@ final class EventView {
 			'poster'            => '',
 			'poster_full'       => '',
 			'poster_alt'        => '',
+			'poster_file'       => '',
 			'shape'             => EventMetaKeys::SHAPE_SQUARE,
 			'separator'         => '',
 		);
@@ -636,6 +657,12 @@ final class EventView {
 		if ( $imagenes ) {
 			_prime_post_caches( $imagenes, false, true );
 		}
+		// Muchos carteles de hoy son un PDF: ese no se pinta, se ofrece para
+		// descargar, y la imagen que se ve es la destacada del evento.
+		$pdf = $cartel > 0 && ! wp_attachment_is_image( $cartel ) ? (string) wp_get_attachment_url( $cartel ) : '';
+		if ( '' !== $pdf ) {
+			$cartel = (int) get_post_thumbnail_id( $event_id );
+		}
 
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
@@ -651,6 +678,7 @@ final class EventView {
 			'poster'            => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
 			'poster_full'       => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
 			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
+			'poster_file'       => $pdf,
 			'shape'             => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
 				EventMetaKeys::image_shapes(),

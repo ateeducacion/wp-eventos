@@ -10,6 +10,7 @@ namespace Evt\PublicFront;
 use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Block\ContentBlock;
 use Evt\PublicFront\Block\PosterBlock;
+use Evt\PublicFront\Block\ProgrammeBlock;
 use Evt\PublicFront\Block\SectionsBlock;
 use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\View\EventChrome;
@@ -88,6 +89,8 @@ final class EventLayout {
 		self::add_block( PosterBlock::NAME, array( PosterBlock::class, 'html' ), PosterBlock::PRIORITY );
 		self::add_block( SectionsBlock::NAME, array( SectionsBlock::class, 'html' ), SectionsBlock::PRIORITY );
 		self::add_block( SignupBlock::NAME, array( SignupBlock::class, 'html' ), SignupBlock::PRIORITY );
+		self::add_block( ProgrammeBlock::NAME, array( ProgrammeBlock::class, 'html' ), ProgrammeBlock::PRIORITY );
+		self::add_block( ProgrammeBlock::FEATURED_NAME, array( ProgrammeBlock::class, 'featured' ), ProgrammeBlock::FEATURED_PRIORITY );
 	}
 
 	/**

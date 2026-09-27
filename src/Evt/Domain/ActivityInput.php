@@ -34,10 +34,11 @@ final class ActivityInput {
 			'ok'     => array() === $errors,
 			'errors' => $errors,
 			'data'   => array(
-				'name' => $name,
-				'role' => self::text( $raw, 'role' ),
-				'org'  => self::text( $raw, 'org' ),
-				'bio'  => isset( $raw['bio'] ) ? trim( (string) $raw['bio'] ) : '',
+				'name'     => $name,
+				'role'     => self::text( $raw, 'role' ),
+				'org'      => self::text( $raw, 'org' ),
+				'bio'      => isset( $raw['bio'] ) ? trim( (string) $raw['bio'] ) : '',
+				'featured' => ! empty( $raw['featured'] ),
 			),
 		);
 	}
@@ -86,6 +87,10 @@ final class ActivityInput {
 		if ( $seats < 0 ) {
 			$errors[] = 'seats';
 		}
+		$video = self::text( $raw, 'video' );
+		if ( '' !== $video && ! preg_match( '~^https?://[^\s]+$~i', $video ) ) {
+			$errors[] = 'video';
+		}
 
 		return array(
 			'ok'     => array() === $errors,
@@ -101,6 +106,8 @@ final class ActivityInput {
 				'seats'    => max( 0, $seats ),
 				'summary'  => isset( $raw['summary'] ) ? trim( (string) $raw['summary'] ) : '',
 				'speakers' => self::ids( $raw['speakers'] ?? array() ),
+				'video'    => $video,
+				'guests'   => isset( $raw['guests'] ) ? trim( (string) $raw['guests'] ) : '',
 			),
 		);
 	}
@@ -121,6 +128,7 @@ final class ActivityInput {
 			'end'        => 'la hora de fin',
 			'time_order' => 'la hora de fin, que es anterior a la de inicio',
 			'seats'      => 'el aforo, que no puede ser negativo',
+			'video'      => 'la dirección del vídeo, que tiene que empezar por https://',
 		);
 		$faltan = array();
 		foreach ( $errors as $codigo ) {

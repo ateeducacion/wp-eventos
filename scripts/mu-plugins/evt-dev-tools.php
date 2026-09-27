@@ -613,8 +613,8 @@ add_filter( 'evt_centres', 'evt_dev_centres' );
  *
  * El aplicativo **no trae dentro el pie, las cookies ni la analítica de nadie**
  * (ADR-0030): sin configurar, no se pintan. Aquí se rellenan con valores de
- * ejemplo —`example.org`, y **ninguna analítica**— para que en el wp-env se vea
- * un pie y un aviso de cookies y se puedan probar.
+ * ejemplo —`example.org`, sin aviso de cookies ni analítica— para que en el
+ * wp-env se vea un pie.
  *
  * Quien despliegue pone los suyos en un snippet suelto, fuera del aplicativo.
  */
@@ -645,11 +645,11 @@ if ( ! function_exists( 'evt_dev_chrome' ) ) {
 						'title' => 'Política de privacidad (tecla de acceso: p)',
 					),
 				),
-				'consent_css'  => 'https://www.example.org/cookies/cookieconsent.min.css',
-				'consent_js'   => 'https://www.example.org/cookies/cookieconsent.min.js',
-				'consent_init' => 'https://www.example.org/cookies/init.js',
-				// Analítica **apagada** a propósito: en desarrollo no se cuenta
-				// nada en ningún sitio, y así se ve que sin configurar no sale.
+				// Ni aviso de cookies ni analítica: en desarrollo no hay ninguno
+				// de verdad que cargar. Una URL inventada devuelve una página
+				// HTML donde el navegador espera una hoja, y hay extensiones que
+				// la incrustan igual: con la de example.org, todo el documento
+				// salía al 80 % de opacidad. El aviso se prueba en los tests.
 			)
 		);
 	}

@@ -773,6 +773,24 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Un cartel en PDF que ya estaba no se pierde al guardar la apariencia.
+	 *
+	 * Llega así de la migración (ADR-0042): el selector no deja elegirlo, pero
+	 * el formulario lo devuelve tal cual y no es una orden de quitarlo.
+	 */
+	public function test_saving_keeps_a_pdf_poster_that_was_already_there() {
+		$uid    = $this->administrator();
+		$evento = $this->event( $uid, array( $this->area( 'Innovación' ) ) );
+		$pdf    = $this->adjunto( 'application/pdf', 'cartel.pdf' );
+		update_post_meta( $evento, EventMetaKeys::POSTER_ID, $pdf );
+
+		$this->submit( $uid, EventWorkspace::PANEL_LOOK, $evento, 0, array( EventMetaKeys::POSTER_ID => (string) $pdf ) );
+
+		$this->assertSame( $pdf, (int) get_post_meta( $evento, EventMetaKeys::POSTER_ID, true ) );
+		$this->assertSame( 'ok', $this->flash( $uid )['tipo'] );
+	}
+
+	/**
 	 * El mismo campo oculto es el que quita la imagen, con un cero.
 	 */
 	public function test_the_hidden_field_puts_and_clears_the_three_images() {

@@ -326,15 +326,31 @@ final class EventMetaKeys {
 
 
 
-
 	public static function fonts(): array {
 		return array(
-			self::FONT_DEFAULT => 'La del tema',
-			'open-sans'        => 'Open Sans',
-			'lato'             => 'Lato',
-			'montserrat'       => 'Montserrat',
-			'source-serif'     => 'Source Serif 4',
-			'merriweather'     => 'Merriweather',
+			self::FONT_DEFAULT   => 'La del tema',
+			'open-sans'          => 'Open Sans',
+			'lato'               => 'Lato',
+			'montserrat'         => 'Montserrat',
+			'source-serif'       => 'Source Serif 4',
+			'merriweather'       => 'Merriweather',
+			'roboto'             => 'Roboto',
+			'nunito'             => 'Nunito',
+			'cantarell'          => 'Cantarell',
+			'dosis'              => 'Dosis',
+			'oxanium'            => 'Oxanium',
+			'cormorant-garamond' => 'Cormorant Garamond',
+			'alata'              => 'Alata',
+			'aboreto'            => 'Aboreto',
+			'aldrich'            => 'Aldrich',
+			'dela-gothic-one'    => 'Dela Gothic One',
+			'fredoka-one'        => 'Fredoka One',
+			'new-tegomin'        => 'New Tegomin',
+			'nosifer'            => 'Nosifer',
+			'oi'                 => 'Oi',
+			'patrick-hand'       => 'Patrick Hand',
+			'patua-one'          => 'Patua One',
+			'times'              => 'Times New Roman',
 		);
 	}
 
@@ -360,14 +376,20 @@ final class EventMetaKeys {
 
 
 
+
 	public static function separators(): array {
 		return array(
-			''         => 'Sin separador',
-			'slant'    => 'Diagonal',
-			'ramp'     => 'Rampa',
-			'curve'    => 'Curva',
-			'wave'     => 'Onda',
-			'triangle' => 'Triángulo',
+			''          => 'Sin separador',
+			'slant'     => 'Diagonal',
+			'ramp'      => 'Rampa',
+			'curve'     => 'Curva',
+			'wave'      => 'Onda',
+			'triangle'  => 'Triángulo',
+			'waves'     => 'Ondas',
+			'clouds'    => 'Nubes',
+			'mountains' => 'Montañas',
+			'graph'     => 'Gráfica',
+			'arrow'     => 'Flecha',
 		);
 	}
 
@@ -861,7 +883,43 @@ final class ProgrammeMetaKeys {
 
 
 
+
+
+
+	public const SPEAKER_FEATURED = 'evt_speaker_featured';
+
+
+
+
+
+
+	public const ACTIVITY_VIDEO = 'evt_activity_video';
+
+
+
+
+
+
+
+	public const ACTIVITY_GUESTS = 'evt_activity_guests';
+
+
+
+
+
+
+
+
+
+
+	public const LEGACY_ENTRY = 'evt_legacy_entry';
+
+
+
+
 	public const KIND_WORKSHOP = 'taller';
+
+
 
 
 
@@ -874,10 +932,16 @@ final class ProgrammeMetaKeys {
 	public static function activity_kinds(): array {
 		return array(
 			'ponencia'     => 'Ponencia',
+			'conferencia'  => 'Conferencia',
 			'taller'       => 'Taller',
 			'mesa'         => 'Mesa redonda',
 			'comunicacion' => 'Comunicación',
 			'panel'        => 'Panel de experiencias',
+			'practicas'    => 'Buenas prácticas',
+			'experiencia'  => 'Experiencia',
+			'encuentro'    => 'Encuentro',
+			'actuacion'    => 'Actuación',
+			'proyeccion'   => 'Proyección audiovisual',
 			'inauguracion' => 'Inauguración',
 			'clausura'     => 'Clausura',
 			'descanso'     => 'Descanso',
@@ -937,13 +1001,17 @@ final class ProgrammeMetaRegistration {
 
 	public static function speaker_schema(): array {
 		return array(
-			ProgrammeMetaKeys::SPEAKER_ROLE => array(
+			ProgrammeMetaKeys::SPEAKER_ROLE     => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			ProgrammeMetaKeys::SPEAKER_ORG  => array(
+			ProgrammeMetaKeys::SPEAKER_ORG      => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
+			),
+			ProgrammeMetaKeys::SPEAKER_FEATURED => array(
+				'type'     => 'boolean',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_bool' ),
 			),
 		);
 	}
@@ -987,6 +1055,14 @@ final class ProgrammeMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_id_list' ),
 			),
+			ProgrammeMetaKeys::ACTIVITY_VIDEO    => array(
+				'type'     => 'string',
+				'sanitize' => 'esc_url_raw',
+			),
+			ProgrammeMetaKeys::ACTIVITY_GUESTS   => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
 		);
 	}
 
@@ -999,6 +1075,7 @@ final class ProgrammeMetaRegistration {
 		$defaults = array(
 			'string'  => '',
 			'integer' => 0,
+			'boolean' => false,
 		);
 		$mapa     = array(
 			SpeakerPostType::POST_TYPE  => self::speaker_schema(),
@@ -1441,10 +1518,11 @@ final class ActivityInput {
 			'ok'     => array() === $errors,
 			'errors' => $errors,
 			'data'   => array(
-				'name' => $name,
-				'role' => self::text( $raw, 'role' ),
-				'org'  => self::text( $raw, 'org' ),
-				'bio'  => isset( $raw['bio'] ) ? trim( (string) $raw['bio'] ) : '',
+				'name'     => $name,
+				'role'     => self::text( $raw, 'role' ),
+				'org'      => self::text( $raw, 'org' ),
+				'bio'      => isset( $raw['bio'] ) ? trim( (string) $raw['bio'] ) : '',
+				'featured' => ! empty( $raw['featured'] ),
 			),
 		);
 	}
@@ -1493,6 +1571,10 @@ final class ActivityInput {
 		if ( $seats < 0 ) {
 			$errors[] = 'seats';
 		}
+		$video = self::text( $raw, 'video' );
+		if ( '' !== $video && ! preg_match( '~^https?://[^\s]+$~i', $video ) ) {
+			$errors[] = 'video';
+		}
 
 		return array(
 			'ok'     => array() === $errors,
@@ -1508,6 +1590,8 @@ final class ActivityInput {
 				'seats'    => max( 0, $seats ),
 				'summary'  => isset( $raw['summary'] ) ? trim( (string) $raw['summary'] ) : '',
 				'speakers' => self::ids( $raw['speakers'] ?? array() ),
+				'video'    => $video,
+				'guests'   => isset( $raw['guests'] ) ? trim( (string) $raw['guests'] ) : '',
 			),
 		);
 	}
@@ -1528,6 +1612,7 @@ final class ActivityInput {
 			'end'        => 'la hora de fin',
 			'time_order' => 'la hora de fin, que es anterior a la de inicio',
 			'seats'      => 'el aforo, que no puede ser negativo',
+			'video'      => 'la dirección del vídeo, que tiene que empezar por https://',
 		);
 		$faltan = array();
 		foreach ( $errors as $codigo ) {
@@ -3161,6 +3246,16 @@ final class EventPostType {
 
 
 
+	public const OPTION_ROOT_URLS = 'evt_root_urls';
+
+
+
+
+	public const ENTRY_VAR = 'evt_entry';
+
+
+
+
 
 
 	public static function register(): void {
@@ -3207,6 +3302,155 @@ final class EventPostType {
 
 		add_filter( 'theme_' . self::POST_TYPE . '_templates', array( self::class, 'theme_templates' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( self::class, 'set_blank_template' ) );
+
+		add_filter( 'request', array( self::class, 'resolve_request' ) );
+		add_filter( 'post_type_link', array( self::class, 'root_link' ), 10, 2 );
+		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
+		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
+	}
+
+
+
+
+
+
+	public static function root_urls(): bool {
+
+
+
+
+
+		return (bool) apply_filters( 'evt_root_urls', '1' === get_option( self::OPTION_ROOT_URLS, '' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function resolve_request( $vars ) {
+		if ( ! is_array( $vars ) ) {
+			return $vars;
+		}
+
+		foreach ( array( 'page_id', 'p' ) as $clave ) {
+			$id = isset( $vars[ $clave ] ) ? absint( $vars[ $clave ] ) : 0;
+			if ( $id > 0 && self::POST_TYPE === get_post_type( $id ) ) {
+				unset( $vars['page_id'] );
+				$vars['p']         = $id;
+				$vars['post_type'] = self::POST_TYPE;
+				return $vars;
+			}
+		}
+
+
+
+
+		if ( isset( $vars[ self::POST_TYPE ], $vars['page'] ) && preg_match( '~^(.+)/entry$~', (string) $vars[ self::POST_TYPE ], $m ) ) {
+			$vars[ self::POST_TYPE ] = $m[1];
+			$vars['name']            = $m[1];
+			$vars[ self::ENTRY_VAR ] = absint( trim( (string) $vars['page'], '/' ) );
+			unset( $vars['page'] );
+			return $vars;
+		}
+
+		if ( ! self::root_urls() ) {
+			return $vars;
+		}
+
+
+		$como = array_intersect_key( $vars, array_flip( array( 'pagename', 'name', 'attachment', 'error' ) ) );
+		if ( array() === $como || isset( $vars['post_type'] ) || ! isset( $GLOBALS['wp'] ) ) {
+			return $vars;
+		}
+		$ruta  = trim( (string) $GLOBALS['wp']->request, '/' );
+		$ficha = 0;
+		if ( preg_match( '~^(.+)/entry/(\d+)$~', $ruta, $m ) ) {
+			$ruta  = $m[1];
+			$ficha = absint( $m[2] );
+		}
+		if ( '' === $ruta || get_page_by_path( $ruta ) || get_page_by_path( $ruta, OBJECT, 'post' ) ) {
+			return $vars;
+		}
+		$evento = get_page_by_path( $ruta, OBJECT, self::POST_TYPE );
+		if ( ! $evento instanceof \WP_Post ) {
+			return $vars;
+		}
+		return array_filter(
+			array(
+				self::POST_TYPE => $ruta,
+				'post_type'     => self::POST_TYPE,
+				'name'          => $ruta,
+				self::ENTRY_VAR => $ficha,
+			)
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function keep_entry_url( $url ) {
+		return absint( get_query_var( self::ENTRY_VAR ) ) > 0 ? false : $url;
+	}
+
+
+
+
+
+
+
+
+	public static function entry_url( int $section_id, int $entry_id ): string {
+		$url = (string) get_permalink( $section_id );
+		if ( ! get_option( 'permalink_structure' ) ) {
+			return add_query_arg( self::ENTRY_VAR, $entry_id, $url );
+		}
+		return user_trailingslashit( trailingslashit( $url ) . 'entry/' . $entry_id );
+	}
+
+
+
+
+
+
+
+	public static function query_vars( $vars ) {
+		if ( is_array( $vars ) ) {
+			$vars[] = self::ENTRY_VAR;
+		}
+		return $vars;
+	}
+
+
+
+
+
+
+
+
+	public static function root_link( $url, $post ) {
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type || ! self::root_urls() ) {
+			return $url;
+		}
+		if ( ! get_option( 'permalink_structure' ) || in_array( $post->post_status, array( 'draft', 'pending', 'auto-draft' ), true ) ) {
+			return $url;
+		}
+		return user_trailingslashit( home_url( '/' . get_page_uri( $post ) ) );
 	}
 
 
@@ -5183,6 +5427,194 @@ final class Assets {
 
 
 		return (string) file_get_contents( $path );
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class Fonts {
+
+
+
+
+	public const VERSION = '5.3.0';
+
+
+
+
+
+
+
+	public const FILES = array(
+		'open-sans'          => array(
+			400 => 'sha384-iCbKvpR5A60/NS//7SB6FzVw0fJ34nxQdHMf36GZO9d2zYjLquC+gb/v2wO1S9sx',
+			700 => 'sha384-wlxPc3ysysl4f7PNCFAB7q9aAhL3oOVyKNTmz7mvkb84YWAE774cpURVm3Fk/9HS',
+		),
+		'lato'               => array(
+			400 => 'sha384-EaujSazvWAx+u1yLfcczolJEwfFibbIaUkuF4Bc9WgtVVtSIjTDTdyCHSh33Ld32',
+			700 => 'sha384-LiO4ka88Z0/5dvuFGaDYviATzARaBcekjRhb0XIqdU2uOXMwo9BFs33m6bVWfxtZ',
+		),
+		'montserrat'         => array(
+			400 => 'sha384-mn1OBOBK7ZfEdVTUvNRqUMCzfQ5i72/9STsbyKZfo84NCVTFn/QovqL5ozS882ux',
+			700 => 'sha384-n+ukm2naeA9fWlaEeVoWDoSikLqyOvCDD5dA1cM8D5sg8m50ePn9tTHD8uCrqGQ3',
+		),
+		'source-serif-4'     => array(
+			400 => 'sha384-Yhk5mLEkzKx29CSpJXzN4aMeXVEwyxBjv8GUrGqzfiYavqiHx6NrHs6jVkV6g0Zm',
+			700 => 'sha384-cDIigMi+qIrJ9lZodeX8m/bxGSB6CGe2kzztQzlJmOPV1eAj9NAkvzBroQ4u0l+L',
+		),
+		'merriweather'       => array(
+			400 => 'sha384-2+ULC2JeQ/mR5wT2tOuluI7YBLHqsfRzrpzd82ckQr+xOWUYnyBYBtsKHZZ60r8H',
+			700 => 'sha384-kwlpJxNKEX1xllIBM384Oy4fLKrgFKpwTCF9woylWpqnldayzyxdX/uxnS5NeNPW',
+		),
+		'roboto'             => array(
+			400 => 'sha384-PD1suwqU3uRAdjtf2uU7xLqFrAlKnev1il3ZXubKemhqyVRIaT7PVXNBAYeGu3+S',
+			700 => 'sha384-C3a4//Qmer1umX7TCPDnkFGQXDRi4tfufFF+VyE0UpefaIrdKAFqsq2p57Bsy1r4',
+		),
+		'nunito'             => array(
+			400 => 'sha384-jreD+rEyhWKSlZIOowvLj1tmy6gxhsvP3aXq5KHxykIr5hdfIYy9Sd0sy+h7uM14',
+			700 => 'sha384-+Ygvr/KhFV8xPATC9iKazLXGnQz6R9PA1p3biwWVQ/cG/3tzv5I4n3vaLjWkZrWJ',
+		),
+		'cantarell'          => array(
+			400 => 'sha384-eL6khcPbeTL1tpnGXFs655u0dhYlkDLmjTdBl44Q4xAQ0THyAvIwAcVsm/p1QVCv',
+			700 => 'sha384-FG2yRzTFgufBEq4rYMR7+a32jbBLOz/oMJ7NJj+fknNeCQW4p9tOn/hr8UqI1wgw',
+		),
+		'dosis'              => array(
+			400 => 'sha384-I2X7GNUWrqsvfyoj8sTEeHtta6xw2/E6VkP4dAF6xsELaPcCIfn/OBQCJYGKc6WF',
+			700 => 'sha384-g7JSNrfftSeWUEx9EGB4t1rwkDBPcrn7X1Hu8HERpXFN3h59LVlVsg49avhDTgPH',
+		),
+		'oxanium'            => array(
+			400 => 'sha384-EpSITMa1tmQZsqG8TwGKkZnJDh4dWw0MSH16kHuppnZOsz/o9t/i4mOAZa4JiVJl',
+			700 => 'sha384-LuVs+5uf3I/9fhdRi1hcD4Bppm9QA1TrSz8AK+4RoePpLJ6JGeKOYU6yBvXfu5V5',
+		),
+		'cormorant-garamond' => array(
+			400 => 'sha384-20o9vAMzu8LFmfep2AJ/twrjvl9mhxDeanzRrV7KpAGFXKp/a1QqIk//ttkdXioc',
+			700 => 'sha384-q+3zdrb5PTuvZjOORmkjJ0b/m3RMaAIoNM562erkXAcC/aAOHTwP/pR+8WFjxiy/',
+		),
+		'alata'              => array(
+			400 => 'sha384-ap+JGFOrkF2FMNLgopQqYEzQ3+vFLHWSxW8oczvpWnH2k0FEWygEc8eK0pZlFQPq',
+		),
+		'aboreto'            => array(
+			400 => 'sha384-6e5ixGCYwRHVro6bH2FgfnsE7FQBTFoogPEUmXeIhf5uzIgzNXqplyqt6Rn+Ugp6',
+		),
+		'aldrich'            => array(
+			400 => 'sha384-4+BeVf6PFtvHxt7oe5SQglP3XHzsQxZK9+L8ALFif/N2fTD3rr4oR4X+5q5BeT7N',
+		),
+		'dela-gothic-one'    => array(
+			400 => 'sha384-5QQvdRDbvbu/vUDzqxYM9ckKYnBhMqU5LYc02xWeFWKLEUMjStKGPOSMBF5GLkET',
+		),
+		'fredoka-one'        => array(
+			400 => 'sha384-xQIyJ+XxwlqWftTPfwlMXgDLQ9RfqxQXBKL1fNKKBV3z14Nhdr1/toXskgW5ykMI',
+		),
+		'new-tegomin'        => array(
+			400 => 'sha384-zlT32DNBnSj9mP+vL+a3v5njKZJIB89iUPc5Pf/d7M2So78QjMmlL6t/yFFFYF1y',
+		),
+		'nosifer'            => array(
+			400 => 'sha384-PjsTIqCWE24cW2MeP+RbhnFG68fkxd3oMP2yHDW14TxXf0TnOk58FPHqPRxrzLw7',
+		),
+		'oi'                 => array(
+			400 => 'sha384-AjKStabBzNCXIwF2pD9sIn01vtDPX8TzHBbi+S0WLDo2OCTkLr/MGWWm2ays/HpG',
+		),
+		'patrick-hand'       => array(
+			400 => 'sha384-bRv4Og6LOuoVz7IEU6hF9pVk7wTVhKPRODGWOxDww6VELTsApNMantCE1dpI9z8V',
+		),
+		'patua-one'          => array(
+			400 => 'sha384-W2kSA0H/1aSxTNIhBfdCRC39nq0bPdBD1DxMusdkERjX3UXRlcZ8i5sdsJGrp8+n',
+		),
+	);
+
+
+
+
+	private const HANDLE = 'evt-font-';
+
+
+
+
+
+
+	public static function register(): void {
+		add_filter( 'style_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+	}
+
+
+
+
+
+
+
+	public static function package( string $slug ): string {
+		return 'source-serif' === $slug ? 'source-serif-4' : $slug;
+	}
+
+
+
+
+
+
+
+
+	public static function url( string $slug, int $weight ): string {
+		return sprintf( 'https://cdn.jsdelivr.net/npm/@fontsource/%s@%s/latin-%d.css', self::package( $slug ), self::VERSION, $weight );
+	}
+
+
+
+
+
+
+
+	public static function enqueue( array $slugs ): void {
+		foreach ( array_unique( $slugs ) as $slug ) {
+			$paquete = self::package( (string) EventMetaKeys::in_list( $slug, EventMetaKeys::fonts() ) );
+			foreach ( self::FILES[ $paquete ] ?? array() as $peso => $sri ) {
+				unset( $sri );
+
+				wp_enqueue_style( self::HANDLE . $paquete . '-' . $peso, self::url( $paquete, (int) $peso ), array(), null );
+			}
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function integrity( $tag, $handle, $href ): string {
+		$tag = (string) $tag;
+		if ( 0 !== strpos( (string) $handle, self::HANDLE ) || 0 !== strpos( (string) $href, 'https://cdn.jsdelivr.net/' ) ) {
+			return $tag;
+		}
+		if ( ! preg_match( '~@fontsource/([a-z0-9-]+)@[^/]+/latin-(\d+)\.css~', (string) $href, $m ) || ! isset( self::FILES[ $m[1] ][ (int) $m[2] ] ) ) {
+			return $tag;
+		}
+		$sri = self::FILES[ $m[1] ][ (int) $m[2] ];
+		return (string) preg_replace( '~<link ~', '<link integrity="' . esc_attr( $sri ) . '" crossorigin="anonymous" ', $tag, 1 );
 	}
 }
 
@@ -8426,6 +8858,7 @@ final class Programme {
 
 		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_ROLE, (string) $data['role'] );
 		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_ORG, (string) $data['org'] );
+		update_post_meta( $id, ProgrammeMetaKeys::SPEAKER_FEATURED, ! empty( $data['featured'] ) );
 		EventAccess::stamp_area( $id );
 
 		return $id;
@@ -8460,6 +8893,8 @@ final class Programme {
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VENUE, (string) $data['venue'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_ROOM, (string) $data['room'] );
 		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, (int) $data['seats'] );
+		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VIDEO, (string) ( $data['video'] ?? '' ) );
+		update_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_GUESTS, (string) ( $data['guests'] ?? '' ) );
 
 
 		update_post_meta(
@@ -8572,6 +9007,7 @@ final class Programme {
 			'bio'      => (string) $ponente->post_content,
 			'photo'    => (string) get_the_post_thumbnail_url( $id, 'thumbnail' ),
 			'photo_id' => (int) get_post_thumbnail_id( $id ),
+			'featured' => (bool) get_post_meta( $id, ProgrammeMetaKeys::SPEAKER_FEATURED, true ),
 		);
 	}
 
@@ -8605,6 +9041,8 @@ final class Programme {
 			'seats'       => (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true ),
 			'speaker_ids' => array_keys( $ponentes ),
 			'speakers'    => $ponentes,
+			'video'       => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VIDEO, true ),
+			'guests'      => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_GUESTS, true ),
 		);
 	}
 
@@ -11809,10 +12247,11 @@ final class EventWorkspace {
 	private static function save_speaker( int $event_id, int $row_id, string $destino ): void {
 		$check = ActivityInput::speaker(
 			array(
-				'name' => self::field( 'evt_sp_name' ),
-				'role' => self::field( 'evt_sp_role' ),
-				'org'  => self::field( 'evt_sp_org' ),
-				'bio'  => self::field( 'evt_sp_bio' ),
+				'name'     => self::field( 'evt_sp_name' ),
+				'role'     => self::field( 'evt_sp_role' ),
+				'org'      => self::field( 'evt_sp_org' ),
+				'bio'      => self::field( 'evt_sp_bio' ),
+				'featured' => self::field( 'evt_sp_featured' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -11870,6 +12309,8 @@ final class EventWorkspace {
 				'seats'    => self::field( 'evt_ac_seats' ),
 				'summary'  => self::field( 'evt_ac_summary' ),
 				'speakers' => $ponentes,
+				'video'    => self::field( 'evt_ac_video' ),
+				'guests'   => self::field( 'evt_ac_guests' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -12350,6 +12791,12 @@ final class EventWorkspace {
 
 
 	private static function validate_and_put_image( int $event_id, string $meta_key, int $attachment_id, int $min_width ): bool {
+
+
+		$actual = '' === $meta_key ? (int) get_post_thumbnail_id( $event_id ) : (int) get_post_meta( $event_id, $meta_key, true );
+		if ( $attachment_id > 0 && $attachment_id === $actual ) {
+			return true;
+		}
 		if ( $attachment_id > 0 && ! self::is_image_attachment( $attachment_id ) ) {
 			return false;
 		}
@@ -13652,6 +14099,12 @@ final class EventSpeakersPanel {
 				<small>Unas líneas. Sale debajo del nombre en la página de ponentes.</small>
 			</div>
 
+			<div class="evt-form-campo form-check">
+				<input class="form-check-input" type="checkbox" id="evt-sp-featured" name="evt_sp_featured" value="1" <?php checked( ! empty( $valores['featured'] ) ); ?> />
+				<label class="form-check-label" for="evt-sp-featured">Destacar en la portada del evento</label>
+				<small>Sale en «Personas comunicadoras», en la portada, además de en la página de ponentes.</small>
+			</div>
+
 			<?php echo self::photo( $m, $valores ); ?>
 
 			<div class="evt-acciones">
@@ -14131,6 +14584,19 @@ final class EventProgrammePanel {
 			<div class="evt-form-campo">
 				<label for="evt-ac-summary">Descripción</label>
 				<textarea id="evt-ac-summary" name="evt_ac_summary" rows="3"><?php echo esc_textarea( (string) ( $valores['summary'] ?? '' ) ); ?></textarea>
+			</div>
+
+			<div class="evt-form-campo">
+				<label for="evt-ac-guests">Otros participantes <span class="evt-opcional">(opcional)</span></label>
+				<textarea id="evt-ac-guests" name="evt_ac_guests" rows="2" placeholder="Nombre (centro o cargo)"><?php echo esc_textarea( (string) ( $valores['guests'] ?? '' ) ); ?></textarea>
+				<small>Uno por línea. Quien presenta, modera o inaugura sin ser ponente: sale en la actividad y no en la página de ponentes.</small>
+			</div>
+
+			<div class="evt-form-campo">
+				<label for="evt-ac-video">Vídeo <span class="evt-opcional">(opcional)</span></label>
+				<input type="url" id="evt-ac-video" name="evt_ac_video" placeholder="https://"
+					value="<?php echo esc_attr( (string) ( $valores['video'] ?? '' ) ); ?>" />
+				<small>La grabación, en YouTube, Vimeo o la mediateca. Con vídeo, la actividad sale en la página «Multimedia».</small>
 			</div>
 
 			<div class="evt-acciones">
@@ -17467,7 +17933,7 @@ final class PosterBlock {
 
 	public static function html( array $m ): string {
 		$look = (array) $m['appearance'];
-		if ( empty( $m['is_root'] ) || '' === (string) $look['poster'] ) {
+		if ( empty( $m['is_root'] ) || ( '' === (string) $look['poster'] && '' === (string) $look['poster_file'] ) ) {
 			return '';
 		}
 
@@ -17480,14 +17946,601 @@ final class PosterBlock {
 		ob_start();
 		?>
 		<figure class="evt-ev__cartel">
-			<a href="<?php echo esc_url( (string) $look['poster_full'] ); ?>">
-				<img src="<?php echo esc_url( (string) $look['poster'] ); ?>"
-					alt="<?php echo esc_attr( $alt ); ?>" loading="lazy" />
-			</a>
-			<figcaption><?php esc_html_e( 'Pulse el cartel para verlo a tamaño completo.', 'wp-eventos' ); ?></figcaption>
+			<?php if ( '' !== (string) $look['poster'] ) : ?>
+				<a href="<?php echo esc_url( '' !== (string) $look['poster_file'] ? (string) $look['poster_file'] : (string) $look['poster_full'] ); ?>">
+					<img src="<?php echo esc_url( (string) $look['poster'] ); ?>"
+						alt="<?php echo esc_attr( $alt ); ?>" loading="lazy" />
+				</a>
+			<?php endif; ?>
+			<figcaption>
+				<?php if ( '' !== (string) $look['poster_file'] ) : ?>
+					<a href="<?php echo esc_url( (string) $look['poster_file'] ); ?>" download><?php esc_html_e( 'Descargar el cartel (PDF)', 'wp-eventos' ); ?></a>
+				<?php else : ?>
+					<?php esc_html_e( 'Pulse el cartel para verlo a tamaño completo.', 'wp-eventos' ); ?>
+				<?php endif; ?>
+			</figcaption>
 		</figure>
 		<?php
 		return (string) ob_get_clean();
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront\Block;
+
+use Evt\Domain\DateRange;
+use Evt\Meta\EventMetaKeys;
+use Evt\Meta\ProgrammeMetaKeys;
+use Evt\PostType\ActivityPostType;
+use Evt\PostType\EventPostType;
+use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Programme;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class ProgrammeBlock {
+
+
+
+
+	public const NAME = 'fichas';
+
+
+
+
+	public const PRIORITY = 15;
+
+
+
+
+	public const FEATURED_NAME = 'destacados';
+
+
+
+
+	public const FEATURED_PRIORITY = 35;
+
+
+
+
+	private const EXCERPT_WORDS = 22;
+
+
+
+
+
+
+	private static $sections = array();
+
+
+
+
+
+
+
+	public static function html( array $m ): string {
+		$evento = (int) $m['event_id'];
+		if ( $evento <= 0 || ! empty( $m['is_root'] ) ) {
+			return '';
+		}
+		$pagina = (int) $m['page_id'];
+		$ficha  = absint( get_query_var( EventPostType::ENTRY_VAR ) );
+
+		switch ( (string) $m['section_type'] ) {
+			case 'ponentes':
+				$ponente = self::entry( $evento, $ficha, SpeakerPostType::POST_TYPE );
+				return $ponente > 0 ? self::speaker( $evento, $ponente, $pagina ) : self::speakers( $evento, $pagina );
+			case 'programa':
+				return self::grid( $evento );
+			case 'actividades':
+				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
+				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, false );
+			case 'multimedia':
+				$actividad = self::entry( $evento, $ficha, ActivityPostType::POST_TYPE );
+				return $actividad > 0 ? self::activity( $evento, $actividad, $pagina ) : self::activities( $evento, $pagina, true );
+		}
+		return '';
+	}
+
+
+
+
+
+
+
+	public static function featured( array $m ): string {
+		$evento = (int) $m['event_id'];
+		if ( $evento <= 0 || empty( $m['is_root'] ) ) {
+			return '';
+		}
+		$destacados = array_filter(
+			Programme::speakers( $evento ),
+			static function ( \WP_Post $p ): bool {
+				return 'publish' === $p->post_status && (bool) get_post_meta( $p->ID, ProgrammeMetaKeys::SPEAKER_FEATURED, true );
+			}
+		);
+		if ( array() === $destacados ) {
+			return '';
+		}
+		$seccion = self::section( $evento, 'ponentes' );
+
+		ob_start();
+		?>
+		<h2>Personas comunicadoras</h2>
+		<p>Ponentes y personas comunicadoras que participan en <?php echo esc_html( (string) $m['event_title'] ); ?>.</p>
+		<ul class="evt-ev__personas">
+			<?php foreach ( $destacados as $ponente ) : ?>
+				<?php $url = $seccion > 0 ? EventPostType::entry_url( $seccion, (int) $ponente->ID ) : ''; ?>
+				<li class="evt-ev__persona">
+					<?php echo self::photo( (int) $ponente->ID, $url ); ?>
+					<h3><?php echo self::link( get_the_title( $ponente ), $url ); ?></h3>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+	private static function speakers( int $evento, int $seccion ): string {
+		$ponentes = self::published( Programme::speakers( $evento ) );
+		if ( array() === $ponentes ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<ul class="evt-ev__personas evt-ev__personas--fichas">
+			<?php foreach ( $ponentes as $ponente ) : ?>
+				<?php
+				$fila = Programme::speaker_row( $ponente );
+				$url  = EventPostType::entry_url( $seccion, (int) $fila['id'] );
+				$bio  = wp_strip_all_tags( (string) $fila['bio'] );
+				?>
+				<li class="evt-ev__persona">
+					<?php echo self::photo( (int) $fila['id'], $url ); ?>
+					<div>
+						<h3><?php echo self::link( (string) $fila['name'], $url ); ?></h3>
+						<?php echo self::role( $fila ); ?>
+						<?php if ( '' !== trim( $bio ) ) : ?>
+							<p>
+								<?php echo esc_html( wp_trim_words( $bio, self::EXCERPT_WORDS, '…' ) ); ?>
+								<a href="<?php echo esc_url( $url ); ?>">Leer más<span class="screen-reader-text"> sobre <?php echo esc_html( (string) $fila['name'] ); ?></span></a>
+							</p>
+						<?php endif; ?>
+					</div>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+	private static function speaker( int $evento, int $id, int $seccion ): string {
+		$fila     = Programme::speaker_row( get_post( $id ) );
+		$suyas    = array();
+		$programa = self::section( $evento, 'actividades' );
+		foreach ( Programme::activities( $evento ) as $actividad ) {
+			if ( 'publish' === $actividad->post_status && in_array( $id, Programme::speaker_ids( $actividad->ID ), true ) ) {
+				$suyas[] = Programme::activity_row( $actividad );
+			}
+		}
+
+		ob_start();
+		?>
+		<article class="evt-ev__ficha">
+			<?php echo self::photo( $id, '' ); ?>
+			<div>
+				<h2><?php echo esc_html( (string) $fila['name'] ); ?></h2>
+				<?php echo self::role( $fila ); ?>
+				<?php echo wp_kses_post( wpautop( (string) $fila['bio'] ) ); ?>
+				<?php if ( array() !== $suyas ) : ?>
+					<h3>Participa en</h3>
+					<ul>
+						<?php foreach ( $suyas as $actividad ) : ?>
+							<li>
+								<?php echo self::link( (string) $actividad['title'], $programa > 0 ? EventPostType::entry_url( $programa, (int) $actividad['id'] ) : '' ); ?>
+								<?php echo self::when( $actividad ); ?>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+			</div>
+		</article>
+		<p><a href="<?php echo esc_url( (string) get_permalink( $seccion ) ); ?>">← Todos los ponentes</a></p>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function grid( int $evento ): string {
+		$dias = self::published_grid( Programme::grid( $evento ) );
+		if ( array() === $dias ) {
+			return '';
+		}
+		$fichas = self::section( $evento, 'actividades' );
+
+		ob_start();
+		foreach ( $dias as $dia ) {
+			foreach ( (array) $dia['venues'] as $sede ) {
+				$rotulo = implode( ' – ', array_filter( array( (string) $sede['venue'], '' !== (string) $dia['date'] ? DateRange::of( (string) $dia['date'], (string) $dia['date'] ) : 'Sin fecha' ) ) );
+				?>
+				<h2 class="evt-ev__dia"><?php echo esc_html( $rotulo ); ?></h2>
+				<ol class="evt-ev__parrilla">
+					<?php foreach ( (array) $sede['rows'] as $fila ) : ?>
+						<li class="evt-ev__hueco">
+							<span class="evt-ev__hora"><?php echo esc_html( self::hours( $fila ) ); ?></span>
+							<div>
+								<span class="evt-ev__tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></span>
+								<?php if ( '' !== (string) $fila['room'] ) : ?>
+									<span class="evt-ev__sala"><?php echo esc_html( (string) $fila['room'] ); ?></span>
+								<?php endif; ?>
+								<h3><?php echo self::link( (string) $fila['title'], $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $fila['id'] ) : '' ); ?></h3>
+								<?php echo self::people( $evento, $fila, false ); ?>
+							</div>
+						</li>
+					<?php endforeach; ?>
+				</ol>
+				<?php
+			}
+		}
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+	private static function activities( int $evento, int $seccion, bool $solo_video ): string {
+		$filas = array();
+		foreach ( self::published( Programme::activities( $evento ) ) as $actividad ) {
+			$fila = Programme::activity_row( $actividad );
+			if ( ! $solo_video || '' !== (string) $fila['video'] ) {
+				$filas[] = $fila;
+			}
+		}
+		if ( array() === $filas ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<ul class="evt-ev__actividades">
+			<?php foreach ( $filas as $fila ) : ?>
+				<?php
+				$url     = EventPostType::entry_url( $seccion, (int) $fila['id'] );
+				$resumen = wp_strip_all_tags( (string) $fila['summary'] );
+				?>
+				<li class="evt-ev__actividad">
+					<span class="evt-ev__tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></span>
+					<h3><?php echo self::link( (string) $fila['title'], $url ); ?></h3>
+					<?php if ( $solo_video ) : ?>
+						<?php echo self::video( (string) $fila['video'] ); ?>
+					<?php elseif ( '' !== trim( $resumen ) ) : ?>
+						<p><?php echo esc_html( wp_trim_words( $resumen, self::EXCERPT_WORDS, '…' ) ); ?></p>
+					<?php endif; ?>
+					<?php echo self::people( $evento, $fila, true ); ?>
+					<?php echo self::when( $fila ); ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+	private static function activity( int $evento, int $id, int $seccion ): string {
+		$fila = Programme::activity_row( get_post( $id ) );
+
+		ob_start();
+		?>
+		<article class="evt-ev__ficha evt-ev__ficha--actividad">
+			<div>
+				<span class="evt-ev__tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></span>
+				<h2><?php echo esc_html( (string) $fila['title'] ); ?></h2>
+				<?php echo self::when( $fila ); ?>
+				<?php echo self::video( (string) $fila['video'] ); ?>
+				<?php echo wp_kses_post( wpautop( (string) $fila['summary'] ) ); ?>
+				<?php echo self::people( $evento, $fila, true ); ?>
+			</div>
+		</article>
+		<p><a href="<?php echo esc_url( (string) get_permalink( $seccion ) ); ?>">← Volver</a></p>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function entry( int $evento, int $ficha, string $post_type ): int {
+		if ( $ficha <= 0 ) {
+			return 0;
+		}
+		$post = get_post( $ficha );
+		if ( $post instanceof \WP_Post && $post_type === $post->post_type && (int) $post->post_parent === $evento && 'publish' === $post->post_status ) {
+			return $ficha;
+		}
+		$ids = get_posts(
+			array(
+				'post_type'   => $post_type,
+				'post_parent' => $evento,
+				'post_status' => 'publish',
+				'numberposts' => 1,
+				'fields'      => 'ids',
+
+				'meta_query'  => array(
+					array(
+						'key'   => ProgrammeMetaKeys::LEGACY_ENTRY,
+						'value' => (string) $ficha,
+					),
+				),
+			)
+		);
+		return $ids ? (int) $ids[0] : 0;
+	}
+
+
+
+
+
+
+
+
+	private static function section( int $evento, string $tipo ): int {
+		if ( ! isset( self::$sections[ $evento ] ) ) {
+			self::$sections[ $evento ] = array();
+			$hijas                     = get_posts(
+				array(
+					'post_type'   => EventPostType::POST_TYPE,
+					'post_parent' => $evento,
+					'post_status' => 'publish',
+					'numberposts' => 100,
+					'orderby'     => 'menu_order',
+					'order'       => 'ASC',
+				)
+			);
+			foreach ( $hijas as $hija ) {
+				$suyo = (string) get_post_meta( $hija->ID, EventMetaKeys::SECTION_TYPE, true );
+				if ( ! isset( self::$sections[ $evento ][ $suyo ] ) ) {
+					self::$sections[ $evento ][ $suyo ] = (int) $hija->ID;
+				}
+			}
+		}
+		if ( isset( self::$sections[ $evento ][ $tipo ] ) ) {
+			return self::$sections[ $evento ][ $tipo ];
+		}
+
+		return 'actividades' === $tipo ? ( self::$sections[ $evento ]['programa'] ?? 0 ) : 0;
+	}
+
+
+
+
+
+
+
+	private static function published( array $posts ): array {
+		return array_values(
+			array_filter(
+				$posts,
+				static function ( \WP_Post $p ): bool {
+					return 'publish' === $p->post_status;
+				}
+			)
+		);
+	}
+
+
+
+
+
+
+
+	private static function published_grid( array $dias ): array {
+		$out = array();
+		foreach ( $dias as $dia ) {
+			$sedes = array();
+			foreach ( (array) $dia['venues'] as $sede ) {
+				$sede['rows'] = array_values(
+					array_filter(
+						(array) $sede['rows'],
+						static function ( array $fila ): bool {
+							return 'publish' === get_post_status( (int) $fila['id'] );
+						}
+					)
+				);
+				if ( array() !== $sede['rows'] ) {
+					$sedes[] = $sede;
+				}
+			}
+			if ( array() !== $sedes ) {
+				$dia['venues'] = $sedes;
+				$out[]         = $dia;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+
+	private static function photo( int $id, string $url ): string {
+		$src = (string) get_the_post_thumbnail_url( $id, 'medium' );
+		$img = '' !== $src
+			? '<img class="evt-ev__retrato" src="' . esc_url( $src ) . '" alt="" loading="lazy" />'
+			: '<span class="evt-ev__retrato evt-ev__retrato--vacio" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8z"/></svg></span>';
+		return '' !== $url ? '<a href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true">' . $img . '</a>' : $img;
+	}
+
+
+
+
+
+
+
+
+	private static function link( string $texto, string $url ): string {
+		return '' !== $url ? '<a href="' . esc_url( $url ) . '">' . esc_html( $texto ) . '</a>' : esc_html( $texto );
+	}
+
+
+
+
+
+
+
+	private static function role( array $fila ): string {
+		$linea = implode( ' – ', array_filter( array( trim( (string) $fila['role'] ), trim( (string) $fila['org'] ) ) ) );
+		return '' === $linea ? '' : '<p class="evt-ev__cargo">' . esc_html( $linea ) . '</p>';
+	}
+
+
+
+
+
+
+
+
+
+	private static function people( int $evento, array $fila, bool $con_cargo ): string {
+		$fichas = self::section( $evento, 'ponentes' );
+		$gente  = array();
+		foreach ( (array) $fila['speakers'] as $id => $nombre ) {
+			$cargo   = $con_cargo ? trim( (string) get_post_meta( (int) $id, ProgrammeMetaKeys::SPEAKER_ROLE, true ) ) : '';
+			$gente[] = self::link( (string) $nombre, $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $id ) : '' )
+				. ( '' !== $cargo ? ' <span class="evt-ev__cargo">(' . esc_html( $cargo ) . ')</span>' : '' );
+		}
+		foreach ( preg_split( '/\r\n|\r|\n/', (string) $fila['guests'] ) as $invitado ) {
+			if ( '' !== trim( $invitado ) ) {
+				$gente[] = esc_html( trim( $invitado ) );
+			}
+		}
+		if ( array() === $gente ) {
+			return '';
+		}
+		return '<ul class="evt-ev__gente"><li>' . implode( '</li><li>', $gente ) . '</li></ul>';
+	}
+
+
+
+
+
+
+
+	private static function when( array $fila ): string {
+		$trozos = array_filter(
+			array(
+				'' !== (string) $fila['date'] ? DateRange::of( (string) $fila['date'], (string) $fila['date'] ) : '',
+				self::hours( $fila ),
+				implode( ', ', array_filter( array( (string) $fila['room'], (string) $fila['venue'] ) ) ),
+			)
+		);
+		return array() === $trozos ? '' : '<p class="evt-ev__cuando">' . esc_html( implode( ' · ', $trozos ) ) . '</p>';
+	}
+
+
+
+
+
+
+
+	private static function hours( array $fila ): string {
+		return implode( '–', array_filter( array( (string) $fila['start'], (string) $fila['end'] ) ) );
+	}
+
+
+
+
+
+
+
+	private static function video( string $url ): string {
+		if ( '' === $url ) {
+			return '';
+		}
+
+
+		$tipo = wp_check_filetype( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+		if ( 0 === strpos( (string) $tipo['type'], 'video/' ) ) {
+			return '<div class="evt-ev__video evt-ev__video--fichero">' . wp_video_shortcode( array( 'src' => $url ) ) . '</div>';
+		}
+		if ( 0 === strpos( (string) $tipo['type'], 'audio/' ) ) {
+			return wp_audio_shortcode( array( 'src' => $url ) );
+		}
+		$embed = wp_oembed_get( $url );
+		if ( is_string( $embed ) && '' !== $embed ) {
+			return '<div class="evt-ev__video">' . $embed . '</div>';
+		}
+		return '<p><a href="' . esc_url( $url ) . '">Ver el vídeo</a></p>';
 	}
 }
 
@@ -18020,6 +19073,7 @@ namespace Evt\PublicFront;
 use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Block\ContentBlock;
 use Evt\PublicFront\Block\PosterBlock;
+use Evt\PublicFront\Block\ProgrammeBlock;
 use Evt\PublicFront\Block\SectionsBlock;
 use Evt\PublicFront\Block\SignupBlock;
 use Evt\PublicFront\View\EventChrome;
@@ -18098,6 +19152,8 @@ final class EventLayout {
 		self::add_block( PosterBlock::NAME, array( PosterBlock::class, 'html' ), PosterBlock::PRIORITY );
 		self::add_block( SectionsBlock::NAME, array( SectionsBlock::class, 'html' ), SectionsBlock::PRIORITY );
 		self::add_block( SignupBlock::NAME, array( SignupBlock::class, 'html' ), SignupBlock::PRIORITY );
+		self::add_block( ProgrammeBlock::NAME, array( ProgrammeBlock::class, 'html' ), ProgrammeBlock::PRIORITY );
+		self::add_block( ProgrammeBlock::FEATURED_NAME, array( ProgrammeBlock::class, 'featured' ), ProgrammeBlock::FEATURED_PRIORITY );
 	}
 
 
@@ -18502,6 +19558,8 @@ final class EventView {
 		add_action( 'template_redirect', array( self::class, 'render' ), self::PRIORITY );
 		add_action( 'wp_head', array( self::class, 'print_stylesheet' ), self::HEAD_PRIORITY );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'drop_page_assets' ), self::DROP_PRIORITY );
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_fonts' ) );
+		Fonts::register();
 
 
 		add_filter( 'style_loader_tag', array( self::class, 'drop_page_tag' ), 10, 3 );
@@ -18571,6 +19629,24 @@ final class EventView {
 
 		echo EventLayout::render( self::current_model() ); 
 		Shell::leave();
+	}
+
+
+
+
+
+
+	public static function enqueue_fonts(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$evento = EventAccess::root_id( (int) get_queried_object_id() );
+		Fonts::enqueue(
+			array(
+				(string) get_post_meta( $evento, EventMetaKeys::TITLE_FONT, true ),
+				(string) get_post_meta( $evento, EventMetaKeys::BODY_FONT, true ),
+			)
+		);
 	}
 
 
@@ -18949,6 +20025,7 @@ final class EventView {
 			'poster'            => '',
 			'poster_full'       => '',
 			'poster_alt'        => '',
+			'poster_file'       => '',
 			'shape'             => EventMetaKeys::SHAPE_SQUARE,
 			'separator'         => '',
 		);
@@ -18966,6 +20043,12 @@ final class EventView {
 			_prime_post_caches( $imagenes, false, true );
 		}
 
+
+		$pdf = $cartel > 0 && ! wp_attachment_is_image( $cartel ) ? (string) wp_get_attachment_url( $cartel ) : '';
+		if ( '' !== $pdf ) {
+			$cartel = (int) get_post_thumbnail_id( $event_id );
+		}
+
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
 			'fg'                => is_string( $fg ) ? $fg : '',
@@ -18980,6 +20063,7 @@ final class EventView {
 			'poster'            => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'large' ) : '',
 			'poster_full'       => $cartel > 0 ? (string) wp_get_attachment_image_url( $cartel, 'full' ) : '',
 			'poster_alt'        => $cartel > 0 ? (string) get_post_meta( $cartel, '_wp_attachment_image_alt', true ) : '',
+			'poster_file'       => $pdf,
 			'shape'             => EventMetaKeys::in_list(
 				get_post_meta( $event_id, EventMetaKeys::IMAGE_SHAPE, true ),
 				EventMetaKeys::image_shapes(),
@@ -19240,11 +20324,16 @@ final class EventChrome {
 
 
 	public const SEPARATORS = array(
-		'slant'    => 'M0,60 L1200,0 L1200,60 Z',
-		'ramp'     => 'M0,60 L1200,24 L1200,60 Z',
-		'curve'    => 'M0,60 Q600,-10 1200,60 Z',
-		'wave'     => 'M0,38 C300,68 900,-6 1200,38 L1200,60 L0,60 Z',
-		'triangle' => 'M0,60 L600,0 L1200,60 Z',
+		'slant'     => 'M0,60 L1200,0 L1200,60 Z',
+		'ramp'      => 'M0,60 L1200,24 L1200,60 Z',
+		'curve'     => 'M0,60 Q600,-10 1200,60 Z',
+		'wave'      => 'M0,38 C300,68 900,-6 1200,38 L1200,60 L0,60 Z',
+		'triangle'  => 'M0,60 L600,0 L1200,60 Z',
+		'waves'     => 'M0,40 C150,62 250,18 400,40 C550,62 650,18 800,40 C950,62 1050,18 1200,40 L1200,60 L0,60 Z',
+		'clouds'    => 'M0,60 L0,44 Q60,18 120,42 Q190,8 260,40 Q330,16 400,44 Q470,10 540,40 Q610,18 680,42 Q750,6 820,40 Q890,20 960,44 Q1030,12 1100,40 Q1150,24 1200,44 L1200,60 Z',
+		'mountains' => 'M0,60 L0,42 L150,16 L300,42 L480,4 L650,40 L820,18 L1000,46 L1200,20 L1200,60 Z',
+		'graph'     => 'M0,60 L0,50 L200,34 L400,46 L600,20 L800,30 L1000,8 L1200,24 L1200,60 Z',
+		'arrow'     => 'M0,30 L560,30 L600,0 L640,30 L1200,30 L1200,60 L0,60 Z',
 	);
 
 
@@ -20362,6 +21451,11 @@ final class Settings {
 
 
 
+	public const NONCE_URLS = 'evt_root_urls';
+
+
+
+
 
 
 	public static function register(): void {
@@ -20393,6 +21487,25 @@ final class Settings {
 	public static function handle_actions(): void {
 		if ( ! is_admin() || ! EventAccess::is_manager() ) {
 			return;
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
+			'root_urls' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_URLS, '_evt_urls_nonce' )
+		) {
+			update_option( EventPostType::OPTION_ROOT_URLS, empty( $_POST['evt_root_urls'] ) ? '' : '1' );
+			self::leave(
+				add_query_arg(
+					array(
+						'post_type' => EventPostType::POST_TYPE,
+						'page'      => self::PAGE,
+						'updated'   => 'synced',
+						'msg'       => rawurlencode( 'Guardada la forma de las direcciones de los eventos.' ),
+					),
+					admin_url( 'edit.php' )
+				)
+			);
 		}
 
 		if (
@@ -20473,6 +21586,24 @@ final class Settings {
 			<?php elseif ( isset( $_GET['error'] ) && ! empty( $_GET['error'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( (string) $_GET['error'] ) ) ); ?></p></div>
 			<?php endif; ?>
+
+			<h2>Direcciones de los eventos</h2>
+			<form method="post" action="" style="max-width:46rem">
+				<?php wp_nonce_field( self::NONCE_URLS, '_evt_urls_nonce' ); ?>
+				<input type="hidden" name="evt_action" value="root_urls" />
+				<p>
+					<label>
+						<input type="checkbox" name="evt_root_urls" value="1" <?php checked( EventPostType::root_urls() ); ?> />
+						Servir los eventos en la raíz del sitio: <code><?php echo esc_html( home_url( '/nombre-del-evento/' ) ); ?></code>
+					</label>
+				</p>
+				<p class="description">
+					Es la forma que tienen hoy las páginas de los eventos, y la que conservan al migrarlos.
+					Sin marcar, van bajo <code><?php echo esc_html( home_url( '/evento/' ) ); ?></code>.
+					Si en la raíz hay una página con la misma dirección, gana la página.
+				</p>
+				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
+			</form>
 
 			<h2>Tipos de contenido</h2>
 			<table class="widefat striped" style="max-width:46rem">
@@ -22555,6 +23686,194 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 	margin-top: 0.5rem;
 	font-size: var(--evt-t-menudo);
 	opacity: 0.8;
+}
+
+/* ─── ponentes y programa (ProgrammeBlock) ────────────────────────────── */
+
+.evt-ev__personas {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+	gap: var(--evt-espacio);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	text-align: center;
+}
+
+.evt-ev__personas h3 {
+	margin: 0.6rem 0 0.2rem;
+	font-size: 1.05rem;
+}
+
+.evt-ev__personas h3 a,
+.evt-ev__actividad h3 a,
+.evt-ev__hueco h3 a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.evt-ev__personas--fichas {
+	grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+	text-align: left;
+}
+
+.evt-ev__personas--fichas .evt-ev__persona {
+	display: grid;
+	grid-template-columns: 96px minmax(0, 1fr);
+	gap: 1rem;
+	align-items: start;
+}
+
+.evt-ev__personas--fichas h3 {
+	margin-top: 0;
+}
+
+.evt-ev__persona p {
+	margin: 0.3rem 0 0;
+}
+
+.evt-ev__retrato {
+	display: block;
+	width: 100%;
+	max-width: 180px;
+	margin-inline: auto;
+}
+
+.evt-ev__retrato--vacio {
+	display: grid;
+	place-items: center;
+	background: var(--evt-suave);
+	color: var(--evt-borde);
+}
+
+.evt-ev__retrato--vacio svg {
+	width: 60%;
+	fill: currentColor;
+}
+
+.evt-ev__cargo {
+	font-size: var(--evt-t-menudo);
+	opacity: 0.8;
+}
+
+.evt-ev__ficha {
+	display: grid;
+	grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+	gap: var(--evt-espacio);
+	align-items: start;
+}
+
+.evt-ev__ficha--actividad {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.evt-ev__ficha h2 {
+	margin: 0 0 0.3rem;
+}
+
+@media (max-width: 600px) {
+	.evt-ev__ficha {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.evt-ev__dia {
+	margin: calc(var(--evt-espacio) * 1.2) 0 0.6rem;
+	padding-bottom: 0.3rem;
+	border-bottom: 2px solid var(--evt-fondo);
+	font-size: 1.2rem;
+	text-transform: uppercase;
+}
+
+.evt-ev__parrilla,
+.evt-ev__actividades,
+.evt-ev__gente {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__hueco {
+	display: grid;
+	grid-template-columns: 8.5rem minmax(0, 1fr);
+	gap: 1rem;
+	padding: 0.8rem 0;
+	border-bottom: 1px solid var(--evt-borde);
+}
+
+.evt-ev__hueco h3,
+.evt-ev__actividad h3 {
+	margin: 0.2rem 0;
+	font-size: 1.1rem;
+}
+
+.evt-ev__hora {
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.evt-ev__tipo,
+.evt-ev__sala {
+	display: inline-block;
+	margin-right: 0.4rem;
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	opacity: 0.75;
+}
+
+.evt-ev__sala {
+	font-weight: 400;
+	text-transform: none;
+}
+
+.evt-ev__actividades {
+	display: grid;
+	gap: var(--evt-espacio);
+}
+
+.evt-ev__actividad {
+	padding: 1rem 1.2rem;
+	background: var(--evt-suave);
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__actividad p {
+	margin: 0.4rem 0;
+}
+
+.evt-ev__gente li {
+	margin: 0.15rem 0;
+}
+
+.evt-ev__cuando {
+	font-size: var(--evt-t-menudo);
+	font-weight: 700;
+}
+
+.evt-ev__video {
+	position: relative;
+	margin: 0.8rem 0;
+	aspect-ratio: 16 / 9;
+}
+
+.evt-ev__video--fichero {
+	aspect-ratio: auto;
+}
+
+.evt-ev__video iframe {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+@media (max-width: 600px) {
+	.evt-ev__hueco {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.2rem;
+	}
 }
 
 /* Una tabla nunca empuja la página: se desplaza ella sola. */

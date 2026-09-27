@@ -38,13 +38,17 @@ final class ProgrammeMetaRegistration {
 	 */
 	public static function speaker_schema(): array {
 		return array(
-			ProgrammeMetaKeys::SPEAKER_ROLE => array(
+			ProgrammeMetaKeys::SPEAKER_ROLE     => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
 			),
-			ProgrammeMetaKeys::SPEAKER_ORG  => array(
+			ProgrammeMetaKeys::SPEAKER_ORG      => array(
 				'type'     => 'string',
 				'sanitize' => 'sanitize_text_field',
+			),
+			ProgrammeMetaKeys::SPEAKER_FEATURED => array(
+				'type'     => 'boolean',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_bool' ),
 			),
 		);
 	}
@@ -88,6 +92,14 @@ final class ProgrammeMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_id_list' ),
 			),
+			ProgrammeMetaKeys::ACTIVITY_VIDEO    => array(
+				'type'     => 'string',
+				'sanitize' => 'esc_url_raw',
+			),
+			ProgrammeMetaKeys::ACTIVITY_GUESTS   => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
 		);
 	}
 
@@ -100,6 +112,7 @@ final class ProgrammeMetaRegistration {
 		$defaults = array(
 			'string'  => '',
 			'integer' => 0,
+			'boolean' => false,
 		);
 		$mapa     = array(
 			SpeakerPostType::POST_TYPE  => self::speaker_schema(),

@@ -363,6 +363,19 @@ final class EventProgrammePanel {
 				<textarea id="evt-ac-summary" name="evt_ac_summary" rows="3"><?php echo esc_textarea( (string) ( $valores['summary'] ?? '' ) ); ?></textarea>
 			</div>
 
+			<div class="evt-form-campo">
+				<label for="evt-ac-guests">Otros participantes <span class="evt-opcional">(opcional)</span></label>
+				<textarea id="evt-ac-guests" name="evt_ac_guests" rows="2" placeholder="Nombre (centro o cargo)"><?php echo esc_textarea( (string) ( $valores['guests'] ?? '' ) ); ?></textarea>
+				<small>Uno por línea. Quien presenta, modera o inaugura sin ser ponente: sale en la actividad y no en la página de ponentes.</small>
+			</div>
+
+			<div class="evt-form-campo">
+				<label for="evt-ac-video">Vídeo <span class="evt-opcional">(opcional)</span></label>
+				<input type="url" id="evt-ac-video" name="evt_ac_video" placeholder="https://"
+					value="<?php echo esc_attr( (string) ( $valores['video'] ?? '' ) ); ?>" />
+				<small>La grabación, en YouTube, Vimeo o la mediateca. Con vídeo, la actividad sale en la página «Multimedia».</small>
+			</div>
+
 			<div class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
 					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>

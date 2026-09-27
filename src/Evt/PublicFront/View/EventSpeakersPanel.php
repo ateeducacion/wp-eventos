@@ -133,6 +133,12 @@ final class EventSpeakersPanel {
 				<small>Unas líneas. Sale debajo del nombre en la página de ponentes.</small>
 			</div>
 
+			<div class="evt-form-campo form-check">
+				<input class="form-check-input" type="checkbox" id="evt-sp-featured" name="evt_sp_featured" value="1" <?php checked( ! empty( $valores['featured'] ) ); ?> />
+				<label class="form-check-label" for="evt-sp-featured">Destacar en la portada del evento</label>
+				<small>Sale en «Personas comunicadoras», en la portada, además de en la página de ponentes.</small>
+			</div>
+
 			<?php echo self::photo( $m, $valores ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
 			<div class="evt-acciones">
