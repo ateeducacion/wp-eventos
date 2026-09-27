@@ -51,25 +51,19 @@ final class EventCodePanel {
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="">
+		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Código</h2><p class="evt-sub">Se aplica a todas las páginas de este evento, y nunca sale de él.</p></div></div>
+		<form class="evt-form" method="post" action="" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_CODE ), EventWorkspace::nonce_name( EventWorkspace::PANEL_CODE ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_CODE ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
-			<p>
-				Lo que escriba aquí se aplica a <strong>todas</strong> las páginas de este evento: a la
-				portada y a cada una de sus secciones. Nunca sale del evento, así que no afecta al resto
-				del sitio. Cada sección puede añadir además el suyo propio, que va después de este y sirve
-				para afinarlo.
-			</p>
+			<p class="evt-ayuda">Cada página puede añadir además el suyo, que va después de este y sirve para afinarlo.</p>
 
 			<?php echo $bloque_css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php echo $bloque_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
 			<?php if ( $css_ok || $js_ok ) : ?>
-				<p class="evt-acciones">
-					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar el código</button>
-				</p>
+				<?php echo PanelParts::save_bar( 'Guardar el código' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php endif; ?>
 		</form>
 		<?php

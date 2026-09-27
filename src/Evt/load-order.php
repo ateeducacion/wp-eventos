@@ -55,7 +55,6 @@ return array(
 	'PublicFront/View/PanelParts.php',
 	'PublicFront/View/EventSpeakersPanel.php',
 	'PublicFront/View/EventProgrammePanel.php',
-	'PublicFront/View/EventWorkshopsPanel.php',
 	'PublicFront/View/EventParticipantsPanel.php',
 	'PublicFront/View/EventSignupPanel.php',
 	'PublicFront/View/EventSectionsPanel.php',

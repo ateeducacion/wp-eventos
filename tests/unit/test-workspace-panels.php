@@ -80,6 +80,20 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Lo que se pinta de una pestaña con el panel lateral de alta abierto.
+	 *
+	 * @param int    $evento Event ID.
+	 * @param string $panel  Panel key.
+	 * @return string
+	 */
+	private function pintar_alta( int $evento, string $panel ): string {
+		$_GET[ EventWorkspace::ARG_NEW ] = '1';
+		$html                            = $this->pintar( $evento, $panel );
+		unset( $_GET[ EventWorkspace::ARG_NEW ] );
+		return $html;
+	}
+
+	/**
 	 * Un ponente.
 	 *
 	 * @param int    $evento Event ID.
@@ -156,8 +170,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	 */
 	public function test_the_speakers_panel_paints_the_form() {
 		$evento = $this->evento();
-		$html   = $this->pintar( $evento, EventWorkspace::PANEL_SPEAKERS );
+		$this->assertStringNotContainsString( 'name="evt_sp_name"', $this->pintar( $evento, EventWorkspace::PANEL_SPEAKERS ), 'sin pedirlo, la lista sin formulario' );
+		$html = $this->pintar_alta( $evento, EventWorkspace::PANEL_SPEAKERS );
 
+		$this->assertStringContainsString( 'data-evt-cajon', $html, 'el alta va en el panel lateral' );
 		foreach ( array( 'evt_sp_name', 'evt_sp_role', 'evt_sp_org', 'evt_sp_bio' ) as $campo ) {
 			$this->assertStringContainsString( 'name="' . $campo . '"', $html, 'falta ' . $campo );
 		}
@@ -206,7 +222,7 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	 * El formulario de actividad trae la lista cerrada de tipos.
 	 */
 	public function test_the_programme_panel_offers_the_closed_list_of_kinds() {
-		$html = $this->pintar( $this->evento(), EventWorkspace::PANEL_PROGRAMME );
+		$html = $this->pintar_alta( $this->evento(), EventWorkspace::PANEL_PROGRAMME );
 
 		foreach ( ProgrammeMetaKeys::activity_kinds() as $rotulo ) {
 			$this->assertStringContainsString( esc_html( $rotulo ), $html );
@@ -215,12 +231,13 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="evt_ac_seats"', $html );
 	}
 
-	// ─── Talleres ──────────────────────────────────────────────────────────
+	// ─── Talleres, dentro del programa ─────────────────────────────────────
 
 	/**
-	 * Los talleres salen con su aforo y su ocupación.
+	 * Un taller lleva en su fila su ocupación; con «Solo talleres», el resto
+	 * de actividades no sale.
 	 */
-	public function test_the_workshops_panel_shows_seats_and_takers() {
+	public function test_the_programme_shows_workshop_seats_and_filters_them() {
 		$evento = $this->evento();
 		$taller = $this->actividad(
 			$evento,
@@ -239,11 +256,16 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 			)
 		);
 
-		$html = $this->pintar( $evento, EventWorkspace::PANEL_WORKSHOPS );
+		$todo = $this->pintar( $evento, EventWorkspace::PANEL_PROGRAMME );
+		$this->assertStringContainsString( 'Mesa redonda', $todo );
+		$this->assertStringContainsString( '0 de 12 plazas', $todo, 'el aforo y la ocupación en la fila del taller' );
 
-		$this->assertStringContainsString( 'Taller de robótica', $html );
-		$this->assertStringContainsString( '12', $html, 'el aforo se enseña' );
-		$this->assertStringNotContainsString( 'Mesa redonda', $html, 'solo talleres' );
+		$_GET[ EventWorkspace::ARG_ONLY ] = 'talleres';
+		$solo                             = $this->pintar( $evento, EventWorkspace::PANEL_PROGRAMME );
+		unset( $_GET[ EventWorkspace::ARG_ONLY ] );
+
+		$this->assertStringContainsString( 'Taller de robótica', $solo );
+		$this->assertStringNotContainsString( 'Mesa redonda', $solo, 'solo talleres' );
 		unset( $taller );
 	}
 
@@ -251,7 +273,7 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	 * La ocupación es la que cuenta el candado, por taller y no por título:
 	 * dos turnos con el mismo nombre no se suman las plazas uno al otro.
 	 */
-	public function test_the_workshops_panel_counts_by_id_not_by_title() {
+	public function test_the_workshop_seats_count_by_id_not_by_title() {
 		$evento = $this->evento();
 		$turnos = array();
 		foreach ( array( 1, 2 ) as $n ) {
@@ -267,10 +289,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$una = $this->inscribir( $evento, 'Ana', 'Pérez', 'ana@example.org' );
 		Registrations::seat( $evento, $una, $turnos[1] );
 
-		$ocupadas = wp_list_pluck( $this->modelo( $evento, EventWorkspace::PANEL_WORKSHOPS )['workshops'], 'taken', 'id' );
+		$plazas = $this->modelo( $evento, EventWorkspace::PANEL_PROGRAMME )['workshop_seats'];
 
-		$this->assertSame( 1, $ocupadas[ $turnos[1] ] );
-		$this->assertSame( 0, $ocupadas[ $turnos[2] ] );
+		$this->assertSame( 1, $plazas[ $turnos[1] ]['taken'] );
+		$this->assertSame( 0, $plazas[ $turnos[2] ]['taken'] );
 	}
 
 	/**
@@ -370,13 +392,15 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="evt_signup_open"', $html );
 		$this->assertStringContainsString( 'name="evt_workshop_open"', $html );
 		$this->assertStringContainsString( 'name="evt_consent_privacy"', $html );
-		$this->assertStringContainsString( 'v4', $html, 'la versión del consentimiento está a la vista' );
+		$this->assertStringContainsString( 'versión 4', $html, 'la versión del consentimiento está a la vista' );
 
 		// La pregunta guardada, y la fila en blanco para añadir otra.
 		$this->assertStringContainsString( 'Se queda a comer', $html );
 		$this->assertStringContainsString( 'evt_q_label[0]', $html );
 		$this->assertStringContainsString( 'evt_q_label[1]', $html, 'la fila en blanco del final' );
-		$this->assertStringContainsString( 'Pregunta nueva', $html );
+		$this->assertStringContainsString( 'Añadir una pregunta', $html );
+		$this->assertStringContainsString( 'role="switch"', $html, 'los interruptores son interruptores' );
+		$this->assertStringContainsString( 'data-evt-guardar', $html, 'la barra de guardar' );
 
 		// Y los cuatro tipos, que son lista cerrada.
 		foreach ( RegistrationMetaKeys::question_types() as $rotulo ) {
@@ -406,9 +430,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 
 		$html = $this->pintar( $evento, EventWorkspace::PANEL_SECTIONS );
 
-		foreach ( array( 'Ponentes', 'Programa', 'Talleres', 'Inscripción', 'Participantes' ) as $rotulo ) {
-			$this->assertStringContainsString( $rotulo, $html, 'falta la pestaña ' . $rotulo );
+		foreach ( array( 'Contenido', 'Ponentes', 'Programa y talleres', 'Formulario y plazos', 'Participantes', 'Configuración', 'Datos del evento' ) as $rotulo ) {
+			$this->assertStringContainsString( $rotulo, $html, 'falta en el menú ' . $rotulo );
 		}
+		$this->assertStringNotContainsString( '>Talleres<', $html, 'los talleres ya no son una pestaña' );
 	}
 
 	/**

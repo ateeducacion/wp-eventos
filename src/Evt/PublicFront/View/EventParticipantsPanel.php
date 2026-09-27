@@ -41,11 +41,10 @@ final class EventParticipantsPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Quién se ha inscrito a este evento. Se puede filtrar por cualquier dato
-			—un apellido, un centro, un taller— y exportar a CSV lo que quede
-			filtrado, no la lista entera.
-		</p>
+		<div class="evt-panel-cabecera"><div>
+			<h2 class="evt-panel-titulo">Participantes</h2>
+			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
+		</div></div>
 
 		<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>

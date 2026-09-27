@@ -32,23 +32,52 @@ final class EventProgrammePanel {
 	 * @return string
 	 */
 	public static function html( array $m ): string {
-		$dias = (array) $m['grid'];
+		$solo  = true === $m['only_workshops'];
+		$dias  = $solo ? self::only_workshops( (array) $m['grid'] ) : (array) $m['grid'];
+		$base  = EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME );
+		$plaza = self::seats( (array) $m['workshop_seats'] );
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Lo que pasa y cuándo. Se agrupa por día y, dentro de cada día, por
-			sede: si una jornada tiene la mañana en un sitio y la tarde en otro,
-			salen los dos bloques. La sede se escribe en cada actividad; no hay
-			que darla de alta en ninguna parte.
-		</p>
+		<div class="evt-panel-cabecera">
+			<div>
+				<h2 class="evt-panel-titulo">Programa y talleres</h2>
+				<p class="evt-sub">Por día y, dentro de cada día, por sede. Un taller es una actividad con plazas.</p>
+			</div>
+			<div class="evt-acciones">
+				<div class="btn-group evt-segmentos" role="group" aria-label="Qué mostrar">
+					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? '' : ' active'; ?>" href="<?php echo esc_url( $base ); ?>" <?php echo $solo ? '' : 'aria-current="true"'; ?>>Todo</a>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_ONLY, 'talleres', $base ) ); ?>" <?php echo $solo ? 'aria-current="true"' : ''; ?>>Solo talleres</a>
+				</div>
+				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir actividad
+				</a>
+			</div>
+		</div>
+
+		<ul class="evt-cifras">
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) count( (array) $m['activities'] ) ); ?></strong><span>actividades</span></li>
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) count( (array) $m['workshop_seats'] ) ); ?></strong><span>talleres</span></li>
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) $plaza['taken'] ); ?></strong><span><?php echo esc_html( $plaza['seats'] > 0 ? 'plazas de taller ocupadas de ' . $plaza['seats'] : 'plazas de taller ocupadas' ); ?></span></li>
+		</ul>
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+
+		<?php if ( true === $m['drawer'] ) : ?>
+			<?php
+			$cajon = PanelParts::drawer(
+				array() !== (array) $m['edit_values'] ? 'Editar actividad' : 'Añadir actividad',
+				self::form( $m ),
+				$base,
+				(array) $m['flash']
+			);
+			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			?>
+		<?php endif; ?>
 
 		<?php if ( array() === $dias ) : ?>
 			<div class="evt-tabla-caja">
-				<p class="evt-vacio">El programa está vacío. Añada la primera actividad arriba.</p>
+				<p class="evt-vacio"><?php echo esc_html( $solo ? 'Este evento no tiene talleres. Un taller es una actividad de tipo «Taller», con su aforo.' : 'El programa está vacío. Añada la primera actividad con «Añadir actividad».' ); ?></p>
 			</div>
 		<?php else : ?>
 			<?php foreach ( $dias as $dia ) : ?>
@@ -57,6 +86,56 @@ final class EventProgrammePanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The parrilla with only the workshops, dropping empty sedes and days.
+	 *
+	 * @param array<int, array<string, mixed>> $dias Days of $m['grid'].
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function only_workshops( array $dias ): array {
+		$out = array();
+		foreach ( $dias as $dia ) {
+			$sedes = array();
+			foreach ( (array) $dia['venues'] as $clave => $sede ) {
+				$filas = array_values(
+					array_filter(
+						(array) $sede['rows'],
+						static function ( $fila ): bool {
+							return \Evt\Meta\ProgrammeMetaKeys::KIND_WORKSHOP === (string) ( $fila['kind'] ?? '' );
+						}
+					)
+				);
+				if ( array() !== $filas ) {
+					$sede['rows']    = $filas;
+					$sedes[ $clave ] = $sede;
+				}
+			}
+			if ( array() !== $sedes ) {
+				$dia['venues'] = $sedes;
+				$out[]         = $dia;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Seats taken and offered, over every workshop with a limit.
+	 *
+	 * @param array<int, array{taken:int, seats:int}> $talleres Workshop ID => seats.
+	 * @return array{taken:int, seats:int}
+	 */
+	private static function seats( array $talleres ): array {
+		$out = array(
+			'taken' => 0,
+			'seats' => 0,
+		);
+		foreach ( $talleres as $taller ) {
+			$out['taken'] += (int) $taller['taken'];
+			$out['seats'] += (int) $taller['seats'];
+		}
+		return $out;
 	}
 
 	/**
@@ -135,7 +214,10 @@ final class EventProgrammePanel {
 		<tr>
 			<td data-rotulo="Hora"><?php echo esc_html( PanelParts::slot( (string) $fila['start'], (string) $fila['end'] ) ); ?></td>
 			<td data-rotulo="Tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></td>
-			<td data-rotulo="Actividad"><?php echo esc_html( $titulo ); ?></td>
+			<td data-rotulo="Actividad">
+				<?php echo esc_html( $titulo ); ?>
+				<?php echo self::occupancy( (array) ( $m['workshop_seats'][ $id ] ?? array() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			</td>
 			<td data-rotulo="Ponentes">
 				<?php echo esc_html( array() === (array) $fila['speakers'] ? '—' : implode( ', ', (array) $fila['speakers'] ) ); ?>
 			</td>
@@ -159,6 +241,35 @@ final class EventProgrammePanel {
 	}
 
 	/**
+	 * How full a workshop is, as a bar and in words.
+	 *
+	 * El número es el que hace cumplir el candado al inscribirse (ADR-0033).
+	 *
+	 * @param array<string, int> $plazas taken and seats; empty when this is not a workshop.
+	 * @return string
+	 */
+	private static function occupancy( array $plazas ): string {
+		if ( array() === $plazas ) {
+			return '';
+		}
+		$ocupadas = (int) $plazas['taken'];
+		$aforo    = (int) $plazas['seats'];
+		if ( $aforo <= 0 ) {
+			return sprintf( '<span class="evt-plazas"><span class="evt-state evt-state-proximo">Taller</span> %s</span>', esc_html( $ocupadas . ' inscritas · sin límite' ) );
+		}
+		$lleno = $ocupadas >= $aforo;
+		return sprintf(
+			'<span class="evt-plazas"><span class="evt-state %1$s">%2$s</span><span class="evt-plazas__barra" role="progressbar" aria-label="Plazas ocupadas" aria-valuemin="0" aria-valuemax="%3$d" aria-valuenow="%4$d"><span style="width: %5$d%%"></span></span>%6$s</span>',
+			esc_attr( $lleno ? 'evt-state-draft' : 'evt-state-proximo' ),
+			esc_html( $lleno ? 'Taller lleno' : 'Taller' ),
+			$aforo,
+			$ocupadas,
+			(int) min( 100, round( 100 * $ocupadas / $aforo ) ),
+			esc_html( sprintf( '%1$d de %2$d plazas', $ocupadas, $aforo ) )
+		);
+	}
+
+	/**
 	 * The form that adds an activity, or edits the one asked for.
 	 *
 	 * @param array<string, mixed> $m Model.
@@ -173,8 +284,7 @@ final class EventProgrammePanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="post" action="">
-			<h2><?php echo esc_html( $editar ? 'Editar actividad' : 'Añadir actividad al programa' ); ?></h2>
+		<form class="evt-form" method="post" action="">
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
@@ -183,7 +293,7 @@ final class EventProgrammePanel {
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
 					<label for="evt-ac-title">Título</label>
-					<input type="text" id="evt-ac-title" name="evt_ac_title" required
+					<input type="text" id="evt-ac-title" name="evt_ac_title" required autofocus
 						value="<?php echo esc_attr( (string) ( $valores['title'] ?? '' ) ); ?>" />
 				</div>
 				<div class="evt-form-campo">
@@ -196,7 +306,7 @@ final class EventProgrammePanel {
 							</option>
 						<?php endforeach; ?>
 					</select>
-					<small>«Taller» es el único que lleva aforo y aparece en la pestaña de Talleres.</small>
+					<small>«Taller» es el único que lleva aforo.</small>
 				</div>
 			</div>
 
@@ -257,10 +367,8 @@ final class EventProgrammePanel {
 					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar actividad' : 'Añadir actividad' ); ?>
 				</button>
-				<?php if ( $editar ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
-				<?php endif; ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
 			</div>
 		</form>
 		<?php

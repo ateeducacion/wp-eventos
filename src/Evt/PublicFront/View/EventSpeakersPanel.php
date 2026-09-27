@@ -33,18 +33,35 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Quién interviene en este evento. El orden es el que sale en la página
-			de ponentes y en el programa. Cada ficha es de este evento: editarla
-			no toca la de ninguna otra edición.
-		</p>
+		<div class="evt-panel-cabecera">
+			<div>
+				<h2 class="evt-panel-titulo">Ponentes</h2>
+				<p class="evt-sub">En este orden salen en la página de ponentes y en el programa.</p>
+			</div>
+			<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
+				href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS, array( EventWorkspace::ARG_NEW => '1' ) ) ); ?>">
+				<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir ponente
+			</a>
+		</div>
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+
+		<?php if ( true === $m['drawer'] ) : ?>
+			<?php
+			$editar = array() !== (array) $m['edit_values'];
+			$cajon  = PanelParts::drawer(
+				$editar ? 'Editar ponente' : 'Añadir ponente',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
+				(array) $m['flash']
+			);
+			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+			?>
+		<?php endif; ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
-				<p class="evt-vacio">Este evento todavía no tiene ponentes. Añada el primero arriba.</p>
+				<p class="evt-vacio">Este evento todavía no tiene ponentes. Añada el primero con «Añadir ponente».</p>
 			</div>
 		<?php else : ?>
 			<div class="evt-tabla-caja">
@@ -85,25 +102,23 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="post" action="">
-			<h2><?php echo esc_html( $editar ? 'Editar ponente' : 'Añadir ponente' ); ?></h2>
+		<form class="evt-form" method="post" action="">
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
 
+			<div class="evt-form-campo">
+				<label for="evt-sp-name">Nombre y apellidos</label>
+				<input type="text" id="evt-sp-name" name="evt_sp_name" required autofocus
+					value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
+				<small>Como quiera que salga en la web del evento.</small>
+			</div>
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
-					<label for="evt-sp-name">Nombre y apellidos</label>
-					<input type="text" id="evt-sp-name" name="evt_sp_name" required
-						value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
-					<small>Como quiera que salga en la web del evento.</small>
-				</div>
-				<div class="evt-form-campo">
-					<label for="evt-sp-role">Cargo</label>
-					<input type="text" id="evt-sp-role" name="evt_sp_role"
+					<label for="evt-sp-role">Cargo <span class="evt-opcional">(opcional)</span></label>
+					<input type="text" id="evt-sp-role" name="evt_sp_role" placeholder="Asesora de formación"
 						value="<?php echo esc_attr( (string) ( $valores['role'] ?? '' ) ); ?>" />
-					<small>«Asesora de formación», «Catedrático de Secundaria»… Se puede dejar vacío.</small>
 				</div>
 				<div class="evt-form-campo">
 					<label for="evt-sp-org">Entidad o centro</label>
@@ -125,10 +140,8 @@ final class EventSpeakersPanel {
 					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
-				<?php if ( $editar ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
-				<?php endif; ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
 			</div>
 		</form>
 		<?php

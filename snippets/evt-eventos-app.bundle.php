@@ -10987,6 +10987,7 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\ActivityInput;
+use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
 use Evt\Domain\EventState;
 use Evt\Domain\SignupQuestions;
@@ -11031,6 +11032,13 @@ final class EventWorkspace {
 
 
 
+	public const GROUP_CONTENT = 'Contenido';
+	public const GROUP_SIGNUP  = 'Inscripción';
+	public const GROUP_CONFIG  = 'Configuración';
+
+
+
+
 	public const ARG_SECTION = 'seccion';
 
 
@@ -11071,11 +11079,6 @@ final class EventWorkspace {
 
 
 
-	public const PANEL_WORKSHOPS = 'talleres';
-
-
-
-
 	public const PANEL_PEOPLE = 'participantes';
 
 
@@ -11097,6 +11100,16 @@ final class EventWorkspace {
 
 
 	public const ARG_WORKSHOP = 'taller';
+
+
+
+
+	public const ARG_NEW = 'alta';
+
+
+
+
+	public const ARG_ONLY = 'solo';
 
 
 
@@ -11316,18 +11329,20 @@ final class EventWorkspace {
 
 
 	public static function panels( int $event_id, int $user_id = 0, ?array $people = null ): array {
+
+
+
 		$rotulos = array(
-			self::PANEL_SECTIONS  => 'Páginas',
-			self::PANEL_SPEAKERS  => 'Ponentes',
-			self::PANEL_PROGRAMME => 'Programa',
-			self::PANEL_WORKSHOPS => 'Talleres',
-			self::PANEL_SIGNUP    => 'Inscripción',
-			self::PANEL_PEOPLE    => 'Participantes',
-			self::PANEL_SETTINGS  => 'Ajustes',
-			self::PANEL_LOOK      => 'Apariencia',
+			self::PANEL_SECTIONS  => array( 'Páginas', self::GROUP_CONTENT ),
+			self::PANEL_SPEAKERS  => array( 'Ponentes', self::GROUP_CONTENT ),
+			self::PANEL_PROGRAMME => array( 'Programa y talleres', self::GROUP_CONTENT ),
+			self::PANEL_SIGNUP    => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
+			self::PANEL_PEOPLE    => array( 'Participantes', self::GROUP_SIGNUP ),
+			self::PANEL_SETTINGS  => array( 'Datos del evento', self::GROUP_CONFIG ),
+			self::PANEL_LOOK      => array( 'Apariencia', self::GROUP_CONFIG ),
 		);
 		if ( self::may_edit_code( $user_id, $event_id ) ) {
-			$rotulos[ self::PANEL_CODE ] = 'Código';
+			$rotulos[ self::PANEL_CODE ] = array( 'Código', self::GROUP_CONFIG );
 		}
 
 
@@ -11337,9 +11352,10 @@ final class EventWorkspace {
 		$cuentas = self::counts( $event_id, $people );
 
 		$out = array();
-		foreach ( $rotulos as $slug => $rotulo ) {
+		foreach ( $rotulos as $slug => $datos ) {
 			$out[ $slug ] = array(
-				'label' => $rotulo,
+				'label' => $datos[0],
+				'group' => $datos[1],
 				'url'   => self::url( $event_id, $slug ),
 				'count' => $cuentas[ $slug ] ?? null,
 			);
@@ -11362,7 +11378,6 @@ final class EventWorkspace {
 			self::PANEL_SECTIONS  => count( self::children( $event_id ) ),
 			self::PANEL_SPEAKERS  => count( Programme::speakers( $event_id ) ),
 			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
-			self::PANEL_WORKSHOPS => count( Programme::workshops( $event_id ) ),
 			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
 			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
 		);
@@ -11544,7 +11559,7 @@ final class EventWorkspace {
 	private static function asked_panel(): string {
 
 		$panel = sanitize_key( wp_unslash( (string) ( $_POST[ self::ARG_PANEL ] ?? '' ) ) );
-		return in_array( $panel, array( self::PANEL_SPEAKERS, self::PANEL_PROGRAMME, self::PANEL_WORKSHOPS ), true )
+		return in_array( $panel, array( self::PANEL_SPEAKERS, self::PANEL_PROGRAMME ), true )
 			? $panel
 			: self::PANEL_SPEAKERS;
 	}
@@ -11729,7 +11744,7 @@ final class EventWorkspace {
 		);
 		if ( true !== $check['ok'] ) {
 			self::set_flash( 'error', ActivityInput::why( (array) $check['errors'] ) );
-			Shell::leave( $destino );
+			Shell::leave( self::reopen( $destino, $row_id ) );
 			return;
 		}
 
@@ -11743,6 +11758,19 @@ final class EventWorkspace {
 		self::save_photo( $id );
 		self::set_flash( 'ok', $row_id > 0 ? 'Ponente actualizado.' : 'Ponente añadido.' );
 		Shell::leave( $destino );
+	}
+
+
+
+
+
+
+
+
+	private static function reopen( string $destino, int $row_id ): string {
+		return $row_id > 0
+			? add_query_arg( self::ARG_ROW, (string) $row_id, $destino )
+			: add_query_arg( self::ARG_NEW, '1', $destino );
 	}
 
 
@@ -11773,7 +11801,7 @@ final class EventWorkspace {
 		);
 		if ( true !== $check['ok'] ) {
 			self::set_flash( 'error', ActivityInput::why( (array) $check['errors'] ) );
-			Shell::leave( $destino );
+			Shell::leave( self::reopen( $destino, $row_id ) );
 			return;
 		}
 
@@ -11931,25 +11959,20 @@ final class EventWorkspace {
 	private static function submitted_values( array $crudo ): array {
 
 		$intro = wp_kses_post( wp_unslash( (string) ( $_POST[ EventMetaKeys::INTRO ] ?? '' ) ) );
-		$show  = empty( $_POST[ EventMetaKeys::SIGNUP_SHOW ] ) ? '' : '1';
 
 
 		return array(
-			self::FIELD_TITLE             => (string) $crudo['title'],
+			self::FIELD_TITLE         => (string) $crudo['title'],
 
-			self::FIELD_AREA              => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
-			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
-			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
-			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
-			EventMetaKeys::HASHTAG        => self::field( EventMetaKeys::HASHTAG ),
-			EventMetaKeys::INTRO          => $intro,
-			EventMetaKeys::START_DATE     => (string) $crudo['start_date'],
-			EventMetaKeys::END_DATE       => (string) $crudo['end_date'],
-			EventMetaKeys::VENUE          => (string) $crudo['venue'],
-			EventMetaKeys::SIGNUP_SHOW    => $show,
-			EventMetaKeys::SIGNUP_LABEL   => self::field( EventMetaKeys::SIGNUP_LABEL ),
-			EventMetaKeys::SIGNUP_URL     => self::field( EventMetaKeys::SIGNUP_URL ),
-			EventMetaKeys::SIGNUP_FORM_ID => (string) max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ),
+			self::FIELD_AREA          => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
+			self::FIELD_TYPE          => (string) (int) self::field( self::FIELD_TYPE ),
+			self::FIELD_COURSE        => (string) (int) self::field( self::FIELD_COURSE ),
+			EventMetaKeys::TAGLINE    => self::field( EventMetaKeys::TAGLINE ),
+			EventMetaKeys::HASHTAG    => self::field( EventMetaKeys::HASHTAG ),
+			EventMetaKeys::INTRO      => $intro,
+			EventMetaKeys::START_DATE => (string) $crudo['start_date'],
+			EventMetaKeys::END_DATE   => (string) $crudo['end_date'],
+			EventMetaKeys::VENUE      => (string) $crudo['venue'],
 		);
 	}
 
@@ -12023,16 +12046,12 @@ final class EventWorkspace {
 
 	private static function save_meta( int $event_id, array $valores, array $limpio ): void {
 		$meta = array(
-			EventMetaKeys::TAGLINE        => $valores[ EventMetaKeys::TAGLINE ],
-			EventMetaKeys::HASHTAG        => $valores[ EventMetaKeys::HASHTAG ],
-			EventMetaKeys::INTRO          => $valores[ EventMetaKeys::INTRO ],
-			EventMetaKeys::START_DATE     => (string) $limpio['start_date'],
-			EventMetaKeys::END_DATE       => (string) $limpio['end_date'],
-			EventMetaKeys::VENUE          => (string) $limpio['venue'],
-			EventMetaKeys::SIGNUP_SHOW    => $valores[ EventMetaKeys::SIGNUP_SHOW ],
-			EventMetaKeys::SIGNUP_LABEL   => $valores[ EventMetaKeys::SIGNUP_LABEL ],
-			EventMetaKeys::SIGNUP_URL     => $valores[ EventMetaKeys::SIGNUP_URL ],
-			EventMetaKeys::SIGNUP_FORM_ID => (int) $valores[ EventMetaKeys::SIGNUP_FORM_ID ],
+			EventMetaKeys::TAGLINE    => $valores[ EventMetaKeys::TAGLINE ],
+			EventMetaKeys::HASHTAG    => $valores[ EventMetaKeys::HASHTAG ],
+			EventMetaKeys::INTRO      => $valores[ EventMetaKeys::INTRO ],
+			EventMetaKeys::START_DATE => (string) $limpio['start_date'],
+			EventMetaKeys::END_DATE   => (string) $limpio['end_date'],
+			EventMetaKeys::VENUE      => (string) $limpio['venue'],
 		);
 		foreach ( $meta as $clave => $valor ) {
 			update_post_meta( $event_id, $clave, $valor );
@@ -12389,7 +12408,15 @@ final class EventWorkspace {
 
 
 		$m['q_locked'] = Registrations::has_any( $event_id );
-		$m['signup']   = array(
+
+
+		$cerrada            = SignupForm::closed_because( $event_id );
+		$m['signup_status'] = array(
+			'open'   => '' === $cerrada,
+			'reason' => $cerrada,
+			'public' => SignupForm::is_public( $event_id ),
+		);
+		$m['signup']        = array(
 			'open'            => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ),
 			'start'           => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true ),
 			'end'             => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true ),
@@ -12424,6 +12451,14 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
+
+
+
+		$boton = self::field( EventMetaKeys::SIGNUP_SHOW );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_SHOW, '' === $boton ? '' : '1' );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_LABEL, self::field( EventMetaKeys::SIGNUP_LABEL ) );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_URL, self::field( EventMetaKeys::SIGNUP_URL ) );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID, max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ) );
 
 		self::save_consent( $event_id );
 
@@ -12709,68 +12744,75 @@ final class EventWorkspace {
 
 	private static function blank(): array {
 		return array(
-			'aviso'         => '',
-			'aviso_tipo'    => 'aviso',
-			'nuevo'         => false,
-			'event_id'      => 0,
-			'title'         => '',
-			'panel'         => self::PANEL_SECTIONS,
-			'panels'        => array(),
-			'flash'         => array(
+			'aviso'          => '',
+			'aviso_tipo'     => 'aviso',
+			'nuevo'          => false,
+			'event_id'       => 0,
+			'title'          => '',
+			'panel'          => self::PANEL_SECTIONS,
+			'panels'         => array(),
+			'flash'          => array(
 				'tipo'   => '',
 				'texto'  => '',
 				'values' => array(),
 			),
-			'can_edit'      => false,
-			'lock'          => EditLock::none(),
-			'archived'      => false,
-			'can_archive'   => false,
-			'can_unarchive' => false,
-			'can_publish'   => false,
-			'can_set_area'  => false,
-			'can_upload'    => false,
-			'can_edit_css'  => false,
-			'can_edit_js'   => false,
-			'code'          => array(
+			'can_edit'       => false,
+			'lock'           => EditLock::none(),
+			'archived'       => false,
+			'can_archive'    => false,
+			'can_unarchive'  => false,
+			'can_publish'    => false,
+			'can_set_area'   => false,
+			'can_upload'     => false,
+			'can_edit_css'   => false,
+			'can_edit_js'    => false,
+			'code'           => array(
 				'css' => '',
 				'js'  => '',
 			),
-			'state'         => '',
-			'state_label'   => '',
-			'status'        => '',
-			'status_label'  => '',
-			'area_ids'      => array(),
-			'foreign_areas' => array(),
-			'view_url'      => '',
-			'events_url'    => Shell::url( 'events' ),
-			'section_url'   => Shell::url( 'section' ),
-			'sections'      => array(),
-			'trashed'       => array(),
-			'trash'         => false,
-			'section_types' => EventMetaKeys::section_types(),
-			'values'        => array(),
-			'terms'         => array(),
-			'media'         => array(),
-			'speakers'      => array(),
-			'activities'    => array(),
-			'grid'          => array(),
-			'workshops'     => array(),
-			'venues'        => array(),
-			'kinds'         => ProgrammeMetaKeys::activity_kinds(),
-			'edit_row'      => 0,
-			'edit_values'   => array(),
-			'row_trash'     => array(),
-			'people'        => array(),
-			'people_total'  => 0,
-			'people_q'      => '',
-			'people_filter' => '',
-			'people_tags'   => array(),
-			'people_cols'   => Participants::columns(),
-			'questions'     => array(),
-			'q_types'       => RegistrationMetaKeys::question_types(),
-			'q_locked'      => false,
-			'signup'        => array(),
-			'form_id'       => 0,
+			'state'          => '',
+			'state_label'    => '',
+			'dates_text'     => '',
+			'venue_text'     => '',
+			'status'         => '',
+			'status_label'   => '',
+			'area_ids'       => array(),
+			'foreign_areas'  => array(),
+			'view_url'       => '',
+			'events_url'     => Shell::url( 'events' ),
+			'section_url'    => Shell::url( 'section' ),
+			'sections'       => array(),
+			'trashed'        => array(),
+			'trash'          => false,
+			'section_types'  => EventMetaKeys::section_types(),
+			'values'         => array(),
+			'terms'          => array(),
+			'media'          => array(),
+			'speakers'       => array(),
+			'activities'     => array(),
+			'grid'           => array(),
+			'workshops'      => array(),
+			'venues'         => array(),
+			'kinds'          => ProgrammeMetaKeys::activity_kinds(),
+			'edit_row'       => 0,
+			'edit_values'    => array(),
+			'adding'         => false,
+			'drawer'         => false,
+			'only_workshops' => false,
+			'workshop_seats' => array(),
+			'signup_status'  => array(),
+			'row_trash'      => array(),
+			'people'         => array(),
+			'people_total'   => 0,
+			'people_q'       => '',
+			'people_filter'  => '',
+			'people_tags'    => array(),
+			'people_cols'    => Participants::columns(),
+			'questions'      => array(),
+			'q_types'        => RegistrationMetaKeys::question_types(),
+			'q_locked'       => false,
+			'signup'         => array(),
+			'form_id'        => 0,
 		);
 	}
 
@@ -12836,6 +12878,8 @@ final class EventWorkspace {
 			self::meta( $event_id, EventMetaKeys::END_DATE )
 		);
 		$m['state_label']   = EventState::label( (string) $m['state'] );
+		$m['dates_text']    = DateRange::of( self::meta( $event_id, EventMetaKeys::START_DATE ), self::meta( $event_id, EventMetaKeys::END_DATE ) );
+		$m['venue_text']    = self::meta( $event_id, EventMetaKeys::VENUE );
 		$m['area_ids']      = EventAccess::post_areas( $event_id );
 		$foreign_ids        = EventAccess::can_edit_all_areas( $user_id ) ? array() : array_diff( $m['area_ids'], EventAccess::scope_areas( $user_id ) );
 		$all_labels         = EventTaxonomies::area_options( 0, true );
@@ -12869,9 +12913,11 @@ final class EventWorkspace {
 
 	private static function fill_programme( array $m, int $event_id, array $inscritos ): array {
 
-		$m['edit_row']      = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
-		$m['people_q']      = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
-		$m['people_filter'] = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
+		$m['edit_row']       = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
+		$m['adding']         = '' !== sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_NEW ] ?? '' ) ) );
+		$m['only_workshops'] = 'talleres' === sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_ONLY ] ?? '' ) ) );
+		$m['people_q']       = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
+		$m['people_filter']  = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
 
 
 		$ponentes = Programme::speakers( $event_id );
@@ -12898,9 +12944,13 @@ final class EventWorkspace {
 			$fila = Programme::activity_row( $taller );
 
 
-			$fila['taken']    = Registrations::taken( $event_id, (int) $fila['id'] );
-			$fila['free']     = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
-			$m['workshops'][] = $fila;
+			$fila['taken']                            = Registrations::taken( $event_id, (int) $fila['id'] );
+			$fila['free']                             = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
+			$m['workshops'][]                         = $fila;
+			$m['workshop_seats'][ (int) $fila['id'] ] = array(
+				'taken' => (int) $fila['taken'],
+				'seats' => (int) $fila['seats'],
+			);
 		}
 
 		$m['grid']   = Programme::grid( $event_id );
@@ -12918,6 +12968,10 @@ final class EventWorkspace {
 		}
 
 		$m['edit_values'] = self::row_values( $event_id, (int) $m['edit_row'], (string) $m['panel'] );
+
+
+
+		$m['drawer'] = true === $m['adding'] || array() !== $m['edit_values'];
 
 		$todos             = $inscritos;
 		$m['people_total'] = count( $todos );
@@ -13196,6 +13250,64 @@ final class PanelParts {
 
 
 
+	public static function drawer( string $titulo, string $cuerpo, string $cerrar, array $flash = array() ): string {
+		ob_start();
+		?>
+		<a class="evt-cajon-fondo" href="<?php echo esc_url( $cerrar ); ?>" tabindex="-1" aria-hidden="true"></a>
+		<section class="evt-cajon" role="dialog" aria-modal="true" aria-labelledby="evt-cajon-titulo" data-evt-cajon data-evt-cajon-cerrar="<?php echo esc_url( $cerrar ); ?>">
+			<header class="evt-cajon__cabecera">
+				<h2 class="evt-cajon__titulo" id="evt-cajon-titulo"><?php echo esc_html( $titulo ); ?></h2>
+				<a class="evt-cajon__cerrar" href="<?php echo esc_url( $cerrar ); ?>" aria-label="Cerrar sin guardar">&times;</a>
+			</header>
+			<div class="evt-cajon__cuerpo">
+				<?php if ( 'error' === (string) ( $flash['tipo'] ?? '' ) && '' !== (string) ( $flash['texto'] ?? '' ) ) : ?>
+					<?php echo Shell::notice( 'error', (string) $flash['texto'] ); ?>
+				<?php endif; ?>
+				<?php echo $cuerpo; ?>
+			</div>
+		</section>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function save_bar( string $rotulo ): string {
+		ob_start();
+		?>
+		<div class="evt-guardar" data-evt-guardar>
+			<span class="evt-guardar__estado" data-evt-guardar-estado aria-live="polite"></span>
+			<span class="evt-guardar__botones">
+				<button class="<?php echo esc_attr( Assets::button_class() ); ?>" type="reset" data-evt-guardar-descartar hidden>Descartar</button>
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit"><?php echo esc_html( $rotulo ); ?></button>
+			</span>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	public static function action( array $m, int $id, string $op, string $icono, string $titulo, string $clases, string $panel, bool $apagado = false, string $confirmar = '', string $id_field = EventWorkspace::FIELD_ROW ): string {
 		$pregunta = '' !== $confirmar ? ' data-evt-confirm="' . esc_attr( $confirmar ) . '"' : '';
@@ -13361,18 +13473,35 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Quién interviene en este evento. El orden es el que sale en la página
-			de ponentes y en el programa. Cada ficha es de este evento: editarla
-			no toca la de ninguna otra edición.
-		</p>
+		<div class="evt-panel-cabecera">
+			<div>
+				<h2 class="evt-panel-titulo">Ponentes</h2>
+				<p class="evt-sub">En este orden salen en la página de ponentes y en el programa.</p>
+			</div>
+			<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>"
+				href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS, array( EventWorkspace::ARG_NEW => '1' ) ) ); ?>">
+				<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir ponente
+			</a>
+		</div>
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_SPEAKERS ); ?>
-		<?php echo self::form( $m ); ?>
+
+		<?php if ( true === $m['drawer'] ) : ?>
+			<?php
+			$editar = array() !== (array) $m['edit_values'];
+			$cajon  = PanelParts::drawer(
+				$editar ? 'Editar ponente' : 'Añadir ponente',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ),
+				(array) $m['flash']
+			);
+			echo $cajon; 
+			?>
+		<?php endif; ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
-				<p class="evt-vacio">Este evento todavía no tiene ponentes. Añada el primero arriba.</p>
+				<p class="evt-vacio">Este evento todavía no tiene ponentes. Añada el primero con «Añadir ponente».</p>
 			</div>
 		<?php else : ?>
 			<div class="evt-tabla-caja">
@@ -13413,25 +13542,23 @@ final class EventSpeakersPanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="post" action="">
-			<h2><?php echo esc_html( $editar ? 'Editar ponente' : 'Añadir ponente' ); ?></h2>
+		<form class="evt-form" method="post" action="">
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
 
+			<div class="evt-form-campo">
+				<label for="evt-sp-name">Nombre y apellidos</label>
+				<input type="text" id="evt-sp-name" name="evt_sp_name" required autofocus
+					value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
+				<small>Como quiera que salga en la web del evento.</small>
+			</div>
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
-					<label for="evt-sp-name">Nombre y apellidos</label>
-					<input type="text" id="evt-sp-name" name="evt_sp_name" required
-						value="<?php echo esc_attr( (string) ( $valores['name'] ?? '' ) ); ?>" />
-					<small>Como quiera que salga en la web del evento.</small>
-				</div>
-				<div class="evt-form-campo">
-					<label for="evt-sp-role">Cargo</label>
-					<input type="text" id="evt-sp-role" name="evt_sp_role"
+					<label for="evt-sp-role">Cargo <span class="evt-opcional">(opcional)</span></label>
+					<input type="text" id="evt-sp-role" name="evt_sp_role" placeholder="Asesora de formación"
 						value="<?php echo esc_attr( (string) ( $valores['role'] ?? '' ) ); ?>" />
-					<small>«Asesora de formación», «Catedrático de Secundaria»… Se puede dejar vacío.</small>
 				</div>
 				<div class="evt-form-campo">
 					<label for="evt-sp-org">Entidad o centro</label>
@@ -13453,10 +13580,8 @@ final class EventSpeakersPanel {
 					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
-				<?php if ( $editar ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
-				<?php endif; ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_SPEAKERS ) ); ?>">Cancelar</a>
 			</div>
 		</form>
 		<?php
@@ -13598,23 +13723,52 @@ final class EventProgrammePanel {
 
 
 	public static function html( array $m ): string {
-		$dias = (array) $m['grid'];
+		$solo  = true === $m['only_workshops'];
+		$dias  = $solo ? self::only_workshops( (array) $m['grid'] ) : (array) $m['grid'];
+		$base  = EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME );
+		$plaza = self::seats( (array) $m['workshop_seats'] );
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Lo que pasa y cuándo. Se agrupa por día y, dentro de cada día, por
-			sede: si una jornada tiene la mañana en un sitio y la tarde en otro,
-			salen los dos bloques. La sede se escribe en cada actividad; no hay
-			que darla de alta en ninguna parte.
-		</p>
+		<div class="evt-panel-cabecera">
+			<div>
+				<h2 class="evt-panel-titulo">Programa y talleres</h2>
+				<p class="evt-sub">Por día y, dentro de cada día, por sede. Un taller es una actividad con plazas.</p>
+			</div>
+			<div class="evt-acciones">
+				<div class="btn-group evt-segmentos" role="group" aria-label="Qué mostrar">
+					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? '' : ' active'; ?>" href="<?php echo esc_url( $base ); ?>" <?php echo $solo ? '' : 'aria-current="true"'; ?>>Todo</a>
+					<a class="btn btn-outline-primary evt-segmento<?php echo $solo ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_ONLY, 'talleres', $base ) ); ?>" <?php echo $solo ? 'aria-current="true"' : ''; ?>>Solo talleres</a>
+				</div>
+				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( add_query_arg( EventWorkspace::ARG_NEW, '1', $base ) ); ?>">
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir actividad
+				</a>
+			</div>
+		</div>
+
+		<ul class="evt-cifras">
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) count( (array) $m['activities'] ) ); ?></strong><span>actividades</span></li>
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) count( (array) $m['workshop_seats'] ) ); ?></strong><span>talleres</span></li>
+			<li class="evt-cifra"><strong><?php echo esc_html( (string) $plaza['taken'] ); ?></strong><span><?php echo esc_html( $plaza['seats'] > 0 ? 'plazas de taller ocupadas de ' . $plaza['seats'] : 'plazas de taller ocupadas' ); ?></span></li>
+		</ul>
 
 		<?php echo PanelParts::trash_link( $m, EventWorkspace::PANEL_PROGRAMME ); ?>
-		<?php echo self::form( $m ); ?>
+
+		<?php if ( true === $m['drawer'] ) : ?>
+			<?php
+			$cajon = PanelParts::drawer(
+				array() !== (array) $m['edit_values'] ? 'Editar actividad' : 'Añadir actividad',
+				self::form( $m ),
+				$base,
+				(array) $m['flash']
+			);
+			echo $cajon; 
+			?>
+		<?php endif; ?>
 
 		<?php if ( array() === $dias ) : ?>
 			<div class="evt-tabla-caja">
-				<p class="evt-vacio">El programa está vacío. Añada la primera actividad arriba.</p>
+				<p class="evt-vacio"><?php echo esc_html( $solo ? 'Este evento no tiene talleres. Un taller es una actividad de tipo «Taller», con su aforo.' : 'El programa está vacío. Añada la primera actividad con «Añadir actividad».' ); ?></p>
 			</div>
 		<?php else : ?>
 			<?php foreach ( $dias as $dia ) : ?>
@@ -13623,6 +13777,56 @@ final class EventProgrammePanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function only_workshops( array $dias ): array {
+		$out = array();
+		foreach ( $dias as $dia ) {
+			$sedes = array();
+			foreach ( (array) $dia['venues'] as $clave => $sede ) {
+				$filas = array_values(
+					array_filter(
+						(array) $sede['rows'],
+						static function ( $fila ): bool {
+							return \Evt\Meta\ProgrammeMetaKeys::KIND_WORKSHOP === (string) ( $fila['kind'] ?? '' );
+						}
+					)
+				);
+				if ( array() !== $filas ) {
+					$sede['rows']    = $filas;
+					$sedes[ $clave ] = $sede;
+				}
+			}
+			if ( array() !== $sedes ) {
+				$dia['venues'] = $sedes;
+				$out[]         = $dia;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+	private static function seats( array $talleres ): array {
+		$out = array(
+			'taken' => 0,
+			'seats' => 0,
+		);
+		foreach ( $talleres as $taller ) {
+			$out['taken'] += (int) $taller['taken'];
+			$out['seats'] += (int) $taller['seats'];
+		}
+		return $out;
 	}
 
 
@@ -13701,7 +13905,10 @@ final class EventProgrammePanel {
 		<tr>
 			<td data-rotulo="Hora"><?php echo esc_html( PanelParts::slot( (string) $fila['start'], (string) $fila['end'] ) ); ?></td>
 			<td data-rotulo="Tipo"><?php echo esc_html( (string) $fila['kind_label'] ); ?></td>
-			<td data-rotulo="Actividad"><?php echo esc_html( $titulo ); ?></td>
+			<td data-rotulo="Actividad">
+				<?php echo esc_html( $titulo ); ?>
+				<?php echo self::occupancy( (array) ( $m['workshop_seats'][ $id ] ?? array() ) ); ?>
+			</td>
 			<td data-rotulo="Ponentes">
 				<?php echo esc_html( array() === (array) $fila['speakers'] ? '—' : implode( ', ', (array) $fila['speakers'] ) ); ?>
 			</td>
@@ -13730,6 +13937,35 @@ final class EventProgrammePanel {
 
 
 
+
+
+	private static function occupancy( array $plazas ): string {
+		if ( array() === $plazas ) {
+			return '';
+		}
+		$ocupadas = (int) $plazas['taken'];
+		$aforo    = (int) $plazas['seats'];
+		if ( $aforo <= 0 ) {
+			return sprintf( '<span class="evt-plazas"><span class="evt-state evt-state-proximo">Taller</span> %s</span>', esc_html( $ocupadas . ' inscritas · sin límite' ) );
+		}
+		$lleno = $ocupadas >= $aforo;
+		return sprintf(
+			'<span class="evt-plazas"><span class="evt-state %1$s">%2$s</span><span class="evt-plazas__barra" role="progressbar" aria-label="Plazas ocupadas" aria-valuemin="0" aria-valuemax="%3$d" aria-valuenow="%4$d"><span style="width: %5$d%%"></span></span>%6$s</span>',
+			esc_attr( $lleno ? 'evt-state-draft' : 'evt-state-proximo' ),
+			esc_html( $lleno ? 'Taller lleno' : 'Taller' ),
+			$aforo,
+			$ocupadas,
+			(int) min( 100, round( 100 * $ocupadas / $aforo ) ),
+			esc_html( sprintf( '%1$d de %2$d plazas', $ocupadas, $aforo ) )
+		);
+	}
+
+
+
+
+
+
+
 	private static function form( array $m ): string {
 		$valores = (array) $m['edit_values'];
 		$id      = isset( $valores['id'] ) ? (int) $valores['id'] : 0;
@@ -13739,8 +13975,7 @@ final class EventProgrammePanel {
 
 		ob_start();
 		?>
-		<form class="evt-form evt-tarjeta" method="post" action="">
-			<h2><?php echo esc_html( $editar ? 'Editar actividad' : 'Añadir actividad al programa' ); ?></h2>
+		<form class="evt-form" method="post" action="">
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
@@ -13749,7 +13984,7 @@ final class EventProgrammePanel {
 			<div class="evt-form-fila">
 				<div class="evt-form-campo">
 					<label for="evt-ac-title">Título</label>
-					<input type="text" id="evt-ac-title" name="evt_ac_title" required
+					<input type="text" id="evt-ac-title" name="evt_ac_title" required autofocus
 						value="<?php echo esc_attr( (string) ( $valores['title'] ?? '' ) ); ?>" />
 				</div>
 				<div class="evt-form-campo">
@@ -13762,7 +13997,7 @@ final class EventProgrammePanel {
 							</option>
 						<?php endforeach; ?>
 					</select>
-					<small>«Taller» es el único que lleva aforo y aparece en la pestaña de Talleres.</small>
+					<small>«Taller» es el único que lleva aforo.</small>
 				</div>
 			</div>
 
@@ -13823,10 +14058,8 @@ final class EventProgrammePanel {
 					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar actividad' : 'Añadir actividad' ); ?>
 				</button>
-				<?php if ( $editar ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
-				<?php endif; ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>"
+					href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Cancelar</a>
 			</div>
 		</form>
 		<?php
@@ -13884,176 +14117,6 @@ namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
-
-
-
-
-
-
-
-
-
-
-
-final class EventWorkshopsPanel {
-
-
-
-
-
-
-
-	public static function html( array $m ): string {
-		$filas = (array) $m['workshops'];
-
-		ob_start();
-		?>
-		<p class="evt-sub">
-			Las actividades del programa marcadas como <strong>taller</strong>, con
-			su aforo. Se crean y se editan en
-			<a href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME ) ); ?>">Programa</a>:
-			un taller es una actividad más, con plazas.
-		</p>
-
-		<?php if ( array() === $filas ) : ?>
-			<div class="evt-tabla-caja">
-				<p class="evt-vacio">
-					Este evento no tiene talleres. Para crear uno, añada una actividad
-					en «Programa» y elija el tipo «Taller».
-				</p>
-			</div>
-		<?php else : ?>
-			<?php echo self::counters( $m, $filas ); ?>
-			<div class="evt-tabla-caja">
-				<table class="evt-tabla">
-					<thead>
-						<tr>
-							<th scope="col">Día</th>
-							<th scope="col">Hora</th>
-							<th scope="col">Taller</th>
-							<th scope="col">Sede y sala</th>
-							<th scope="col">Aforo</th>
-							<th scope="col">Plazas</th>
-							<th scope="col">Acciones</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $filas as $fila ) : ?>
-							<?php echo self::row( $m, (array) $fila ); ?>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
-		<?php endif; ?>
-		<?php
-		return (string) ob_get_clean();
-	}
-
-
-
-
-
-
-
-
-	private static function counters( array $m, array $filas ): string {
-		unset( $m );
-		$plazas   = 0;
-		$ocupadas = 0;
-		$llenos   = 0;
-		foreach ( $filas as $fila ) {
-			$fila      = (array) $fila;
-			$plazas   += (int) $fila['seats'];
-			$ocupadas += (int) $fila['taken'];
-			if ( null !== $fila['free'] && 0 === (int) $fila['free'] ) {
-				++$llenos;
-			}
-		}
-
-		ob_start();
-		?>
-		<ul class="evt-cifras">
-			<li class="evt-cifra"><strong><?php echo esc_html( (string) count( $filas ) ); ?></strong> talleres</li>
-			<li class="evt-cifra"><strong><?php echo esc_html( (string) $ocupadas ); ?></strong> plazas ocupadas<?php echo $plazas > 0 ? esc_html( ' de ' . $plazas ) : ''; ?></li>
-			<li class="evt-cifra"><strong><?php echo esc_html( (string) $llenos ); ?></strong> sin plazas libres</li>
-		</ul>
-		<?php
-		return (string) ob_get_clean();
-	}
-
-
-
-
-
-
-
-
-	private static function row( array $m, array $fila ): string {
-		$id    = (int) $fila['id'];
-		$mini  = Assets::button_class() . ' evt-mini';
-		$sede  = trim( (string) $fila['venue'] );
-		$sala  = trim( (string) $fila['room'] );
-		$donde = trim( $sede . ( '' !== $sede && '' !== $sala ? ' · ' : '' ) . $sala );
-
-		ob_start();
-		?>
-		<tr>
-			<td data-rotulo="Día"><?php echo esc_html( PanelParts::day( (string) $fila['date'] ) ); ?></td>
-			<td data-rotulo="Hora"><?php echo esc_html( PanelParts::slot( (string) $fila['start'], (string) $fila['end'] ) ); ?></td>
-			<td data-rotulo="Taller"><?php echo esc_html( '' !== trim( (string) $fila['title'] ) ? (string) $fila['title'] : '(sin título)' ); ?></td>
-			<td data-rotulo="Sede y sala"><?php echo esc_html( '' !== $donde ? $donde : '—' ); ?></td>
-			<td class="evt-num" data-rotulo="Aforo">
-				<?php echo esc_html( (int) $fila['seats'] > 0 ? (string) (int) $fila['seats'] : 'Sin límite' ); ?>
-			</td>
-			<td data-rotulo="Plazas"><?php echo self::seats( $fila ); ?></td>
-			<td data-rotulo="Acciones">
-				<span class="evt-acciones">
-					<?php
-					$editar = PanelParts::icon_link(
-						EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PROGRAMME, array( EventWorkspace::ARG_ROW => $id ) ),
-						'lapiz',
-						'Editar este taller en el programa'
-					);
-					echo $editar; 
-					?>
-				</span>
-			</td>
-		</tr>
-		<?php
-		return (string) ob_get_clean();
-	}
-
-
-
-
-
-
-
-	private static function seats( array $fila ): string {
-		$ocupadas = (int) $fila['taken'];
-		if ( null === $fila['free'] ) {
-			return '<span class="evt-state">' . esc_html( $ocupadas . ' inscritas' ) . '</span>';
-		}
-		$libres = (int) $fila['free'];
-		$clase  = 0 === $libres ? 'evt-state evt-state-finalizado' : 'evt-state evt-state-abierto';
-
-		return '<span class="' . esc_attr( $clase ) . '">'
-			. esc_html( 0 === $libres ? 'Completo' : $libres . ' libres' )
-			. '</span> <span class="evt-sub">' . esc_html( '(' . $ocupadas . ' de ' . (int) $fila['seats'] . ')' ) . '</span>';
-	}
-}
-
-
-
-
-
-
-
-
-namespace Evt\PublicFront\View;
-
-use Evt\PublicFront\Assets;
-use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\RegistrationFiles;
 
@@ -14086,11 +14149,10 @@ final class EventParticipantsPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Quién se ha inscrito a este evento. Se puede filtrar por cualquier dato
-			—un apellido, un centro, un taller— y exportar a CSV lo que quede
-			filtrado, no la lista entera.
-		</p>
+		<div class="evt-panel-cabecera"><div>
+			<h2 class="evt-panel-titulo">Participantes</h2>
+			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
+		</div></div>
 
 		<?php echo self::counters( $m, $filas ); ?>
 		<?php echo self::filter( $m ); ?>
@@ -14309,8 +14371,12 @@ final class EventParticipantsPanel {
 
 namespace Evt\PublicFront\View;
 
+use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+
+
+
 
 
 
@@ -14342,7 +14408,11 @@ final class EventSignupPanel {
 		$preguntas = (array) $m['questions'];
 
 		$op    = EventWorkspace::PANEL_SIGNUP;
-		$html  = '<form class="evt-form evt-panel--inscripcion" method="post" action="">';
+		$html  = '<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Formulario y plazos</h2>'
+			. '<p class="evt-sub">Cuándo se acepta a alguien y qué se le pregunta además de sus datos.</p></div></div>';
+		$html .= self::status( (array) ( $m['signup_status'] ?? array() ) );
+
+		$html .= '<form class="evt-form evt-panel--inscripcion" method="post" action="" data-evt-cambios>';
 		$html .= wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false, false );
 		$html .= sprintf(
 			'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d">',
@@ -14352,11 +14422,11 @@ final class EventSignupPanel {
 			$event_id
 		);
 
-		$html .= self::windows( $ajustes, $preguntas );
-		$html .= self::consent( $ajustes );
+		$html .= '<div class="evt-dos-columnas">' . self::windows( $ajustes, $preguntas ) . self::workshops( $ajustes ) . '</div>';
 		$html .= self::questions( $preguntas, (array) $m['q_types'], (bool) $m['q_locked'] );
-
-		$html .= '<p class="evt-panel__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar</button></p>';
+		$html .= self::consent( $ajustes );
+		$html .= self::button( (array) ( $m['values'] ?? array() ) );
+		$html .= PanelParts::save_bar( 'Guardar la inscripción' );
 		$html .= '</form>';
 
 		return $html;
@@ -14368,38 +14438,79 @@ final class EventSignupPanel {
 
 
 
+	private static function status( array $s ): string {
+		if ( array() === $s ) {
+			return '';
+		}
+		if ( true === $s['open'] ) {
+			$texto = true === $s['public']
+				? 'La inscripción está aceptando gente, también sin iniciar sesión.'
+				: 'La inscripción está aceptando gente con sesión iniciada.';
+			return '<p class="' . esc_attr( Assets::alert_class( 'success' ) ) . '" role="status">' . esc_html( $texto ) . '</p>';
+		}
+		return '<p class="' . esc_attr( Assets::alert_class( 'info' ) ) . '" role="status">'
+			. esc_html( 'Ahora mismo no acepta a nadie. Quien visite la página lee: «' . (string) $s['reason'] . '»' ) . '</p>';
+	}
+
+
+
+
+
+
+
 
 	private static function windows( array $a, array $preguntas ): string {
-		$html  = '<fieldset class="evt-campos"><legend>Plazos</legend>';
-		$html .= self::toggle( 'evt_signup_open', 'La inscripción está abierta', (bool) $a['open'] );
-		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-desde">Desde</label>'
-			. '<input type="date" id="evt-ins-desde" name="evt_signup_start" value="' . esc_attr( (string) $a['start'] ) . '"></p>';
-		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-hasta">Hasta</label>'
-			. '<input type="date" id="evt-ins-hasta" name="evt_signup_end" value="' . esc_attr( (string) $a['end'] ) . '"></p>';
-		$html .= '<p class="evt-ayuda">Solo se acepta a alguien con el interruptor puesto, dentro de las fechas '
-			. '—son opcionales— y con el evento publicado y sin marcar como histórico. Fuera de eso, '
-			. 'la página de inscripción dice por qué está cerrada.</p>';
-
-		$html .= self::toggle( 'evt_signup_public', 'Inscripción pública: también sin iniciar sesión', (bool) $a['public'] );
-		$html .= '<p class="evt-ayuda">Apagada, solo se inscribe quien ha iniciado sesión.</p>';
+		$html  = '<fieldset class="evt-tarjeta evt-campos"><legend>Inscripción</legend>';
+		$html .= self::toggle( 'evt_signup_open', 'Abierta', (bool) $a['open'] );
+		$html .= self::dates( 'evt_signup_start', 'evt_signup_end', 'evt-ins', (string) $a['start'], (string) $a['end'] );
+		$html .= '<p class="evt-ayuda">Además, el evento tiene que estar publicado y sin marcar como histórico.</p>';
+		$html .= self::toggle( 'evt_signup_public', 'Pública: también sin iniciar sesión', (bool) $a['public'] );
+		$html .= '<p class="evt-ayuda">Sin sesión se pide la casilla «No soy un robot» y no se adjuntan archivos.</p>';
 		if ( (bool) $a['public'] && self::has_file_question( $preguntas ) ) {
-			$html .= '<p class="evt-aviso evt-aviso--aviso">Quien se inscriba <strong>sin iniciar sesión no puede adjuntar '
+			$html .= '<p class="' . esc_attr( Assets::alert_class( 'warning' ) ) . '">Quien se inscriba <strong>sin iniciar sesión no puede adjuntar '
 				. 'archivos</strong>: las preguntas de archivo no le salen, y si alguna es obligatoria tendrá que '
 				. 'iniciar sesión para inscribirse.</p>';
 		}
-
-
-
-		$html .= self::toggle( 'evt_workshop_open', 'Se puede elegir taller', (bool) $a['workshop_open'] );
-		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ws-desde">Desde</label>'
-			. '<input type="date" id="evt-ws-desde" name="evt_workshop_start" value="' . esc_attr( (string) $a['workshop_start'] ) . '"></p>';
-		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ws-hasta">Hasta</label>'
-			. '<input type="date" id="evt-ws-hasta" name="evt_workshop_end" value="' . esc_attr( (string) $a['workshop_end'] ) . '"></p>';
-		$html .= '<p class="evt-ayuda">Las fechas son opcionales: sin ellas manda el interruptor. '
-			. 'Quien ya se inscribió puede cambiar de taller mientras el plazo siga abierto, '
-			. 'y un taller lleno deja de poder elegirse.</p>';
-
 		return $html . '</fieldset>';
+	}
+
+
+
+
+
+
+
+	private static function workshops( array $a ): string {
+		$html  = '<fieldset class="evt-tarjeta evt-campos"><legend>Elegir taller</legend>';
+		$html .= self::toggle( 'evt_workshop_open', 'Se puede elegir taller', (bool) $a['workshop_open'] );
+		$html .= self::dates( 'evt_workshop_start', 'evt_workshop_end', 'evt-ws', (string) $a['workshop_start'], (string) $a['workshop_end'] );
+		$html .= '<p class="evt-ayuda">Sin fechas manda el interruptor. Quien ya se inscribió puede cambiar de taller '
+			. 'mientras siga abierto, y un taller lleno deja de poder elegirse.</p>';
+		return $html . '</fieldset>';
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function dates( string $desde, string $hasta, string $id, string $inicio, string $fin ): string {
+		return sprintf(
+			'<div class="evt-form-fila evt-form-fila--2">'
+				. '<p class="evt-campo evt-campo--fecha"><label for="%1$s-desde">Desde</label><input type="date" id="%1$s-desde" name="%2$s" value="%3$s"></p>'
+				. '<p class="evt-campo evt-campo--fecha"><label for="%1$s-hasta">Hasta</label><input type="date" id="%1$s-hasta" name="%4$s" value="%5$s"></p>'
+				. '</div>',
+			esc_attr( $id ),
+			esc_attr( $desde ),
+			esc_attr( $inicio ),
+			esc_attr( $hasta ),
+			esc_attr( $fin )
+		);
 	}
 
 
@@ -14418,43 +14529,16 @@ final class EventSignupPanel {
 
 
 
-	private static function consent( array $a ): string {
-		$html  = '<fieldset class="evt-campos"><legend>Protección de datos</legend>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-privacidad">Información sobre el tratamiento de sus datos</label>'
-			. '<textarea id="evt-consent-privacidad" name="evt_consent_privacy" rows="6">'
-			. esc_textarea( (string) $a['consent_privacy'] ) . '</textarea></p>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-imagen">Consentimiento informado</label>'
-			. '<textarea id="evt-consent-imagen" name="evt_consent_image" rows="6">'
-			. esc_textarea( (string) $a['consent_image'] ) . '</textarea></p>';
-
-
-
-		$html .= '<p class="evt-ayuda">Versión actual: <strong>v' . (int) $a['consent_version'] . '</strong>. '
-			. 'Cambiar cualquiera de los dos textos crea una versión nueva; lo que ya aceptó alguien no se reescribe, '
-			. 'y en la lista de participantes se ve qué versión aceptó cada persona.</p>';
-
-		return $html . '</fieldset>';
-	}
-
-
-
-
-
-
-
 
 
 	private static function questions( array $preguntas, array $tipos, bool $locked ): string {
-		$html = '<fieldset class="evt-campos evt-preguntas"><legend>Preguntas de este evento</legend>';
-
-		$html .= '<p class="evt-ayuda">Tres o cuatro, las de logística: si se queda a comer, intolerancias, '
-			. 'si es residente. El resto del formulario —documento, nombre, apellidos, correo, teléfono, centro '
-			. 'y consentimiento— es siempre el mismo y no se toca desde aquí.</p>';
+		$html  = '<section class="evt-tarjeta evt-preguntas"><h3 class="evt-tarjeta__titulo">Preguntas de este evento</h3>';
+		$html .= '<p class="evt-ayuda">Tres o cuatro, las de logística. El documento, el nombre, los apellidos, el correo, '
+			. 'el teléfono, el centro y el consentimiento van siempre y no se tocan desde aquí.</p>';
 
 		if ( $locked ) {
-			$html .= '<p class="evt-aviso evt-aviso--aviso">Ya hay personas inscritas. Puede reescribir un rótulo y '
-				. '<strong>añadir</strong> opciones, pero no cambiar el tipo de una pregunta ni quitarle una opción: '
-				. 'lo que ya se contestó dejaría de significar lo mismo.</p>';
+			$html .= '<p class="' . esc_attr( Assets::alert_class( 'warning' ) ) . '">Ya hay personas inscritas: se puede reescribir un rótulo y '
+				. '<strong>añadir</strong> opciones, pero no cambiar el tipo de una pregunta ni quitarle una opción.</p>';
 		}
 
 		$filas = $preguntas;
@@ -14470,13 +14554,13 @@ final class EventSignupPanel {
 		);
 
 		foreach ( $filas as $i => $pregunta ) {
-			$html .= self::row( (int) $i, $pregunta, $tipos );
+			$html .= self::row( (int) $i, $pregunta, $tipos, array() === $preguntas );
 		}
 
 		$html .= '<p class="evt-ayuda">Para quitar una pregunta, borre su rótulo y guarde. '
 			. 'Lo que ya hubiera contestado alguien no se borra: deja de verse, y vuelve si la pregunta vuelve.</p>';
 
-		return $html . '</fieldset>';
+		return $html . '</section>';
 	}
 
 
@@ -14487,21 +14571,29 @@ final class EventSignupPanel {
 
 
 
-	private static function row( int $i, array $p, array $tipos ): string {
-		$nueva  = '' === (string) $p['id'];
-		$rotulo = $nueva ? 'Pregunta nueva' : 'Pregunta ' . ( $i + 1 );
 
-		$html  = '<div class="evt-pregunta">';
-		$html .= '<h4 class="evt-pregunta__n">' . esc_html( $rotulo ) . '</h4>';
+	private static function row( int $i, array $p, array $tipos, bool $abierta ): string {
+		$nueva   = '' === (string) $p['id'];
+		$resumen = $nueva
+			? '<span class="evt-pregunta__rotulo">Añadir una pregunta</span>'
+			: sprintf(
+				'<span class="evt-pregunta__rotulo">%1$s</span><span class="evt-pregunta__tipo">%2$s%3$s</span>',
+				esc_html( (string) $p['label'] ),
+				esc_html( (string) ( $tipos[ (string) $p['type'] ] ?? '' ) ),
+				(bool) $p['required'] ? ' · obligatoria' : ''
+			);
+
+		$html  = '<details class="evt-pregunta' . ( $nueva ? ' evt-pregunta--nueva' : '' ) . '"' . ( $nueva && $abierta ? ' open' : '' ) . '>';
+		$html .= '<summary>' . $resumen . '</summary><div class="evt-pregunta__cuerpo">';
 		$html .= sprintf( '<input type="hidden" name="evt_q_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $p['id'] ) );
 
+		$html .= '<div class="evt-form-fila evt-form-fila--2">';
 		$html .= sprintf(
 			'<p class="evt-campo"><label for="evt-q-l-%1$d">Rótulo</label>'
 				. '<input type="text" id="evt-q-l-%1$d" name="evt_q_label[%1$d]" value="%2$s" maxlength="200"></p>',
 			$i,
 			esc_attr( (string) $p['label'] )
 		);
-
 		$html .= '<p class="evt-campo"><label for="evt-q-t-' . $i . '">Tipo</label>'
 			. '<select id="evt-q-t-' . $i . '" name="evt_q_type[' . $i . ']">';
 		foreach ( $tipos as $valor => $nombre ) {
@@ -14512,7 +14604,7 @@ final class EventSignupPanel {
 				esc_html( $nombre )
 			);
 		}
-		$html .= '</select></p>';
+		$html .= '</select></p></div>';
 
 		$html .= sprintf(
 			'<p class="evt-campo"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
@@ -14522,14 +14614,66 @@ final class EventSignupPanel {
 			esc_textarea( implode( "\n", (array) $p['options'] ) )
 		);
 
-		$html .= sprintf(
-			'<p class="evt-campo evt-campo--casilla"><label for="evt-q-r-%1$d">'
-				. '<input type="checkbox" id="evt-q-r-%1$d" name="evt_q_required[%1$d]" value="1"%2$s> Obligatoria</label></p>',
-			$i,
-			checked( true, (bool) $p['required'], false )
-		);
+		$html .= self::toggle( 'evt_q_required[' . $i . ']', 'Obligatoria', (bool) $p['required'], 'evt-q-r-' . $i );
 
-		return $html . '</div>';
+		return $html . '</div></details>';
+	}
+
+
+
+
+
+
+
+	private static function consent( array $a ): string {
+		$html  = '<details class="evt-tarjeta evt-plegable"><summary>Protección de datos <span class="evt-state">versión '
+			. (int) $a['consent_version'] . '</span></summary>';
+		$html .= '<p class="evt-campo"><label for="evt-consent-privacidad">Información sobre el tratamiento de sus datos</label>'
+			. '<textarea id="evt-consent-privacidad" name="evt_consent_privacy" rows="6">'
+			. esc_textarea( (string) $a['consent_privacy'] ) . '</textarea></p>';
+		$html .= '<p class="evt-campo"><label for="evt-consent-imagen">Consentimiento informado</label>'
+			. '<textarea id="evt-consent-imagen" name="evt_consent_image" rows="6">'
+			. esc_textarea( (string) $a['consent_image'] ) . '</textarea></p>';
+
+
+
+		$html .= '<p class="evt-ayuda">Cambiar cualquiera de los dos textos crea una versión nueva; lo que ya aceptó alguien '
+			. 'no se reescribe, y en la lista de participantes se ve qué versión aceptó cada persona.</p>';
+
+		return $html . '</details>';
+	}
+
+
+
+
+
+
+
+	private static function button( array $v ): string {
+		$abierto = '' !== (string) ( $v[ EventMetaKeys::SIGNUP_URL ] ?? '' ) || '' !== (string) ( $v[ EventMetaKeys::SIGNUP_SHOW ] ?? '' );
+
+		$html  = '<details class="evt-tarjeta evt-plegable"' . ( $abierto ? ' open' : '' ) . '><summary>Botón de la portada e inscripción en otro sitio</summary>';
+		$html .= self::toggle( EventMetaKeys::SIGNUP_SHOW, 'Mostrar el botón de inscripción en la portada del evento', '' !== (string) ( $v[ EventMetaKeys::SIGNUP_SHOW ] ?? '' ), 'evt-signup-show' );
+		$html .= '<div class="evt-form-fila evt-form-fila--2">';
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-signup-label">Texto del botón</label><input type="text" id="evt-signup-label" name="%1$s" placeholder="Inscríbete" value="%2$s"></p>',
+			esc_attr( EventMetaKeys::SIGNUP_LABEL ),
+			esc_attr( (string) ( $v[ EventMetaKeys::SIGNUP_LABEL ] ?? '' ) )
+		);
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-signup-url">Dirección, si la inscripción es en otro sitio</label><input type="url" id="evt-signup-url" name="%1$s" placeholder="https://" value="%2$s"><small>Con el formulario de aquí, déjela en blanco.</small></p>',
+			esc_attr( EventMetaKeys::SIGNUP_URL ),
+			esc_attr( (string) ( $v[ EventMetaKeys::SIGNUP_URL ] ?? '' ) )
+		);
+		$html .= '</div>';
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-signup-form">Formulario antiguo <span class="evt-state">Histórico</span></label>'
+				. '<input type="number" id="evt-signup-form" name="%1$s" min="0" step="1" value="%2$s">'
+				. '<small><strong>No lo rellene en un evento nuevo.</strong> Es el número del formulario del sistema anterior, solo para eventos migrados.</small></p>',
+			esc_attr( EventMetaKeys::SIGNUP_FORM_ID ),
+			esc_attr( (string) (int) ( $v[ EventMetaKeys::SIGNUP_FORM_ID ] ?? 0 ) )
+		);
+		return $html . '</details>';
 	}
 
 
@@ -14540,9 +14684,12 @@ final class EventSignupPanel {
 
 
 
-	private static function toggle( string $nombre, string $rotulo, bool $puesto ): string {
+
+	private static function toggle( string $nombre, string $rotulo, bool $puesto, string $id = '' ): string {
+		$id = '' !== $id ? $id : $nombre;
 		return sprintf(
-			'<p class="evt-campo evt-campo--casilla"><label for="%1$s"><input type="checkbox" id="%1$s" name="%1$s" value="1"%2$s> %3$s</label></p>',
+			'<div class="form-check form-switch evt-interruptor"><input class="form-check-input" type="checkbox" role="switch" id="%1$s" name="%2$s" value="1"%3$s> <label class="form-check-label" for="%1$s">%4$s</label></div>',
+			esc_attr( $id ),
 			esc_attr( $nombre ),
 			checked( true, $puesto, false ),
 			esc_html( $rotulo )
@@ -14633,11 +14780,10 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Las páginas de este evento, en el orden en que salen en su menú. Cada
-			una es una página propia con su dirección: al despublicarla desaparece
-			del menú, pero no se pierde nada de lo escrito.
-		</p>
+		<div class="evt-panel-cabecera"><div>
+			<h2 class="evt-panel-titulo">Páginas</h2>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+		</div></div>
 
 		<?php echo self::trash_link( $m ); ?>
 		<?php echo self::add_form( $m ); ?>
@@ -14952,7 +15098,7 @@ final class EventDataPanel {
 
 
 
-		$sel_area    = self::area_checks(
+		$sel_area  = self::area_checks(
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
 			'Ámbitos organizativos',
@@ -14963,7 +15109,7 @@ final class EventDataPanel {
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
 				: 'Seleccione solo ámbitos dentro de su subárbol.'
 		);
-		$sel_tipo    = self::term_select(
+		$sel_tipo  = self::term_select(
 			'evt-type',
 			EventWorkspace::FIELD_TYPE,
 			'Tipología',
@@ -14971,7 +15117,7 @@ final class EventDataPanel {
 			(int) $v[ EventWorkspace::FIELD_TYPE ],
 			'Jornadas, encuentro, congreso, taller… Sirve para agrupar eventos parecidos.'
 		);
-		$sel_curso   = self::term_select(
+		$sel_curso = self::term_select(
 			'evt-course',
 			EventWorkspace::FIELD_COURSE,
 			'Curso escolar',
@@ -14979,18 +15125,20 @@ final class EventDataPanel {
 			(int) $v[ EventWorkspace::FIELD_COURSE ],
 			'El curso al que pertenece, en la forma 2025-2026.'
 		);
-		$inscripcion = self::signup_card( $v );
+		$nuevo     = true === ( $m['nuevo'] ?? false );
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="">
+		<?php if ( ! $nuevo ) : ?>
+			<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Datos del evento</h2><p class="evt-sub">Lo que se anuncia, y de dónde sale el estado: próximo, abierto o finalizado.</p></div></div>
+		<?php endif; ?>
+		<form class="evt-form" method="post" action="" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_SETTINGS ), EventWorkspace::nonce_name( EventWorkspace::PANEL_SETTINGS ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_SETTINGS ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
 			<fieldset class="evt-tarjeta">
 				<legend>Identidad</legend>
-				<p>Cómo se llama el evento y qué se lee de él antes de entrar.</p>
 
 				<div class="evt-form-campo">
 					<label for="evt-title">Título del evento</label>
@@ -14999,31 +15147,30 @@ final class EventDataPanel {
 					<small>El nombre completo, tal y como se anuncia. Es el que sale en grande en la cabecera.</small>
 				</div>
 
-				<div class="evt-form-fila">
+				<div class="evt-form-fila evt-form-fila--ancha">
 					<div>
-						<label for="evt-tagline">Lema</label>
+						<label for="evt-tagline">Lema <span class="evt-opcional">(opcional)</span></label>
 						<input type="text" id="evt-tagline" name="<?php echo esc_attr( EventMetaKeys::TAGLINE ); ?>"
 							value="<?php echo esc_attr( (string) $v[ EventMetaKeys::TAGLINE ] ); ?>" />
-						<small>La línea corta que acompaña al título. Puede dejarse en blanco.</small>
+						<small>La línea corta que acompaña al título.</small>
 					</div>
 					<div>
 						<label for="evt-hashtag">Etiqueta de redes</label>
 						<input type="text" id="evt-hashtag" name="<?php echo esc_attr( EventMetaKeys::HASHTAG ); ?>"
 							value="<?php echo esc_attr( (string) $v[ EventMetaKeys::HASHTAG ] ); ?>" />
-						<small>Sin la almohadilla: escriba <code>jornadas25</code>, no <code>#jornadas25</code>.</small>
+						<small>Sin la almohadilla: <code>jornadas25</code>.</small>
 					</div>
 				</div>
 
 				<div class="evt-form-campo">
 					<label for="evt-intro">Texto introductorio</label>
 					<textarea id="evt-intro" name="<?php echo esc_attr( EventMetaKeys::INTRO ); ?>" rows="6"><?php echo esc_textarea( (string) $v[ EventMetaKeys::INTRO ] ); ?></textarea>
-					<small>Dos o tres párrafos que expliquen de qué va y a quién se dirige. Es lo que se lee en la portada del evento, debajo de la cabecera.</small>
+					<small>Dos o tres párrafos: de qué va y a quién se dirige. Se lee en la portada, debajo de la cabecera.</small>
 				</div>
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">
 				<legend>Cuándo y dónde</legend>
-				<p>De estas fechas sale el estado del evento —próximo, abierto o finalizado—, así que no hay que marcarlo a mano en ningún sitio.</p>
 
 				<div class="evt-form-fila">
 					<div>
@@ -15050,7 +15197,6 @@ final class EventDataPanel {
 
 			<fieldset class="evt-tarjeta">
 				<legend>Clasificación</legend>
-				<p>Con qué se ordena y se busca el evento. Cada ámbito seleccionado puede editarlo.</p>
 
 				<div class="evt-form-fila">
 					<div><?php echo $sel_area; ?></div>
@@ -15059,62 +15205,8 @@ final class EventDataPanel {
 				</div>
 			</fieldset>
 
-			<?php echo $inscripcion; ?>
-
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-					<?php echo esc_html( true === ( $m['nuevo'] ?? false ) ? 'Crear el evento' : 'Guardar los datos' ); ?>
-				</button>
-			</p>
+			<?php echo PanelParts::save_bar( $nuevo ? 'Crear el evento' : 'Guardar los datos' ); ?>
 		</form>
-		<?php
-		return (string) ob_get_clean();
-	}
-
-
-
-
-
-
-
-	private static function signup_card( array $v ): string {
-		ob_start();
-		?>
-			<fieldset class="evt-tarjeta">
-				<legend>Inscripción</legend>
-				<p>Las inscripciones siguen llevándose en el sistema anterior: aquí solo se dice si la portada enseña el botón y a dónde lleva.</p>
-
-				<div class="evt-form-campo">
-					<label for="evt-signup-show">
-						<input type="checkbox" id="evt-signup-show" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_SHOW ); ?>" value="1"
-							<?php checked( '' !== (string) $v[ EventMetaKeys::SIGNUP_SHOW ] ); ?> />
-						Mostrar el botón de inscripción en la portada del evento
-					</label>
-					<small>Desmárquelo cuando el plazo se cierre: el botón desaparece y no hay que tocar la página.</small>
-				</div>
-
-				<div class="evt-form-fila">
-					<div>
-						<label for="evt-signup-label">Texto del botón</label>
-						<input type="text" id="evt-signup-label" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_LABEL ); ?>"
-							placeholder="Inscríbete" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::SIGNUP_LABEL ] ); ?>" />
-						<small>Lo que se lee dentro del botón. En blanco, pone «Inscríbete».</small>
-					</div>
-					<div>
-						<label for="evt-signup-form">Formulario antiguo <span class="evt-state evt-state-draft">Histórico</span></label>
-						<input type="number" id="evt-signup-form" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_FORM_ID ); ?>"
-							min="0" step="1" value="<?php echo esc_attr( (string) (int) $v[ EventMetaKeys::SIGNUP_FORM_ID ] ); ?>" />
-						<small><strong>No lo rellene en un evento nuevo.</strong> Es el número del formulario de inscripción del sistema anterior, y está aquí solo para que los eventos migrados sigan viéndose igual. Los participantes de este aplicativo se gestionan en la pestaña «Participantes». <strong>Este campo desaparecerá.</strong></small>
-					</div>
-				</div>
-
-				<div class="evt-form-campo">
-					<label for="evt-signup-url">Dirección a la que lleva el botón</label>
-					<input type="url" id="evt-signup-url" name="<?php echo esc_attr( EventMetaKeys::SIGNUP_URL ); ?>"
-						placeholder="https://" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::SIGNUP_URL ] ); ?>" />
-					<small>Solo si la inscripción está fuera de este sitio. Con formulario propio, déjelo en blanco.</small>
-				</div>
-			</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -15291,14 +15383,14 @@ final class EventAppearancePanel {
 			'evt_logo',
 			'Logo acompañante',
 			self::image_of( (int) ( $medios['logo'] ?? 0 ) ),
-			'Sale junto al título en la cabecera. Un PNG con fondo transparente queda mejor sobre el color de fondo.',
+			'Junto al título. Mejor un PNG con fondo transparente.',
 			$subir
 		);
 		$img_banner    = self::image_field(
 			'evt_header_banner',
 			'Banner de cabecera',
 			self::image_of( (int) ( $medios['header_banner'] ?? 0 ) ),
-			'Sustituye visualmente la cabecera completa solo en la portada del evento. Debe tener al menos 1920 píxeles de ancho. Al quitarla reaparecen el título, el lema, las fechas, la sede y las acciones guardadas; esos datos no se borran.',
+			'Sustituye la cabecera solo en la portada. Al menos 1920 píxeles de ancho.',
 			$subir,
 			1920
 		);
@@ -15306,29 +15398,29 @@ final class EventAppearancePanel {
 			'evt_poster',
 			'Cartel del evento',
 			self::image_of( (int) ( $medios['poster'] ?? 0 ) ),
-			'El cartel completo. Se enseña en la portada del evento, y al pulsarlo se abre a tamaño completo para descargarlo o compartirlo.',
+			'En la portada, y a tamaño completo al pulsarlo. Es también el que sale en el listado y en la línea del tiempo.',
 			$subir
 		);
 		$img_destacada = self::image_field(
 			'evt_featured',
 			'Imagen destacada',
 			self::image_of( (int) ( $medios['featured'] ?? 0 ) ),
-			'La que se ve cuando se comparte el enlace del evento y en los listados. Apaisada se recorta menos.',
+			'Al compartir el enlace. Apaisada se recorta menos.',
 			$subir
 		);
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="" enctype="multipart/form-data">
+		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Apariencia</h2><p class="evt-sub">Se aplica a todas las páginas del evento. La muestra cambia al momento; nada se guarda hasta pulsar «Guardar la apariencia».</p></div></div>
+		<form class="evt-form" method="post" action="" enctype="multipart/form-data" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_LOOK ), EventWorkspace::nonce_name( EventWorkspace::PANEL_LOOK ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
-			<?php echo $vista; ?>
-
+			<div class="evt-apariencia">
+			<div class="evt-apariencia__ajustes">
 			<fieldset class="evt-tarjeta">
 				<legend>Colores de la cabecera</legend>
-				<p>Los dos colores de la banda de arriba de todas las páginas del evento. Elíjalos con contraste: el texto tiene que leerse sobre el fondo.</p>
 
 				<div class="evt-form-fila">
 					<div><?php echo $color_bg; ?></div>
@@ -15337,19 +15429,12 @@ final class EventAppearancePanel {
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">
-				<legend>Tipografías</legend>
-				<p>Dos y no más: una para los títulos y otra para el texto. «La del tema» no carga ninguna fuente y es la opción más rápida de cargar.</p>
+				<legend>Tipografía y remate</legend>
 
 				<div class="evt-form-fila">
 					<div><?php echo $sel_titulo; ?></div>
 					<div><?php echo $sel_cuerpo; ?></div>
 				</div>
-			</fieldset>
-
-			<fieldset class="evt-tarjeta">
-				<legend>Forma y remate</legend>
-				<p>Detalles que se aplican a todas las páginas del evento.</p>
-
 				<div class="evt-form-fila">
 					<div><?php echo $sel_forma; ?></div>
 					<div><?php echo $sel_sep; ?></div>
@@ -15358,12 +15443,7 @@ final class EventAppearancePanel {
 
 			<fieldset class="evt-tarjeta">
 				<legend>Imágenes</legend>
-				<p>
-					Las cuatro salen de la biblioteca de medios del sitio: «Seleccionar o subir» abre la
-					ventana nativa de WordPress, donde puede reutilizar una imagen, previsualizarla o
-					arrastrar una nueva desde su equipo
-					(JPG, PNG, WEBP o GIF). Nada cambia hasta que pulse «Guardar la apariencia».
-				</p>
+				<p class="evt-ayuda">De la biblioteca de medios del sitio: JPG, PNG, WEBP o GIF.</p>
 
 				<?php if ( ! $subir ) : ?>
 					<p class="<?php echo esc_attr( Assets::alert_class( 'warning' ) ); ?>">
@@ -15371,15 +15451,20 @@ final class EventAppearancePanel {
 					</p>
 				<?php endif; ?>
 
-				<?php echo $img_logo; ?>
-				<?php echo $img_banner; ?>
-				<?php echo $img_cartel; ?>
-				<?php echo $img_destacada; ?>
+				<div class="evt-imagenes">
+					<?php echo $img_cartel; ?>
+					<?php echo $img_logo; ?>
+					<?php echo $img_banner; ?>
+					<?php echo $img_destacada; ?>
+				</div>
 			</fieldset>
+			</div>
+			<aside class="evt-apariencia__muestra" aria-label="Así se verá">
+				<?php echo $vista; ?>
+			</aside>
+			</div>
 
-			<p class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la apariencia</button>
-			</p>
+			<?php echo PanelParts::save_bar( 'Guardar la apariencia' ); ?>
 		</form>
 		<?php
 		return (string) ob_get_clean();
@@ -15433,7 +15518,7 @@ final class EventAppearancePanel {
 					<?php ?>
 					<img src="<?php echo esc_attr( self::SHAPE_SAMPLE ); ?>" width="72" height="72" alt="Ejemplo de la forma de las fotografías" />
 				</span>
-				Así se verá la cabecera del evento y así se recortarán las fotos de las personas. Es una muestra: no se guarda nada hasta que pulse «Guardar la apariencia».
+				Así se verá la cabecera y así se recortarán las fotos de las personas.
 			</div>
 		</div>
 		<?php
@@ -15689,25 +15774,19 @@ final class EventCodePanel {
 
 		ob_start();
 		?>
-		<form class="evt-form" method="post" action="">
+		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Código</h2><p class="evt-sub">Se aplica a todas las páginas de este evento, y nunca sale de él.</p></div></div>
+		<form class="evt-form" method="post" action="" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_CODE ), EventWorkspace::nonce_name( EventWorkspace::PANEL_CODE ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_CODE ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
 
-			<p>
-				Lo que escriba aquí se aplica a <strong>todas</strong> las páginas de este evento: a la
-				portada y a cada una de sus secciones. Nunca sale del evento, así que no afecta al resto
-				del sitio. Cada sección puede añadir además el suyo propio, que va después de este y sirve
-				para afinarlo.
-			</p>
+			<p class="evt-ayuda">Cada página puede añadir además el suyo, que va después de este y sirve para afinarlo.</p>
 
 			<?php echo $bloque_css; ?>
 			<?php echo $bloque_js; ?>
 
 			<?php if ( $css_ok || $js_ok ) : ?>
-				<p class="evt-acciones">
-					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar el código</button>
-				</p>
+				<?php echo PanelParts::save_bar( 'Guardar el código' ); ?>
 			<?php endif; ?>
 		</form>
 		<?php
@@ -15877,20 +15956,16 @@ final class EventWorkspaceView {
 
 		ob_start();
 		echo self::head( $m ); 
-		echo self::tabs( $m ); 
+		echo '<div class="evt-taller">';
+		echo self::menu( $m ); 
+		echo '<div class="evt-taller__panel">';
 
-		if ( '' !== (string) $flash['texto'] ) {
+
+		if ( '' !== (string) $flash['texto'] && ! ( true === $m['drawer'] && 'error' === (string) $flash['tipo'] ) ) {
 			echo Shell::notice( (string) $flash['tipo'], (string) $flash['texto'] ); 
 		}
 
 		echo self::archived_notice( $m ); 
-
-
-
-
-		if ( EventWorkspace::PANEL_SETTINGS === $panel ) {
-			echo self::archive_switch( $m ); 
-		}
 
 
 
@@ -15906,8 +15981,6 @@ final class EventWorkspaceView {
 			echo EventSpeakersPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_PROGRAMME === $panel ) {
 			echo EventProgrammePanel::html( $m ); 
-		} elseif ( EventWorkspace::PANEL_WORKSHOPS === $panel ) {
-			echo EventWorkshopsPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_SIGNUP === $panel ) {
 			echo EventSignupPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
@@ -15927,6 +16000,15 @@ final class EventWorkspaceView {
 		if ( $cerrado ) {
 			echo '</fieldset>';
 		}
+
+
+
+
+		if ( EventWorkspace::PANEL_SETTINGS === $panel ) {
+			echo self::archive_switch( $m ); 
+		}
+
+		echo '</div></div>';
 
 		return Shell::render( '', '', (string) ob_get_clean() );
 	}
@@ -16007,10 +16089,12 @@ final class EventWorkspaceView {
 
 		ob_start();
 		?>
-		<section class="evt-tarjeta">
+		<section class="evt-tarjeta evt-peligro">
 			<h2>Dar el evento por terminado</h2>
-			<p>Cuando ya no quede nada que tocar —los vídeos subidos, las presentaciones colgadas, las erratas corregidas—, márquelo como histórico y quedará cerrado tal y como está. Seguirá entrando a consultarlo y a exportarlo, y la página pública se verá igual que siempre; lo que ya no podrá es cambiar nada, ni de él ni de sus secciones. <strong>Para volver a abrirlo tendrá que pedírselo a quien administre el aplicativo.</strong></p>
-			<?php echo self::archive_form( $m, true ); ?>
+			<div class="evt-peligro__fila">
+				<p>Queda cerrado tal cual: se sigue consultando y exportando, y la página pública no cambia, pero ya no se edita ni él ni sus páginas. <strong>Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.</strong></p>
+				<?php echo self::archive_form( $m, true ); ?>
+			</div>
 		</section>
 		<?php
 		return (string) ob_get_clean();
@@ -16045,7 +16129,7 @@ final class EventWorkspaceView {
 			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
-			<button type="submit" class="<?php echo esc_attr( Assets::button_class() ); ?>" title="<?php echo esc_attr( $rotulo ); ?>"><?php echo esc_html( $rotulo ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( $marcar ? 'evt-btn btn btn-outline-danger evt-btn-borrar' : Assets::button_class() ); ?>"><?php echo esc_html( $marcar ? $rotulo . '…' : $rotulo ); ?></button>
 		</form>
 		<?php
 		return (string) ob_get_clean();
@@ -16058,20 +16142,31 @@ final class EventWorkspaceView {
 
 
 	private static function head( array $m ): string {
+		$lugar = array_filter( array( (string) ( $m['dates_text'] ?? '' ), (string) ( $m['venue_text'] ?? '' ), 'Ámbito: ' . self::area_names( (array) $m['area_ids'] ) ) );
+
 		ob_start();
 		?>
-		<p class="evt-sub"><a href="<?php echo esc_url( (string) $m['events_url'] ); ?>">&larr; Todos los eventos</a></p>
-		<div class="evt-h1-fila">
-			<h1 class="evt-h1"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></h1>
-			<span class="<?php echo esc_attr( Assets::state_class( (string) $m['state'] ) ); ?>"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
-			<span class="<?php echo esc_attr( 'publish' === (string) $m['status'] ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ); ?>"><?php echo esc_html( (string) $m['status_label'] ); ?></span>
-			<span class="evt-acciones">
-				<?php if ( '' !== (string) $m['view_url'] ) : ?>
-					<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['view_url'] ); ?>">Ver la página</a>
-				<?php endif; ?>
-			</span>
-		</div>
-		<p class="evt-sub"><?php echo esc_html( 'Ámbito: ' . self::area_names( (array) $m['area_ids'] ) ); ?></p>
+		<header class="evt-taller-cabecera">
+			<div>
+				<nav class="evt-migas" aria-label="Migas de pan">
+					<a href="<?php echo esc_url( (string) $m['events_url'] ); ?>">Eventos</a>
+					<span aria-hidden="true">›</span>
+					<span aria-current="page"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></span>
+				</nav>
+				<div class="evt-h1-fila">
+					<h1 class="evt-h1"><?php echo esc_html( '' !== (string) $m['title'] ? (string) $m['title'] : 'Evento sin título' ); ?></h1>
+					<span class="<?php echo esc_attr( Assets::state_class( (string) $m['state'] ) ); ?>"><?php echo esc_html( (string) $m['state_label'] ); ?></span>
+					<span class="<?php echo esc_attr( 'publish' === (string) $m['status'] ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ); ?>"><?php echo esc_html( (string) $m['status_label'] ); ?></span>
+					<?php if ( true === $m['archived'] ) : ?>
+						<span class="evt-state evt-state-archived">Histórico</span>
+					<?php endif; ?>
+				</div>
+				<p class="evt-sub"><?php echo esc_html( implode( ' · ', $lugar ) ); ?></p>
+			</div>
+			<?php if ( '' !== (string) $m['view_url'] ) : ?>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( (string) $m['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $m['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+			<?php endif; ?>
+		</header>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -16082,26 +16177,33 @@ final class EventWorkspaceView {
 
 
 
-	private static function tabs( array $m ): string {
+	private static function menu( array $m ): string {
 		$activa = (string) $m['panel'];
+		$grupos = array();
+		foreach ( (array) $m['panels'] as $clave => $panel ) {
+			$grupos[ (string) ( $panel['group'] ?? '' ) ][ $clave ] = $panel;
+		}
 
 		ob_start();
 		?>
-		<nav class="evt-tabs" aria-label="Paneles del evento">
-			<div class="evt-tabs-fila">
-				<?php foreach ( (array) $m['panels'] as $clave => $panel ) : ?>
-					<a class="evt-tab<?php echo $clave === $activa ? ' evt-tab-on' : ''; ?>"
-						<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>
-						href="<?php echo esc_url( (string) $panel['url'] ); ?>"><?php echo esc_html( (string) $panel['label'] ); ?>
-						<?php
-
-
-						if ( null !== ( $panel['count'] ?? null ) ) :
-							?>
-							<span class="evt-tab-n"><?php echo esc_html( (string) (int) $panel['count'] ); ?></span>
-						<?php endif; ?></a>
-				<?php endforeach; ?>
-			</div>
+		<nav class="evt-taller__menu" aria-label="Partes del evento">
+			<?php foreach ( $grupos as $grupo => $paneles ) : ?>
+				<p class="evt-taller__grupo"><?php echo esc_html( $grupo ); ?></p>
+				<ul class="evt-taller__lista">
+					<?php foreach ( $paneles as $clave => $panel ) : ?>
+						<li>
+							<a class="evt-taller__enlace<?php echo $clave === $activa ? ' evt-taller__enlace--on' : ''; ?>"
+								<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>
+								href="<?php echo esc_url( (string) $panel['url'] ); ?>">
+								<span><?php echo esc_html( (string) $panel['label'] ); ?></span>
+								<?php if ( null !== ( $panel['count'] ?? null ) ) : ?>
+									<span class="evt-tab-n"><?php echo esc_html( (string) (int) $panel['count'] ); ?></span>
+								<?php endif; ?>
+							</a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endforeach; ?>
 		</nav>
 		<?php
 		return (string) ob_get_clean();
@@ -21695,6 +21797,222 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-tabla__titulo { font-weight: 600; }
 .evt-tabla tr[hidden] { display: none; }
 
+
+/* --- el taller del evento: cabecera, menú lateral y paneles -------------- */
+
+/*
+ * Un menú lateral en tres grupos en vez de nueve pestañas en fila: lo que se
+ * publica, quién se apunta y cómo es el evento (ADR-0041).
+ */
+.evt-taller-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.evt-taller-cabecera .evt-sub { margin-bottom: 0; }
+.evt-migas { display: flex; gap: 6px; margin-bottom: 4px; font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-migas a { color: var(--evt-pri); }
+
+.evt-taller {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.evt-taller__menu {
+  position: sticky;
+  top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px);
+  padding: 14px 10px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r);
+}
+.evt-taller__grupo {
+  margin: 12px 10px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--evt-texto-2);
+}
+.evt-taller__grupo:first-child { margin-top: 0; }
+.evt-taller__lista { margin: 0 0 6px; padding: 0; list-style: none; }
+.evt-taller__enlace {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--evt-texto);
+  text-decoration: none;
+}
+.evt-taller__enlace:hover { background: var(--evt-sup-2); color: var(--evt-pri); text-decoration: none; }
+.evt-taller__enlace--on,
+.evt-taller__enlace--on:hover { background: var(--evt-pri); color: #fff; font-weight: 600; }
+.evt-taller__enlace--on .evt-tab-n { background: rgba(255, 255, 255, .22); color: #fff; }
+.evt-taller__panel { min-width: 0; }
+
+.evt-panel-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.evt-panel-cabecera .evt-sub { margin: 2px 0 0; }
+.evt-panel-titulo { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.evt-opcional { font-weight: 400; color: var(--evt-texto-2); }
+.evt-ayuda { margin: 6px 0 12px; font-size: 13px; color: var(--evt-texto-2); max-width: 68ch; }
+.evt-dos-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 16px; }
+.evt-dos-columnas > .evt-tarjeta { margin: 0 0 16px; }
+.evt-form-fila--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.evt-form-fila--ancha { grid-template-columns: 2fr 1fr; }
+.evt-tarjeta__titulo { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+
+/* Interruptores: con Bootstrap son `form-switch`; sin él, una casilla. */
+.evt-form .form-check-label { display: inline; margin: 0; font-weight: 500; }
+.evt-interruptor { display: flex; align-items: center; gap: 8px; min-height: 36px; margin: 0 0 8px; }
+.evt-sin-bootstrap .evt-interruptor input { width: 20px; height: 20px; margin: 0; }
+
+/* Preguntas y bloques que se tocan poco: plegados, con un resumen. */
+.evt-pregunta { border-top: 1px solid var(--evt-linea); }
+.evt-pregunta summary,
+.evt-plegable > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.evt-pregunta summary::-webkit-details-marker,
+.evt-plegable > summary::-webkit-details-marker { display: none; }
+.evt-pregunta summary::before,
+.evt-plegable > summary::before { content: "›"; display: inline-block; width: 1em; color: var(--evt-texto-2); transition: transform .15s; }
+.evt-pregunta[open] > summary::before,
+.evt-plegable[open] > summary::before { transform: rotate(90deg); }
+.evt-pregunta__rotulo { font-weight: 600; }
+.evt-pregunta__tipo { font-size: 13px; color: var(--evt-texto-2); }
+.evt-pregunta--nueva summary { color: var(--evt-pri); }
+.evt-pregunta__cuerpo { padding: 0 0 12px 1em; }
+.evt-plegable > summary { padding: 0; font-weight: 700; }
+.evt-plegable[open] > summary { margin-bottom: 12px; }
+
+/* La barra de guardar, pegada abajo mientras se baja por el formulario. */
+.evt-guardar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 8px -12px 0;
+  padding: 12px;
+  background: var(--evt-sup);
+  border: 1px solid var(--evt-linea);
+  border-radius: var(--evt-r) var(--evt-r) 0 0;
+  box-shadow: 0 -4px 16px rgba(16, 24, 40, .08);
+}
+.evt-guardar__estado { font-size: 13.5px; color: var(--evt-texto-2); }
+.evt-guardar--sucio .evt-guardar__estado { color: var(--evt-esp); font-weight: 600; }
+.evt-guardar__botones { display: flex; gap: 8px; margin-left: auto; }
+
+/* Lo que no tiene vuelta atrás, al final y en rojo. */
+.evt-peligro { border-color: #f1c7c3; background: #fffafa; }
+.evt-peligro > h2 { color: var(--evt-mal); }
+.evt-peligro__fila { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.evt-peligro__fila p { margin: 0; font-size: 14px; color: var(--evt-texto-2); }
+.evt-peligro__fila .evt-accion { flex-shrink: 0; }
+
+/* Apariencia: los ajustes a la izquierda y la muestra, fija, a la derecha. */
+.evt-apariencia { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+.evt-apariencia__muestra { position: sticky; top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px); }
+.evt-apariencia__muestra .evt-preview { margin: 0; }
+.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px; }
+.evt-imagenes > * { margin: 0; padding: 12px; border: 1px solid var(--evt-linea); border-radius: 10px; }
+
+/* Plazas de un taller, dentro de su fila del programa. */
+.evt-plazas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-plazas__barra { display: inline-block; width: 110px; height: 6px; overflow: hidden; border-radius: 3px; background: var(--evt-linea); }
+.evt-plazas__barra > span { display: block; height: 100%; background: var(--evt-pri); }
+
+/* El panel lateral: añadir o editar una fila sin perder la lista de vista. */
+.evt-cajon-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(20, 28, 38, .45);
+}
+.evt-cajon {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100001;
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 100%);
+  background: var(--evt-sup);
+  box-shadow: var(--evt-e3);
+}
+.evt-cajon__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--evt-linea);
+}
+.evt-cajon__titulo { margin: 0; font-size: 18px; font-weight: 700; }
+.evt-cajon__cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--evt-texto);
+  font-size: 26px;
+  line-height: 1;
+  text-decoration: none;
+}
+.evt-cajon__cerrar:hover { background: var(--evt-sup-2); text-decoration: none; }
+.evt-cajon__cuerpo { flex: 1 1 auto; overflow-y: auto; padding: 20px; }
+.evt-cajon .evt-form-fila { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+body:has(.evt-cajon) { overflow: hidden; }
+
+@media (max-width: 900px) {
+  .evt-taller { grid-template-columns: 1fr; }
+  .evt-taller__menu { position: static; }
+  .evt-apariencia { grid-template-columns: 1fr; }
+  .evt-apariencia__muestra { position: static; }
+  .evt-peligro__fila { flex-direction: column; align-items: flex-start; }
+  .evt-form-fila--2, .evt-form-fila--ancha { grid-template-columns: 1fr; }
+}
+
+/* Los grupos de botones y los interruptores, con el azul del aplicativo. */
+.evt-segmentos .btn-outline-primary {
+  --bs-btn-color: var(--evt-pri);
+  --bs-btn-border-color: var(--evt-pri);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--evt-pri);
+  --bs-btn-hover-border-color: var(--evt-pri);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--evt-pri);
+  --bs-btn-active-border-color: var(--evt-pri);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.evt-app .form-check-input:checked { background-color: var(--evt-pri); border-color: var(--evt-pri); }
+.evt-app .form-check-input:focus { border-color: var(--evt-pri); box-shadow: 0 0 0 .25rem rgba(27, 79, 138, .25); }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -22131,7 +22449,22 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
  * hoja del aplicativo: todo lo que necesita está aquí, bajo `.evt-linea`,
  * y no toca nada de fuera.
  */
-.evt-linea {
+/* Doble clase: el diseño «constrained» del tema limita `max-width` con la
+   misma especificidad y llega después. */
+.evt-linea.evt-linea {
+	/*
+	 * Una línea del tiempo necesita ancho: se sale de la columna estrecha
+	 * del tema hasta los bordes de la ventana, con su propio margen.
+	 */
+	position: relative;
+	left: 50%;
+	width: 100vw;
+	max-width: 100vw;
+	/* `transform` y no márgenes negativos: el diseño «constrained» de los
+	   temas de bloques fuerza sus márgenes con `!important`. */
+	transform: translateX(-50%);
+	padding: 0 max(16px, calc((100vw - 1240px) / 2));
+	box-sizing: border-box;
 	--evt-linea-azul: #1d4e89;
 	--evt-linea-azul-claro: #dbe5f1;
 	--evt-linea-gris: #c5ccd5;
@@ -23152,6 +23485,101 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 		var lista = e.target.closest ? e.target.closest( \'[data-evt-autoenvio]\' ) : null;
 		if ( lista && lista.form ) {
 			lista.form.submit();
+		}
+	} );
+
+	/* --- 8. El panel lateral: se cierra con Escape ------------------------ */
+
+	/*
+	 * La hoja del aplicativo se centra con `transform`, y eso hace de ella la
+	 * caja de referencia de todo lo `position: fixed` que lleve dentro: el
+	 * panel quedaría debajo de la cabecera y del pie. Se lleva al final del
+	 * `<body>`, que es donde un panel sobre la página tiene que estar.
+	 */
+	function sacarCajon() {
+		var piezas = document.querySelectorAll( \'[data-evt-cajon], .evt-cajon-fondo\' );
+		Array.prototype.forEach.call( piezas, function ( pieza ) {
+			document.body.appendChild( pieza );
+		} );
+		var primero = document.querySelector( \'[data-evt-cajon] input:not([type=hidden]), [data-evt-cajon] textarea, [data-evt-cajon] select\' );
+		if ( primero ) {
+			primero.focus();
+		}
+	}
+	if ( \'loading\' === document.readyState ) {
+		document.addEventListener( \'DOMContentLoaded\', sacarCajon );
+	} else {
+		sacarCajon();
+	}
+
+	document.addEventListener( \'keydown\', function ( e ) {
+		if ( \'Escape\' !== e.key ) {
+			return;
+		}
+		var cajon = document.querySelector( \'[data-evt-cajon]\' );
+		if ( cajon && cajon.getAttribute( \'data-evt-cajon-cerrar\' ) ) {
+			window.location.href = cajon.getAttribute( \'data-evt-cajon-cerrar\' );
+		}
+	} );
+
+	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */
+
+	/*
+	 * `data-evt-cambios` en el formulario. Al tocar un campo, la barra dice
+	 * «Hay cambios sin guardar» y enseña «Descartar», que vuelve el formulario
+	 * a como estaba. Salir de la página con cambios pide confirmación. Sin
+	 * guion, la barra es solo el botón de guardar.
+	 */
+	function marcar( form, sucio ) {
+		var barra = form.querySelector( \'[data-evt-guardar]\' );
+		if ( ! barra ) {
+			return;
+		}
+		form.evtSucio = sucio;
+		barra.classList.toggle( \'evt-guardar--sucio\', sucio );
+		var estado = barra.querySelector( \'[data-evt-guardar-estado]\' );
+		if ( estado ) {
+			estado.textContent = sucio ? \'Hay cambios sin guardar\' : \'\';
+		}
+		var descartar = barra.querySelector( \'[data-evt-guardar-descartar]\' );
+		if ( descartar ) {
+			descartar.hidden = ! sucio;
+		}
+	}
+
+	function alCambiar( e ) {
+		var form = e.target.closest ? e.target.closest( \'form[data-evt-cambios]\' ) : null;
+		if ( form ) {
+			marcar( form, true );
+		}
+	}
+	document.addEventListener( \'input\', alCambiar );
+	document.addEventListener( \'change\', alCambiar );
+
+	document.addEventListener( \'reset\', function ( e ) {
+		var form = e.target;
+		if ( form && form.matches && form.matches( \'form[data-evt-cambios]\' ) ) {
+			window.setTimeout( function () {
+				marcar( form, false );
+				form.dispatchEvent( new Event( \'evt:descartado\', { bubbles: true } ) );
+			}, 0 );
+		}
+	} );
+
+	document.addEventListener( \'submit\', function ( e ) {
+		if ( e.target && e.target.matches && e.target.matches( \'form[data-evt-cambios]\' ) ) {
+			e.target.evtSucio = false;
+		}
+	}, true );
+
+	window.addEventListener( \'beforeunload\', function ( e ) {
+		var formularios = document.querySelectorAll( \'form[data-evt-cambios]\' );
+		for ( var i = 0; i < formularios.length; i++ ) {
+			if ( formularios[ i ].evtSucio ) {
+				e.preventDefault();
+				e.returnValue = \'\';
+				return;
+			}
 		}
 	} );
 }() );

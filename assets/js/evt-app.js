@@ -696,4 +696,99 @@
 			lista.form.submit();
 		}
 	} );
+
+	/* --- 8. El panel lateral: se cierra con Escape ------------------------ */
+
+	/*
+	 * La hoja del aplicativo se centra con `transform`, y eso hace de ella la
+	 * caja de referencia de todo lo `position: fixed` que lleve dentro: el
+	 * panel quedaría debajo de la cabecera y del pie. Se lleva al final del
+	 * `<body>`, que es donde un panel sobre la página tiene que estar.
+	 */
+	function sacarCajon() {
+		var piezas = document.querySelectorAll( '[data-evt-cajon], .evt-cajon-fondo' );
+		Array.prototype.forEach.call( piezas, function ( pieza ) {
+			document.body.appendChild( pieza );
+		} );
+		var primero = document.querySelector( '[data-evt-cajon] input:not([type=hidden]), [data-evt-cajon] textarea, [data-evt-cajon] select' );
+		if ( primero ) {
+			primero.focus();
+		}
+	}
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', sacarCajon );
+	} else {
+		sacarCajon();
+	}
+
+	document.addEventListener( 'keydown', function ( e ) {
+		if ( 'Escape' !== e.key ) {
+			return;
+		}
+		var cajon = document.querySelector( '[data-evt-cajon]' );
+		if ( cajon && cajon.getAttribute( 'data-evt-cajon-cerrar' ) ) {
+			window.location.href = cajon.getAttribute( 'data-evt-cajon-cerrar' );
+		}
+	} );
+
+	/* --- 9. La barra de guardar: avisa de los cambios sin guardar --------- */
+
+	/*
+	 * `data-evt-cambios` en el formulario. Al tocar un campo, la barra dice
+	 * «Hay cambios sin guardar» y enseña «Descartar», que vuelve el formulario
+	 * a como estaba. Salir de la página con cambios pide confirmación. Sin
+	 * guion, la barra es solo el botón de guardar.
+	 */
+	function marcar( form, sucio ) {
+		var barra = form.querySelector( '[data-evt-guardar]' );
+		if ( ! barra ) {
+			return;
+		}
+		form.evtSucio = sucio;
+		barra.classList.toggle( 'evt-guardar--sucio', sucio );
+		var estado = barra.querySelector( '[data-evt-guardar-estado]' );
+		if ( estado ) {
+			estado.textContent = sucio ? 'Hay cambios sin guardar' : '';
+		}
+		var descartar = barra.querySelector( '[data-evt-guardar-descartar]' );
+		if ( descartar ) {
+			descartar.hidden = ! sucio;
+		}
+	}
+
+	function alCambiar( e ) {
+		var form = e.target.closest ? e.target.closest( 'form[data-evt-cambios]' ) : null;
+		if ( form ) {
+			marcar( form, true );
+		}
+	}
+	document.addEventListener( 'input', alCambiar );
+	document.addEventListener( 'change', alCambiar );
+
+	document.addEventListener( 'reset', function ( e ) {
+		var form = e.target;
+		if ( form && form.matches && form.matches( 'form[data-evt-cambios]' ) ) {
+			window.setTimeout( function () {
+				marcar( form, false );
+				form.dispatchEvent( new Event( 'evt:descartado', { bubbles: true } ) );
+			}, 0 );
+		}
+	} );
+
+	document.addEventListener( 'submit', function ( e ) {
+		if ( e.target && e.target.matches && e.target.matches( 'form[data-evt-cambios]' ) ) {
+			e.target.evtSucio = false;
+		}
+	}, true );
+
+	window.addEventListener( 'beforeunload', function ( e ) {
+		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
+		for ( var i = 0; i < formularios.length; i++ ) {
+			if ( formularios[ i ].evtSucio ) {
+				e.preventDefault();
+				e.returnValue = '';
+				return;
+			}
+		}
+	} );
 }() );

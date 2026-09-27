@@ -81,11 +81,10 @@ final class EventSectionsPanel {
 
 		ob_start();
 		?>
-		<p class="evt-sub">
-			Las páginas de este evento, en el orden en que salen en su menú. Cada
-			una es una página propia con su dirección: al despublicarla desaparece
-			del menú, pero no se pierde nada de lo escrito.
-		</p>
+		<div class="evt-panel-cabecera"><div>
+			<h2 class="evt-panel-titulo">Páginas</h2>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+		</div></div>
 
 		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::add_form( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>

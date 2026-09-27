@@ -9,6 +9,7 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\ActivityInput;
+use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
 use Evt\Domain\EventState;
 use Evt\Domain\SignupQuestions;
@@ -51,6 +52,13 @@ final class EventWorkspace {
 	public const ARG_PANEL = 'panel';
 
 	/**
+	 * The three groups of the side menu, with their heading.
+	 */
+	public const GROUP_CONTENT = 'Contenido';
+	public const GROUP_SIGNUP  = 'Inscripción';
+	public const GROUP_CONFIG  = 'Configuración';
+
+	/**
 	 * Query arg carrying a satellite page, for the section form.
 	 */
 	public const ARG_SECTION = 'seccion';
@@ -91,11 +99,6 @@ final class EventWorkspace {
 	public const PANEL_PROGRAMME = 'programa';
 
 	/**
-	 * Tab with the activities that take enrolment.
-	 */
-	public const PANEL_WORKSHOPS = 'talleres';
-
-	/**
 	 * Tab with who signed up.
 	 */
 	public const PANEL_PEOPLE = 'participantes';
@@ -119,6 +122,16 @@ final class EventWorkspace {
 	 * Query arg narrowing the participants to one workshop.
 	 */
 	public const ARG_WORKSHOP = 'taller';
+
+	/**
+	 * Query var that opens the side panel to add a speaker or an activity.
+	 */
+	public const ARG_NEW = 'alta';
+
+	/**
+	 * Query var that narrows the programme to the workshops (`solo=talleres`).
+	 */
+	public const ARG_ONLY = 'solo';
 
 	/**
 	 * Tab with the custom CSS and JavaScript of the event.
@@ -338,18 +351,20 @@ final class EventWorkspace {
 	 * @return array<string, array{label:string, url:string}>
 	 */
 	public static function panels( int $event_id, int $user_id = 0, ?array $people = null ): array {
+		// Tres grupos y no nueve pestañas en fila: lo que se publica, quién se
+		// apunta y cómo es el evento (ADR-0041). Los talleres viven dentro del
+		// programa: un taller es una actividad con plazas.
 		$rotulos = array(
-			self::PANEL_SECTIONS  => 'Páginas',
-			self::PANEL_SPEAKERS  => 'Ponentes',
-			self::PANEL_PROGRAMME => 'Programa',
-			self::PANEL_WORKSHOPS => 'Talleres',
-			self::PANEL_SIGNUP    => 'Inscripción',
-			self::PANEL_PEOPLE    => 'Participantes',
-			self::PANEL_SETTINGS  => 'Ajustes',
-			self::PANEL_LOOK      => 'Apariencia',
+			self::PANEL_SECTIONS  => array( 'Páginas', self::GROUP_CONTENT ),
+			self::PANEL_SPEAKERS  => array( 'Ponentes', self::GROUP_CONTENT ),
+			self::PANEL_PROGRAMME => array( 'Programa y talleres', self::GROUP_CONTENT ),
+			self::PANEL_SIGNUP    => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
+			self::PANEL_PEOPLE    => array( 'Participantes', self::GROUP_SIGNUP ),
+			self::PANEL_SETTINGS  => array( 'Datos del evento', self::GROUP_CONFIG ),
+			self::PANEL_LOOK      => array( 'Apariencia', self::GROUP_CONFIG ),
 		);
 		if ( self::may_edit_code( $user_id, $event_id ) ) {
-			$rotulos[ self::PANEL_CODE ] = 'Código';
+			$rotulos[ self::PANEL_CODE ] = array( 'Código', self::GROUP_CONFIG );
 		}
 
 		// El recuento va en la pestaña porque es lo que contesta de un vistazo
@@ -359,9 +374,10 @@ final class EventWorkspace {
 		$cuentas = self::counts( $event_id, $people );
 
 		$out = array();
-		foreach ( $rotulos as $slug => $rotulo ) {
+		foreach ( $rotulos as $slug => $datos ) {
 			$out[ $slug ] = array(
-				'label' => $rotulo,
+				'label' => $datos[0],
+				'group' => $datos[1],
 				'url'   => self::url( $event_id, $slug ),
 				'count' => $cuentas[ $slug ] ?? null,
 			);
@@ -384,7 +400,6 @@ final class EventWorkspace {
 			self::PANEL_SECTIONS  => count( self::children( $event_id ) ),
 			self::PANEL_SPEAKERS  => count( Programme::speakers( $event_id ) ),
 			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
-			self::PANEL_WORKSHOPS => count( Programme::workshops( $event_id ) ),
 			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
 			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
 		);
@@ -566,7 +581,7 @@ final class EventWorkspace {
 	private static function asked_panel(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- se comprueba en verify(); esto solo elige a dónde volver.
 		$panel = sanitize_key( wp_unslash( (string) ( $_POST[ self::ARG_PANEL ] ?? '' ) ) );
-		return in_array( $panel, array( self::PANEL_SPEAKERS, self::PANEL_PROGRAMME, self::PANEL_WORKSHOPS ), true )
+		return in_array( $panel, array( self::PANEL_SPEAKERS, self::PANEL_PROGRAMME ), true )
 			? $panel
 			: self::PANEL_SPEAKERS;
 	}
@@ -751,7 +766,7 @@ final class EventWorkspace {
 		);
 		if ( true !== $check['ok'] ) {
 			self::set_flash( 'error', ActivityInput::why( (array) $check['errors'] ) );
-			Shell::leave( $destino );
+			Shell::leave( self::reopen( $destino, $row_id ) );
 			return;
 		}
 
@@ -765,6 +780,19 @@ final class EventWorkspace {
 		self::save_photo( $id );
 		self::set_flash( 'ok', $row_id > 0 ? 'Ponente actualizado.' : 'Ponente añadido.' );
 		Shell::leave( $destino );
+	}
+
+	/**
+	 * Where to go back after a failed save: the same side panel, open again.
+	 *
+	 * @param string $destino Tab URL.
+	 * @param int    $row_id  Row being edited, 0 when adding.
+	 * @return string
+	 */
+	private static function reopen( string $destino, int $row_id ): string {
+		return $row_id > 0
+			? add_query_arg( self::ARG_ROW, (string) $row_id, $destino )
+			: add_query_arg( self::ARG_NEW, '1', $destino );
 	}
 
 	/**
@@ -795,7 +823,7 @@ final class EventWorkspace {
 		);
 		if ( true !== $check['ok'] ) {
 			self::set_flash( 'error', ActivityInput::why( (array) $check['errors'] ) );
-			Shell::leave( $destino );
+			Shell::leave( self::reopen( $destino, $row_id ) );
 			return;
 		}
 
@@ -953,25 +981,20 @@ final class EventWorkspace {
 	private static function submitted_values( array $crudo ): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
 		$intro = wp_kses_post( wp_unslash( (string) ( $_POST[ EventMetaKeys::INTRO ] ?? '' ) ) );
-		$show  = empty( $_POST[ EventMetaKeys::SIGNUP_SHOW ] ) ? '' : '1';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return array(
-			self::FIELD_TITLE             => (string) $crudo['title'],
+			self::FIELD_TITLE         => (string) $crudo['title'],
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verified the form nonce.
-			self::FIELD_AREA              => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
-			self::FIELD_TYPE              => (string) (int) self::field( self::FIELD_TYPE ),
-			self::FIELD_COURSE            => (string) (int) self::field( self::FIELD_COURSE ),
-			EventMetaKeys::TAGLINE        => self::field( EventMetaKeys::TAGLINE ),
-			EventMetaKeys::HASHTAG        => self::field( EventMetaKeys::HASHTAG ),
-			EventMetaKeys::INTRO          => $intro,
-			EventMetaKeys::START_DATE     => (string) $crudo['start_date'],
-			EventMetaKeys::END_DATE       => (string) $crudo['end_date'],
-			EventMetaKeys::VENUE          => (string) $crudo['venue'],
-			EventMetaKeys::SIGNUP_SHOW    => $show,
-			EventMetaKeys::SIGNUP_LABEL   => self::field( EventMetaKeys::SIGNUP_LABEL ),
-			EventMetaKeys::SIGNUP_URL     => self::field( EventMetaKeys::SIGNUP_URL ),
-			EventMetaKeys::SIGNUP_FORM_ID => (string) max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ),
+			self::FIELD_AREA          => implode( ',', array_map( 'sanitize_text_field', (array) wp_unslash( $_POST[ self::FIELD_AREA ] ?? array() ) ) ),
+			self::FIELD_TYPE          => (string) (int) self::field( self::FIELD_TYPE ),
+			self::FIELD_COURSE        => (string) (int) self::field( self::FIELD_COURSE ),
+			EventMetaKeys::TAGLINE    => self::field( EventMetaKeys::TAGLINE ),
+			EventMetaKeys::HASHTAG    => self::field( EventMetaKeys::HASHTAG ),
+			EventMetaKeys::INTRO      => $intro,
+			EventMetaKeys::START_DATE => (string) $crudo['start_date'],
+			EventMetaKeys::END_DATE   => (string) $crudo['end_date'],
+			EventMetaKeys::VENUE      => (string) $crudo['venue'],
 		);
 	}
 
@@ -1045,16 +1068,12 @@ final class EventWorkspace {
 	 */
 	private static function save_meta( int $event_id, array $valores, array $limpio ): void {
 		$meta = array(
-			EventMetaKeys::TAGLINE        => $valores[ EventMetaKeys::TAGLINE ],
-			EventMetaKeys::HASHTAG        => $valores[ EventMetaKeys::HASHTAG ],
-			EventMetaKeys::INTRO          => $valores[ EventMetaKeys::INTRO ],
-			EventMetaKeys::START_DATE     => (string) $limpio['start_date'],
-			EventMetaKeys::END_DATE       => (string) $limpio['end_date'],
-			EventMetaKeys::VENUE          => (string) $limpio['venue'],
-			EventMetaKeys::SIGNUP_SHOW    => $valores[ EventMetaKeys::SIGNUP_SHOW ],
-			EventMetaKeys::SIGNUP_LABEL   => $valores[ EventMetaKeys::SIGNUP_LABEL ],
-			EventMetaKeys::SIGNUP_URL     => $valores[ EventMetaKeys::SIGNUP_URL ],
-			EventMetaKeys::SIGNUP_FORM_ID => (int) $valores[ EventMetaKeys::SIGNUP_FORM_ID ],
+			EventMetaKeys::TAGLINE    => $valores[ EventMetaKeys::TAGLINE ],
+			EventMetaKeys::HASHTAG    => $valores[ EventMetaKeys::HASHTAG ],
+			EventMetaKeys::INTRO      => $valores[ EventMetaKeys::INTRO ],
+			EventMetaKeys::START_DATE => (string) $limpio['start_date'],
+			EventMetaKeys::END_DATE   => (string) $limpio['end_date'],
+			EventMetaKeys::VENUE      => (string) $limpio['venue'],
 		);
 		foreach ( $meta as $clave => $valor ) {
 			update_post_meta( $event_id, $clave, $valor );
@@ -1411,7 +1430,15 @@ final class EventWorkspace {
 		// añadir opciones, pero no el tipo ni quitar una opción (ADR-0032). La
 		// pantalla lo dice antes de que alguien lo intente.
 		$m['q_locked'] = Registrations::has_any( $event_id );
-		$m['signup']   = array(
+		// Lo que ve quien visita la página de inscripción, dicho arriba del
+		// panel: si acepta a gente ahora, y si no, por qué.
+		$cerrada            = SignupForm::closed_because( $event_id );
+		$m['signup_status'] = array(
+			'open'   => '' === $cerrada,
+			'reason' => $cerrada,
+			'public' => SignupForm::is_public( $event_id ),
+		);
+		$m['signup']        = array(
 			'open'            => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ),
 			'start'           => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true ),
 			'end'             => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true ),
@@ -1446,6 +1473,14 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
+
+		// El botón de la portada y la inscripción en otro sitio viven aquí, con
+		// el resto de la inscripción, y no en «Datos» (ADR-0041).
+		$boton = self::field( EventMetaKeys::SIGNUP_SHOW );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_SHOW, '' === $boton ? '' : '1' );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_LABEL, self::field( EventMetaKeys::SIGNUP_LABEL ) );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_URL, self::field( EventMetaKeys::SIGNUP_URL ) );
+		update_post_meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID, max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ) );
 
 		self::save_consent( $event_id );
 
@@ -1731,68 +1766,75 @@ final class EventWorkspace {
 	 */
 	private static function blank(): array {
 		return array(
-			'aviso'         => '',
-			'aviso_tipo'    => 'aviso',
-			'nuevo'         => false,
-			'event_id'      => 0,
-			'title'         => '',
-			'panel'         => self::PANEL_SECTIONS,
-			'panels'        => array(),
-			'flash'         => array(
+			'aviso'          => '',
+			'aviso_tipo'     => 'aviso',
+			'nuevo'          => false,
+			'event_id'       => 0,
+			'title'          => '',
+			'panel'          => self::PANEL_SECTIONS,
+			'panels'         => array(),
+			'flash'          => array(
 				'tipo'   => '',
 				'texto'  => '',
 				'values' => array(),
 			),
-			'can_edit'      => false,
-			'lock'          => EditLock::none(),
-			'archived'      => false,
-			'can_archive'   => false,
-			'can_unarchive' => false,
-			'can_publish'   => false,
-			'can_set_area'  => false,
-			'can_upload'    => false,
-			'can_edit_css'  => false,
-			'can_edit_js'   => false,
-			'code'          => array(
+			'can_edit'       => false,
+			'lock'           => EditLock::none(),
+			'archived'       => false,
+			'can_archive'    => false,
+			'can_unarchive'  => false,
+			'can_publish'    => false,
+			'can_set_area'   => false,
+			'can_upload'     => false,
+			'can_edit_css'   => false,
+			'can_edit_js'    => false,
+			'code'           => array(
 				'css' => '',
 				'js'  => '',
 			),
-			'state'         => '',
-			'state_label'   => '',
-			'status'        => '',
-			'status_label'  => '',
-			'area_ids'      => array(),
-			'foreign_areas' => array(),
-			'view_url'      => '',
-			'events_url'    => Shell::url( 'events' ),
-			'section_url'   => Shell::url( 'section' ),
-			'sections'      => array(),
-			'trashed'       => array(),
-			'trash'         => false,
-			'section_types' => EventMetaKeys::section_types(),
-			'values'        => array(),
-			'terms'         => array(),
-			'media'         => array(),
-			'speakers'      => array(),
-			'activities'    => array(),
-			'grid'          => array(),
-			'workshops'     => array(),
-			'venues'        => array(),
-			'kinds'         => ProgrammeMetaKeys::activity_kinds(),
-			'edit_row'      => 0,
-			'edit_values'   => array(),
-			'row_trash'     => array(),
-			'people'        => array(),
-			'people_total'  => 0,
-			'people_q'      => '',
-			'people_filter' => '',
-			'people_tags'   => array(),
-			'people_cols'   => Participants::columns(),
-			'questions'     => array(),
-			'q_types'       => RegistrationMetaKeys::question_types(),
-			'q_locked'      => false,
-			'signup'        => array(),
-			'form_id'       => 0,
+			'state'          => '',
+			'state_label'    => '',
+			'dates_text'     => '',
+			'venue_text'     => '',
+			'status'         => '',
+			'status_label'   => '',
+			'area_ids'       => array(),
+			'foreign_areas'  => array(),
+			'view_url'       => '',
+			'events_url'     => Shell::url( 'events' ),
+			'section_url'    => Shell::url( 'section' ),
+			'sections'       => array(),
+			'trashed'        => array(),
+			'trash'          => false,
+			'section_types'  => EventMetaKeys::section_types(),
+			'values'         => array(),
+			'terms'          => array(),
+			'media'          => array(),
+			'speakers'       => array(),
+			'activities'     => array(),
+			'grid'           => array(),
+			'workshops'      => array(),
+			'venues'         => array(),
+			'kinds'          => ProgrammeMetaKeys::activity_kinds(),
+			'edit_row'       => 0,
+			'edit_values'    => array(),
+			'adding'         => false,
+			'drawer'         => false,
+			'only_workshops' => false,
+			'workshop_seats' => array(),
+			'signup_status'  => array(),
+			'row_trash'      => array(),
+			'people'         => array(),
+			'people_total'   => 0,
+			'people_q'       => '',
+			'people_filter'  => '',
+			'people_tags'    => array(),
+			'people_cols'    => Participants::columns(),
+			'questions'      => array(),
+			'q_types'        => RegistrationMetaKeys::question_types(),
+			'q_locked'       => false,
+			'signup'         => array(),
+			'form_id'        => 0,
 		);
 	}
 
@@ -1858,6 +1900,8 @@ final class EventWorkspace {
 			self::meta( $event_id, EventMetaKeys::END_DATE )
 		);
 		$m['state_label']   = EventState::label( (string) $m['state'] );
+		$m['dates_text']    = DateRange::of( self::meta( $event_id, EventMetaKeys::START_DATE ), self::meta( $event_id, EventMetaKeys::END_DATE ) );
+		$m['venue_text']    = self::meta( $event_id, EventMetaKeys::VENUE );
 		$m['area_ids']      = EventAccess::post_areas( $event_id );
 		$foreign_ids        = EventAccess::can_edit_all_areas( $user_id ) ? array() : array_diff( $m['area_ids'], EventAccess::scope_areas( $user_id ) );
 		$all_labels         = EventTaxonomies::area_options( 0, true );
@@ -1891,9 +1935,11 @@ final class EventWorkspace {
 	 */
 	private static function fill_programme( array $m, int $event_id, array $inscritos ): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- lectura: qué ficha se edita y qué se busca. Mutar lleva su nonce.
-		$m['edit_row']      = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
-		$m['people_q']      = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
-		$m['people_filter'] = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
+		$m['edit_row']       = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
+		$m['adding']         = '' !== sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_NEW ] ?? '' ) ) );
+		$m['only_workshops'] = 'talleres' === sanitize_key( wp_unslash( (string) ( $_GET[ self::ARG_ONLY ] ?? '' ) ) );
+		$m['people_q']       = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
+		$m['people_filter']  = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$ponentes = Programme::speakers( $event_id );
@@ -1920,9 +1966,13 @@ final class EventWorkspace {
 			$fila = Programme::activity_row( $taller );
 			// El mismo número que hace cumplir el candado al inscribirse: se
 			// cuenta por el identificador del taller, no por su título (ADR-0033).
-			$fila['taken']    = Registrations::taken( $event_id, (int) $fila['id'] );
-			$fila['free']     = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
-			$m['workshops'][] = $fila;
+			$fila['taken']                            = Registrations::taken( $event_id, (int) $fila['id'] );
+			$fila['free']                             = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
+			$m['workshops'][]                         = $fila;
+			$m['workshop_seats'][ (int) $fila['id'] ] = array(
+				'taken' => (int) $fila['taken'],
+				'seats' => (int) $fila['seats'],
+			);
 		}
 
 		$m['grid']   = Programme::grid( $event_id );
@@ -1940,6 +1990,10 @@ final class EventWorkspace {
 		}
 
 		$m['edit_values'] = self::row_values( $event_id, (int) $m['edit_row'], (string) $m['panel'] );
+		// El formulario de alta y edición va en un panel lateral que se abre
+		// por la dirección: sin JavaScript funciona igual, y al fallar un
+		// guardado se vuelve con el panel abierto y el aviso dentro.
+		$m['drawer'] = true === $m['adding'] || array() !== $m['edit_values'];
 
 		$todos             = $inscritos;
 		$m['people_total'] = count( $todos );
