@@ -252,13 +252,14 @@ final class SignupForm {
 				'post_type'        => \Evt\PostType\EventPostType::POST_TYPE,
 				'post_parent'      => $event_id,
 				'post_status'      => 'publish',
-				'numberposts'      => -1,
+				'numberposts'      => 1,
+				'fields'           => 'ids',
 				'meta_key'         => \Evt\Meta\EventMetaKeys::SECTION_TYPE, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'       => 'inscripcion', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 				'suppress_filters' => false,
 			)
 		);
-		return is_array( $hijas ) && array() !== $hijas ? (int) $hijas[0]->ID : 0;
+		return is_array( $hijas ) && array() !== $hijas ? (int) $hijas[0] : 0;
 	}
 
 	/**

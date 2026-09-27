@@ -5491,12 +5491,22 @@ final class Shell {
 		if ( ! $post instanceof \WP_Post ) {
 			return '';
 		}
-		foreach ( self::SHORTCODES as $seccion => $codigo ) {
-			if ( has_shortcode( (string) $post->post_content, $codigo ) ) {
-				return $seccion;
+
+
+
+		static $memo = array();
+		$contenido   = (string) $post->post_content;
+		$clave       = md5( $contenido );
+		if ( ! isset( $memo[ $clave ] ) ) {
+			$memo[ $clave ] = '';
+			foreach ( self::SHORTCODES as $seccion => $codigo ) {
+				if ( has_shortcode( $contenido, $codigo ) ) {
+					$memo[ $clave ] = $seccion;
+					break;
+				}
 			}
 		}
-		return '';
+		return $memo[ $clave ];
 	}
 
 
@@ -9066,7 +9076,21 @@ final class Registrations {
 
 
 	public static function has_any( int $event_id ): bool {
-		return array() !== self::all( $event_id );
+		if ( $event_id <= 0 ) {
+			return false;
+		}
+
+		$una = get_posts(
+			array(
+				'post_type'        => RegistrationPostType::POST_TYPE,
+				'post_parent'      => $event_id,
+				'post_status'      => array( 'publish', 'private' ),
+				'numberposts'      => 1,
+				'fields'           => 'ids',
+				'suppress_filters' => false,
+			)
+		);
+		return ! empty( $una );
 	}
 
 
@@ -9303,11 +9327,21 @@ final class Registrations {
 			? (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true )
 			: 0;
 
+
+		$ocupados = array_count_values(
+			array_map(
+				static function ( \WP_Post $inscripcion ): int {
+					return (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true );
+				},
+				self::all( $event_id )
+			)
+		);
+
 		$out = array();
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$id      = (int) $taller->ID;
 			$aforo   = (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true );
-			$ocupado = self::taken( $event_id, $id );
+			$ocupado = $ocupados[ $id ] ?? 0;
 			$suyo    = $id === $mio;
 
 			if ( ! $suyo && $aforo > 0 && $ocupado >= $aforo ) {
@@ -10463,13 +10497,14 @@ final class SignupForm {
 				'post_type'        => \Evt\PostType\EventPostType::POST_TYPE,
 				'post_parent'      => $event_id,
 				'post_status'      => 'publish',
-				'numberposts'      => -1,
+				'numberposts'      => 1,
+				'fields'           => 'ids',
 				'meta_key'         => \Evt\Meta\EventMetaKeys::SECTION_TYPE, 
 				'meta_value'       => 'inscripcion', 
 				'suppress_filters' => false,
 			)
 		);
-		return is_array( $hijas ) && array() !== $hijas ? (int) $hijas[0]->ID : 0;
+		return is_array( $hijas ) && array() !== $hijas ? (int) $hijas[0] : 0;
 	}
 
 
@@ -18347,11 +18382,15 @@ final class EventView {
 			return $vacia;
 		}
 
-		$bg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
-		$fg     = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
-		$logo   = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
-		$banner = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
-		$cartel = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
+		$bg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_BG, true ) );
+		$fg       = sanitize_hex_color( (string) get_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, true ) );
+		$logo     = (int) get_post_meta( $event_id, EventMetaKeys::LOGO_ID, true );
+		$banner   = (int) get_post_meta( $event_id, EventMetaKeys::HEADER_BANNER_ID, true );
+		$cartel   = (int) get_post_meta( $event_id, EventMetaKeys::POSTER_ID, true );
+		$imagenes = array_filter( array( $logo, $banner, $cartel, (int) get_post_thumbnail_id( $event_id ) ) );
+		if ( $imagenes ) {
+			_prime_post_caches( $imagenes, false, true );
+		}
 
 		return array(
 			'bg'                => is_string( $bg ) ? $bg : '',
@@ -18496,17 +18535,24 @@ final class EventView {
 
 		$paginas = get_posts(
 			array(
-				'post_type'        => EventPostType::POST_TYPE,
-				'post_parent'      => $event_id,
-				'post_status'      => 'publish',
-				'orderby'          => 'menu_order title',
-				'order'            => 'ASC',
-				'numberposts'      => 100,
-				'suppress_filters' => false,
+				'post_type'              => EventPostType::POST_TYPE,
+				'post_parent'            => $event_id,
+				'post_status'            => 'publish',
+				'orderby'                => 'menu_order title',
+				'order'                  => 'ASC',
+				'numberposts'            => 100,
+				'suppress_filters'       => false,
+
+				'update_post_term_cache' => false,
 			)
 		);
 
 		self::$sections[ $event_id ] = is_array( $paginas ) ? $paginas : array();
+
+		$imagenes = array_filter( array_map( 'get_post_thumbnail_id', self::$sections[ $event_id ] ) );
+		if ( $imagenes ) {
+			_prime_post_caches( $imagenes, false, true );
+		}
 		return self::$sections[ $event_id ];
 	}
 }

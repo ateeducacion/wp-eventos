@@ -208,7 +208,21 @@ final class Registrations {
 	 * @return bool
 	 */
 	public static function has_any( int $event_id ): bool {
-		return array() !== self::all( $event_id );
+		if ( $event_id <= 0 ) {
+			return false;
+		}
+		// Basta con saber si hay una: no hace falta traer todas con sus metas.
+		$una = get_posts(
+			array(
+				'post_type'        => RegistrationPostType::POST_TYPE,
+				'post_parent'      => $event_id,
+				'post_status'      => array( 'publish', 'private' ),
+				'numberposts'      => 1,
+				'fields'           => 'ids',
+				'suppress_filters' => false,
+			)
+		);
+		return ! empty( $una );
 	}
 
 	/**
@@ -445,11 +459,21 @@ final class Registrations {
 			? (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true )
 			: 0;
 
+		// Se cuentan todas las plazas de una pasada, no una vuelta por taller.
+		$ocupados = array_count_values(
+			array_map(
+				static function ( \WP_Post $inscripcion ): int {
+					return (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true );
+				},
+				self::all( $event_id )
+			)
+		);
+
 		$out = array();
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$id      = (int) $taller->ID;
 			$aforo   = (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true );
-			$ocupado = self::taken( $event_id, $id );
+			$ocupado = $ocupados[ $id ] ?? 0;
 			$suyo    = $id === $mio;
 
 			if ( ! $suyo && $aforo > 0 && $ocupado >= $aforo ) {
