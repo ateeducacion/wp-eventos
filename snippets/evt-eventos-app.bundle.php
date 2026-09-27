@@ -7334,11 +7334,27 @@ final class EventList {
 
 
 
+
 	private static function with_sections( array $rows ): array {
 		$secciones = self::section_counts( array_map( 'intval', array_column( $rows, 'id' ) ) );
+		$user_id   = get_current_user_id();
 
 		foreach ( $rows as $i => $row ) {
-			$rows[ $i ]['sections'] = $secciones[ $row['id'] ] ?? 0;
+			$id       = (int) $row['id'];
+			$papelera = self::FILTER_TRASH === $row['status'];
+
+			$rows[ $i ]['sections'] = $secciones[ $id ] ?? 0;
+
+
+			$rows[ $i ]['url'] = $papelera ? '' : Shell::url( 'event', array( 'evento' => $id ) );
+
+
+
+
+			$rows[ $i ]['view_url'] = $papelera
+				? ''
+				: ( 'publish' === $row['status'] ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) );
+			$rows[ $i ]['can_pub']  = EventAccess::can_publish( $user_id, $id );
 		}
 
 		return $rows;
@@ -7442,17 +7458,6 @@ final class EventList {
 			'archived' => EventAccess::is_archived( $id ),
 			'status'   => (string) $post->post_status,
 			'sections' => 0,
-
-
-			'url'      => self::FILTER_TRASH === $post->post_status ? '' : Shell::url( 'event', array( 'evento' => $id ) ),
-
-
-
-
-			'view_url' => self::FILTER_TRASH === $post->post_status
-				? ''
-				: ( 'publish' === $post->post_status ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) ),
-			'can_pub'  => EventAccess::can_publish( get_current_user_id(), $id ),
 			'search'   => self::normalize( $titulo ),
 		);
 	}
@@ -10898,7 +10903,8 @@ final class EventWorkspace {
 
 
 
-	public static function panels( int $event_id, int $user_id = 0 ): array {
+
+	public static function panels( int $event_id, int $user_id = 0, ?array $people = null ): array {
 		$rotulos = array(
 			self::PANEL_SECTIONS  => 'Páginas',
 			self::PANEL_SPEAKERS  => 'Ponentes',
@@ -10917,7 +10923,7 @@ final class EventWorkspace {
 
 
 
-		$cuentas = self::counts( $event_id );
+		$cuentas = self::counts( $event_id, $people );
 
 		$out = array();
 		foreach ( $rotulos as $slug => $rotulo ) {
@@ -10936,7 +10942,8 @@ final class EventWorkspace {
 
 
 
-	private static function counts( int $event_id ): array {
+
+	private static function counts( int $event_id, ?array $people = null ): array {
 		if ( $event_id <= 0 ) {
 			return array();
 		}
@@ -10946,7 +10953,7 @@ final class EventWorkspace {
 			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
 			self::PANEL_WORKSHOPS => count( Programme::workshops( $event_id ) ),
 			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
-			self::PANEL_PEOPLE    => count( Participants::rows( $event_id ) ),
+			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
 		);
 	}
 
@@ -12393,9 +12400,13 @@ final class EventWorkspace {
 
 	private static function fill( array $m, \WP_Post $evento, int $user_id, string $pedido ): array {
 		$event_id = (int) $evento->ID;
-		$paneles  = self::panels( $event_id, $user_id );
-		$css_ok   = EventAccess::can_edit_custom_css( $user_id, $event_id );
-		$js_ok    = EventAccess::can_edit_custom_js( $user_id, $event_id );
+
+
+
+		$inscritos = Participants::rows( $event_id );
+		$paneles   = self::panels( $event_id, $user_id, $inscritos );
+		$css_ok    = EventAccess::can_edit_custom_css( $user_id, $event_id );
+		$js_ok     = EventAccess::can_edit_custom_js( $user_id, $event_id );
 
 		$m['event_id'] = $event_id;
 		$m['title']    = (string) $evento->post_title;
@@ -12455,7 +12466,7 @@ final class EventWorkspace {
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
 
-		return self::fill_signup( self::fill_programme( $m, $event_id ), $event_id );
+		return self::fill_signup( self::fill_programme( $m, $event_id, $inscritos ), $event_id );
 	}
 
 
@@ -12470,14 +12481,21 @@ final class EventWorkspace {
 
 
 
-	private static function fill_programme( array $m, int $event_id ): array {
+
+	private static function fill_programme( array $m, int $event_id, array $inscritos ): array {
 
 		$m['edit_row']      = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
 		$m['people_q']      = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
 		$m['people_filter'] = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
 
 
-		foreach ( Programme::speakers( $event_id ) as $indice => $ponente ) {
+		$ponentes = Programme::speakers( $event_id );
+
+		$fotos = array_filter( array_map( 'get_post_thumbnail_id', $ponentes ) );
+		if ( $fotos ) {
+			_prime_post_caches( $fotos, false, true );
+		}
+		foreach ( $ponentes as $indice => $ponente ) {
 			$fila            = Programme::speaker_row( $ponente );
 			$fila['first']   = 0 === $indice;
 			$fila['last']    = false;
@@ -12491,7 +12509,6 @@ final class EventWorkspace {
 		foreach ( Programme::activities( $event_id ) as $actividad ) {
 			$m['activities'][] = Programme::activity_row( $actividad );
 		}
-		$inscritos = Participants::rows( $event_id );
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$fila = Programme::activity_row( $taller );
 

@@ -340,11 +340,12 @@ final class EventWorkspace {
 	 * activa mirando esta lista, tampoco la abre escribiendo la dirección a
 	 * mano —cae en «Secciones»—.
 	 *
-	 * @param int $event_id Event post ID.
-	 * @param int $user_id  Who is looking; 0 leaves out anything conditional.
+	 * @param int                                    $event_id Event post ID.
+	 * @param int                                    $user_id  Who is looking; 0 leaves out anything conditional.
+	 * @param array<int, array<string, string>>|null $people   Participant rows when the caller already has them.
 	 * @return array<string, array{label:string, url:string}>
 	 */
-	public static function panels( int $event_id, int $user_id = 0 ): array {
+	public static function panels( int $event_id, int $user_id = 0, ?array $people = null ): array {
 		$rotulos = array(
 			self::PANEL_SECTIONS  => 'Páginas',
 			self::PANEL_SPEAKERS  => 'Ponentes',
@@ -363,7 +364,7 @@ final class EventWorkspace {
 		// «¿le falta algo a este evento?», que es la pregunta con la que se
 		// abre esta pantalla. Cero se pinta igual que cualquier otro número:
 		// esconderlo dejaría la pestaña indistinguible de una sin datos.
-		$cuentas = self::counts( $event_id );
+		$cuentas = self::counts( $event_id, $people );
 
 		$out = array();
 		foreach ( $rotulos as $slug => $rotulo ) {
@@ -379,10 +380,11 @@ final class EventWorkspace {
 	/**
 	 * How many things each tab has, for the little number beside its name.
 	 *
-	 * @param int $event_id Event post ID.
+	 * @param int                                    $event_id Event post ID.
+	 * @param array<int, array<string, string>>|null $people   Participant rows when the caller already has them.
 	 * @return array<string, int>
 	 */
-	private static function counts( int $event_id ): array {
+	private static function counts( int $event_id, ?array $people = null ): array {
 		if ( $event_id <= 0 ) {
 			return array();
 		}
@@ -392,7 +394,7 @@ final class EventWorkspace {
 			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
 			self::PANEL_WORKSHOPS => count( Programme::workshops( $event_id ) ),
 			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
-			self::PANEL_PEOPLE    => count( Participants::rows( $event_id ) ),
+			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
 		);
 	}
 
@@ -1839,9 +1841,13 @@ final class EventWorkspace {
 	 */
 	private static function fill( array $m, \WP_Post $evento, int $user_id, string $pedido ): array {
 		$event_id = (int) $evento->ID;
-		$paneles  = self::panels( $event_id, $user_id );
-		$css_ok   = EventAccess::can_edit_custom_css( $user_id, $event_id );
-		$js_ok    = EventAccess::can_edit_custom_js( $user_id, $event_id );
+		// La lista de participantes es lo más caro del taller —pasa por el
+		// filtro y lee cada inscripción entera—: se construye una vez y la
+		// usan el recuento de la pestaña y la propia pestaña.
+		$inscritos = Participants::rows( $event_id );
+		$paneles   = self::panels( $event_id, $user_id, $inscritos );
+		$css_ok    = EventAccess::can_edit_custom_css( $user_id, $event_id );
+		$js_ok     = EventAccess::can_edit_custom_js( $user_id, $event_id );
 
 		$m['event_id'] = $event_id;
 		$m['title']    = (string) $evento->post_title;
@@ -1901,7 +1907,7 @@ final class EventWorkspace {
 			'featured'      => (int) get_post_thumbnail_id( $event_id ),
 		);
 
-		return self::fill_signup( self::fill_programme( $m, $event_id ), $event_id );
+		return self::fill_signup( self::fill_programme( $m, $event_id, $inscritos ), $event_id );
 	}
 
 	/**
@@ -1912,18 +1918,25 @@ final class EventWorkspace {
 	 * caminos por pestaña es la clase de ahorro que se paga en el primer fallo
 	 * que solo aparece en una de ellas.
 	 *
-	 * @param array<string, mixed> $m        Model so far.
-	 * @param int                  $event_id Event post ID.
+	 * @param array<string, mixed>              $m         Model so far.
+	 * @param int                               $event_id  Event post ID.
+	 * @param array<int, array<string, string>> $inscritos Participant rows.
 	 * @return array<string, mixed>
 	 */
-	private static function fill_programme( array $m, int $event_id ): array {
+	private static function fill_programme( array $m, int $event_id, array $inscritos ): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- lectura: qué ficha se edita y qué se busca. Mutar lleva su nonce.
 		$m['edit_row']      = absint( wp_unslash( $_GET[ self::ARG_ROW ] ?? 0 ) );
 		$m['people_q']      = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_Q ] ?? '' ) ) );
 		$m['people_filter'] = sanitize_text_field( wp_unslash( (string) ( $_GET[ self::ARG_WORKSHOP ] ?? '' ) ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		foreach ( Programme::speakers( $event_id ) as $indice => $ponente ) {
+		$ponentes = Programme::speakers( $event_id );
+		// Una consulta para todas las fotos, no dos por ponente.
+		$fotos = array_filter( array_map( 'get_post_thumbnail_id', $ponentes ) );
+		if ( $fotos ) {
+			_prime_post_caches( $fotos, false, true );
+		}
+		foreach ( $ponentes as $indice => $ponente ) {
 			$fila            = Programme::speaker_row( $ponente );
 			$fila['first']   = 0 === $indice;
 			$fila['last']    = false;
@@ -1937,7 +1950,6 @@ final class EventWorkspace {
 		foreach ( Programme::activities( $event_id ) as $actividad ) {
 			$m['activities'][] = Programme::activity_row( $actividad );
 		}
-		$inscritos = Participants::rows( $event_id );
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$fila = Programme::activity_row( $taller );
 			// Las plazas ocupadas se cuentan por el título del taller, que es lo

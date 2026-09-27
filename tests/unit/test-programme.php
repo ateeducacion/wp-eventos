@@ -584,6 +584,30 @@ class Test_Programme extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La pestaña «Participantes» pide la lista una sola vez, y su número y su
+	 * contenido salen de esa misma lista.
+	 */
+	public function test_the_people_list_is_built_once_per_view() {
+		$area   = $this->area( 'Una' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+		$this->acting_as( $uid );
+
+		$llamadas = 0;
+		$contar   = static function ( array $filas ) use ( &$llamadas ): array {
+			++$llamadas;
+			return $filas;
+		};
+		add_filter( \Evt\PublicFront\Participants::HOOK, $contar, 99 );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $evento;
+		$m                                 = EventWorkspace::model();
+		remove_filter( \Evt\PublicFront\Participants::HOOK, $contar, 99 );
+
+		$this->assertSame( 1, $llamadas );
+		$this->assertSame( $m['people_total'], $m['panels'][ EventWorkspace::PANEL_PEOPLE ]['count'] );
+	}
+
+	/**
 	 * Guardar un ponente desde la pantalla, con su nonce, y volver a su pestaña.
 	 */
 	public function test_the_screen_saves_a_speaker() {
