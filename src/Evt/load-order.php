@@ -73,6 +73,8 @@ return array(
 	'PublicFront/EventView.php',
 	'PublicFront/View/EventChrome.php',
 	'PublicFront/Home.php',
+	'PublicFront/View/TimelineView.php',
+	'PublicFront/Timeline.php',
 	'Admin/EventAdmin.php',
 	'Admin/Settings.php',
 	'App.php',
