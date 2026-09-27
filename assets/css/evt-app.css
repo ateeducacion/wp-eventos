@@ -1004,8 +1004,35 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   font: inherit;
 }
 .evt-segmentos { display: inline-flex; }
-/* La cifra de cada filtro, separada y más suave que el rótulo. */
-.evt-segmento__cifra { margin-left: 0.4em; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.evt-segmento svg { flex: none; margin-right: 0.35em; vertical-align: -0.2em; }
+/* Los filtros de estado del listado: fichas sueltas, esquinas rectas, su
+   número en una pastilla suave y la activa rellena. Igual con Bootstrap o sin él. */
+.evt-fichas { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+.evt-fichas__una {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  color: #212529;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+.evt-fichas__una:hover { border-color: var(--evt-pri); color: var(--evt-pri); }
+.evt-fichas__una.is-active { border-color: var(--evt-pri); background: var(--evt-pri); color: #fff; font-weight: 600; }
+.evt-fichas__cifra {
+  min-width: 1.9em;
+  padding: 0.15em 0.5em;
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.evt-fichas__una.is-active .evt-fichas__cifra { background: rgba(255, 255, 255, 0.2); color: #fff; }
 .evt-sin-bootstrap .evt-segmento {
   display: inline-flex;
   align-items: center;

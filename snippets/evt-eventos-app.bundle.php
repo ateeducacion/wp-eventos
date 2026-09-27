@@ -6595,16 +6595,19 @@ final class Shell {
 	public static function icon( string $nombre ): string {
 		$caminos = array(
 
-			'lapiz'     => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
+			'lapiz'      => '<path fill="currentColor" d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8.4 17.6l-3.9.9.9-3.9L16.5 3.5Z"/>',
 
-			'ojo'       => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
+			'ojo'        => '<path fill="currentColor" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>',
 
-			'papelera'  => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
+			'papelera'   => '<path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9Zm4 2v9h1.5v-9H10Zm3.5 0v9H15v-9h-1.5Z"/>',
 
-			'subir'     => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
-			'bajar'     => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
+			'subir'      => '<path fill="currentColor" d="M12 4.5 18.5 11H14v8.5h-4V11H5.5L12 4.5Z"/>',
+			'bajar'      => '<path fill="currentColor" d="M12 19.5 5.5 13H10V4.5h4V13h4.5L12 19.5Z"/>',
 
-			'restaurar' => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
+			'cuadricula' => '<path fill="currentColor" d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/>',
+			'lista'      => '<path fill="currentColor" d="M4 5h3v3H4V5Zm5 0h11v3H9V5Zm-5 5.5h3v3H4v-3Zm5 0h11v3H9v-3ZM4 16h3v3H4v-3Zm5 0h11v3H9v-3Z"/>',
+
+			'restaurar'  => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
 			return '';
@@ -8467,6 +8470,7 @@ final class EventListView {
 		?>
 		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); ?>
 		<?php self::toolbar( $m ); ?>
+		<?php self::states( $m ); ?>
 		<?php self::trash_bar( $m ); ?>
 		<?php if ( array() === $m['rows'] ) : ?>
 			<div class="evt-vacio evt-tarjeta">
@@ -8484,6 +8488,30 @@ final class EventListView {
 		<?php self::pagination( $m ); ?>
 		<?php
 		return Shell::render( 'Eventos', (string) $m['subtitle'], (string) ob_get_clean() );
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function states( array $m ): void {
+		$s = $m['selection'];
+		?>
+		<nav class="evt-fichas" aria-label="Qué eventos ver">
+			<?php foreach ( EventList::SEGMENTS as $clave => $rotulo ) : ?>
+				<?php $activa = $clave === (string) $s['state']; ?>
+				<a class="evt-fichas__una<?php echo $activa ? ' is-active' : ''; ?>"
+					href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
+					<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
+					<span class="evt-fichas__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
 	}
 
 
@@ -8526,17 +8554,6 @@ final class EventListView {
 				<?php endif; ?>
 				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
 			</form>
-			<div class="btn-group evt-segmentos" role="group" aria-label="Qué eventos ver">
-				<?php
-				foreach ( EventList::SEGMENTS as $clave => $rotulo ) :
-					$activa = $clave === (string) $s['state'];
-					?>
-					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
-						href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
-						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
-						<span class="evt-segmento__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
-				<?php endforeach; ?>
-			</div>
 			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
 				<?php
 				foreach ( array(
@@ -8559,7 +8576,7 @@ final class EventListView {
 						);
 						?>
 								"
-						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?></a>
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo wp_kses( Shell::icon( EventList::VIEW_GRID === $clave ? 'cuadricula' : 'lista' ), PanelParts::SVG ); ?> <?php echo esc_html( $rotulo ); ?></a>
 				<?php endforeach; ?>
 			</div>
 			<?php if ( ! empty( $m['can_create'] ) ) : ?>
@@ -24194,8 +24211,35 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   font: inherit;
 }
 .evt-segmentos { display: inline-flex; }
-/* La cifra de cada filtro, separada y más suave que el rótulo. */
-.evt-segmento__cifra { margin-left: 0.4em; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.evt-segmento svg { flex: none; margin-right: 0.35em; vertical-align: -0.2em; }
+/* Los filtros de estado del listado: fichas sueltas, esquinas rectas, su
+   número en una pastilla suave y la activa rellena. Igual con Bootstrap o sin él. */
+.evt-fichas { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+.evt-fichas__una {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  color: #212529;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+.evt-fichas__una:hover { border-color: var(--evt-pri); color: var(--evt-pri); }
+.evt-fichas__una.is-active { border-color: var(--evt-pri); background: var(--evt-pri); color: #fff; font-weight: 600; }
+.evt-fichas__cifra {
+  min-width: 1.9em;
+  padding: 0.15em 0.5em;
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.evt-fichas__una.is-active .evt-fichas__cifra { background: rgba(255, 255, 255, 0.2); color: #fff; }
 .evt-sin-bootstrap .evt-segmento {
   display: inline-flex;
   align-items: center;

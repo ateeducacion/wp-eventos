@@ -33,6 +33,7 @@ final class EventListView {
 		?>
 		<?php echo Shell::notice( (string) $m['notice']['type'], (string) $m['notice']['text'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shell::notice escapa su texto. ?>
 		<?php self::toolbar( $m ); ?>
+		<?php self::states( $m ); ?>
 		<?php self::trash_bar( $m ); ?>
 		<?php if ( array() === $m['rows'] ) : ?>
 			<div class="evt-vacio evt-tarjeta">
@@ -50,6 +51,30 @@ final class EventListView {
 		<?php self::pagination( $m ); ?>
 		<?php
 		return Shell::render( 'Eventos', (string) $m['subtitle'], (string) ob_get_clean() );
+	}
+
+	/**
+	 * Which events to see: active, drafts, archived or all, each with its count.
+	 *
+	 * Fichas sueltas y no un grupo de botones: son cuatro filtros que se leen
+	 * de un vistazo, con su número al lado. Por defecto, «Activos».
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return void
+	 */
+	private static function states( array $m ): void {
+		$s = $m['selection'];
+		?>
+		<nav class="evt-fichas" aria-label="Qué eventos ver">
+			<?php foreach ( EventList::SEGMENTS as $clave => $rotulo ) : ?>
+				<?php $activa = $clave === (string) $s['state']; ?>
+				<a class="evt-fichas__una<?php echo $activa ? ' is-active' : ''; ?>"
+					href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
+					<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
+					<span class="evt-fichas__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
 	}
 
 	/**
@@ -92,17 +117,6 @@ final class EventListView {
 				<?php endif; ?>
 				<button class="<?php echo esc_attr( Assets::button_class() ); ?> evt-herramientas__aplicar" type="submit">Buscar</button>
 			</form>
-			<div class="btn-group evt-segmentos" role="group" aria-label="Qué eventos ver">
-				<?php
-				foreach ( EventList::SEGMENTS as $clave => $rotulo ) :
-					$activa = $clave === (string) $s['state'];
-					?>
-					<a class="btn btn-outline-primary evt-segmento<?php echo $activa ? ' active' : ''; ?>"
-						href="<?php echo esc_url( EventList::url( $s, array( 'state' => $clave ) ) ); ?>"
-						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?>
-						<span class="evt-segmento__cifra"><?php echo esc_html( (string) (int) ( $m['counts'][ $clave ] ?? 0 ) ); ?></span></a>
-				<?php endforeach; ?>
-			</div>
 			<div class="btn-group evt-segmentos" role="group" aria-label="Cómo ver los eventos">
 				<?php
 				foreach ( array(
@@ -125,7 +139,7 @@ final class EventListView {
 						);
 						?>
 								"
-						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo esc_html( $rotulo ); ?></a>
+						<?php echo $activa ? 'aria-current="true"' : ''; ?>><?php echo wp_kses( Shell::icon( EventList::VIEW_GRID === $clave ? 'cuadricula' : 'lista' ), PanelParts::SVG ); ?> <?php echo esc_html( $rotulo ); ?></a>
 				<?php endforeach; ?>
 			</div>
 			<?php if ( ! empty( $m['can_create'] ) ) : ?>
