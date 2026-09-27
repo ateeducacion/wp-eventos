@@ -257,8 +257,9 @@ final class Shell {
 	 * @return bool
 	 */
 	public static function show_admin_bar(): bool {
-		// Dentro del panel lateral del taller no hay barra: ya la tiene la página de fuera.
-		if ( self::framed() ) {
+		// Dentro del panel lateral del taller —la edición de una página o la
+		// vista previa de la web— no hay barra: ya la tiene la página de fuera.
+		if ( self::framed() || self::in_frame() ) {
 			return false;
 		}
 		if ( current_user_can( 'manage_options' ) ) {
@@ -302,6 +303,20 @@ final class Shell {
 			$classes[] = 'evt-marco';
 		}
 		return $classes;
+	}
+
+	/**
+	 * Whether the browser is loading this page inside a frame.
+	 *
+	 * Lo dice la cabecera `Sec-Fetch-Dest`, que el navegador manda en cada
+	 * carga, también al navegar por enlaces dentro del marco: por eso sirve
+	 * para la vista previa, donde un parámetro en la dirección se perdería al
+	 * primer clic. Solo decide si se pinta la barra de administración.
+	 *
+	 * @return bool
+	 */
+	public static function in_frame(): bool {
+		return isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) && 'iframe' === sanitize_key( wp_unslash( (string) $_SERVER['HTTP_SEC_FETCH_DEST'] ) );
 	}
 
 	/**

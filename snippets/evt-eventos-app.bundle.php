@@ -5446,7 +5446,8 @@ final class Shell {
 
 	public static function show_admin_bar(): bool {
 
-		if ( self::framed() ) {
+
+		if ( self::framed() || self::in_frame() ) {
 			return false;
 		}
 		if ( current_user_can( 'manage_options' ) ) {
@@ -5490,6 +5491,20 @@ final class Shell {
 			$classes[] = 'evt-marco';
 		}
 		return $classes;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function in_frame(): bool {
+		return isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) && 'iframe' === sanitize_key( wp_unslash( (string) $_SERVER['HTTP_SEC_FETCH_DEST'] ) );
 	}
 
 

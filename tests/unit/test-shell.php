@@ -483,4 +483,19 @@ class Test_Shell extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<p>cuerpo</p>', $html );
 		$this->assertFalse( $barra );
 	}
+
+	/**
+	 * Cargada dentro de un marco —la vista previa del taller—, la web no
+	 * lleva la barra de administración, tampoco al navegar por sus enlaces.
+	 */
+	public function test_no_admin_bar_inside_a_frame() {
+		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertTrue( Shell::show_admin_bar() );
+
+		$_SERVER['HTTP_SEC_FETCH_DEST'] = 'iframe';
+		$barra                          = Shell::show_admin_bar();
+		unset( $_SERVER['HTTP_SEC_FETCH_DEST'] );
+
+		$this->assertFalse( $barra );
+	}
 }
