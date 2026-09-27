@@ -247,6 +247,42 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		unset( $taller );
 	}
 
+	/**
+	 * La ocupación es la que cuenta el candado, por taller y no por título:
+	 * dos turnos con el mismo nombre no se suman las plazas uno al otro.
+	 */
+	public function test_the_workshops_panel_counts_by_id_not_by_title() {
+		$evento = $this->evento();
+		$turnos = array();
+		foreach ( array( 1, 2 ) as $n ) {
+			$turnos[ $n ] = $this->actividad(
+				$evento,
+				array(
+					'title' => 'Taller de robótica',
+					'kind'  => ProgrammeMetaKeys::KIND_WORKSHOP,
+					'seats' => 12,
+				)
+			);
+		}
+		$una = $this->inscribir( $evento, 'Ana', 'Pérez', 'ana@example.org' );
+		Registrations::seat( $evento, $una, $turnos[1] );
+
+		$ocupadas = wp_list_pluck( $this->modelo( $evento, EventWorkspace::PANEL_WORKSHOPS )['workshops'], 'taken', 'id' );
+
+		$this->assertSame( 1, $ocupadas[ $turnos[1] ] );
+		$this->assertSame( 0, $ocupadas[ $turnos[2] ] );
+	}
+
+	/**
+	 * El «+» de los botones de alta se ve: `wp_kses_post()` se comía el SVG.
+	 */
+	public function test_the_add_buttons_keep_their_plus_icon() {
+		$evento = $this->evento();
+		foreach ( array( EventWorkspace::PANEL_SECTIONS, EventWorkspace::PANEL_SPEAKERS, EventWorkspace::PANEL_PROGRAMME ) as $panel ) {
+			$this->assertStringContainsString( 'M12 4a1 1 0 0 1 1 1v6h6', $this->pintar( $evento, $panel ), $panel );
+		}
+	}
+
 	// ─── Participantes ─────────────────────────────────────────────────────
 
 	/**

@@ -35,7 +35,7 @@ final class EventListView {
 		<?php if ( ! empty( $m['can_create'] ) ) : ?>
 			<p class="evt-acciones">
 				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
-					<?php echo Shell::icon_plus(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG literal. ?>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					Crear evento
 				</a>
 			</p>

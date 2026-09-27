@@ -31,7 +31,7 @@ final class PanelParts {
 	 *
 	 * @var array<string, array<string, bool>>
 	 */
-	private const SVG = array(
+	public const SVG = array(
 		'svg'  => array(
 			'viewbox'     => true,
 			'width'       => true,

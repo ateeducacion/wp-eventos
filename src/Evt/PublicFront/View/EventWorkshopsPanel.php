@@ -69,14 +69,6 @@ final class EventWorkshopsPanel {
 					</tbody>
 				</table>
 			</div>
-			<p class="evt-sub">
-				Las plazas ocupadas se cuentan cruzando el <strong>título del taller</strong>
-				con lo que eligió cada persona al inscribirse, porque la inscripción
-				todavía no es de este aplicativo y no hay un identificador común. Así
-				que <strong>si le cambia el título a un taller ya empezado, la cuenta
-				deja de cuadrar</strong>. Cuando el formulario de inscripción sea
-				nuestro, se cruzará por identificador y esto dejará de pasar.
-			</p>
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();

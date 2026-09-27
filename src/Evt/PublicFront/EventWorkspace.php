@@ -1952,12 +1952,9 @@ final class EventWorkspace {
 		}
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
 			$fila = Programme::activity_row( $taller );
-			// Las plazas ocupadas se cuentan por el título del taller, que es lo
-			// que trae la inscripción mientras la inscripción no sea de este
-			// aplicativo: no hay identificador compartido (ADR-0027). Si el
-			// título cambia, deja de cuadrar, y por eso la pantalla dice de
-			// dónde sale el número.
-			$fila['taken']    = self::seats_taken( $inscritos, (string) $fila['title'] );
+			// El mismo número que hace cumplir el candado al inscribirse: se
+			// cuenta por el identificador del taller, no por su título (ADR-0033).
+			$fila['taken']    = Registrations::taken( $event_id, (int) $fila['id'] );
 			$fila['free']     = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
 			$m['workshops'][] = $fila;
 		}
@@ -1985,26 +1982,6 @@ final class EventWorkspace {
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
 
 		return $m;
-	}
-
-	/**
-	 * How many of the people signed up chose this workshop.
-	 *
-	 * @param array<int, array<string, string>> $inscritos Participant rows.
-	 * @param string                            $titulo    Workshop title.
-	 * @return int
-	 */
-	private static function seats_taken( array $inscritos, string $titulo ): int {
-		if ( '' === trim( $titulo ) ) {
-			return 0;
-		}
-		$cuenta = 0;
-		foreach ( $inscritos as $fila ) {
-			if ( trim( (string) ( $fila['workshop'] ?? '' ) ) === trim( $titulo ) ) {
-				++$cuenta;
-			}
-		}
-		return $cuenta;
 	}
 
 	/**
