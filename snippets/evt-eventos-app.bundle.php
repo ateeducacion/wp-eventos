@@ -7752,7 +7752,7 @@ final class EventListView {
 		<?php if ( ! empty( $m['can_create'] ) ) : ?>
 			<p class="evt-acciones">
 				<a class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" href="<?php echo esc_url( (string) $m['create_url'] ); ?>">
-					<?php echo Shell::icon_plus(); ?>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					Crear evento
 				</a>
 			</p>
@@ -12513,10 +12513,7 @@ final class EventWorkspace {
 			$fila = Programme::activity_row( $taller );
 
 
-
-
-
-			$fila['taken']    = self::seats_taken( $inscritos, (string) $fila['title'] );
+			$fila['taken']    = Registrations::taken( $event_id, (int) $fila['id'] );
 			$fila['free']     = $fila['seats'] > 0 ? max( 0, (int) $fila['seats'] - (int) $fila['taken'] ) : null;
 			$m['workshops'][] = $fila;
 		}
@@ -12544,26 +12541,6 @@ final class EventWorkspace {
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
 
 		return $m;
-	}
-
-
-
-
-
-
-
-
-	private static function seats_taken( array $inscritos, string $titulo ): int {
-		if ( '' === trim( $titulo ) ) {
-			return 0;
-		}
-		$cuenta = 0;
-		foreach ( $inscritos as $fila ) {
-			if ( trim( (string) ( $fila['workshop'] ?? '' ) ) === trim( $titulo ) ) {
-				++$cuenta;
-			}
-		}
-		return $cuenta;
 	}
 
 
@@ -12816,7 +12793,7 @@ final class PanelParts {
 
 
 
-	private const SVG = array(
+	public const SVG = array(
 		'svg'  => array(
 			'viewbox'     => true,
 			'width'       => true,
@@ -13095,7 +13072,7 @@ final class EventSpeakersPanel {
 
 			<div class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-					<?php echo $editar ? '' : wp_kses_post( Shell::icon_plus() ); ?>
+					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
 				<?php if ( $editar ) : ?>
@@ -13465,7 +13442,7 @@ final class EventProgrammePanel {
 
 			<div class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-					<?php echo $editar ? '' : wp_kses_post( Shell::icon_plus() ); ?>
+					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar actividad' : 'Añadir actividad' ); ?>
 				</button>
 				<?php if ( $editar ) : ?>
@@ -13589,14 +13566,6 @@ final class EventWorkshopsPanel {
 					</tbody>
 				</table>
 			</div>
-			<p class="evt-sub">
-				Las plazas ocupadas se cuentan cruzando el <strong>título del taller</strong>
-				con lo que eligió cada persona al inscribirse, porque la inscripción
-				todavía no es de este aplicativo y no hay un identificador común. Así
-				que <strong>si le cambia el título a un taller ya empezado, la cuenta
-				deja de cuadrar</strong>. Cuando el formulario de inscripción sea
-				nuestro, se cruzará por identificador y esto dejará de pasar.
-			</p>
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
@@ -14444,7 +14413,7 @@ final class EventSectionsPanel {
 				</div>
 				<div class="evt-acciones">
 					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-						<?php echo wp_kses_post( Shell::icon_plus() ); ?> Añadir sección
+						<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
 					</button>
 				</div>
 			</div>

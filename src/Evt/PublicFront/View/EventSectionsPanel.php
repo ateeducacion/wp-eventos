@@ -265,7 +265,7 @@ final class EventSectionsPanel {
 				</div>
 				<div class="evt-acciones">
 					<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-						<?php echo wp_kses_post( Shell::icon_plus() ); ?> Añadir sección
+						<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir sección
 					</button>
 				</div>
 			</div>

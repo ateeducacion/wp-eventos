@@ -122,7 +122,7 @@ final class EventSpeakersPanel {
 
 			<div class="evt-acciones">
 				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">
-					<?php echo $editar ? '' : wp_kses_post( Shell::icon_plus() ); ?>
+					<?php echo $editar ? '' : wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?>
 					<?php echo esc_html( $editar ? 'Guardar ponente' : 'Añadir ponente' ); ?>
 				</button>
 				<?php if ( $editar ) : ?>
