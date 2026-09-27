@@ -615,19 +615,35 @@ final class EventList {
 	}
 
 	/**
-	 * How many pages each of the rows being painted has.
+	 * What only the rows being painted need: their pages, links and buttons.
 	 *
 	 * Solo las de la página: una consulta para las veinte filas, y no una por
-	 * evento.
+	 * evento; y los enlaces y el permiso de publicar, que no hacen falta para
+	 * filtrar ni para contar, tampoco se calculan para las que no se pintan.
 	 *
 	 * @param array<int, array<string, mixed>> $rows Rows of this page.
 	 * @return array<int, array<string, mixed>>
 	 */
 	private static function with_sections( array $rows ): array {
 		$secciones = self::section_counts( array_map( 'intval', array_column( $rows, 'id' ) ) );
+		$user_id   = get_current_user_id();
 
 		foreach ( $rows as $i => $row ) {
-			$rows[ $i ]['sections'] = $secciones[ $row['id'] ] ?? 0;
+			$id       = (int) $row['id'];
+			$papelera = self::FILTER_TRASH === $row['status'];
+
+			$rows[ $i ]['sections'] = $secciones[ $id ] ?? 0;
+			// Lo que está en la papelera no se abre para editarlo: primero se
+			// restaura. Sin enlace, la vista lo pinta como texto.
+			$rows[ $i ]['url'] = $papelera ? '' : Shell::url( 'event', array( 'evento' => $id ) );
+			// Para la botonera: dónde se mira el evento y si quien mira puede
+			// publicarlo. **Un borrador también se mira**: estando dentro y con
+			// permiso, WordPress lo sirve en previsualización. Lo de la papelera
+			// no: primero se restaura.
+			$rows[ $i ]['view_url'] = $papelera
+				? ''
+				: ( 'publish' === $row['status'] ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) );
+			$rows[ $i ]['can_pub']  = EventAccess::can_publish( $user_id, $id );
 		}
 
 		return $rows;
@@ -731,17 +747,6 @@ final class EventList {
 			'archived' => EventAccess::is_archived( $id ),
 			'status'   => (string) $post->post_status,
 			'sections' => 0,
-			// Lo que está en la papelera no se abre para editarlo: primero se
-			// restaura. Sin enlace, la vista lo pinta como texto.
-			'url'      => self::FILTER_TRASH === $post->post_status ? '' : Shell::url( 'event', array( 'evento' => $id ) ),
-			// Para la botonera: dónde se mira el evento y si quien mira puede
-			// publicarlo. **Un borrador también se mira**: estando dentro y con
-			// permiso, WordPress lo sirve en previsualización. Lo de la papelera
-			// no: primero se restaura.
-			'view_url' => self::FILTER_TRASH === $post->post_status
-				? ''
-				: ( 'publish' === $post->post_status ? (string) get_permalink( $id ) : (string) get_preview_post_link( $id ) ),
-			'can_pub'  => EventAccess::can_publish( get_current_user_id(), $id ),
 			'search'   => self::normalize( $titulo ),
 		);
 	}
