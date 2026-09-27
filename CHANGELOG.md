@@ -46,6 +46,10 @@ en el subsitio `eventos` se hace después.
 
 ### Corregido
 
+- **En la demostración no se podían corregir ni borrar participantes.** Las personas de «Participantes» eran filas inventadas por el entorno de desarrollo, de solo lectura. Ahora `scripts/seed-demo.php` las crea como inscripciones de verdad, con su taller y respetando el aforo, así que salen el lápiz y la papelera en el wp-env y en Playground
+- **La silueta de un ponente sin foto casi no se veía.** Ahora es el avatar de siempre: figura clara sobre fondo gris
+- **En desarrollo y en Playground, la página del evento no enseñaba ningún logo arriba a la izquierda.** El entorno de desarrollo pone uno de ejemplo, sin marca de nadie, para ver dónde va el de verdad
+
 - **Con banner, la portada no enseñaba «Gestionar este evento».** El banner sustituye la cabecera y se llevaba el enlace; ahora va debajo
 - **Los colores propios de una sección no salían.** El formulario de la página los guardaba, pero la página pública solo leía los del evento
 - **El programa salía dos veces** en los eventos que lo escribieron a mano: su CSS a medida escondía la parrilla por la clase `programa-estandar`, que la parrilla nueva no llevaba. Y las actividades sin fecha ya no salen en un bloque «Sin fecha»

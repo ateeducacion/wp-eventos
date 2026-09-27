@@ -510,71 +510,6 @@ add_filter( 'style_loader_src', 'evt_dev_local_cdn_src' );
 
 /*
  * -----------------------------------------------------------------------------
- * Inscripciones de mentira para la pestaña «Participantes»
- * -----------------------------------------------------------------------------
- *
- * En la fase 1 las inscripciones viven en el gestor de formularios del sistema
- * anterior, que no está en el wp-env y del que el aplicativo no depende:
- * pregunta por ellas con el enganche `evt_participants` y, si nadie contesta,
- * la pantalla dice dónde están (ADR-0007). Aquí se contesta **solo en
- * desarrollo**, para poder ver de verdad la tabla, el filtro y la exportación
- * a CSV.
- *
- * Es el mismo contrato que tendrá que cumplir el snippet suelto que lea esas
- * inscripciones el día del despliegue: una fila por inscripción, con las claves
- * que declara `Participants::columns()`.
- */
-if ( ! function_exists( 'evt_dev_participants' ) ) {
-	/**
-	 * Demo sign-ups for one event, matched to its demo workshops.
-	 *
-	 * @param array<int, array<string, string>> $filas    Rows so far.
-	 * @param int                               $event_id Event post ID.
-	 * @return array<int, array<string, string>>
-	 */
-	function evt_dev_participants( array $filas, int $event_id ): array {
-		if ( 'jornadas-tecnologia-educativa' !== get_post_field( 'post_name', $event_id ) ) {
-			return $filas;
-		}
-
-		// Desde que el aplicativo tiene su propio formulario (ADR-0032) las
-		// filas de verdad las contesta él. Estas son solo para que la pantalla
-		// tenga algo que enseñar mientras no se ha inscrito nadie: en cuanto
-		// hay una inscripción real, la demo se aparta y no la ensucia.
-		if ( array() !== $filas ) {
-			return $filas;
-		}
-
-		$centros  = array( 'CEIP El Drago', 'Instituto Sur', 'CEIP Valverde', 'IES El Mirador' );
-		$talleres = array( 'Taller de radio escolar', 'Taller de robótica en Primaria', '' );
-		$nombres  = array(
-			'Ana Martín Cabrera',
-			'Luis Gómez Perdomo',
-			'Marta Ruiz Santana',
-			'Jorge Delgado Rivero',
-			'Nayra Hernández Bello',
-			'Iván Padrón Mesa',
-			'Lucía Afonso Quintero',
-		);
-
-		foreach ( $nombres as $i => $nombre ) {
-			$filas[] = array(
-				'name'     => $nombre,
-				'email'    => sanitize_title( $nombre ) . '@example.org',
-				'centre'   => $centros[ $i % count( $centros ) ],
-				'workshop' => $talleres[ $i % count( $talleres ) ],
-				'date'     => gmdate( 'Y-m-d', strtotime( '-' . ( 10 - $i ) . ' days' ) ),
-				'consent'  => 'Aceptado',
-			);
-		}
-
-		return $filas;
-	}
-}
-add_filter( 'evt_participants', 'evt_dev_participants', 20, 2 );
-
-/*
- * -----------------------------------------------------------------------------
  * El catálogo de centros, para poder probar la inscripción
  * -----------------------------------------------------------------------------
  *
@@ -630,6 +565,10 @@ if ( ! function_exists( 'evt_dev_chrome' ) ) {
 			$chrome,
 			array(
 				'owner'        => 'Organización de ejemplo',
+				// Un logo de ejemplo, sin marca de nadie, para ver dónde va el de verdad.
+				'brand_logo'   => WPMU_PLUGIN_URL . '/evt-dev-logo.svg',
+				'brand_alt'    => 'Organización de ejemplo',
+				'brand_url'    => 'https://www.example.org/',
 				'owner_url'    => 'https://www.example.org/',
 				'org'          => 'Área de ejemplo · entorno de desarrollo',
 				'credit'       => 'Entorno de desarrollo',
