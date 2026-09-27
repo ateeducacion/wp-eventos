@@ -51,6 +51,10 @@
 		if ( ! pregunta ) {
 			return;
 		}
+		if ( form.hasAttribute( 'data-evt-confirm-escribe' ) ) {
+			confirmarEscribiendo( e, form, pregunta );
+			return;
+		}
 
 		if ( ! window.Swal ) {
 			if ( ! window.confirm( pregunta ) ) {
@@ -96,6 +100,68 @@
 			}
 		} );
 	} );
+
+	/*
+	 * Lo que no tiene papelera —borrar una inscripción— pide además teclear
+	 * un dato: `data-evt-confirm-escribe="<lo que hay que escribir>"` y, en el
+	 * formulario, el campo `[name="evt_confirm_email"]`, que sin guion se ve y
+	 * se rellena a mano. Los mismos tres escalones, y el servidor comprueba lo
+	 * escrito en los tres: esto solo evita el viaje de ida y vuelta.
+	 */
+	function normaliza( texto ) {
+		return String( texto || '' ).trim().toLowerCase();
+	}
+
+	function confirmarEscribiendo( e, form, pregunta ) {
+		var esperado = normaliza( form.getAttribute( 'data-evt-confirm-escribe' ) );
+		var campo = form.querySelector( '[name="evt_confirm_email"]' );
+		e.preventDefault();
+
+		function enviar( escrito ) {
+			if ( campo ) {
+				campo.value = escrito;
+			}
+			form.dataset.evtConfirmado = '1';
+			form.submit();
+		}
+
+		if ( ! window.Swal ) {
+			var escrito = window.prompt( pregunta + '\n\nPara confirmar, escriba su correo: ' + esperado );
+			if ( null !== escrito && normaliza( escrito ) === esperado ) {
+				enviar( escrito );
+			}
+			return;
+		}
+
+		var corte = pregunta.indexOf( '? ' );
+		window.Swal.fire( {
+			title: -1 === corte ? pregunta : pregunta.slice( 0, corte + 1 ),
+			text: ( -1 === corte ? '' : pregunta.slice( corte + 2 ) + ' ' ) + 'Para confirmar, escriba su correo: ' + esperado,
+			icon: 'warning',
+			input: 'email',
+			inputPlaceholder: esperado,
+			inputAttributes: { autocomplete: 'off', 'aria-label': 'Correo de la persona' },
+			validationMessage: 'Escriba un correo válido.',
+			inputValidator: function ( valor ) {
+				return normaliza( valor ) === esperado ? undefined : 'No coincide con el correo de esta inscripción.';
+			},
+			showCancelButton: true,
+			confirmButtonText: form.getAttribute( 'data-evt-confirm-ok' ) || 'Borrar',
+			cancelButtonText: 'Cancelar',
+			focusCancel: false,
+			reverseButtons: true,
+			heightAuto: false,
+			buttonsStyling: false,
+			customClass: {
+				confirmButton: 'evt-btn evt-btn-borrar btn',
+				cancelButton: 'evt-btn btn btn-light'
+			}
+		} ).then( function ( respuesta ) {
+			if ( respuesta.isConfirmed ) {
+				enviar( respuesta.value );
+			}
+		} );
+	}
 
 	/* --- 2. Proponer el slug desde el título ----------------------------- */
 

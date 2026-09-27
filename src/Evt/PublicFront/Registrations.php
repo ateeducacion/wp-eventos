@@ -129,6 +129,7 @@ final class Registrations {
 				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
 			$fila[ Participants::KEY_FILES ] = $documentos;
+			$fila[ Participants::KEY_REG ]   = (int) $inscripcion->ID;
 
 			// Una columna por pregunta, con el rótulo por cabecera. La clave es
 			// el identificador, así que reescribir el rótulo mueve la cabecera
@@ -313,6 +314,80 @@ final class Registrations {
 		}
 
 		return $id;
+	}
+
+	/**
+	 * Whether a registration belongs to this event and is still there.
+	 *
+	 * @param int $event_id        Event post ID.
+	 * @param int $registration_id Registration post ID.
+	 * @return bool
+	 */
+	public static function belongs( int $event_id, int $registration_id ): bool {
+		return $event_id > 0
+			&& RegistrationPostType::POST_TYPE === get_post_type( $registration_id )
+			&& (int) get_post_field( 'post_parent', $registration_id ) === $event_id
+			&& in_array( get_post_status( $registration_id ), array( 'publish', 'private' ), true );
+	}
+
+	/**
+	 * What the organisation can change of a registration: core and answers.
+	 *
+	 * El consentimiento, su fecha, el testigo y los documentos no se tocan:
+	 * son lo que aceptó y aportó la persona, no un dato que se corrige. Las
+	 * respuestas de archivo se conservan tal cual.
+	 *
+	 * @param int                  $event_id        Event post ID.
+	 * @param int                  $registration_id Registration post ID.
+	 * @param array<string, mixed> $core            Validated core fields.
+	 * @param array<string, mixed> $answers         Validated answers, keyed by question ID.
+	 * @return bool False when it is not a registration of this event.
+	 */
+	public static function update( int $event_id, int $registration_id, array $core, array $answers ): bool {
+		if ( ! self::belongs( $event_id, $registration_id ) ) {
+			return false;
+		}
+		$campos = array(
+			RegistrationMetaKeys::REG_TAX_ID      => 'tax_id',
+			RegistrationMetaKeys::REG_NAME        => 'name',
+			RegistrationMetaKeys::REG_SURNAME     => 'surname',
+			RegistrationMetaKeys::REG_EMAIL       => 'email',
+			RegistrationMetaKeys::REG_PHONE       => 'phone',
+			RegistrationMetaKeys::REG_CENTRE      => 'centre',
+			RegistrationMetaKeys::REG_CENTRE_CODE => 'centre_code',
+		);
+		foreach ( $campos as $clave => $origen ) {
+			update_post_meta( $registration_id, $clave, (string) ( $core[ $origen ] ?? '' ) );
+		}
+		$respuestas = array_merge( self::answers( $registration_id ), $answers );
+		update_post_meta( $registration_id, RegistrationMetaKeys::REG_ANSWERS, wp_slash( (string) wp_json_encode( $respuestas ) ) );
+		return true;
+	}
+
+	/**
+	 * Delete a registration for good, if whoever asks typed its email.
+	 *
+	 * Borrar una inscripción es borrar los datos de una persona —y sus
+	 * documentos, que se van con ella (ADR-0036)—, y no tiene papelera: por
+	 * eso se pide teclear su correo, que no se escribe sin mirar a quién se
+	 * borra (ADR-0043). Su plaza de taller, si tenía, queda libre sola: las
+	 * plazas se cuentan sobre las inscripciones que hay.
+	 *
+	 * @param int    $event_id        Event post ID.
+	 * @param int    $registration_id Registration post ID.
+	 * @param string $typed           The email typed to confirm.
+	 * @return string '' when deleted; 'no_es_de_este_evento' or 'correo' otherwise.
+	 */
+	public static function delete( int $event_id, int $registration_id, string $typed ): string {
+		if ( ! self::belongs( $event_id, $registration_id ) ) {
+			return 'no_es_de_este_evento';
+		}
+		$correo = strtolower( trim( (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_EMAIL, true ) ) );
+		if ( '' === $correo || strtolower( trim( $typed ) ) !== $correo ) {
+			return 'correo';
+		}
+		wp_delete_post( $registration_id, true );
+		return '';
 	}
 
 	/**

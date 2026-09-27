@@ -34,6 +34,15 @@ const FORM = `<!doctype html><meta charset="utf-8">
     <span class="screen-reader-text">Enviar a la papelera</span>
   </button>
 </form>
+<form id="fe" class="evt-accion evt-borrar-escrito" method="post" action="/enviado"
+      data-evt-confirm="¿Borrar la inscripción de Ana Martín? No hay papelera."
+      data-evt-confirm-ok="Borrar la inscripción"
+      data-evt-confirm-escribe="ana@example.org">
+  <input type="hidden" name="evt_do" value="reg_delete" />
+  <label class="evt-escribe"><span>Para borrar, escriba su correo: ana@example.org</span>
+    <input id="fe-correo" type="email" name="evt_confirm_email" /></label>
+  <button id="be" type="submit" class="evt-btn evt-mini evt-btn-borrar">Borrar</button>
+</form>
 <a id="fuera" href="#">un enlace fuera del diálogo</a>
 </body>`;
 
@@ -56,7 +65,9 @@ async function abrir( ctx, conSwal ) {
 		route.fulfill( {
 			status: 200,
 			contentType: 'text/html; charset=utf-8',
-			body: url.includes( '/enviado' ) ? '<!doctype html><h1>ENVIADO</h1>' : html( conSwal ),
+			body: url.includes( '/enviado' )
+				? '<!doctype html><h1>ENVIADO</h1><pre id="datos">' + ( route.request().postData() || '' ) + '</pre>'
+				: html( conSwal ),
 		} );
 	} );
 	await page.goto( 'https://evt.test/panel' );
@@ -134,6 +145,51 @@ async function abrir( ctx, conSwal ) {
 		await page.waitForSelector( '.swal2-popup', { state: 'visible' } );
 		await Promise.all( [ page.waitForURL( '**/enviado' ), page.click( '.swal2-confirm' ) ] );
 		ok( page.url().includes( 'enviado' ), 'confirmar envía el formulario' );
+		await page.close();
+	}
+
+	// --- 4. Borrar tecleando el correo (ADR-0043) ----------------------------
+	const enviado = async ( page ) => decodeURIComponent( ( await page.textContent( '#datos' ) ) || '' );
+	{
+		// Sin SweetAlert: prompt(), que enseña el correo y lo compara.
+		const page = await abrir( ctx, false );
+		let texto = '';
+		page.on( 'dialog', async ( d ) => { texto = d.message(); await d.accept( 'otra@example.org' ); } );
+		await page.click( '#be' );
+		await page.waitForTimeout( 300 );
+		ok( texto.includes( 'ana@example.org' ), 'el prompt() enseña el correo que hay que escribir' );
+		ok( ! page.url().includes( 'enviado' ), 'con otro correo no se envía' );
+		page.removeAllListeners( 'dialog' );
+		page.on( 'dialog', ( d ) => d.accept( 'ANA@example.org' ) );
+		await Promise.all( [ page.waitForURL( '**/enviado' ), page.click( '#be' ) ] );
+		ok( ( await enviado( page ) ).includes( 'evt_confirm_email=ANA@example.org' ), 'con su correo se envía, y viaja lo escrito' );
+		await page.close();
+	}
+	{
+		// Sin JavaScript: el campo se ve y se escribe a mano; el servidor compara.
+		const sinJs = await browser.newContext( { javaScriptEnabled: false } );
+		const page = await abrir( sinJs, true );
+		ok( await page.isVisible( '#fe-correo' ), 'sin JavaScript el campo del correo se ve' );
+		await page.fill( '#fe-correo', 'ana@example.org' );
+		await Promise.all( [ page.waitForURL( '**/enviado' ), page.click( '#be' ) ] );
+		ok( ( await enviado( page ) ).includes( 'evt_confirm_email=ana@example.org' ), 'y se envía con lo escrito' );
+		await sinJs.close();
+	}
+	{
+		// Con SweetAlert: el diálogo pide el correo y no deja pasar otro.
+		const page = await abrir( ctx, true );
+		ok( ! ( await page.isVisible( '#fe-correo' ) ), 'con guion, el campo del formulario sobra y no se ve' );
+		await page.click( '#be' );
+		await page.waitForSelector( '.swal2-input', { state: 'visible' } );
+		const detalle = ( await page.textContent( '.swal2-html-container' ) ).trim();
+		ok( detalle.includes( 'ana@example.org' ), 'el diálogo enseña el correo: ' + detalle );
+		await page.fill( '.swal2-input', 'otra@example.org' );
+		await page.click( '.swal2-confirm' );
+		await page.waitForSelector( '.swal2-validation-message', { state: 'visible' } );
+		ok( ! page.url().includes( 'enviado' ), 'con otro correo avisa y no envía' );
+		await page.fill( '.swal2-input', 'ana@example.org' );
+		await Promise.all( [ page.waitForURL( '**/enviado' ), page.click( '.swal2-confirm' ) ] );
+		ok( ( await enviado( page ) ).includes( 'evt_confirm_email=ana@example.org' ), 'con su correo se envía' );
 		await page.close();
 	}
 

@@ -8,6 +8,8 @@
 namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Shell;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\RegistrationFiles;
@@ -46,6 +48,19 @@ final class EventParticipantsPanel {
 			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
 		</div></div>
 
+		<?php
+		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
+			$cajon = PanelParts::drawer(
+				'Corregir inscripción',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
+				(array) $m['flash'],
+				true,
+				true
+			);
+			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		}
+		?>
 		<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
@@ -58,6 +73,7 @@ final class EventParticipantsPanel {
 				<table class="evt-tabla">
 					<thead>
 						<tr>
+							<th scope="col"><span class="screen-reader-text">Acciones</span></th>
 							<?php foreach ( (array) $m['people_cols'] as $rotulo ) : ?>
 								<th scope="col"><?php echo esc_html( (string) $rotulo ); ?></th>
 							<?php endforeach; ?>
@@ -66,6 +82,8 @@ final class EventParticipantsPanel {
 					<tbody>
 						<?php foreach ( $filas as $fila ) : ?>
 							<tr>
+								<?php // Las acciones, lo primero: la tabla es ancha y se desplaza. ?>
+								<td data-rotulo="Acciones"><?php echo self::actions( $m, $fila ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></td>
 								<?php foreach ( (array) $m['people_cols'] as $clave => $rotulo ) : ?>
 									<td data-rotulo="<?php echo esc_attr( (string) $rotulo ); ?>">
 										<?php if ( 'files' === $clave ) : ?>
@@ -81,6 +99,199 @@ final class EventParticipantsPanel {
 				</table>
 			</div>
 		<?php endif; ?>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Correct and delete, for the registrations that are ours.
+	 *
+	 * Una fila que llega de otro sitio por el filtro no trae identificador y
+	 * se queda de solo lectura. Borrar no tiene papelera, así que se pide
+	 * teclear el correo de la persona (ADR-0043): con SweetAlert2 en su
+	 * diálogo, sin ella con `prompt()`, y sin guion en el campo que va en el
+	 * propio formulario. Lo comprueba el servidor en los tres casos.
+	 *
+	 * @param array<string, mixed> $m    Model.
+	 * @param array<string, mixed> $fila One row.
+	 * @return string
+	 */
+	private static function actions( array $m, array $fila ): string {
+		$id = (int) ( $fila[ Participants::KEY_REG ] ?? 0 );
+		if ( $id <= 0 || ! isset( $m['event_id'] ) || ( true === ( $m['archived'] ?? false ) && true !== ( $m['can_unarchive'] ?? false ) ) ) {
+			return '';
+		}
+		$nombre = '' !== (string) $fila['name'] ? (string) $fila['name'] : 'esta persona';
+
+		ob_start();
+		?>
+		<span class="evt-acciones">
+			<?php echo PanelParts::icon_link( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE, array( EventWorkspace::ARG_ROW => $id ) ), 'lapiz', 'Corregir la inscripción' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::delete_form( $m, $id, $nombre, (string) $fila['email'], true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		</span>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The form that deletes one registration, asking for its email.
+	 *
+	 * @param array<string, mixed> $m      Model.
+	 * @param int                  $id     Registration post ID.
+	 * @param string               $nombre Name, for the question.
+	 * @param string               $correo Email that has to be typed.
+	 * @param bool                 $mini   Icon button, for the table.
+	 * @return string
+	 */
+	private static function delete_form( array $m, int $id, string $nombre, string $correo, bool $mini ): string {
+		$op       = EventWorkspace::OP_REG_DELETE;
+		$pregunta = sprintf( '¿Borrar la inscripción de %s? Se borran sus datos y sus documentos, y no hay papelera ni vuelta atrás.', $nombre );
+
+		ob_start();
+		?>
+		<form class="evt-accion evt-borrar-escrito" method="post" action=""
+			data-evt-confirm="<?php echo esc_attr( $pregunta ); ?>"
+			data-evt-confirm-ok="Borrar la inscripción"
+			data-evt-confirm-escribe="<?php echo esc_attr( strtolower( $correo ) ); ?>">
+			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<label class="evt-escribe">
+				<span class="<?php echo $mini ? 'screen-reader-text' : ''; ?>"><?php echo esc_html( 'Para borrar, escriba su correo: ' . $correo ); ?></span>
+				<input type="email" name="<?php echo esc_attr( EventWorkspace::FIELD_CONFIRM_EMAIL ); ?>" autocomplete="off" placeholder="<?php echo esc_attr( $correo ); ?>" />
+			</label>
+			<?php if ( $mini ) : ?>
+				<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-icono evt-btn-borrar' ); ?>" title="Borrar la inscripción" data-bs-toggle="tooltip">
+					<?php echo wp_kses( Shell::icon( 'papelera' ), PanelParts::SVG ); ?>
+					<span class="screen-reader-text">Borrar la inscripción</span>
+				</button>
+			<?php else : ?>
+				<button type="submit" class="evt-btn btn btn-outline-danger evt-btn-borrar">Borrar la inscripción…</button>
+			<?php endif; ?>
+		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The form that corrects one registration, in the side panel.
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return string
+	 */
+	private static function form( array $m ): string {
+		$v         = (array) $m['edit_values'];
+		$id        = (int) $v['id'];
+		$op        = EventWorkspace::OP_REG_SAVE;
+		$preguntas = Registrations::questions( (int) $m['event_id'] );
+		$respuesta = (array) $v['answers'];
+		$campos    = array(
+			'tax_id'  => array( 'Documento de identidad', 'text' ),
+			'name'    => array( 'Nombre', 'text' ),
+			'surname' => array( 'Apellidos', 'text' ),
+			'email'   => array( 'Correo electrónico', 'email' ),
+			'phone'   => array( 'Teléfono', 'tel' ),
+		);
+
+		ob_start();
+		?>
+		<form class="evt-form" method="post" action="">
+			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+
+			<?php foreach ( $campos as $clave => $campo ) : ?>
+				<div class="evt-form-campo">
+					<label for="evt-rg-<?php echo esc_attr( $clave ); ?>"><?php echo esc_html( $campo[0] ); ?><?php echo 'phone' === $clave ? ' <span class="evt-opcional">(opcional)</span>' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- literal. ?></label>
+					<input type="<?php echo esc_attr( $campo[1] ); ?>" id="evt-rg-<?php echo esc_attr( $clave ); ?>" name="evt_rg_<?php echo esc_attr( $clave ); ?>"
+						value="<?php echo esc_attr( (string) $v[ $clave ] ); ?>" <?php echo 'phone' === $clave ? '' : 'required'; ?> />
+				</div>
+			<?php endforeach; ?>
+
+			<div class="evt-form-campo">
+				<label for="evt-rg-centre">Código del centro</label>
+				<input type="text" id="evt-rg-centre" name="evt_rg_centre" inputmode="numeric" pattern="\d{8}" <?php echo '' === (string) $v['centre_code'] && '' !== (string) $v['centre'] ? '' : 'required'; ?>
+					value="<?php echo esc_attr( (string) $v['centre_code'] ); ?>" />
+				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial.' ); ?> El nombre sale del catálogo de centros.</small>
+			</div>
+
+			<?php foreach ( $preguntas as $pregunta ) : ?>
+				<?php echo self::question( $pregunta, $respuesta[ $pregunta['id'] ] ?? null ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php endforeach; ?>
+
+			<?php if ( array() !== (array) $m['workshops'] ) : ?>
+				<div class="evt-form-campo">
+					<label for="evt-rg-workshop">Taller</label>
+					<select id="evt-rg-workshop" name="evt_rg_workshop">
+						<option value="0">Sin taller</option>
+						<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
+							<option value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php selected( (int) $v['workshop'], (int) $taller['id'] ); ?>>
+								<?php echo esc_html( (string) $taller['title'] . ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' ) ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+					<small>Con el mismo aforo que cuando lo elige la persona: un taller completo no admite a nadie más.</small>
+				</div>
+			<?php endif; ?>
+
+			<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+
+			<div class="evt-acciones">
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la inscripción</button>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
+			</div>
+		</form>
+
+		<section class="evt-tarjeta evt-peligro">
+			<h2>Borrar la inscripción</h2>
+			<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
+			<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		</section>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * One question of the event, answered as it is stored.
+	 *
+	 * @param array<string, mixed> $pregunta  Normalised question.
+	 * @param mixed                $respuesta Stored answer.
+	 * @return string
+	 */
+	private static function question( array $pregunta, $respuesta ): string {
+		if ( 'file' === $pregunta['type'] ) {
+			return '';
+		}
+		$id     = 'evt-rg-q-' . sanitize_html_class( (string) $pregunta['id'] );
+		$nombre = 'evt_rg_answers[' . (string) $pregunta['id'] . ']';
+
+		ob_start();
+		?>
+		<div class="evt-form-campo">
+			<?php if ( 'check' === $pregunta['type'] ) : ?>
+				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>" value="1" <?php checked( ! empty( $respuesta ) ); ?> /> <?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+			<?php elseif ( 'one' === $pregunta['type'] ) : ?>
+				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+				<select id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $nombre ); ?>">
+					<option value="">—</option>
+					<?php foreach ( (array) $pregunta['options'] as $opcion ) : ?>
+						<option value="<?php echo esc_attr( (string) $opcion ); ?>" <?php selected( (string) $respuesta, (string) $opcion ); ?>><?php echo esc_html( (string) $opcion ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			<?php elseif ( 'many' === $pregunta['type'] ) : ?>
+				<fieldset>
+					<legend><?php echo esc_html( (string) $pregunta['label'] ); ?></legend>
+					<?php foreach ( (array) $pregunta['options'] as $opcion ) : ?>
+						<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $opcion ); ?>" <?php checked( in_array( (string) $opcion, (array) $respuesta, true ) ); ?> /> <?php echo esc_html( (string) $opcion ); ?></label>
+					<?php endforeach; ?>
+				</fieldset>
+			<?php else : ?>
+				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+				<input type="text" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $nombre ); ?>" value="<?php echo esc_attr( is_scalar( $respuesta ) ? (string) $respuesta : '' ); ?>" />
+			<?php endif; ?>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}

@@ -1336,6 +1336,7 @@ body:has(.evt-cajon) { overflow: hidden; }
 
 /* Un grupo de casillas se rotula como cualquier campo, no como un título. */
 .evt-form .evt-form-campo > legend,
+.evt-form .evt-form-campo > fieldset > legend,
 .evt-form fieldset.evt-form-campo > legend {
   float: none;
   width: auto;
@@ -1413,3 +1414,16 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 }
 .evt-publicacion h2 { margin: 0; font-size: 1.05rem; }
 .evt-publicacion .evt-sub { margin: 2px 0 0; }
+
+/* Borrar una inscripción pide su correo (ADR-0043). Sin guion se escribe en
+   el propio formulario; con guion lo pide el diálogo y el campo sobra. */
+.evt-borrar-escrito { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.evt-escribe { display: inline-flex; flex-direction: column; gap: 2px; margin: 0; font-size: .85rem; }
+.evt-escribe input { max-width: 16rem; }
+.evt-app-js .evt-escribe { display: none; }
+.evt-form .evt-form-campo > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.evt-form .evt-form-campo > fieldset > label { display: block; font-weight: 400; }
+
+/* SweetAlert2 abre por encima del panel lateral, que ya está a 100 001: un
+   diálogo que se pide desde el panel no puede quedarse debajo. */
+body .swal2-container { z-index: 100010; }

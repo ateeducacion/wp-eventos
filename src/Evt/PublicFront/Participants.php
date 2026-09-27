@@ -46,6 +46,15 @@ final class Participants {
 	public const KEY_FILES = '_files';
 
 	/**
+	 * Key of the registration ID of a row, when the row is one of ours.
+	 *
+	 * Tampoco es columna: sirve para editarla y borrarla desde el panel
+	 * (ADR-0043). Una fila que llegue de otro sitio por el filtro no lo trae
+	 * y se queda de solo lectura.
+	 */
+	public const KEY_REG = '_reg';
+
+	/**
 	 * The columns of the table, in order, with their heading.
 	 *
 	 * Es el contrato con quien conteste al filtro: una fila es este array.
@@ -114,6 +123,9 @@ final class Participants {
 			// pantalla.
 			if ( isset( $fila[ self::KEY_FILES ] ) && is_array( $fila[ self::KEY_FILES ] ) ) {
 				$limpia[ self::KEY_FILES ] = array_values( $fila[ self::KEY_FILES ] );
+			}
+			if ( isset( $fila[ self::KEY_REG ] ) && absint( $fila[ self::KEY_REG ] ) > 0 ) {
+				$limpia[ self::KEY_REG ] = absint( $fila[ self::KEY_REG ] );
 			}
 			$out[] = $limpia;
 		}
