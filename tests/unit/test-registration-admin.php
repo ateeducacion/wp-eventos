@@ -342,10 +342,10 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 				'consent' => '1',
 			),
 			array(
-				'qcomer01'    => '1',
-				'qetapa01'    => 'Primaria',
+				'qcomer01' => '1',
+				'qetapa01' => 'Primaria',
 				'qalerg01' => array( 'Gluten' ),
-				'qnotas01'    => 'Llega tarde',
+				'qnotas01' => 'Llega tarde',
 			)
 		);
 		$id     = Registrations::create( $this->evento, $v['core'], $v['answers'] );
