@@ -693,6 +693,13 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'data-evt-buscar="jornada en borrador"', $html );
 		$this->assertStringContainsString( 'data-evt-filtro', $html );
 		$this->assertStringNotContainsString( 'evt_filter_type', $html, 'ni tipología ni curso en la barra' );
+
+		// Cada tarjeta lleva su pie: el interruptor, ver y editar.
+		$this->assertStringContainsString( 'class="evt-ficha__pie"', $html );
+		$this->assertStringContainsString( 'data-evt-switch', $html, 'también en cuadrícula se publica' );
+		$this->assertStringContainsString( 'title="Editar este evento"', $html );
+		$this->assertStringContainsString( 'title="Previsualizar el evento, que está en borrador"', $html );
+		$this->assertStringContainsString( 'evt-switch--fijo', $html, 'el del histórico, apagado' );
 	}
 
 	/**

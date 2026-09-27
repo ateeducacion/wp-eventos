@@ -78,6 +78,7 @@ final class EventWorkspaceView {
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
 			echo EventParticipantsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_SETTINGS === $panel ) {
+			echo self::publication( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 			echo EventDataPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_LOOK === $panel ) {
 			echo EventAppearancePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
@@ -187,6 +188,46 @@ final class EventWorkspaceView {
 				<p>Queda cerrado tal cual: se sigue consultando y exportando, y la página pública no cambia, pero ya no se edita ni él ni sus páginas. <strong>Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.</strong></p>
 				<?php echo self::archive_form( $m, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			</div>
+		</section>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * «Publicación»: si el evento se ve fuera, y el interruptor para cambiarlo.
+	 *
+	 * Va encima de los datos y en su propio formulario: se publica con un
+	 * toque, sin pasar por «Guardar» ni llevarse lo que esté a medio escribir.
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return string
+	 */
+	private static function publication( array $m ): string {
+		$publicado = 'publish' === (string) $m['status'];
+		if ( true === $m['can_publish'] ) {
+			$op     = $publicado ? EventWorkspace::OP_UNPUBLISH : EventWorkspace::OP_PUBLISH;
+			$estado = PanelParts::publish_switch(
+				$publicado,
+				array(
+					EventWorkspace::FIELD_DO    => $op,
+					EventWorkspace::FIELD_EVENT => (string) (int) $m['event_id'],
+				),
+				EventWorkspace::nonce_action( $op ),
+				EventWorkspace::nonce_name( $op ),
+				true === ( $m['archived'] ?? false )
+			);
+		} else {
+			$estado = '<span class="' . esc_attr( $publicado ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ) . '">' . esc_html( (string) $m['status_label'] ) . '</span>';
+		}
+
+		ob_start();
+		?>
+		<section class="evt-tarjeta evt-publicacion">
+			<div>
+				<h2>Publicación</h2>
+				<p class="evt-sub"><?php echo esc_html( true === ( $m['archived'] ?? false ) ? 'Es histórico: se queda como está.' : ( $publicado ? 'El evento se ve fuera. Sus páginas, cada una según su estado.' : 'En borrador: solo lo ve quien lo organiza, en previsualización.' ) ); ?></p>
+			</div>
+			<?php echo $estado; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</section>
 		<?php
 		return (string) ob_get_clean();

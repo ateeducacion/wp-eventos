@@ -7431,8 +7431,10 @@ final class EventList {
 		$user_id  = get_current_user_id();
 		$publicar = 'publish' === $op;
 
+
 		if ( ! EventPostType::is_root( $event_id )
 			|| 'trash' === get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id )
 			|| ! EventAccess::can_publish( $user_id, $event_id )
 			|| ! EventAccess::can_edit( $user_id, $event_id ) ) {
 			Shell::leave( self::back_to( 'all', 'permiso' ) );
@@ -8521,8 +8523,15 @@ final class EventListView {
 						<p class="evt-ficha__dato"><?php echo esc_html( self::names( $row['areas'] ) ); ?></p>
 						<?php if ( $dentro ) : ?>
 							<?php echo self::restore_form( (int) $row['id'] ); ?>
-						<?php elseif ( '' !== (string) $row['view_url'] ) : ?>
-							<a class="evt-ficha__ver" href="<?php echo esc_url( (string) $row['view_url'] ); ?>"><?php echo esc_html( 'publish' === (string) $row['status'] ? 'Ver la página' : 'Previsualizar' ); ?></a>
+						<?php else : ?>
+							<div class="evt-ficha__pie">
+								<?php if ( true === $row['can_pub'] ) : ?>
+									<?php echo self::publish_switch( (array) $row ); ?>
+								<?php else : ?>
+									<span class="<?php echo esc_attr( Assets::state_class( (string) $row['status'] ) ); ?>"><?php echo esc_html( EventList::status_labels()[ $row['status'] ] ?? (string) $row['status'] ); ?></span>
+								<?php endif; ?>
+								<?php echo self::row_icons( (array) $row ); ?>
+							</div>
 						<?php endif; ?>
 					</div>
 				</li>
@@ -8613,15 +8622,7 @@ final class EventListView {
 								<?php if ( $dentro ) : ?>
 									<?php echo self::restore_form( (int) $row['id'] ); ?>
 								<?php else : ?>
-									<span class="evt-acciones">
-										<?php
-										echo PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Abrir el taller de este evento' ); 
-										$mirar = 'publish' === (string) $row['status']
-											? 'Ver la página del evento'
-											: 'Previsualizar el evento, que está en borrador';
-										echo PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar ); 
-										?>
-									</span>
+									<?php echo self::row_icons( (array) $row ); ?>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -8638,7 +8639,15 @@ final class EventListView {
 
 
 
-
+	private static function row_icons( array $row ): string {
+		$mirar = 'publish' === (string) $row['status']
+			? 'Ver la página del evento'
+			: 'Previsualizar el evento, que está en borrador';
+		return '<span class="evt-acciones">'
+			. PanelParts::icon_link( (string) $row['view_url'], 'ojo', $mirar )
+			. PanelParts::icon_link( (string) $row['url'], 'lapiz', 'Editar este evento' )
+			. '</span>';
+	}
 
 
 
@@ -8650,25 +8659,16 @@ final class EventListView {
 		$id        = (int) $row['id'];
 		$publicado = 'publish' === (string) $row['status'];
 		$op        = $publicado ? 'unpublish' : 'publish';
-		$rotulo    = $publicado ? 'Despublicar este evento' : 'Publicar este evento';
-
-		ob_start();
-		?>
-		<form class="evt-accion evt-switch" method="post" action="">
-			<?php wp_nonce_field( EventList::nonce_action( $op ), EventList::nonce_name( $id ), false ); ?>
-			<input type="hidden" name="<?php echo esc_attr( EventList::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
-			<input type="hidden" name="<?php echo esc_attr( EventList::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
-			<label class="evt-switch-caja" title="<?php echo esc_attr( $rotulo ); ?>" data-bs-toggle="tooltip">
-				<input type="checkbox" class="evt-switch-input" data-evt-switch
-					<?php checked( $publicado, true ); ?> />
-				<span class="evt-switch-pista" aria-hidden="true"></span>
-				<span class="evt-switch-txt"><?php echo esc_html( $publicado ? 'Publicado' : 'Borrador' ); ?></span>
-				<span class="screen-reader-text"><?php echo esc_html( $rotulo ); ?></span>
-			</label>
-			<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-switch-boton' ); ?>"><?php echo esc_html( $publicado ? 'Despublicar' : 'Publicar' ); ?></button>
-		</form>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::publish_switch(
+			$publicado,
+			array(
+				EventList::FIELD_DO    => $op,
+				EventList::FIELD_EVENT => (string) $id,
+			),
+			EventList::nonce_action( $op ),
+			EventList::nonce_name( $id ),
+			true === $row['archived']
+		);
 	}
 
 
@@ -11764,6 +11764,12 @@ final class EventWorkspace {
 
 
 
+	public const OP_PUBLISH   = 'ev_publish';
+	public const OP_UNPUBLISH = 'ev_unpublish';
+
+
+
+
 
 
 	private const ROW_OPS = array( 'up', 'down', 'publish', 'unpublish', 'delete', 'restore' );
@@ -11808,6 +11814,8 @@ final class EventWorkspace {
 		self::OP_SPEAKER,
 		self::OP_ACTIVITY,
 		self::OP_EXPORT,
+		self::OP_PUBLISH,
+		self::OP_UNPUBLISH,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -12097,6 +12105,10 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_PUBLISH === $op || self::OP_UNPUBLISH === $op ) {
+			self::save_status( self::OP_PUBLISH === $op, $event_id, $user_id, $destino );
+			return;
+		}
 		if ( self::PANEL_SETTINGS === $op ) {
 			self::save_data( $event_id, $user_id, $destino );
 			return;
@@ -12122,7 +12134,7 @@ final class EventWorkspace {
 		if ( in_array( $op, self::ROW_OPS, true ) ) {
 			return self::PANEL_SECTIONS;
 		}
-		if ( self::OP_ARCHIVE === $op || self::OP_UNARCHIVE === $op ) {
+		if ( in_array( $op, array( self::OP_ARCHIVE, self::OP_UNARCHIVE, self::OP_PUBLISH, self::OP_UNPUBLISH ), true ) ) {
 			return self::PANEL_SETTINGS;
 		}
 		if ( self::OP_SPEAKER === $op || 'sp_up' === $op || 'sp_down' === $op ) {
@@ -12266,6 +12278,39 @@ final class EventWorkspace {
 		}
 
 		self::set_flash( 'ok', self::ROW_DONE[ $op ] );
+		Shell::leave( $destino );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function save_status( bool $publicar, int $event_id, int $user_id, string $destino ): void {
+		if ( EventAccess::is_archived( $event_id ) ) {
+			self::set_flash( 'error', 'Es un evento histórico: se queda como está, publicado o en borrador.' );
+			Shell::leave( $destino );
+			return;
+		}
+		if ( ! EventAccess::can_publish( $user_id, $event_id ) ) {
+			self::set_flash( 'error', 'Su perfil no publica eventos: puede editarlo, pero no publicarlo.' );
+			Shell::leave( $destino );
+			return;
+		}
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => $publicar ? 'publish' : 'draft',
+			)
+		);
+		self::set_flash( 'ok', $publicar ? 'Evento publicado: ya se ve fuera. Sus páginas siguen con el estado que tuvieran.' : 'Evento en borrador: ya no se ve fuera.' );
 		Shell::leave( $destino );
 	}
 
@@ -13958,6 +14003,59 @@ final class PanelParts {
 			. ' title="' . esc_attr( $titulo ) . '" data-bs-toggle="tooltip">'
 			. wp_kses( Shell::icon( $icono ), self::SVG )
 			. '<span class="screen-reader-text">' . esc_html( $titulo ) . '</span></a>';
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function publish_switch( bool $publicado, array $campos, string $nonce, string $campo, bool $historico = false ): string {
+		$rotulo = $publicado ? 'Despublicar este evento' : 'Publicar este evento';
+		if ( $historico ) {
+			$motivo = 'Es histórico: se queda como está, publicado o en borrador.';
+			return '<span class="evt-switch evt-switch--fijo"><label class="evt-switch-caja" title="' . esc_attr( $motivo ) . '" data-bs-toggle="tooltip">'
+				. '<input type="checkbox" class="evt-switch-input" disabled' . ( $publicado ? ' checked' : '' ) . ' />'
+				. '<span class="evt-switch-pista" aria-hidden="true"></span>'
+				. '<span class="evt-switch-txt">' . esc_html( $publicado ? 'Publicado' : 'Borrador' ) . '</span>'
+				. '<span class="screen-reader-text">' . esc_html( $motivo ) . '</span></label></span>';
+		}
+
+		ob_start();
+		?>
+		<form class="evt-accion evt-switch" method="post" action="">
+			<?php wp_nonce_field( $nonce, $campo, false ); ?>
+			<?php foreach ( $campos as $nombre => $valor ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $nombre ); ?>" value="<?php echo esc_attr( $valor ); ?>" />
+			<?php endforeach; ?>
+			<label class="evt-switch-caja" title="<?php echo esc_attr( $rotulo ); ?>" data-bs-toggle="tooltip">
+				<input type="checkbox" class="evt-switch-input" data-evt-switch
+					<?php checked( $publicado, true ); ?> />
+				<span class="evt-switch-pista" aria-hidden="true"></span>
+				<span class="evt-switch-txt"><?php echo esc_html( $publicado ? 'Publicado' : 'Borrador' ); ?></span>
+				<span class="screen-reader-text"><?php echo esc_html( $rotulo ); ?></span>
+			</label>
+			<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-switch-boton' ); ?>"><?php echo esc_html( $publicado ? 'Despublicar' : 'Publicar' ); ?></button>
+		</form>
+		<?php
+		return (string) ob_get_clean();
 	}
 
 
@@ -16609,6 +16707,7 @@ final class EventWorkspaceView {
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
 			echo EventParticipantsPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_SETTINGS === $panel ) {
+			echo self::publication( $m ); 
 			echo EventDataPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_LOOK === $panel ) {
 			echo EventAppearancePanel::html( $m ); 
@@ -16718,6 +16817,46 @@ final class EventWorkspaceView {
 				<p>Queda cerrado tal cual: se sigue consultando y exportando, y la página pública no cambia, pero ya no se edita ni él ni sus páginas. <strong>Para volver a abrirlo hay que pedírselo a quien administre el aplicativo.</strong></p>
 				<?php echo self::archive_form( $m, true ); ?>
 			</div>
+		</section>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function publication( array $m ): string {
+		$publicado = 'publish' === (string) $m['status'];
+		if ( true === $m['can_publish'] ) {
+			$op     = $publicado ? EventWorkspace::OP_UNPUBLISH : EventWorkspace::OP_PUBLISH;
+			$estado = PanelParts::publish_switch(
+				$publicado,
+				array(
+					EventWorkspace::FIELD_DO    => $op,
+					EventWorkspace::FIELD_EVENT => (string) (int) $m['event_id'],
+				),
+				EventWorkspace::nonce_action( $op ),
+				EventWorkspace::nonce_name( $op ),
+				true === ( $m['archived'] ?? false )
+			);
+		} else {
+			$estado = '<span class="' . esc_attr( $publicado ? 'evt-state evt-state-publish' : 'evt-state evt-state-draft' ) . '">' . esc_html( (string) $m['status_label'] ) . '</span>';
+		}
+
+		ob_start();
+		?>
+		<section class="evt-tarjeta evt-publicacion">
+			<div>
+				<h2>Publicación</h2>
+				<p class="evt-sub"><?php echo esc_html( true === ( $m['archived'] ?? false ) ? 'Es histórico: se queda como está.' : ( $publicado ? 'El evento se ve fuera. Sus páginas, cada una según su estado.' : 'En borrador: solo lo ve quien lo organiza, en previsualización.' ) ); ?></p>
+			</div>
+			<?php echo $estado; ?>
 		</section>
 		<?php
 		return (string) ob_get_clean();
@@ -22529,6 +22668,8 @@ body.evt-app .evt-hoja {
 .evt-switch-input:checked + .evt-switch-pista::after { transform: translateX(16px); }
 .evt-switch-input:focus-visible + .evt-switch-pista { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-switch-input:disabled + .evt-switch-pista { opacity: .6; }
+/* El de un histórico: se ve el estado, no se toca. */
+.evt-switch--fijo .evt-switch-caja { cursor: not-allowed; }
 .evt-switch-txt { font-size: 13px; color: var(--evt-texto-2); }
 
 @media ( prefers-reduced-motion: reduce ) {
@@ -23093,16 +23234,28 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   line-height: 1.25;
   text-align: center;
 }
-.evt-ficha__cuerpo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
+.evt-ficha__cuerpo { display: flex; flex: 1 1 auto; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
 .evt-ficha__chapas { display: flex; flex-wrap: wrap; gap: 4px; }
 .evt-ficha__titulo { margin: 0; font-size: 1rem; line-height: 1.3; }
 .evt-ficha__enlace { color: inherit; text-decoration: none; }
-/* Toda la tarjeta abre el taller; «Ver la página» queda por encima. */
+/* Toda la tarjeta abre el taller; el pie —publicar, ver, editar— queda por encima. */
 .evt-ficha__enlace::after { content: ""; position: absolute; inset: 0; }
 .evt-ficha__enlace:focus-visible { outline: none; }
 .evt-ficha:has(.evt-ficha__enlace:focus-visible) { outline: 3px solid var(--evt-pri); outline-offset: 2px; }
 .evt-ficha__dato { margin: 0; color: var(--evt-texto-2); font-size: .85rem; }
-.evt-ficha__ver { position: relative; z-index: 1; align-self: flex-start; margin-top: 4px; font-size: .85rem; }
+/* El pie va abajo del todo, para que las tarjetas de una fila lo alineen. */
+.evt-ficha__pie {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--evt-linea);
+}
 .evt-ficha .evt-accion { position: relative; z-index: 1; }
 
 .evt-tabla__cartel { width: 64px; }
@@ -23408,10 +23561,12 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 }
 .evt-ficha--historico .evt-ficha__banda { background: #2b3036; }
 .evt-ficha--papelera .evt-ficha__banda { background: var(--evt-mal); }
+/* Se apaga lo que cuenta el evento, no el pie: publicarlo es justo lo que
+   se viene a hacer con un borrador. */
 .evt-ficha--borrador .evt-ficha__cartel,
-.evt-ficha--borrador .evt-ficha__cuerpo,
+.evt-ficha--borrador .evt-ficha__cuerpo > :not(.evt-ficha__pie),
 .evt-ficha--papelera .evt-ficha__cartel,
-.evt-ficha--papelera .evt-ficha__cuerpo { opacity: .6; }
+.evt-ficha--papelera .evt-ficha__cuerpo > :not(.evt-ficha__pie) { opacity: .6; }
 .evt-ficha--historico .evt-ficha__cartel { filter: grayscale(1); opacity: .8; }
 .evt-fila--borrador > td,
 .evt-fila--papelera > td { opacity: .65; }
@@ -23424,6 +23579,17 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
   align-items: center;
   margin-top: 1.5rem;
 }
+
+/* «Publicación», encima de los datos del evento. */
+.evt-publicacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.evt-publicacion h2 { margin: 0; font-size: 1.05rem; }
+.evt-publicacion .evt-sub { margin: 2px 0 0; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.

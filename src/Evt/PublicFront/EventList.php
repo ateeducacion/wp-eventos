@@ -236,8 +236,10 @@ final class EventList {
 		$user_id  = get_current_user_id();
 		$publicar = 'publish' === $op;
 
+		// Un histórico se queda como estaba, también para administración.
 		if ( ! EventPostType::is_root( $event_id )
 			|| 'trash' === get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id )
 			|| ! EventAccess::can_publish( $user_id, $event_id )
 			|| ! EventAccess::can_edit( $user_id, $event_id ) ) {
 			Shell::leave( self::back_to( 'all', 'permiso' ) );

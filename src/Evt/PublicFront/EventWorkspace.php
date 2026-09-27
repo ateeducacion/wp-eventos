@@ -193,6 +193,12 @@ final class EventWorkspace {
 	public const OP_UNARCHIVE = 'unarchive';
 
 	/**
+	 * Operations that publish the event, or send it back to draft, from «Datos».
+	 */
+	public const OP_PUBLISH   = 'ev_publish';
+	public const OP_UNPUBLISH = 'ev_unpublish';
+
+	/**
 	 * Operations that act on one row of the sections table.
 	 *
 	 * @var string[]
@@ -239,6 +245,8 @@ final class EventWorkspace {
 		self::OP_SPEAKER,
 		self::OP_ACTIVITY,
 		self::OP_EXPORT,
+		self::OP_PUBLISH,
+		self::OP_UNPUBLISH,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -528,6 +536,10 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_PUBLISH === $op || self::OP_UNPUBLISH === $op ) {
+			self::save_status( self::OP_PUBLISH === $op, $event_id, $user_id, $destino );
+			return;
+		}
 		if ( self::PANEL_SETTINGS === $op ) {
 			self::save_data( $event_id, $user_id, $destino );
 			return;
@@ -553,7 +565,7 @@ final class EventWorkspace {
 		if ( in_array( $op, self::ROW_OPS, true ) ) {
 			return self::PANEL_SECTIONS;
 		}
-		if ( self::OP_ARCHIVE === $op || self::OP_UNARCHIVE === $op ) {
+		if ( in_array( $op, array( self::OP_ARCHIVE, self::OP_UNARCHIVE, self::OP_PUBLISH, self::OP_UNPUBLISH ), true ) ) {
 			return self::PANEL_SETTINGS;
 		}
 		if ( self::OP_SPEAKER === $op || 'sp_up' === $op || 'sp_down' === $op ) {
@@ -697,6 +709,39 @@ final class EventWorkspace {
 		}
 
 		self::set_flash( 'ok', self::ROW_DONE[ $op ] );
+		Shell::leave( $destino );
+	}
+
+	/**
+	 * Publish the event, or send it back to draft.
+	 *
+	 * Lo mismo que el interruptor del listado, desde el taller: publicar el
+	 * evento no toca sus páginas, que tienen cada una su estado.
+	 *
+	 * @param bool   $publicar Whether to publish.
+	 * @param int    $event_id Event post ID.
+	 * @param int    $user_id  Who is asking.
+	 * @param string $destino  Where to go back to.
+	 * @return void
+	 */
+	private static function save_status( bool $publicar, int $event_id, int $user_id, string $destino ): void {
+		if ( EventAccess::is_archived( $event_id ) ) {
+			self::set_flash( 'error', 'Es un evento histórico: se queda como está, publicado o en borrador.' );
+			Shell::leave( $destino );
+			return;
+		}
+		if ( ! EventAccess::can_publish( $user_id, $event_id ) ) {
+			self::set_flash( 'error', 'Su perfil no publica eventos: puede editarlo, pero no publicarlo.' );
+			Shell::leave( $destino );
+			return;
+		}
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => $publicar ? 'publish' : 'draft',
+			)
+		);
+		self::set_flash( 'ok', $publicar ? 'Evento publicado: ya se ve fuera. Sus páginas siguen con el estado que tuvieran.' : 'Evento en borrador: ya no se ve fuera.' );
 		Shell::leave( $destino );
 	}
 
