@@ -107,6 +107,18 @@ final class RegistrationMetaRegistration {
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
+			RegistrationMetaKeys::SIGNUP_START     => array(
+				'type'     => 'string',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
+			),
+			RegistrationMetaKeys::SIGNUP_END       => array(
+				'type'     => 'string',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
+			),
+			RegistrationMetaKeys::SIGNUP_PUBLIC    => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
 			RegistrationMetaKeys::SIGNUP_QUESTIONS => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_questions' ),

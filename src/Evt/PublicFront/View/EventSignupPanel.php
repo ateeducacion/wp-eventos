@@ -49,7 +49,7 @@ final class EventSignupPanel {
 			$event_id
 		);
 
-		$html .= self::windows( $ajustes );
+		$html .= self::windows( $ajustes, $preguntas );
 		$html .= self::consent( $ajustes );
 		$html .= self::questions( $preguntas, (array) $m['q_types'], (bool) $m['q_locked'] );
 
@@ -62,13 +62,28 @@ final class EventSignupPanel {
 	/**
 	 * The two windows: the signup one and the workshop one.
 	 *
-	 * @param array<string, mixed> $a Signup settings.
+	 * @param array<string, mixed>             $a         Signup settings.
+	 * @param array<int, array<string, mixed>> $preguntas Questions of the event.
 	 * @return string
 	 */
-	private static function windows( array $a ): string {
+	private static function windows( array $a, array $preguntas ): string {
 		$html  = '<fieldset class="evt-campos"><legend>Plazos</legend>';
 		$html .= self::toggle( 'evt_signup_open', 'La inscripción está abierta', (bool) $a['open'] );
-		$html .= '<p class="evt-ayuda">Mientras esté cerrada, la página de inscripción lo dice y no acepta a nadie.</p>';
+		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-desde">Desde</label>'
+			. '<input type="date" id="evt-ins-desde" name="evt_signup_start" value="' . esc_attr( (string) $a['start'] ) . '"></p>';
+		$html .= '<p class="evt-campo evt-campo--fecha"><label for="evt-ins-hasta">Hasta</label>'
+			. '<input type="date" id="evt-ins-hasta" name="evt_signup_end" value="' . esc_attr( (string) $a['end'] ) . '"></p>';
+		$html .= '<p class="evt-ayuda">Solo se acepta a alguien con el interruptor puesto, dentro de las fechas '
+			. '—son opcionales— y con el evento publicado y sin marcar como histórico. Fuera de eso, '
+			. 'la página de inscripción dice por qué está cerrada.</p>';
+
+		$html .= self::toggle( 'evt_signup_public', 'Inscripción pública: también sin iniciar sesión', (bool) $a['public'] );
+		$html .= '<p class="evt-ayuda">Apagada, solo se inscribe quien ha iniciado sesión.</p>';
+		if ( (bool) $a['public'] && self::has_file_question( $preguntas ) ) {
+			$html .= '<p class="evt-aviso evt-aviso--aviso">Quien se inscriba <strong>sin iniciar sesión no puede adjuntar '
+				. 'archivos</strong>: las preguntas de archivo no le salen, y si alguna es obligatoria tendrá que '
+				. 'iniciar sesión para inscribirse.</p>';
+		}
 
 		// El plazo del taller es propio porque se abre cuando el programa está
 		// cerrado, y eso casi nunca coincide con abrir la inscripción (ADR-0033).
@@ -82,6 +97,16 @@ final class EventSignupPanel {
 			. 'y un taller lleno deja de poder elegirse.</p>';
 
 		return $html . '</fieldset>';
+	}
+
+	/**
+	 * Whether any question asks for a file.
+	 *
+	 * @param array<int, array<string, mixed>> $preguntas Questions.
+	 * @return bool
+	 */
+	private static function has_file_question( array $preguntas ): bool {
+		return in_array( 'file', array_column( $preguntas, 'type' ), true );
 	}
 
 	/**

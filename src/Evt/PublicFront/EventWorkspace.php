@@ -1413,6 +1413,9 @@ final class EventWorkspace {
 		$m['q_locked'] = Registrations::has_any( $event_id );
 		$m['signup']   = array(
 			'open'            => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, true ),
+			'start'           => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, true ),
+			'end'             => (string) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, true ),
+			'public'          => (bool) get_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, true ),
 			'workshop_open'   => (bool) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ),
 			'workshop_start'  => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, true ),
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
@@ -1434,8 +1437,12 @@ final class EventWorkspace {
 	private static function save_signup( int $event_id, string $destino ): void {
 		$abierta  = self::field( 'evt_signup_open' );
 		$talleres = self::field( 'evt_workshop_open' );
+		$publica  = self::field( 'evt_signup_public' );
 
 		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_OPEN, '' !== $abierta );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_START, self::field( 'evt_signup_start' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_END, self::field( 'evt_signup_end' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::SIGNUP_PUBLIC, '' !== $publica );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );

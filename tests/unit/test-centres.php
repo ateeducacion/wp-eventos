@@ -425,6 +425,7 @@ class Test_Centres extends WP_UnitTestCase {
 
 		$evento = $this->event( $this->administrator() );
 		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_OPEN, 1 );
+		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_PUBLIC, 1 );
 
 		$html = SignupBlock::html(
 			array(

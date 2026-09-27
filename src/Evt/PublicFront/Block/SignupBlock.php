@@ -62,8 +62,18 @@ final class SignupBlock {
 			return $aviso . self::mine( $evento, $mia );
 		}
 
-		if ( ! SignupForm::is_open( $evento ) ) {
-			return $aviso . '<p class="evt-ins__cerrada">La inscripción de este evento no está abierta.</p>';
+		$cerrada = SignupForm::closed_because( $evento );
+		if ( '' !== $cerrada ) {
+			return $aviso . '<p class="evt-ins__cerrada">' . esc_html( $cerrada ) . '</p>';
+		}
+
+		$sesion = SignupForm::login_needed( $evento );
+		if ( '' !== $sesion ) {
+			return $aviso . sprintf(
+				'<p class="evt-ins__cerrada">%1$s</p><p><a class="evt-btn evt-btn--primario" href="%2$s">Iniciar sesión</a></p>',
+				esc_html( $sesion ),
+				esc_url( wp_login_url( (string) get_permalink() ) )
+			);
 		}
 
 		return $aviso . self::form( $evento );
@@ -268,9 +278,23 @@ final class SignupBlock {
 			return '';
 		}
 
-		$html = '<fieldset class="evt-ins__preguntas"><legend>Sobre este evento</legend>';
+		// Sin sesión no se adjunta nada: las preguntas de archivo no salen y se
+		// dice por qué. Las obligatorias ya mandaron a iniciar sesión antes.
+		$anonimo = ! is_user_logged_in();
+		$sin_doc = false;
+		$html    = '<fieldset class="evt-ins__preguntas"><legend>Sobre este evento</legend>';
 		foreach ( $preguntas as $pregunta ) {
+			if ( $anonimo && 'file' === $pregunta['type'] ) {
+				$sin_doc = true;
+				continue;
+			}
 			$html .= self::question( $pregunta );
+		}
+		if ( $sin_doc ) {
+			$html .= sprintf(
+				'<p class="evt-ayuda">Para adjuntar documentos a su inscripción, <a href="%s">inicie sesión</a>.</p>',
+				esc_url( wp_login_url( (string) get_permalink() ) )
+			);
 		}
 		return $html . '</fieldset>';
 	}

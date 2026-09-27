@@ -85,6 +85,20 @@ final class RegistrationMetaKeys {
 	public const SIGNUP_OPEN = 'evt_signup_open';
 
 	/**
+	 * The signup window. Optional: without dates, the switch decides.
+	 */
+	public const SIGNUP_START = 'evt_signup_start';
+	public const SIGNUP_END   = 'evt_signup_end';
+
+	/**
+	 * Whether people who have not logged in may sign up too.
+	 *
+	 * Apagado por defecto: sin sesión no hay a quién pedirle cuentas, y por eso
+	 * quien se inscribe así tampoco adjunta documentos.
+	 */
+	public const SIGNUP_PUBLIC = 'evt_signup_public';
+
+	/**
 	 * The questions of this event, as JSON.
 	 */
 	public const SIGNUP_QUESTIONS = 'evt_signup_questions';
@@ -140,6 +154,9 @@ final class RegistrationMetaKeys {
 	public static function signup_keys(): array {
 		return array(
 			self::SIGNUP_OPEN,
+			self::SIGNUP_START,
+			self::SIGNUP_END,
+			self::SIGNUP_PUBLIC,
 			self::SIGNUP_QUESTIONS,
 			self::WORKSHOP_OPEN,
 			self::WORKSHOP_START,

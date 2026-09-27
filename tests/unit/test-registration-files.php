@@ -199,6 +199,9 @@ class Test_Registration_Files extends WP_UnitTestCase {
 			wp_slash( (string) wp_json_encode( array( $pregunta ) ) )
 		);
 
+		// Adjuntar pide sesión: quien se inscribe aquí ha entrado con su cuenta.
+		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
 		return array(
 			'event'    => $evento,
 			'question' => 'qdoc0001',
@@ -610,6 +613,39 @@ class Test_Registration_Files extends WP_UnitTestCase {
 		$this->assertSame( $cuantos, $this->cuantos_adjuntos() );
 	}
 
+	/**
+	 * Sin sesión no se adjunta nada, aunque la petición traiga el fichero:
+	 * la inscripción pública se registra sin el documento opcional.
+	 */
+	public function test_an_anonymous_signup_stores_no_file_even_if_sent() {
+		$datos = $this->evento_con_pregunta_de_fichero( false );
+		update_post_meta( $datos['event'], RegistrationMetaKeys::SIGNUP_PUBLIC, true );
+		$this->acting_as( 0 );
+		$this->en_files( array( $datos['question'] => $this->un_pdf() ) );
+
+		$this->post(
+			array(
+				SignupForm::FIELD_OP    => SignupForm::OP_SIGNUP,
+				SignupForm::FIELD_EVENT => $datos['event'],
+				'tax_id'                => '12345678Z',
+				'name'                  => 'María',
+				'surname'               => 'Pérez',
+				'email'                 => 'maria@example.org',
+				'centre'                => '38000001',
+				'consent'               => '1',
+			),
+			SignupForm::NONCE_ACTION,
+			SignupForm::NONCE_FIELD
+		);
+		add_filter( 'evt_centres', fn() => array( '38000001' => 'CEIP Ejemplo' ) );
+
+		$this->exit_url( array( SignupForm::class, 'maybe_handle_submit' ) );
+
+		$inscripciones = Registrations::all( $datos['event'] );
+		$this->assertCount( 1, $inscripciones );
+		$this->assertSame( array(), RegistrationFiles::descriptors( (int) $inscripciones[0]->ID ) );
+	}
+
 	// ─── la autorización ───────────────────────────────────────────────────
 
 	/**
@@ -907,7 +943,10 @@ class Test_Registration_Files extends WP_UnitTestCase {
 		$evento = $this->event(
 			$this->administrator(),
 			array( $this->area( 'Innovación' ) ),
-			array( RegistrationMetaKeys::SIGNUP_OPEN => true )
+			array(
+				RegistrationMetaKeys::SIGNUP_OPEN   => true,
+				RegistrationMetaKeys::SIGNUP_PUBLIC => true,
+			)
 		);
 		update_post_meta(
 			$evento,
