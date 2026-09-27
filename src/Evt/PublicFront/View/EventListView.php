@@ -130,16 +130,21 @@ final class EventListView {
 	/**
 	 * The badges of one event: its state by the dates, and borrador / histórico.
 	 *
-	 * @param array<string, mixed> $row Row.
+	 * @param array<string, mixed> $row       Row.
+	 * @param bool                 $con_marca Whether to add borrador / histórico / papelera.
 	 * @return string
 	 */
-	private static function badges( array $row ): string {
+	private static function badges( array $row, bool $con_marca = true ): string {
 		$estados = EventMetaKeys::states();
 		$html    = sprintf(
 			'<span class="%1$s">%2$s</span>',
 			esc_attr( Assets::state_class( (string) $row['state'] ) ),
 			esc_html( $estados[ $row['state'] ] ?? '—' )
 		);
+		// En la cuadrícula lo dice la banda de la esquina: no se repite.
+		if ( ! $con_marca ) {
+			return $html;
+		}
 		if ( ! empty( $row['draft'] ) ) {
 			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_DRAFT ) ) . '">Borrador</span>';
 		}
@@ -150,6 +155,28 @@ final class EventListView {
 			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_TRASH ) ) . '">En la papelera</span>';
 		}
 		return $html;
+	}
+
+	/**
+	 * What sets an event apart from a live one: papelera, borrador or histórico.
+	 *
+	 * Uno solo, el que más pesa: lo de la papelera no se edita, y un borrador
+	 * todavía no se ve fuera.
+	 *
+	 * @param array<string, mixed> $row Row.
+	 * @return array{0:string, 1:string} CSS modifier and label; empty when it is live.
+	 */
+	private static function mark( array $row ): array {
+		if ( EventList::FILTER_TRASH === (string) $row['status'] ) {
+			return array( 'papelera', 'En la papelera' );
+		}
+		if ( ! empty( $row['draft'] ) ) {
+			return array( 'borrador', 'Borrador' );
+		}
+		if ( ! empty( $row['archived'] ) ) {
+			return array( 'historico', 'Histórico' );
+		}
+		return array( '', '' );
 	}
 
 	/**
@@ -182,10 +209,14 @@ final class EventListView {
 		?>
 		<ul class="evt-rejilla">
 			<?php foreach ( $m['rows'] as $row ) : ?>
-				<li class="evt-ficha" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+				<?php list( $marca, $rotulo ) = self::mark( (array) $row ); ?>
+				<li class="evt-ficha<?php echo '' !== $marca ? ' evt-ficha--' . esc_attr( $marca ) : ''; ?>" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+					<?php if ( '' !== $marca ) : ?>
+						<span class="evt-ficha__banda"><?php echo esc_html( $rotulo ); ?></span>
+					<?php endif; ?>
 					<?php echo self::poster( (array) $row, 'evt-ficha__cartel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 					<div class="evt-ficha__cuerpo">
-						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 						<h2 class="evt-ficha__titulo">
 							<?php if ( '' !== (string) $row['url'] ) : ?>
 								<a class="evt-ficha__enlace" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
@@ -262,7 +293,8 @@ final class EventListView {
 				</thead>
 				<tbody>
 					<?php foreach ( $m['rows'] as $row ) : ?>
-						<tr data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+						<?php list( $marca ) = self::mark( (array) $row ); ?>
+						<tr<?php echo '' !== $marca ? ' class="evt-fila--' . esc_attr( $marca ) . '"' : ''; ?> data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
 							<td class="evt-tabla__cartel"><?php echo self::poster( (array) $row, 'evt-mini-cartel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></td>
 							<td data-rotulo="Evento">
 								<?php if ( '' !== (string) $row['url'] ) : ?>

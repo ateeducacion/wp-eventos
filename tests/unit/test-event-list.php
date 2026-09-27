@@ -609,8 +609,9 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertSame( EventList::VIEW_GRID, $m['selection']['view'] );
 		$this->assertStringContainsString( 'class="evt-rejilla"', $html );
 		$this->assertStringContainsString( 'evt-ficha__cartel--vacio', $html );
-		$this->assertStringContainsString( '>Borrador</span>', $html );
-		$this->assertStringContainsString( '>Histórico</span>', $html );
+		$this->assertStringContainsString( 'evt-ficha evt-ficha--borrador', $html, 'el borrador, más claro' );
+		$this->assertStringContainsString( '<span class="evt-ficha__banda">Borrador</span>', $html, 'con su banda en la esquina' );
+		$this->assertStringContainsString( '<span class="evt-ficha__banda">Histórico</span>', $html );
 		$this->assertStringContainsString( 'data-evt-buscar="jornada en borrador"', $html );
 		$this->assertStringContainsString( 'data-evt-filtro', $html );
 		$this->assertStringNotContainsString( 'evt_filter_type', $html, 'ni tipología ni curso en la barra' );

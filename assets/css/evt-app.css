@@ -1344,3 +1344,35 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 .evt-campo-con-boton > input { flex: 1 1 16rem; width: auto; }
 .evt-campo-con-boton > .btn,
 .evt-campo-con-boton > .evt-btn { flex: 0 0 auto; }
+
+/* Borrador, histórico o papelera: la tarjeta más clara y una banda cruzada
+   en la esquina que lo dice (ADR-0041). La chapa de la lista lo repite. */
+.evt-ficha__banda {
+  position: absolute;
+  top: 22px;
+  right: -44px;
+  z-index: 2;
+  width: 170px;
+  padding: 5px 0;
+  transform: rotate(45deg);
+  background: var(--evt-esp);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, .25);
+  pointer-events: none;
+}
+.evt-ficha--historico .evt-ficha__banda { background: #2b3036; }
+.evt-ficha--papelera .evt-ficha__banda { background: var(--evt-mal); }
+.evt-ficha--borrador .evt-ficha__cartel,
+.evt-ficha--borrador .evt-ficha__cuerpo,
+.evt-ficha--papelera .evt-ficha__cartel,
+.evt-ficha--papelera .evt-ficha__cuerpo { opacity: .6; }
+.evt-ficha--historico .evt-ficha__cartel { filter: grayscale(1); opacity: .8; }
+.evt-fila--borrador > td,
+.evt-fila--papelera > td { opacity: .65; }
+.evt-fila--borrador > td:last-child,
+.evt-fila--papelera > td:last-child { opacity: 1; }

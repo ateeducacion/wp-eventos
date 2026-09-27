@@ -7914,13 +7914,18 @@ final class EventListView {
 
 
 
-	private static function badges( array $row ): string {
+
+	private static function badges( array $row, bool $con_marca = true ): string {
 		$estados = EventMetaKeys::states();
 		$html    = sprintf(
 			'<span class="%1$s">%2$s</span>',
 			esc_attr( Assets::state_class( (string) $row['state'] ) ),
 			esc_html( $estados[ $row['state'] ] ?? '—' )
 		);
+
+		if ( ! $con_marca ) {
+			return $html;
+		}
 		if ( ! empty( $row['draft'] ) ) {
 			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_DRAFT ) ) . '">Borrador</span>';
 		}
@@ -7931,6 +7936,28 @@ final class EventListView {
 			$html .= ' <span class="' . esc_attr( Assets::state_class( EventList::FILTER_TRASH ) ) . '">En la papelera</span>';
 		}
 		return $html;
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function mark( array $row ): array {
+		if ( EventList::FILTER_TRASH === (string) $row['status'] ) {
+			return array( 'papelera', 'En la papelera' );
+		}
+		if ( ! empty( $row['draft'] ) ) {
+			return array( 'borrador', 'Borrador' );
+		}
+		if ( ! empty( $row['archived'] ) ) {
+			return array( 'historico', 'Histórico' );
+		}
+		return array( '', '' );
 	}
 
 
@@ -7963,10 +7990,14 @@ final class EventListView {
 		?>
 		<ul class="evt-rejilla">
 			<?php foreach ( $m['rows'] as $row ) : ?>
-				<li class="evt-ficha" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+				<?php list( $marca, $rotulo ) = self::mark( (array) $row ); ?>
+				<li class="evt-ficha<?php echo '' !== $marca ? ' evt-ficha--' . esc_attr( $marca ) : ''; ?>" data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+					<?php if ( '' !== $marca ) : ?>
+						<span class="evt-ficha__banda"><?php echo esc_html( $rotulo ); ?></span>
+					<?php endif; ?>
 					<?php echo self::poster( (array) $row, 'evt-ficha__cartel' ); ?>
 					<div class="evt-ficha__cuerpo">
-						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row ); ?></div>
+						<div class="evt-ficha__chapas"><?php echo self::badges( (array) $row, false ); ?></div>
 						<h2 class="evt-ficha__titulo">
 							<?php if ( '' !== (string) $row['url'] ) : ?>
 								<a class="evt-ficha__enlace" href="<?php echo esc_url( (string) $row['url'] ); ?>"><?php echo esc_html( (string) $row['title'] ); ?></a>
@@ -8043,7 +8074,8 @@ final class EventListView {
 				</thead>
 				<tbody>
 					<?php foreach ( $m['rows'] as $row ) : ?>
-						<tr data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
+						<?php list( $marca ) = self::mark( (array) $row ); ?>
+						<tr<?php echo '' !== $marca ? ' class="evt-fila--' . esc_attr( $marca ) . '"' : ''; ?> data-evt-buscar="<?php echo esc_attr( (string) $row['search'] ); ?>">
 							<td class="evt-tabla__cartel"><?php echo self::poster( (array) $row, 'evt-mini-cartel' ); ?></td>
 							<td data-rotulo="Evento">
 								<?php if ( '' !== (string) $row['url'] ) : ?>
@@ -22116,6 +22148,38 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 .evt-campo-con-boton > input { flex: 1 1 16rem; width: auto; }
 .evt-campo-con-boton > .btn,
 .evt-campo-con-boton > .evt-btn { flex: 0 0 auto; }
+
+/* Borrador, histórico o papelera: la tarjeta más clara y una banda cruzada
+   en la esquina que lo dice (ADR-0041). La chapa de la lista lo repite. */
+.evt-ficha__banda {
+  position: absolute;
+  top: 22px;
+  right: -44px;
+  z-index: 2;
+  width: 170px;
+  padding: 5px 0;
+  transform: rotate(45deg);
+  background: var(--evt-esp);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, .25);
+  pointer-events: none;
+}
+.evt-ficha--historico .evt-ficha__banda { background: #2b3036; }
+.evt-ficha--papelera .evt-ficha__banda { background: var(--evt-mal); }
+.evt-ficha--borrador .evt-ficha__cartel,
+.evt-ficha--borrador .evt-ficha__cuerpo,
+.evt-ficha--papelera .evt-ficha__cartel,
+.evt-ficha--papelera .evt-ficha__cuerpo { opacity: .6; }
+.evt-ficha--historico .evt-ficha__cartel { filter: grayscale(1); opacity: .8; }
+.evt-fila--borrador > td,
+.evt-fila--papelera > td { opacity: .65; }
+.evt-fila--borrador > td:last-child,
+.evt-fila--papelera > td:last-child { opacity: 1; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
