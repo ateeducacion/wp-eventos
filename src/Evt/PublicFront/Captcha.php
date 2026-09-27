@@ -198,8 +198,8 @@ final class Captcha {
 			wp_enqueue_script( $handle, $vendor['url'], array(), self::VERSION, true );
 		}
 		return sprintf(
-			'<p class="evt-campo evt-ins__robot"><altcha-widget name="%1$s" challenge="%2$s" language="es-es"></altcha-widget></p>'
-				. '<noscript><p class="evt-aviso evt-aviso--aviso">Para inscribirse sin iniciar sesión hace falta tener JavaScript activado.</p></noscript>',
+			'<p class="evt-campo evt-ins__robot mb-3"><altcha-widget name="%1$s" challenge="%2$s" language="es-es"></altcha-widget></p>'
+				. '<noscript><p class="evt-aviso evt-aviso--aviso alert alert-warning">Para inscribirse sin iniciar sesión hace falta tener JavaScript activado.</p></noscript>',
 			esc_attr( self::FIELD ),
 			esc_url( rest_url( self::REST_NAMESPACE . self::REST_ROUTE ) )
 		);

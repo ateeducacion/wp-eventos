@@ -200,6 +200,7 @@ class Test_Signup_Gates extends WP_UnitTestCase {
 
 		$html = EventSignupPanel::html( $modelo );
 		$this->assertStringContainsString( 'name="evt_signup_public"', $html );
+		$this->assertStringContainsString( 'class="' . \Evt\PublicFront\Assets::button_class( true ) . '">Guardar', $html, 'el botón es el de Bootstrap' );
 		$this->assertStringContainsString( 'name="evt_signup_start"', $html );
 		$this->assertStringContainsString( 'sin iniciar sesión no puede adjuntar', $html );
 
