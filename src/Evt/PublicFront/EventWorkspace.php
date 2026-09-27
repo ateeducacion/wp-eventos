@@ -231,6 +231,20 @@ final class EventWorkspace {
 	private const PROGRAMME_OPS = array( 'sp_up', 'sp_down', 'row_delete', 'row_restore' );
 
 	/**
+	 * Operations on one registration: correct it, or delete it for good.
+	 *
+	 * Como las de ponentes y actividades, la fila viaja en `FIELD_ROW` y el
+	 * nonce la lleva dentro (ADR-0043).
+	 */
+	public const OP_REG_SAVE   = 'reg_save';
+	public const OP_REG_DELETE = 'reg_delete';
+
+	/**
+	 * Field where the email typed to confirm a deletion travels.
+	 */
+	public const FIELD_CONFIRM_EMAIL = 'evt_confirm_email';
+
+	/**
 	 * Every operation this screen accepts by POST.
 	 *
 	 * @var string[]
@@ -247,6 +261,8 @@ final class EventWorkspace {
 		self::OP_EXPORT,
 		self::OP_PUBLISH,
 		self::OP_UNPUBLISH,
+		self::OP_REG_SAVE,
+		self::OP_REG_DELETE,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -465,12 +481,13 @@ final class EventWorkspace {
 
 		$fila     = in_array( $op, self::ROW_OPS, true );
 		$programa = in_array( $op, self::PROGRAMME_OPS, true );
+		$persona  = self::OP_REG_SAVE === $op || self::OP_REG_DELETE === $op;
 		// El nonce de una acción de fila lleva dentro la fila, para que dos
 		// botones de la misma pantalla no compartan identificador.
 		$nonce_row = 0;
 		if ( $fila ) {
 			$nonce_row = $section_id;
-		} elseif ( $programa ) {
+		} elseif ( $programa || $persona ) {
 			$nonce_row = $row_id;
 		}
 		if ( ! self::verify( $op, $nonce_row ) ) {
@@ -536,6 +553,14 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_REG_SAVE === $op ) {
+			self::save_registration( $event_id, $row_id, $destino );
+			return;
+		}
+		if ( self::OP_REG_DELETE === $op ) {
+			self::delete_registration( $event_id, $row_id, $destino );
+			return;
+		}
 		if ( self::OP_PUBLISH === $op || self::OP_UNPUBLISH === $op ) {
 			self::save_status( self::OP_PUBLISH === $op, $event_id, $user_id, $destino );
 			return;
@@ -574,7 +599,7 @@ final class EventWorkspace {
 		if ( self::OP_ACTIVITY === $op ) {
 			return self::PANEL_PROGRAMME;
 		}
-		if ( self::OP_EXPORT === $op ) {
+		if ( in_array( $op, array( self::OP_EXPORT, self::OP_REG_SAVE, self::OP_REG_DELETE ), true ) ) {
 			return self::PANEL_PEOPLE;
 		}
 		// Borrar y restaurar una ficha vuelven a donde se pulsó, que puede ser
@@ -709,6 +734,103 @@ final class EventWorkspace {
 		}
 
 		self::set_flash( 'ok', self::ROW_DONE[ $op ] );
+		Shell::leave( $destino );
+	}
+
+	/**
+	 * Correct one registration: its core, its answers and its workshop.
+	 *
+	 * Se valida como al inscribirse, salvo dos cosas: el consentimiento no se
+	 * vuelve a pedir —lo dio la persona, no quien corrige— y el centro que ya
+	 * tenía vale aunque el catálogo de hoy no lo traiga. El taller pasa por
+	 * el mismo candado y el mismo aforo que cuando lo elige la persona.
+	 *
+	 * @param int    $event_id        Event post ID.
+	 * @param int    $registration_id Registration post ID.
+	 * @param string $destino         Where to go back to.
+	 * @return void
+	 */
+	private static function save_registration( int $event_id, int $registration_id, string $destino ): void {
+		if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
+			Shell::leave( $destino );
+			return;
+		}
+		$centros = Registrations::centres();
+		$actual  = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
+		if ( '' !== $actual && ! isset( $centros[ $actual ] ) ) {
+			$centros[ $actual ] = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		}
+		$nucleo = \Evt\Domain\RegistrationInput::core(
+			array(
+				'tax_id'  => self::field( 'evt_rg_tax_id' ),
+				'name'    => self::field( 'evt_rg_name' ),
+				'surname' => self::field( 'evt_rg_surname' ),
+				'email'   => self::field( 'evt_rg_email' ),
+				'phone'   => self::field( 'evt_rg_phone' ),
+				'centre'  => self::field( 'evt_rg_centre' ),
+				'consent' => true,
+			),
+			$centros
+		);
+		// Una inscripción que llegó con el nombre del centro y sin código lo
+		// conserva si no se escribe uno: corregir el correo no obliga a buscar
+		// el código de su centro.
+		$nombre_centro = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		if ( '' === self::field( 'evt_rg_centre' ) && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
+			$nucleo['errors']         = array_values( array_diff( $nucleo['errors'], array( 'centre' ) ) );
+			$nucleo['ok']             = array() === $nucleo['errors'];
+			$nucleo['data']['centre'] = $nombre_centro;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); cada respuesta la sanea SignupQuestions::answers().
+		$crudas     = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		$respuestas = SignupQuestions::answers( Registrations::questions( $event_id ), $crudas );
+		if ( true !== $nucleo['ok'] || true !== $respuestas['ok'] ) {
+			self::set_flash( 'error', \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) ) );
+			Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			return;
+		}
+
+		Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
+
+		$taller = absint( self::field( 'evt_rg_workshop' ) );
+		$antes  = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
+		if ( $taller !== $antes ) {
+			$sitio = Registrations::seat( $event_id, $registration_id, $taller );
+			if ( true !== $sitio['ok'] ) {
+				$motivo = 'sin_plazas' === $sitio['error'] ? 'ese taller está completo' : 'ese taller no es de este evento';
+				self::set_flash( 'error', 'Datos guardados, pero el taller no se ha cambiado: ' . $motivo . '.' );
+				Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+				return;
+			}
+		}
+
+		self::set_flash( 'ok', 'Inscripción corregida.' );
+		Shell::leave( $destino );
+	}
+
+	/**
+	 * Delete one registration for good, if the email typed is its email.
+	 *
+	 * @param int    $event_id        Event post ID.
+	 * @param int    $registration_id Registration post ID.
+	 * @param string $destino         Where to go back to.
+	 * @return void
+	 */
+	private static function delete_registration( int $event_id, int $registration_id, string $destino ): void {
+		$nombre = trim( get_post_meta( $registration_id, RegistrationMetaKeys::REG_NAME, true ) . ' ' . get_post_meta( $registration_id, RegistrationMetaKeys::REG_SURNAME, true ) );
+		$error  = Registrations::delete( $event_id, $registration_id, self::field( self::FIELD_CONFIRM_EMAIL ) );
+		if ( 'correo' === $error ) {
+			self::set_flash( 'error', 'No se ha borrado nada: para borrar una inscripción hay que escribir su correo tal cual.' );
+			Shell::leave( $destino );
+			return;
+		}
+		if ( '' !== $error ) {
+			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
+			Shell::leave( $destino );
+			return;
+		}
+		self::set_flash( 'ok', sprintf( 'Inscripción de %s borrada, con sus documentos. Si tenía taller, su plaza ha quedado libre.', '' !== $nombre ? $nombre : 'esa persona' ) );
 		Shell::leave( $destino );
 	}
 
@@ -2084,6 +2206,21 @@ final class EventWorkspace {
 		}
 		if ( ActivityPostType::POST_TYPE === $post->post_type ) {
 			return Programme::activity_row( $post );
+		}
+		if ( self::PANEL_PEOPLE === $panel && Registrations::belongs( $event_id, $row_id ) ) {
+			$meta = Registrations::meta( $row_id );
+			return array(
+				'id'          => $row_id,
+				'tax_id'      => $meta[ RegistrationMetaKeys::REG_TAX_ID ],
+				'name'        => $meta[ RegistrationMetaKeys::REG_NAME ],
+				'surname'     => $meta[ RegistrationMetaKeys::REG_SURNAME ],
+				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
+				'phone'       => $meta[ RegistrationMetaKeys::REG_PHONE ],
+				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
+				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ],
+				'workshop'    => (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ],
+				'answers'     => Registrations::answers( $row_id ),
+			);
 		}
 		return array();
 	}

@@ -9307,6 +9307,15 @@ final class Participants {
 
 
 
+	public const KEY_REG = '_reg';
+
+
+
+
+
+
+
+
 
 	public static function columns(): array {
 		return array(
@@ -9369,6 +9378,9 @@ final class Participants {
 
 			if ( isset( $fila[ self::KEY_FILES ] ) && is_array( $fila[ self::KEY_FILES ] ) ) {
 				$limpia[ self::KEY_FILES ] = array_values( $fila[ self::KEY_FILES ] );
+			}
+			if ( isset( $fila[ self::KEY_REG ] ) && absint( $fila[ self::KEY_REG ] ) > 0 ) {
+				$limpia[ self::KEY_REG ] = absint( $fila[ self::KEY_REG ] );
 			}
 			$out[] = $limpia;
 		}
@@ -9667,6 +9679,7 @@ final class Registrations {
 				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
 			);
 			$fila[ Participants::KEY_FILES ] = $documentos;
+			$fila[ Participants::KEY_REG ]   = (int) $inscripcion->ID;
 
 
 
@@ -9851,6 +9864,80 @@ final class Registrations {
 		}
 
 		return $id;
+	}
+
+
+
+
+
+
+
+
+	public static function belongs( int $event_id, int $registration_id ): bool {
+		return $event_id > 0
+			&& RegistrationPostType::POST_TYPE === get_post_type( $registration_id )
+			&& (int) get_post_field( 'post_parent', $registration_id ) === $event_id
+			&& in_array( get_post_status( $registration_id ), array( 'publish', 'private' ), true );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function update( int $event_id, int $registration_id, array $core, array $answers ): bool {
+		if ( ! self::belongs( $event_id, $registration_id ) ) {
+			return false;
+		}
+		$campos = array(
+			RegistrationMetaKeys::REG_TAX_ID      => 'tax_id',
+			RegistrationMetaKeys::REG_NAME        => 'name',
+			RegistrationMetaKeys::REG_SURNAME     => 'surname',
+			RegistrationMetaKeys::REG_EMAIL       => 'email',
+			RegistrationMetaKeys::REG_PHONE       => 'phone',
+			RegistrationMetaKeys::REG_CENTRE      => 'centre',
+			RegistrationMetaKeys::REG_CENTRE_CODE => 'centre_code',
+		);
+		foreach ( $campos as $clave => $origen ) {
+			update_post_meta( $registration_id, $clave, (string) ( $core[ $origen ] ?? '' ) );
+		}
+		$respuestas = array_merge( self::answers( $registration_id ), $answers );
+		update_post_meta( $registration_id, RegistrationMetaKeys::REG_ANSWERS, wp_slash( (string) wp_json_encode( $respuestas ) ) );
+		return true;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function delete( int $event_id, int $registration_id, string $typed ): string {
+		if ( ! self::belongs( $event_id, $registration_id ) ) {
+			return 'no_es_de_este_evento';
+		}
+		$correo = strtolower( trim( (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_EMAIL, true ) ) );
+		if ( '' === $correo || strtolower( trim( $typed ) ) !== $correo ) {
+			return 'correo';
+		}
+		wp_delete_post( $registration_id, true );
+		return '';
 	}
 
 
@@ -11804,6 +11891,20 @@ final class EventWorkspace {
 
 
 
+
+	public const OP_REG_SAVE   = 'reg_save';
+	public const OP_REG_DELETE = 'reg_delete';
+
+
+
+
+	public const FIELD_CONFIRM_EMAIL = 'evt_confirm_email';
+
+
+
+
+
+
 	private const OPS = array(
 		self::PANEL_SETTINGS,
 		self::PANEL_SIGNUP,
@@ -11816,6 +11917,8 @@ final class EventWorkspace {
 		self::OP_EXPORT,
 		self::OP_PUBLISH,
 		self::OP_UNPUBLISH,
+		self::OP_REG_SAVE,
+		self::OP_REG_DELETE,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -12034,12 +12137,13 @@ final class EventWorkspace {
 
 		$fila     = in_array( $op, self::ROW_OPS, true );
 		$programa = in_array( $op, self::PROGRAMME_OPS, true );
+		$persona  = self::OP_REG_SAVE === $op || self::OP_REG_DELETE === $op;
 
 
 		$nonce_row = 0;
 		if ( $fila ) {
 			$nonce_row = $section_id;
-		} elseif ( $programa ) {
+		} elseif ( $programa || $persona ) {
 			$nonce_row = $row_id;
 		}
 		if ( ! self::verify( $op, $nonce_row ) ) {
@@ -12105,6 +12209,14 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_REG_SAVE === $op ) {
+			self::save_registration( $event_id, $row_id, $destino );
+			return;
+		}
+		if ( self::OP_REG_DELETE === $op ) {
+			self::delete_registration( $event_id, $row_id, $destino );
+			return;
+		}
 		if ( self::OP_PUBLISH === $op || self::OP_UNPUBLISH === $op ) {
 			self::save_status( self::OP_PUBLISH === $op, $event_id, $user_id, $destino );
 			return;
@@ -12143,7 +12255,7 @@ final class EventWorkspace {
 		if ( self::OP_ACTIVITY === $op ) {
 			return self::PANEL_PROGRAMME;
 		}
-		if ( self::OP_EXPORT === $op ) {
+		if ( in_array( $op, array( self::OP_EXPORT, self::OP_REG_SAVE, self::OP_REG_DELETE ), true ) ) {
 			return self::PANEL_PEOPLE;
 		}
 
@@ -12278,6 +12390,103 @@ final class EventWorkspace {
 		}
 
 		self::set_flash( 'ok', self::ROW_DONE[ $op ] );
+		Shell::leave( $destino );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function save_registration( int $event_id, int $registration_id, string $destino ): void {
+		if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
+			Shell::leave( $destino );
+			return;
+		}
+		$centros = Registrations::centres();
+		$actual  = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
+		if ( '' !== $actual && ! isset( $centros[ $actual ] ) ) {
+			$centros[ $actual ] = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		}
+		$nucleo = \Evt\Domain\RegistrationInput::core(
+			array(
+				'tax_id'  => self::field( 'evt_rg_tax_id' ),
+				'name'    => self::field( 'evt_rg_name' ),
+				'surname' => self::field( 'evt_rg_surname' ),
+				'email'   => self::field( 'evt_rg_email' ),
+				'phone'   => self::field( 'evt_rg_phone' ),
+				'centre'  => self::field( 'evt_rg_centre' ),
+				'consent' => true,
+			),
+			$centros
+		);
+
+
+
+		$nombre_centro = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		if ( '' === self::field( 'evt_rg_centre' ) && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
+			$nucleo['errors']         = array_values( array_diff( $nucleo['errors'], array( 'centre' ) ) );
+			$nucleo['ok']             = array() === $nucleo['errors'];
+			$nucleo['data']['centre'] = $nombre_centro;
+		}
+
+		$crudas     = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		$respuestas = SignupQuestions::answers( Registrations::questions( $event_id ), $crudas );
+		if ( true !== $nucleo['ok'] || true !== $respuestas['ok'] ) {
+			self::set_flash( 'error', \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) ) );
+			Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			return;
+		}
+
+		Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
+
+		$taller = absint( self::field( 'evt_rg_workshop' ) );
+		$antes  = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
+		if ( $taller !== $antes ) {
+			$sitio = Registrations::seat( $event_id, $registration_id, $taller );
+			if ( true !== $sitio['ok'] ) {
+				$motivo = 'sin_plazas' === $sitio['error'] ? 'ese taller está completo' : 'ese taller no es de este evento';
+				self::set_flash( 'error', 'Datos guardados, pero el taller no se ha cambiado: ' . $motivo . '.' );
+				Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+				return;
+			}
+		}
+
+		self::set_flash( 'ok', 'Inscripción corregida.' );
+		Shell::leave( $destino );
+	}
+
+
+
+
+
+
+
+
+
+	private static function delete_registration( int $event_id, int $registration_id, string $destino ): void {
+		$nombre = trim( get_post_meta( $registration_id, RegistrationMetaKeys::REG_NAME, true ) . ' ' . get_post_meta( $registration_id, RegistrationMetaKeys::REG_SURNAME, true ) );
+		$error  = Registrations::delete( $event_id, $registration_id, self::field( self::FIELD_CONFIRM_EMAIL ) );
+		if ( 'correo' === $error ) {
+			self::set_flash( 'error', 'No se ha borrado nada: para borrar una inscripción hay que escribir su correo tal cual.' );
+			Shell::leave( $destino );
+			return;
+		}
+		if ( '' !== $error ) {
+			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
+			Shell::leave( $destino );
+			return;
+		}
+		self::set_flash( 'ok', sprintf( 'Inscripción de %s borrada, con sus documentos. Si tenía taller, su plaza ha quedado libre.', '' !== $nombre ? $nombre : 'esa persona' ) );
 		Shell::leave( $destino );
 	}
 
@@ -13654,6 +13863,21 @@ final class EventWorkspace {
 		if ( ActivityPostType::POST_TYPE === $post->post_type ) {
 			return Programme::activity_row( $post );
 		}
+		if ( self::PANEL_PEOPLE === $panel && Registrations::belongs( $event_id, $row_id ) ) {
+			$meta = Registrations::meta( $row_id );
+			return array(
+				'id'          => $row_id,
+				'tax_id'      => $meta[ RegistrationMetaKeys::REG_TAX_ID ],
+				'name'        => $meta[ RegistrationMetaKeys::REG_NAME ],
+				'surname'     => $meta[ RegistrationMetaKeys::REG_SURNAME ],
+				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
+				'phone'       => $meta[ RegistrationMetaKeys::REG_PHONE ],
+				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
+				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ],
+				'workshop'    => (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ],
+				'answers'     => Registrations::answers( $row_id ),
+			);
+		}
 		return array();
 	}
 
@@ -14840,6 +15064,8 @@ final class EventProgrammePanel {
 namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\Registrations;
+use Evt\PublicFront\Shell;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Participants;
 use Evt\PublicFront\RegistrationFiles;
@@ -14878,6 +15104,19 @@ final class EventParticipantsPanel {
 			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
 		</div></div>
 
+		<?php
+		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
+			$cajon = PanelParts::drawer(
+				'Corregir inscripción',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
+				(array) $m['flash'],
+				true,
+				true
+			);
+			echo $cajon; 
+		}
+		?>
 		<?php echo self::counters( $m, $filas ); ?>
 		<?php echo self::filter( $m ); ?>
 
@@ -14890,6 +15129,7 @@ final class EventParticipantsPanel {
 				<table class="evt-tabla">
 					<thead>
 						<tr>
+							<th scope="col"><span class="screen-reader-text">Acciones</span></th>
 							<?php foreach ( (array) $m['people_cols'] as $rotulo ) : ?>
 								<th scope="col"><?php echo esc_html( (string) $rotulo ); ?></th>
 							<?php endforeach; ?>
@@ -14898,6 +15138,8 @@ final class EventParticipantsPanel {
 					<tbody>
 						<?php foreach ( $filas as $fila ) : ?>
 							<tr>
+								<?php ?>
+								<td data-rotulo="Acciones"><?php echo self::actions( $m, $fila ); ?></td>
 								<?php foreach ( (array) $m['people_cols'] as $clave => $rotulo ) : ?>
 									<td data-rotulo="<?php echo esc_attr( (string) $rotulo ); ?>">
 										<?php if ( 'files' === $clave ) : ?>
@@ -14913,6 +15155,199 @@ final class EventParticipantsPanel {
 				</table>
 			</div>
 		<?php endif; ?>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function actions( array $m, array $fila ): string {
+		$id = (int) ( $fila[ Participants::KEY_REG ] ?? 0 );
+		if ( $id <= 0 || ! isset( $m['event_id'] ) || ( true === ( $m['archived'] ?? false ) && true !== ( $m['can_unarchive'] ?? false ) ) ) {
+			return '';
+		}
+		$nombre = '' !== (string) $fila['name'] ? (string) $fila['name'] : 'esta persona';
+
+		ob_start();
+		?>
+		<span class="evt-acciones">
+			<?php echo PanelParts::icon_link( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE, array( EventWorkspace::ARG_ROW => $id ) ), 'lapiz', 'Corregir la inscripción' ); ?>
+			<?php echo self::delete_form( $m, $id, $nombre, (string) $fila['email'], true ); ?>
+		</span>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function delete_form( array $m, int $id, string $nombre, string $correo, bool $mini ): string {
+		$op       = EventWorkspace::OP_REG_DELETE;
+		$pregunta = sprintf( '¿Borrar la inscripción de %s? Se borran sus datos y sus documentos, y no hay papelera ni vuelta atrás.', $nombre );
+
+		ob_start();
+		?>
+		<form class="evt-accion evt-borrar-escrito" method="post" action=""
+			data-evt-confirm="<?php echo esc_attr( $pregunta ); ?>"
+			data-evt-confirm-ok="Borrar la inscripción"
+			data-evt-confirm-escribe="<?php echo esc_attr( strtolower( $correo ) ); ?>">
+			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+			<label class="evt-escribe">
+				<span class="<?php echo $mini ? 'screen-reader-text' : ''; ?>"><?php echo esc_html( 'Para borrar, escriba su correo: ' . $correo ); ?></span>
+				<input type="email" name="<?php echo esc_attr( EventWorkspace::FIELD_CONFIRM_EMAIL ); ?>" autocomplete="off" placeholder="<?php echo esc_attr( $correo ); ?>" />
+			</label>
+			<?php if ( $mini ) : ?>
+				<button type="submit" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini evt-icono evt-btn-borrar' ); ?>" title="Borrar la inscripción" data-bs-toggle="tooltip">
+					<?php echo wp_kses( Shell::icon( 'papelera' ), PanelParts::SVG ); ?>
+					<span class="screen-reader-text">Borrar la inscripción</span>
+				</button>
+			<?php else : ?>
+				<button type="submit" class="evt-btn btn btn-outline-danger evt-btn-borrar">Borrar la inscripción…</button>
+			<?php endif; ?>
+		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function form( array $m ): string {
+		$v         = (array) $m['edit_values'];
+		$id        = (int) $v['id'];
+		$op        = EventWorkspace::OP_REG_SAVE;
+		$preguntas = Registrations::questions( (int) $m['event_id'] );
+		$respuesta = (array) $v['answers'];
+		$campos    = array(
+			'tax_id'  => array( 'Documento de identidad', 'text' ),
+			'name'    => array( 'Nombre', 'text' ),
+			'surname' => array( 'Apellidos', 'text' ),
+			'email'   => array( 'Correo electrónico', 'email' ),
+			'phone'   => array( 'Teléfono', 'tel' ),
+		);
+
+		ob_start();
+		?>
+		<form class="evt-form" method="post" action="">
+			<?php wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op, $id ), false ); ?>
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( $op ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_EVENT ); ?>" value="<?php echo esc_attr( (string) (int) $m['event_id'] ); ?>" />
+			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_ROW ); ?>" value="<?php echo esc_attr( (string) $id ); ?>" />
+
+			<?php foreach ( $campos as $clave => $campo ) : ?>
+				<div class="evt-form-campo">
+					<label for="evt-rg-<?php echo esc_attr( $clave ); ?>"><?php echo esc_html( $campo[0] ); ?><?php echo 'phone' === $clave ? ' <span class="evt-opcional">(opcional)</span>' : ''; ?></label>
+					<input type="<?php echo esc_attr( $campo[1] ); ?>" id="evt-rg-<?php echo esc_attr( $clave ); ?>" name="evt_rg_<?php echo esc_attr( $clave ); ?>"
+						value="<?php echo esc_attr( (string) $v[ $clave ] ); ?>" <?php echo 'phone' === $clave ? '' : 'required'; ?> />
+				</div>
+			<?php endforeach; ?>
+
+			<div class="evt-form-campo">
+				<label for="evt-rg-centre">Código del centro</label>
+				<input type="text" id="evt-rg-centre" name="evt_rg_centre" inputmode="numeric" pattern="\d{8}" <?php echo '' === (string) $v['centre_code'] && '' !== (string) $v['centre'] ? '' : 'required'; ?>
+					value="<?php echo esc_attr( (string) $v['centre_code'] ); ?>" />
+				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial.' ); ?> El nombre sale del catálogo de centros.</small>
+			</div>
+
+			<?php foreach ( $preguntas as $pregunta ) : ?>
+				<?php echo self::question( $pregunta, $respuesta[ $pregunta['id'] ] ?? null ); ?>
+			<?php endforeach; ?>
+
+			<?php if ( array() !== (array) $m['workshops'] ) : ?>
+				<div class="evt-form-campo">
+					<label for="evt-rg-workshop">Taller</label>
+					<select id="evt-rg-workshop" name="evt_rg_workshop">
+						<option value="0">Sin taller</option>
+						<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
+							<option value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php selected( (int) $v['workshop'], (int) $taller['id'] ); ?>>
+								<?php echo esc_html( (string) $taller['title'] . ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' ) ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+					<small>Con el mismo aforo que cuando lo elige la persona: un taller completo no admite a nadie más.</small>
+				</div>
+			<?php endif; ?>
+
+			<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+
+			<div class="evt-acciones">
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la inscripción</button>
+				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
+			</div>
+		</form>
+
+		<section class="evt-tarjeta evt-peligro">
+			<h2>Borrar la inscripción</h2>
+			<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
+			<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); ?>
+		</section>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+	private static function question( array $pregunta, $respuesta ): string {
+		if ( 'file' === $pregunta['type'] ) {
+			return '';
+		}
+		$id     = 'evt-rg-q-' . sanitize_html_class( (string) $pregunta['id'] );
+		$nombre = 'evt_rg_answers[' . (string) $pregunta['id'] . ']';
+
+		ob_start();
+		?>
+		<div class="evt-form-campo">
+			<?php if ( 'check' === $pregunta['type'] ) : ?>
+				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>" value="1" <?php checked( ! empty( $respuesta ) ); ?> /> <?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+			<?php elseif ( 'one' === $pregunta['type'] ) : ?>
+				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+				<select id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $nombre ); ?>">
+					<option value="">—</option>
+					<?php foreach ( (array) $pregunta['options'] as $opcion ) : ?>
+						<option value="<?php echo esc_attr( (string) $opcion ); ?>" <?php selected( (string) $respuesta, (string) $opcion ); ?>><?php echo esc_html( (string) $opcion ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			<?php elseif ( 'many' === $pregunta['type'] ) : ?>
+				<fieldset>
+					<legend><?php echo esc_html( (string) $pregunta['label'] ); ?></legend>
+					<?php foreach ( (array) $pregunta['options'] as $opcion ) : ?>
+						<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $opcion ); ?>" <?php checked( in_array( (string) $opcion, (array) $respuesta, true ) ); ?> /> <?php echo esc_html( (string) $opcion ); ?></label>
+					<?php endforeach; ?>
+				</fieldset>
+			<?php else : ?>
+				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( (string) $pregunta['label'] ); ?></label>
+				<input type="text" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $nombre ); ?>" value="<?php echo esc_attr( is_scalar( $respuesta ) ? (string) $respuesta : '' ); ?>" />
+			<?php endif; ?>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -23513,6 +23948,7 @@ body:has(.evt-cajon) { overflow: hidden; }
 
 /* Un grupo de casillas se rotula como cualquier campo, no como un título. */
 .evt-form .evt-form-campo > legend,
+.evt-form .evt-form-campo > fieldset > legend,
 .evt-form fieldset.evt-form-campo > legend {
   float: none;
   width: auto;
@@ -23590,6 +24026,19 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 }
 .evt-publicacion h2 { margin: 0; font-size: 1.05rem; }
 .evt-publicacion .evt-sub { margin: 2px 0 0; }
+
+/* Borrar una inscripción pide su correo (ADR-0043). Sin guion se escribe en
+   el propio formulario; con guion lo pide el diálogo y el campo sobra. */
+.evt-borrar-escrito { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.evt-escribe { display: inline-flex; flex-direction: column; gap: 2px; margin: 0; font-size: .85rem; }
+.evt-escribe input { max-width: 16rem; }
+.evt-app-js .evt-escribe { display: none; }
+.evt-form .evt-form-campo > fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.evt-form .evt-form-campo > fieldset > label { display: block; font-weight: 400; }
+
+/* SweetAlert2 abre por encima del panel lateral, que ya está a 100 001: un
+   diálogo que se pide desde el panel no puede quedarse debajo. */
+body .swal2-container { z-index: 100010; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -24607,6 +25056,10 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 		if ( ! pregunta ) {
 			return;
 		}
+		if ( form.hasAttribute( \'data-evt-confirm-escribe\' ) ) {
+			confirmarEscribiendo( e, form, pregunta );
+			return;
+		}
 
 		if ( ! window.Swal ) {
 			if ( ! window.confirm( pregunta ) ) {
@@ -24652,6 +25105,68 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 			}
 		} );
 	} );
+
+	/*
+	 * Lo que no tiene papelera —borrar una inscripción— pide además teclear
+	 * un dato: `data-evt-confirm-escribe="<lo que hay que escribir>"` y, en el
+	 * formulario, el campo `[name="evt_confirm_email"]`, que sin guion se ve y
+	 * se rellena a mano. Los mismos tres escalones, y el servidor comprueba lo
+	 * escrito en los tres: esto solo evita el viaje de ida y vuelta.
+	 */
+	function normaliza( texto ) {
+		return String( texto || \'\' ).trim().toLowerCase();
+	}
+
+	function confirmarEscribiendo( e, form, pregunta ) {
+		var esperado = normaliza( form.getAttribute( \'data-evt-confirm-escribe\' ) );
+		var campo = form.querySelector( \'[name="evt_confirm_email"]\' );
+		e.preventDefault();
+
+		function enviar( escrito ) {
+			if ( campo ) {
+				campo.value = escrito;
+			}
+			form.dataset.evtConfirmado = \'1\';
+			form.submit();
+		}
+
+		if ( ! window.Swal ) {
+			var escrito = window.prompt( pregunta + \'\\n\\nPara confirmar, escriba su correo: \' + esperado );
+			if ( null !== escrito && normaliza( escrito ) === esperado ) {
+				enviar( escrito );
+			}
+			return;
+		}
+
+		var corte = pregunta.indexOf( \'? \' );
+		window.Swal.fire( {
+			title: -1 === corte ? pregunta : pregunta.slice( 0, corte + 1 ),
+			text: ( -1 === corte ? \'\' : pregunta.slice( corte + 2 ) + \' \' ) + \'Para confirmar, escriba su correo: \' + esperado,
+			icon: \'warning\',
+			input: \'email\',
+			inputPlaceholder: esperado,
+			inputAttributes: { autocomplete: \'off\', \'aria-label\': \'Correo de la persona\' },
+			validationMessage: \'Escriba un correo válido.\',
+			inputValidator: function ( valor ) {
+				return normaliza( valor ) === esperado ? undefined : \'No coincide con el correo de esta inscripción.\';
+			},
+			showCancelButton: true,
+			confirmButtonText: form.getAttribute( \'data-evt-confirm-ok\' ) || \'Borrar\',
+			cancelButtonText: \'Cancelar\',
+			focusCancel: false,
+			reverseButtons: true,
+			heightAuto: false,
+			buttonsStyling: false,
+			customClass: {
+				confirmButton: \'evt-btn evt-btn-borrar btn\',
+				cancelButton: \'evt-btn btn btn-light\'
+			}
+		} ).then( function ( respuesta ) {
+			if ( respuesta.isConfirmed ) {
+				enviar( respuesta.value );
+			}
+		} );
+	}
 
 	/* --- 2. Proponer el slug desde el título ----------------------------- */
 
