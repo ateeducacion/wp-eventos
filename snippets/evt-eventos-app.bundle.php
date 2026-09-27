@@ -25816,14 +25816,18 @@ body .swal2-container { z-index: 100010; }
 			return;
 		}
 		var recargar = p.cajon.hasAttribute( \'data-evt-cajon-edita\' );
+		// Se cierra también pulsando el fondo, que es un `<div>` sin `href`:
+		// la dirección de vuelta es siempre la del botón de cerrar del panel.
+		var boton = p.cajon.querySelector( \'.evt-cajon__cerrar\' );
+		var vuelta = ( destino && destino.href ) || ( boton && boton.href ) || window.location.href;
 		var reducido = window.matchMedia && window.matchMedia( \'(prefers-reduced-motion: reduce)\' ).matches;
 		p.cajon.classList.add( \'evt-cajon--saliendo\' );
 		if ( p.fondo ) {
 			p.fondo.classList.add( \'evt-cajon--saliendo\' );
 		}
 		window.setTimeout( function () {
-			if ( recargar && destino ) {
-				window.location.assign( destino.href );
+			if ( recargar ) {
+				window.location.assign( vuelta );
 				return;
 			}
 			p.cajon.hidden = true;
@@ -25831,8 +25835,8 @@ body .swal2-container { z-index: 100010; }
 				p.fondo.hidden = true;
 			}
 			// La dirección deja de pedir el alta: recargar no la vuelve a abrir.
-			if ( destino && window.history && window.history.replaceState ) {
-				window.history.replaceState( null, \'\', destino.href );
+			if ( window.history && window.history.replaceState ) {
+				window.history.replaceState( null, \'\', vuelta );
 			}
 		}, reducido ? 0 : 200 );
 	}
