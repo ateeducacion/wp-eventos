@@ -230,6 +230,53 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Y al revés: una sección puede tener su tarjeta sin ocupar sitio en el menú.
+	 *
+	 * Las dos marcas son independientes; con las dos, solo se llega por el enlace.
+	 */
+	public function test_a_section_can_keep_its_card_without_being_in_the_menu() {
+		$area      = $this->area( 'Innovación' );
+		$evento    = $this->event( $this->administrator(), array( $area ) );
+		$programa  = $this->event_page(
+			$evento,
+			'programa',
+			array(
+				'post_title' => 'Programa',
+				'menu_order' => 10,
+			)
+		);
+		$encuesta  = $this->event_page(
+			$evento,
+			'encuesta',
+			array(
+				'post_title' => 'Encuesta',
+				'menu_order' => 20,
+			)
+		);
+		$escondida = $this->event_page(
+			$evento,
+			'otra',
+			array(
+				'post_title' => 'Solo con enlace',
+				'menu_order' => 30,
+			)
+		);
+		update_post_meta( $encuesta, EventMetaKeys::MENU_HIDDEN, true );
+		update_post_meta( $escondida, EventMetaKeys::MENU_HIDDEN, true );
+		update_post_meta( $escondida, EventMetaKeys::HOME_HIDDEN, true );
+
+		$this->acting_as( 0 );
+		$m = EventView::model( $evento );
+
+		$this->assertSame( array( 'Inicio', 'Programa' ), $this->menu( $m ) );
+		$this->assertSame( array( $programa, $encuesta ), array_column( (array) $m['cards'], 'id' ), 'la encuesta conserva su tarjeta' );
+
+		// Y se sigue viendo: fuera del menú no es despublicada.
+		$this->forget_sections();
+		$this->assertSame( 'Solo con enlace', EventView::model( $escondida )['title'] );
+	}
+
+	/**
 	 * Cada sección lleva un icono: el que se eligió o el de su tipo.
 	 *
 	 * Sale en el menú y, cuando la tarjeta no tiene imagen, en la tarjeta. Uno

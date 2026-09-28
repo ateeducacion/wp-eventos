@@ -2390,6 +2390,8 @@ final class EventWorkspace {
 		return array(
 			// Ya acotada al ámbito de quien mira: es la misma lista del escritorio.
 			'area'   => EventTaxonomies::area_options( $user_id ),
+			// El mismo acotado, en árbol y con lo de encima como contexto.
+			'tree'   => EventTaxonomies::area_tree_for( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
@@ -2435,6 +2437,7 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'menu_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::MENU_HIDDEN, true ),
 				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,

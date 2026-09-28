@@ -316,6 +316,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 			)
 		);
 		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::HOME_HIDDEN, true ), 'sin marcar, sin tarjeta' );
+		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::MENU_HIDDEN, true ), 'ni en el menú' );
 		$this->assertSame( 'pin', get_post_meta( $seccion, EventMetaKeys::SECTION_ICON, true ) );
 
 		// Sin el bloque en el envío, lo guardado se queda.
@@ -337,10 +338,12 @@ class Test_Page_Form extends WP_UnitTestCase {
 				'evt_title'                 => 'Contacto',
 				'evt_showcase'              => '1',
 				'evt_home_card'             => '1',
+				'evt_in_menu'               => '1',
 				EventMetaKeys::SECTION_ICON => 'no-existe',
 			)
 		);
 		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::HOME_HIDDEN ) );
+		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::MENU_HIDDEN ) );
 		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::SECTION_ICON ), 'un icono fuera de la lista es el de su tipo' );
 
 		// Y el formulario lo repinta: la casilla marcada y «El de su tipo» elegido.
@@ -348,10 +351,69 @@ class Test_Page_Form extends WP_UnitTestCase {
 		$_GET['seccion'] = (string) $seccion;
 		$m               = PageForm::model();
 		$this->assertTrue( $m['values']['home_card'] );
+		$this->assertTrue( $m['values']['in_menu'] );
 		$this->assertSame( '', $m['values']['icon'] );
 		$html = \Evt\PublicFront\View\PageFormView::html( $m );
 		$this->assertStringContainsString( 'name="evt_home_card" value="1"  checked=\'checked\'', $html );
 		$this->assertStringContainsString( 'value="pin"', $html, 'se elige entre todos los iconos de la lista' );
+	}
+
+	/**
+	 * Los puntos del mapa se escriben con las coordenadas que copia un mapa.
+	 *
+	 * Uno que no se entiende no se tira en silencio: se dice cuál, y no se
+	 * guarda nada.
+	 */
+	public function test_a_contact_page_keeps_its_map_points() {
+		$area     = $this->area( 'Innovación' );
+		$yo       = $this->organiser( array( $area ) );
+		$evento   = $this->event( $yo, array( $area ) );
+		$contacto = $this->event_page( $evento, 'contacto', array( 'post_title' => 'Contacto' ) );
+
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'   => (string) $contacto,
+				'evt_title'     => 'Contacto',
+				'evt_cp_coords' => array( '28.4636, -16.2518', 'no sé', '' ),
+				'evt_cp_text'   => array( 'Sede', 'Aparcamiento', '' ),
+				'evt_cp_url'    => array( 'https://example.org', '', '' ),
+			)
+		);
+		$this->assertStringContainsString( '«Aparcamiento» no se entienden', PageForm::model()['error'] );
+		$this->assertFalse( metadata_exists( 'post', $contacto, EventMetaKeys::CONTACT_POINTS ), 'nada a medias' );
+
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'   => (string) $contacto,
+				'evt_title'     => 'Contacto',
+				'evt_cp_coords' => array( '28.4636, -16.2518', '28.47 -16.25', '' ),
+				'evt_cp_text'   => array( 'Sede', 'Aparcamiento', '' ),
+				'evt_cp_url'    => array( 'https://example.org', '', '' ),
+			)
+		);
+		$puntos = \Evt\PublicFront\ContactMap::points( $contacto );
+		$this->assertSame( array( 'Sede', 'Aparcamiento' ), array_column( $puntos, 'text' ) );
+		$this->assertSame( 28.47, $puntos[1]['lat'] );
+
+		// Y el formulario los repinta, más la fila en blanco para otro.
+		$this->acting_as( $yo );
+		$_GET['seccion'] = (string) $contacto;
+		$html            = \Evt\PublicFront\View\PageFormView::html( PageForm::model() );
+		$this->assertStringContainsString( 'value="28.4636, -16.2518"', $html );
+		$this->assertStringContainsString( 'name="evt_cp_coords[2]"', $html );
+
+		// Vaciar las filas quita el mapa.
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'   => (string) $contacto,
+				'evt_title'     => 'Contacto',
+				'evt_cp_coords' => array( '' ),
+			)
+		);
+		$this->assertFalse( metadata_exists( 'post', $contacto, EventMetaKeys::CONTACT_POINTS ) );
 	}
 
 	/**
