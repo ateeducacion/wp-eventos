@@ -463,6 +463,12 @@ class Test_Event_View extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'Acceder', $dentro );
 		$this->assertStringContainsString( 'Ana Pérez', $dentro );
 		$this->assertStringContainsString( '>Salir</a>', $dentro );
+
+		// Quien puede usar el aplicativo tiene además el camino a la gestión.
+		$gestion = \Evt\PublicFront\Shell::url( 'home' );
+		$this->assertNotSame( '', $gestion, 'el entorno de tests trae las páginas del aplicativo' );
+		$this->assertStringContainsString( esc_url( $gestion ), EventChrome::account() );
+		$this->assertStringContainsString( '>Gestión de eventos</a>', EventChrome::account() );
 	}
 
 	/**
