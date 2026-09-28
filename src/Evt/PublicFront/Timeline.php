@@ -244,43 +244,8 @@ final class Timeline {
 			'filters'  => $filters,
 			'filtered' => $filtrado,
 			'count'    => array_sum( array_map( 'count', $eventos ) ),
-			'areas'    => self::area_options(),
+			'areas'    => EventTaxonomies::area_tree(),
 		);
-	}
-
-	/**
-	 * Every scope, in tree order, with its depth.
-	 *
-	 * @return array<int, array{id: int, name: string, depth: int}>
-	 */
-	public static function area_options(): array {
-		$terminos = get_terms(
-			array(
-				'taxonomy'   => EventTaxonomies::AREA,
-				'hide_empty' => false,
-				'orderby'    => 'name',
-			)
-		);
-		if ( ! is_array( $terminos ) ) {
-			return array();
-		}
-		$hijos = array();
-		foreach ( $terminos as $t ) {
-			$hijos[ (int) $t->parent ][] = $t;
-		}
-		$lista = array();
-		$baja  = static function ( int $padre, int $nivel ) use ( &$baja, &$lista, $hijos ): void {
-			foreach ( $hijos[ $padre ] ?? array() as $t ) {
-				$lista[] = array(
-					'id'    => (int) $t->term_id,
-					'name'  => (string) $t->name,
-					'depth' => $nivel,
-				);
-				$baja( (int) $t->term_id, $nivel + 1 );
-			}
-		};
-		$baja( 0, 0 );
-		return $lista;
 	}
 
 	/**

@@ -320,4 +320,28 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$this->assertSame( $guion, evt_scope_select_sri( $guion, 'tom-select', 'https://example.org/wp-content/evt-dev/node_modules/tom-select/dist/js/tom-select.complete.min.js' ) );
 		$this->assertSame( $guion, evt_scope_select_sri( $guion, 'otro', $vendor['js'] ) );
 	}
+
+	/**
+	 * El desplegable del perfil enseña el árbol: nombre sangrado y la ruta para buscar.
+	 */
+	public function test_the_scope_field_shows_the_tree_with_its_path() {
+		$raiz   = (int) wp_insert_term( 'Organismo', 'evt_area' )['term_id'];
+		$hija   = (int) wp_insert_term( 'Servicio de Innovación', 'evt_area', array( 'parent' => $raiz ) )['term_id'];
+		$nieta  = (int) wp_insert_term( 'Área STEAM', 'evt_area', array( 'parent' => $hija ) )['term_id'];
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, 'evt_area', array( $nieta ) );
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		ob_start();
+		evt_render_profile_fields( get_user_by( 'id', $editor ) );
+		$html = (string) ob_get_clean();
+
+		$this->assertStringContainsString( '>Organismo</option>', $html );
+		$this->assertStringContainsString( '>— Servicio de Innovación</option>', $html );
+		$this->assertStringContainsString( '>— — Área STEAM</option>', $html, 'el nombre, sangrado por su profundidad' );
+		$this->assertStringNotContainsString( '>Organismo › ', $html, 'la ruta ya no es la etiqueta' );
+		$this->assertStringContainsString( 'title="Organismo › Servicio de Innovación › Área STEAM"', $html );
+		$this->assertStringContainsString( esc_attr( (string) wp_json_encode( array( 'path' => 'Organismo › Servicio de Innovación › Área STEAM' ) ) ), $html, 'la ruta, para buscar' );
+		$this->assertMatchesRegularExpression( '/value="' . $nieta . '" selected="selected"/', $html );
+	}
 }

@@ -141,6 +141,48 @@ final class EventTaxonomies {
 	}
 
 	/**
+	 * Every scope, in tree order, with its depth and its full path.
+	 *
+	 * Es el árbol que enseñan los desplegables que eligen un ámbito entre
+	 * todos: el filtro de la portada y el perfil de usuario. Cada opción se
+	 * pinta con su nombre sangrado por su profundidad, y la ruta entera queda
+	 * para buscar y para el título.
+	 *
+	 * @return array<int, array{id: int, name: string, depth: int, path: string}>
+	 */
+	public static function area_tree(): array {
+		$terminos = get_terms(
+			array(
+				'taxonomy'   => self::AREA,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( ! is_array( $terminos ) ) {
+			return array();
+		}
+		$hijos = array();
+		foreach ( $terminos as $t ) {
+			$hijos[ (int) $t->parent ][] = $t;
+		}
+		$lista = array();
+		$baja  = static function ( int $padre, int $nivel, string $ruta ) use ( &$baja, &$lista, $hijos ): void {
+			foreach ( $hijos[ $padre ] ?? array() as $t ) {
+				$aqui    = '' === $ruta ? (string) $t->name : $ruta . ' › ' . $t->name;
+				$lista[] = array(
+					'id'    => (int) $t->term_id,
+					'name'  => (string) $t->name,
+					'depth' => $nivel,
+					'path'  => $aqui,
+				);
+				$baja( (int) $t->term_id, $nivel + 1, $aqui );
+			}
+		};
+		$baja( 0, 0, '' );
+		return $lista;
+	}
+
+	/**
 	 * Replace the native scope box with choices from the same access rule.
 	 *
 	 * @param \WP_Post $post Edited event.
