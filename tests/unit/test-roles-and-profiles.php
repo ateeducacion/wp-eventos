@@ -269,4 +269,55 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		wp_set_current_user( $admin );
 		$this->assertTrue( evt_can_edit_admin_only_fields() );
 	}
+
+	/**
+	 * Tom Select: la versión, clavada igual aquí, en las URL y en package.json.
+	 */
+	public function test_the_scope_select_version_matches_package_json() {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- fichero del repositorio, no una petición remota.
+		$datos    = json_decode( (string) file_get_contents( dirname( __DIR__, 2 ) . '/package.json' ), true );
+		$esperada = $datos['devDependencies']['tom-select'];
+		$vendor   = evt_scope_select_vendor();
+
+		$this->assertSame( '2.6.2', $esperada, 'versión exacta, sin ^ ni ~' );
+		$this->assertSame( $esperada, $vendor['ver'] );
+		$this->assertStringStartsWith( 'https://cdn.jsdelivr.net/npm/tom-select@' . $esperada . '/', $vendor['js'] );
+		$this->assertStringStartsWith( 'https://cdn.jsdelivr.net/npm/tom-select@' . $esperada . '/', $vendor['css'] );
+		$this->assertStringStartsWith( 'sha384-', $vendor['js_sri'] );
+		$this->assertStringStartsWith( 'sha384-', $vendor['css_sri'] );
+	}
+
+	/**
+	 * Se carga en las pantallas de perfil y solo para quien puede fijar el ámbito.
+	 */
+	public function test_the_scope_select_loads_only_on_profiles_for_administration() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		evt_scope_select_assets( 'user-edit.php' );
+		$this->assertFalse( wp_script_is( 'tom-select', 'registered' ), 'quien no administra no elige ámbito' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		evt_scope_select_assets( 'edit.php' );
+		$this->assertFalse( wp_script_is( 'tom-select', 'registered' ), 'fuera del perfil no hace falta' );
+
+		evt_scope_select_assets( 'user-edit.php' );
+		$this->assertTrue( wp_script_is( 'tom-select', 'enqueued' ) );
+		$this->assertTrue( wp_style_is( 'tom-select', 'enqueued' ) );
+		$this->assertStringContainsString( "getElementById('evt_area')", implode( '', (array) wp_scripts()->get_data( 'tom-select', 'after' ) ) );
+	}
+
+	/**
+	 * El SRI va en las dos etiquetas del CDN, y en ninguna otra.
+	 */
+	public function test_the_scope_select_tags_carry_their_integrity() {
+		$vendor = evt_scope_select_vendor();
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- es la etiqueta que recibe el filtro.
+		$guion = "<script src='" . $vendor['js'] . "' id='tom-select-js'></script>";
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- es la etiqueta que recibe el filtro.
+		$hoja = "<link rel='stylesheet' id='tom-select-css' href='" . $vendor['css'] . "' />";
+
+		$this->assertStringContainsString( 'integrity="' . $vendor['js_sri'] . '" crossorigin="anonymous" src=', evt_scope_select_sri( $guion, 'tom-select', $vendor['js'] ) );
+		$this->assertStringContainsString( 'integrity="' . $vendor['css_sri'] . '" crossorigin="anonymous" href=', evt_scope_select_sri( $hoja, 'tom-select', $vendor['css'] ) );
+		$this->assertSame( $guion, evt_scope_select_sri( $guion, 'tom-select', 'https://example.org/wp-content/evt-dev/node_modules/tom-select/dist/js/tom-select.complete.min.js' ) );
+		$this->assertSame( $guion, evt_scope_select_sri( $guion, 'otro', $vendor['js'] ) );
+	}
 }

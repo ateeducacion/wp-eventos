@@ -8,6 +8,16 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.2] — 2026-09-28
+
+### Corregido
+
+- **El ámbito del perfil de usuario se puede elegir otra vez.** Con el árbol de ámbitos completo, cada opción lleva su ruta entera y el desplegable se hacía inmanejable. Ahora se escribe para buscar, y las rutas largas se parten en varias líneas. Si la librería del buscador no llega, el campo sigue siendo el desplegable de siempre
+
+### Pendiente antes de desplegar
+
+- Actualizar también el snippet «EVT — Roles y perfiles», que es donde vive el campo: no va dentro del aplicativo
+
 ## [0.1.1] — 2026-09-28
 
 ### Añadido
