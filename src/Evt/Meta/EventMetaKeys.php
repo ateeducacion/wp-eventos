@@ -196,6 +196,21 @@ final class EventMetaKeys {
 	public const CONTACT_MAP = 'evt_contact_map';
 
 	/**
+	 * Sección que no saca tarjeta en la portada del evento.
+	 *
+	 * Sigue en el menú y se sigue viendo: solo se quita de la rejilla. Es lo
+	 * que se hacía antes con la página de contacto, que ya está arriba y no
+	 * necesita tarjeta. Sin la marca, la tarjeta sale: así se ven igual las
+	 * secciones que ya existen.
+	 */
+	public const HOME_HIDDEN = 'evt_home_hidden';
+
+	/**
+	 * Icono de la sección, de la lista cerrada. Vacío: el de su tipo.
+	 */
+	public const SECTION_ICON = 'evt_section_icon';
+
+	/**
 	 * CSS a medida de esta página. Se guarda en crudo: es código, no texto.
 	 *
 	 * En la raíz del evento viste todas sus páginas; en una página satélite,
@@ -300,6 +315,8 @@ final class EventMetaKeys {
 			self::CONTACT_PHONE,
 			self::CONTACT_EMAIL,
 			self::CONTACT_MAP,
+			self::HOME_HIDDEN,
+			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -338,6 +355,55 @@ final class EventMetaKeys {
 			'directo'           => 'Emisión en directo',
 			self::SECTION_OTHER => 'Otra',
 		);
+	}
+
+	/**
+	 * Closed vocabulary of section icons.
+	 *
+	 * Los dibujos están en {@see \Evt\PublicFront\SectionIcons}; aquí solo el
+	 * nombre, que es lo que se guarda.
+	 *
+	 * @return array<string, string> slug => etiqueta.
+	 */
+	public static function section_icons(): array {
+		return array(
+			'calendar'  => 'Calendario',
+			'people'    => 'Personas',
+			'form'      => 'Formulario',
+			'image'     => 'Imagen',
+			'mail'      => 'Sobre',
+			'bulb'      => 'Bombilla',
+			'chart'     => 'Gráfica',
+			'megaphone' => 'Megáfono',
+			'chat'      => 'Bocadillo',
+			'play'      => 'Vídeo',
+			'pin'       => 'Ubicación',
+			'star'      => 'Estrella',
+			'info'      => 'Información',
+			'page'      => 'Página',
+		);
+	}
+
+	/**
+	 * The icon a section gets from its type until someone picks another.
+	 *
+	 * @param string $type Section type slug.
+	 * @return string Icon slug.
+	 */
+	public static function default_icon( string $type ): string {
+		$por_tipo = array(
+			'programa'      => 'calendar',
+			'ponentes'      => 'people',
+			'inscripcion'   => 'form',
+			'multimedia'    => 'image',
+			'contacto'      => 'mail',
+			'actividades'   => 'bulb',
+			'encuesta'      => 'chart',
+			'participacion' => 'megaphone',
+			'preguntas'     => 'chat',
+			'directo'       => 'play',
+		);
+		return $por_tipo[ $type ] ?? 'page';
 	}
 
 	/**

@@ -7,6 +7,7 @@
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 /**
@@ -148,7 +149,7 @@ final class EventChrome {
 	 * La cuenta sale siempre, a la derecha: «Acceder» sin sesión y, con ella,
 	 * quién es y a dónde puede ir.
 	 *
-	 * @param array<int, array{label:string, url:string, current:bool}> $items Menu entries.
+	 * @param array<int, array{label:string, url:string, current:bool, icon?:string}> $items Menu entries.
 	 * @return string
 	 */
 	public static function nav( array $items ): string {
@@ -176,7 +177,7 @@ final class EventChrome {
 							<?php foreach ( $items as $item ) : ?>
 								<li class="nav-item">
 									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
+										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
 								</li>
 							<?php endforeach; ?>
 						</ul>

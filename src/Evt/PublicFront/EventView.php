@@ -762,9 +762,11 @@ final class EventView {
 	 * título de la página y no el tipo de sección: el título lo escribe quien la
 	 * crea, el tipo es un slug.
 	 *
+	 * Cada entrada lleva el icono de su sección: el elegido o el de su tipo.
+	 *
 	 * @param int $event_id   Event.
 	 * @param int $current_id Page being viewed.
-	 * @return array<int, array{label:string, url:string, current:bool}>
+	 * @return array<int, array{label:string, url:string, current:bool, icon:string}>
 	 */
 	private static function nav( int $event_id, int $current_id ): array {
 		$menu = array(
@@ -772,6 +774,7 @@ final class EventView {
 				'label'   => 'Inicio',
 				'url'     => (string) get_permalink( $event_id ),
 				'current' => $event_id === $current_id,
+				'icon'    => 'home',
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
@@ -779,6 +782,7 @@ final class EventView {
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
 				'current' => (int) $seccion->ID === $current_id,
+				'icon'    => SectionIcons::of( (int) $seccion->ID ),
 			);
 		}
 		return $menu;
@@ -788,15 +792,20 @@ final class EventView {
 	 * The section cards of the front page.
 	 *
 	 * Lo que hoy hace la portada del sistema anterior, con sus textos por
-	 * defecto por tipo.
+	 * defecto por tipo. La sección marcada para no salir en la portada se queda
+	 * en el menú pero no saca tarjeta: es lo que pasa con la de contacto, que
+	 * ya está arriba.
 	 *
 	 * @param int $event_id Event.
-	 * @return array<int, array{id:int, title:string, url:string, image:string, text:string}>
+	 * @return array<int, array{id:int, title:string, url:string, image:string, icon:string, text:string}>
 	 */
 	private static function cards( int $event_id ): array {
 		$tarjetas = array();
 		foreach ( self::sections( $event_id ) as $seccion ) {
-			$id    = (int) $seccion->ID;
+			$id = (int) $seccion->ID;
+			if ( (bool) get_post_meta( $id, EventMetaKeys::HOME_HIDDEN, true ) ) {
+				continue;
+			}
 			$tipo  = EventMetaKeys::in_list(
 				get_post_meta( $id, EventMetaKeys::SECTION_TYPE, true ),
 				EventMetaKeys::section_types()
@@ -811,6 +820,7 @@ final class EventView {
 				'title' => (string) get_the_title( $seccion ),
 				'url'   => (string) get_permalink( $seccion ),
 				'image' => self::card_image( $id, $tipo ),
+				'icon'  => SectionIcons::of( $id ),
 				'text'  => $texto,
 			);
 		}
@@ -848,7 +858,7 @@ final class EventView {
 	 */
 	private static function card_image( int $post_id, string $type, string $size = 'medium' ): string {
 		$url = (string) get_the_post_thumbnail_url( $post_id, $size );
-		if ( '' !== $url ) {
+		if ( '' !== $url || '' !== (string) get_post_meta( $post_id, EventMetaKeys::SECTION_ICON, true ) ) {
 			return $url;
 		}
 

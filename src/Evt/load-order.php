@@ -41,6 +41,7 @@ return array(
 	'PublicFront/Assets.php',
 	'PublicFront/Fonts.php',
 	'PublicFront/Shell.php',
+	'PublicFront/SectionIcons.php',
 	'PublicFront/EditLock.php',
 	'PublicFront/CodeEditor.php',
 	'PublicFront/CustomCode.php',

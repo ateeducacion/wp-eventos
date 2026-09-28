@@ -11,6 +11,7 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\CodeEditor;
 use Evt\PublicFront\PageForm;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 /**
@@ -142,6 +143,8 @@ final class PageFormView {
 				</div>
 			</fieldset>
 
+			<?php echo self::showcase( $valores ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
 				<?php
@@ -178,6 +181,57 @@ final class PageFormView {
 				<?php endif; ?>
 			</p>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * How the section shows up: its card on the front page and its icon.
+	 *
+	 * El icono se elige entre dibujos y no en un desplegable de nombres: lo que
+	 * se decide es cómo se ve. La primera opción es «el de su tipo», que es lo
+	 * que lleva la sección mientras nadie elija otro.
+	 *
+	 * @param array<string, mixed> $valores Form values.
+	 * @return string
+	 */
+	private static function showcase( array $valores ): string {
+		$elegido  = (string) ( $valores['icon'] ?? '' );
+		$tipo     = (string) $valores['section_type'];
+		$opciones = array( '' => 'El de su tipo' ) + EventMetaKeys::section_icons();
+
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>En la portada y en el menú del evento</legend>
+			<input type="hidden" name="evt_showcase" value="1" />
+			<div class="evt-form-campo">
+				<label class="evt-check">
+					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
+					Mostrar una tarjeta de esta sección en la portada del evento
+				</label>
+				<small>Sin marcar, la sección sigue en el menú de arriba y se sigue viendo, pero no ocupa
+					una tarjeta en la portada. Es lo habitual en la de contacto.</small>
+			</div>
+			<div class="evt-form-campo">
+				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
+				<div class="evt-iconos" role="radiogroup" aria-labelledby="evt-icono-rotulo">
+					<?php foreach ( $opciones as $slug => $rotulo ) : ?>
+						<?php
+						$dibujo = '' === $slug ? EventMetaKeys::default_icon( $tipo ) : (string) $slug;
+						?>
+						<label class="evt-icono-opcion" title="<?php echo esc_attr( (string) $rotulo ); ?>">
+							<input type="radio" name="<?php echo esc_attr( EventMetaKeys::SECTION_ICON ); ?>"
+								value="<?php echo esc_attr( (string) $slug ); ?>" <?php checked( $elegido, (string) $slug ); ?> />
+							<?php echo wp_kses( SectionIcons::svg( $dibujo, 28 ), SectionIcons::KSES ); ?>
+							<span class="<?php echo esc_attr( '' === $slug ? 'evt-icono-nombre' : 'screen-reader-text' ); ?>"><?php echo esc_html( (string) $rotulo ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+				<small>Sale junto al nombre de la sección en el menú, y en su tarjeta cuando la sección no
+					tiene imagen destacada.</small>
+			</div>
+		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}

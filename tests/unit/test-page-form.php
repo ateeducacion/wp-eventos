@@ -295,6 +295,66 @@ class Test_Page_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La tarjeta de la portada y el icono se guardan solo cuando el bloque viaja.
+	 *
+	 * Desmarcar la tarjeta guarda la marca; volver a marcarla la borra. Un envío
+	 * sin el bloque no toca ni la una ni el icono.
+	 */
+	public function test_a_section_can_leave_the_front_page_and_pick_its_icon() {
+		$area    = $this->area( 'Innovación' );
+		$yo      = $this->organiser( array( $area ) );
+		$evento  = $this->event( $yo, array( $area ) );
+		$seccion = $this->event_page( $evento, 'contacto', array( 'post_title' => 'Contacto' ) );
+
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'               => (string) $seccion,
+				'evt_title'                 => 'Contacto',
+				'evt_showcase'              => '1',
+				EventMetaKeys::SECTION_ICON => 'pin',
+			)
+		);
+		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::HOME_HIDDEN, true ), 'sin marcar, sin tarjeta' );
+		$this->assertSame( 'pin', get_post_meta( $seccion, EventMetaKeys::SECTION_ICON, true ) );
+
+		// Sin el bloque en el envío, lo guardado se queda.
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id' => (string) $seccion,
+				'evt_title'   => 'Contacto',
+			)
+		);
+		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::HOME_HIDDEN, true ) );
+		$this->assertSame( 'pin', get_post_meta( $seccion, EventMetaKeys::SECTION_ICON, true ) );
+
+		// Marcarla de nuevo y volver al icono del tipo: no queda nada guardado.
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'               => (string) $seccion,
+				'evt_title'                 => 'Contacto',
+				'evt_showcase'              => '1',
+				'evt_home_card'             => '1',
+				EventMetaKeys::SECTION_ICON => 'no-existe',
+			)
+		);
+		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::HOME_HIDDEN ) );
+		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::SECTION_ICON ), 'un icono fuera de la lista es el de su tipo' );
+
+		// Y el formulario lo repinta: la casilla marcada y «El de su tipo» elegido.
+		$this->acting_as( $yo );
+		$_GET['seccion'] = (string) $seccion;
+		$m               = PageForm::model();
+		$this->assertTrue( $m['values']['home_card'] );
+		$this->assertSame( '', $m['values']['icon'] );
+		$html = \Evt\PublicFront\View\PageFormView::html( $m );
+		$this->assertStringContainsString( 'name="evt_home_card" value="1"  checked=\'checked\'', $html );
+		$this->assertStringContainsString( 'value="pin"', $html, 'se elige entre todos los iconos de la lista' );
+	}
+
+	/**
 	 * Una página de contacto guarda su dirección, teléfono, correo y mapa, y los pinta.
 	 *
 	 * Campos y no HTML en el texto: es lo que rellena quien organiza.

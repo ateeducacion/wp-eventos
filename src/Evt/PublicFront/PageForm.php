@@ -281,6 +281,8 @@ final class PageForm {
 			update_post_meta( $id, EventMetaKeys::SECTION_TYPE, (string) $data['section_type'] );
 		}
 
+		self::save_showcase( $id, $fields );
+
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$valor = (string) ( $fields['look'][ $clave ] ?? '' );
 			if ( '' === $valor || '0' === $valor ) {
@@ -306,6 +308,38 @@ final class PageForm {
 		self::save_code( $user_id, $event_id, $id, $fields );
 
 		return $id;
+	}
+
+	/**
+	 * Write whether the section has a card on the front page, and its icon.
+	 *
+	 * Solo si el envío trae el bloque: un envío sin él no dice nada de la
+	 * tarjeta ni del icono, y lo guardado se queda como estaba.
+	 *
+	 * @param int                  $page_id Page just written.
+	 * @param array<string, mixed> $fields  What the form carried.
+	 * @return void
+	 */
+	private static function save_showcase( int $page_id, array $fields ): void {
+		if ( null === $fields['home_card'] ) {
+			return;
+		}
+
+		// Sale en la portada salvo que se diga lo contrario: la marca solo se
+		// guarda para quitarla, y así las secciones que ya existen no cambian.
+		if ( $fields['home_card'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
+		}
+
+		// Sin elegir, el de su tipo; y eso también se guarda no guardando, para
+		// que el icono siga al tipo si mañana cambia el de la lista.
+		if ( '' === $fields['icon'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::SECTION_ICON );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::SECTION_ICON, $fields['icon'] );
+		}
 	}
 
 	/**
@@ -502,6 +536,8 @@ final class PageForm {
 			'slug'         => '',
 			'section_type' => '',
 			'menu_order'   => 0,
+			'home_card'    => true,
+			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
@@ -533,6 +569,8 @@ final class PageForm {
 			'slug'         => (string) get_post_field( 'post_name', $page_id ),
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
+			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
@@ -571,6 +609,12 @@ final class PageForm {
 			'slug'         => isset( $raw['evt_slug'] ) ? sanitize_title( (string) $raw['evt_slug'] ) : '',
 			'section_type' => isset( $raw[ EventMetaKeys::SECTION_TYPE ] ) ? sanitize_key( (string) $raw[ EventMetaKeys::SECTION_TYPE ] ) : '',
 			'menu_order'   => isset( $raw['evt_order'] ) ? (int) $raw['evt_order'] : 0,
+			// Una casilla sin marcar no viaja: su ausencia es el «no», pero
+			// solo si el bloque vino en el envío. Sin él, null: no se toca.
+			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
+				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
+				: '',
 			// Nadie escribe HTML sin filtrar, tampoco quien organiza.
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,

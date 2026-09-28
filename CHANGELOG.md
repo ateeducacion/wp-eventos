@@ -8,6 +8,13 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.5] — 2026-09-28
+
+### Añadido
+
+- **Una sección puede quedarse en el menú sin salir en la portada del evento.** En el formulario de la sección, la casilla «Mostrar una tarjeta de esta sección en la portada del evento». Viene marcada, así que las secciones que ya existen se ven igual; desmarcada, la sección sigue en el menú de arriba pero no ocupa tarjeta. Es lo habitual en la de contacto. En la tabla de secciones del taller, la que no sale lleva la etiqueta «Sin tarjeta en la portada»
+- **Iconos en las secciones.** Cada tipo de sección trae el suyo (un calendario el programa, un sobre el contacto…) y quien organiza puede elegir otro entre catorce dibujos. Salen junto al nombre en el menú del evento, en la tabla de secciones del taller y en la tarjeta de la portada cuando la sección no tiene imagen destacada
+
 ## [0.1.4] — 2026-09-28
 
 ### Añadido
