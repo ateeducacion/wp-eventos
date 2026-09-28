@@ -1,7 +1,7 @@
 ---
 id: ADR-0008
 title: "Se migra el contenedor de los eventos históricos y se congela su contenido"
-status: Aceptada
+status: Sustituida
 date: 2026-09-12
 related:
   issues: []
@@ -9,7 +9,7 @@ related:
   sdds: [SDD-0002]
   adrs: [ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0010]
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0045]
 ai_assistance:
   tool: "Claude Code"
   model: "claude-opus-5"
@@ -19,7 +19,11 @@ ai_assistance:
 
 ## Estado
 
-Aceptada
+**Sustituida** el 2026-09-28 por la
+[ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md), que
+importa lo histórico a un sitio limpio en lugar de migrarlo en el mismo
+sitio. Se conserva por su contexto —cómo estaba hecho lo histórico y qué
+dependía de qué—; lo que ya **no** vale es su decisión.
 
 ## Contexto
 

@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -242,7 +242,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0005](ADR-0005-el-estado-del-evento-se-deriva-de-las-fechas.md) | El estado del evento se deriva de las fechas | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) | El área es un ámbito, no un rol | Aceptada | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0007](ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md) | Las inscripciones siguen en el sistema anterior en la fase 1 | **Sustituida** por [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) | Se migra el contenedor de los eventos históricos y se congela su contenido | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) | Se migra el contenedor de los eventos históricos y se congela su contenido | **Sustituida** por [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0009](ADR-0009-identificadores-internos-en-ingles.md) | Identificadores internos en inglés, lo que se ve en castellano | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0010](ADR-0010-la-pagina-la-genera-codigo-versionado.md) | La página la genera código versionado, no una plantilla guardada en la base de datos | Aceptada | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0011](ADR-0011-ci-y-politica-de-pruebas.md) | Integración continua y política de pruebas | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
@@ -279,6 +279,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa | Propuesta | 2026-09-27 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) |
 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md) | Las inscripciones se corrigen y se borran desde el taller; no hay aforo del evento ni lista de admitidos | Propuesta | 2026-09-27 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
 | [ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) | La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas | Propuesta | 2026-09-27 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) |
+| [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | Los eventos históricos se importan a un sitio limpio y el antiguo se conserva al lado | Propuesta | 2026-09-28 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -596,3 +597,12 @@ ilustración y su entradilla; el evento gana un color de acento y una imagen de
 fondo de cabecera; el programa va en pestañas por día o en acordeón, conserva
 la clase `programa-estandar` y deja fuera lo que no tiene fecha. El logo de
 quien publica y el color del pie entran por `evt_chrome`, vacíos por defecto.
+
+**Sitio limpio, 2026-09-28: ADR-0045.** La
+[ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) sustituye
+a la [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md): en lugar de
+cambiar el tipo de contenido en el mismo sitio y congelar lo histórico, se crea
+un sitio vacío en la ruta de siempre y se importa a él desde el anterior, que
+se conserva al lado y no se borra. Los ficheros se copian en la misma ruta
+relativa, porque la red los sirve por la ruta del sitio y el cambio de nombre
+rompió sus enlaces externos. El importador lee el sitio anterior por dentro y por eso no se versiona.
