@@ -291,7 +291,7 @@ final class EventListView {
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
-				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
+				<span>Restaurar devuelve el evento a borrador. Borrar algo de verdad y para siempre lo hace quien administra, desde el escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">
 					<?php echo esc_html( sprintf( 'Papelera (%d)', $cuantos ) ); ?>

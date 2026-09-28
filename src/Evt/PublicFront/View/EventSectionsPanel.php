@@ -155,9 +155,9 @@ final class EventSectionsPanel {
 		<p class="evt-sub">
 			Las secciones de este evento que se enviaron a la papelera. Nada se ha
 			perdido: al restaurar una vuelve en borrador, así que no reaparece en
-			el menú del evento hasta que la publique. Para borrar algo de verdad y
-			para siempre hay que ir al escritorio de WordPress: desde aquí no se
-			destruye nada.
+			el menú del evento hasta que la publique. Borrar algo de verdad y para
+			siempre lo hace quien administra, desde el escritorio de WordPress:
+			desde aquí no se destruye nada.
 		</p>
 
 		<p class="evt-acciones">

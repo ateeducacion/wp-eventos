@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.8
+ * @version 0.1.9
  */
 
 // phpcs:disable
@@ -9071,7 +9071,7 @@ final class EventListView {
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
-				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
+				<span>Restaurar devuelve el evento a borrador. Borrar algo de verdad y para siempre lo hace quien administra, desde el escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">
 					<?php echo esc_html( sprintf( 'Papelera (%d)', $cuantos ) ); ?>
@@ -16634,9 +16634,9 @@ final class EventSectionsPanel {
 		<p class="evt-sub">
 			Las secciones de este evento que se enviaron a la papelera. Nada se ha
 			perdido: al restaurar una vuelve en borrador, así que no reaparece en
-			el menú del evento hasta que la publique. Para borrar algo de verdad y
-			para siempre hay que ir al escritorio de WordPress: desde aquí no se
-			destruye nada.
+			el menú del evento hasta que la publique. Borrar algo de verdad y para
+			siempre lo hace quien administra, desde el escritorio de WordPress:
+			desde aquí no se destruye nada.
 		</p>
 
 		<p class="evt-acciones">
@@ -23606,6 +23606,7 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
 
@@ -23627,6 +23628,83 @@ final class EventAdmin {
 		add_filter( 'manage_' . EventPostType::POST_TYPE . '_posts_columns', array( self::class, 'columns' ) );
 		add_action( 'manage_' . EventPostType::POST_TYPE . '_posts_custom_column', array( self::class, 'column_content' ), 10, 2 );
 		add_action( 'admin_menu', array( self::class, 'add_new_submenus' ), 20 );
+		add_action( 'admin_menu', array( self::class, 'hide_desk_menu' ), 999 );
+		add_action( 'admin_bar_menu', array( self::class, 'hide_desk_new_items' ), 999 );
+		add_action( 'current_screen', array( self::class, 'send_to_the_app' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function uses_the_desk( int $user_id = 0 ): bool {
+		return EventAccess::is_manager( $user_id );
+	}
+
+
+
+
+
+
+	public static function hide_desk_menu(): void {
+		if ( ! self::uses_the_desk() ) {
+			remove_menu_page( 'edit.php?post_type=' . EventPostType::POST_TYPE );
+		}
+	}
+
+
+
+
+
+
+
+	public static function hide_desk_new_items( $barra ): void {
+		if ( ! ( $barra instanceof \WP_Admin_Bar ) || self::uses_the_desk() ) {
+			return;
+		}
+		foreach ( self::desk_post_types() as $tipo ) {
+			$barra->remove_node( 'new-' . $tipo );
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function send_to_the_app( $pantalla ): void {
+		if ( ! ( $pantalla instanceof \WP_Screen ) || self::uses_the_desk() ) {
+			return;
+		}
+		if ( ! in_array( $pantalla->base, array( 'edit', 'post' ), true ) || ! in_array( $pantalla->post_type, self::desk_post_types(), true ) ) {
+			return;
+		}
+		$destino = Shell::url( 'events' );
+		Shell::leave( '' !== $destino ? $destino : home_url( '/' ) );
+	}
+
+
+
+
+
+
+	public static function desk_post_types(): array {
+		return array( EventPostType::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE );
 	}
 
 

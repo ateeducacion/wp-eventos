@@ -8,6 +8,16 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.9] — 2026-09-28
+
+### Cambiado
+
+- **El menú «Eventos» del escritorio de WordPress solo lo ve administración.** Quien organiza gestiona su evento entero desde el aplicativo, así que en el escritorio ya no ve:
+  - el menú «Eventos», con sus ponentes y actividades;
+  - «Evento», «Ponente» y «Actividad» en el «+ Nuevo» de la barra de arriba.
+
+  Si llega a esas pantallas con un enlace guardado, va a «Mis eventos». Lo que cada uno puede editar no cambia: sigue decidiéndolo el mismo guardián
+
 ## [0.1.8] — 2026-09-28
 
 ### Cambiado
