@@ -29,6 +29,7 @@ use Evt\PublicFront\PageForm;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
@@ -109,6 +110,8 @@ final class App {
 		// documento entero en `template_redirect`, como las pantallas, y un
 		// evento migrado se queda en el tema (ADR-0022).
 		EventView::register();
+		// El mapa de la página de contacto: Leaflet solo donde hay puntos (ADR-0046).
+		ContactMap::register();
 
 		// El CSS y el JavaScript a medida se imprimen en la página pública del
 		// evento y en ninguna otra: `wp_head` y `wp_footer`, los dos al final

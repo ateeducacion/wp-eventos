@@ -1126,6 +1126,48 @@
 		} );
 	} );
 
+	/* --- 12. Filas que se repiten: «Añadir otro punto» ------------------ */
+
+	/*
+	 * `data-evt-filas` en la caja, `data-evt-fila` en cada fila y
+	 * `data-evt-filas-nueva` en el botón, dentro del mismo campo. El botón
+	 * copia la última fila vacía con el índice siguiente. Sin guion, la fila en
+	 * blanco del final, de una en una.
+	 */
+	document.addEventListener( 'DOMContentLoaded', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-filas-nueva]' ), function ( boton ) {
+			var campo = boton.closest( '.evt-form-campo' );
+			var caja = campo ? campo.querySelector( '[data-evt-filas]' ) : null;
+			var filas = caja ? caja.querySelectorAll( '[data-evt-fila]' ) : [];
+			if ( ! filas.length ) {
+				return;
+			}
+			var molde = filas[ filas.length - 1 ].cloneNode( true );
+			var siguiente = filas.length;
+			boton.hidden = false;
+			boton.addEventListener( 'click', function () {
+				var fila = molde.cloneNode( true );
+				var i = siguiente++;
+				Array.prototype.forEach.call( fila.querySelectorAll( '[name], [id], [for]' ), function ( nodo ) {
+					[ 'name', 'id', 'for' ].forEach( function ( atributo ) {
+						var valor = nodo.getAttribute( atributo );
+						if ( valor ) {
+							nodo.setAttribute( atributo, valor.replace( /\[\d+\]$/, '[' + i + ']' ).replace( /-\d+$/, '-' + i ) );
+						}
+					} );
+					if ( 'value' in nodo && 'INPUT' === nodo.tagName ) {
+						nodo.value = '';
+					}
+				} );
+				caja.appendChild( fila );
+				var primero = fila.querySelector( 'input' );
+				if ( primero ) {
+					primero.focus();
+				}
+			} );
+		} );
+	} );
+
 	window.addEventListener( 'beforeunload', function ( e ) {
 		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
 		for ( var i = 0; i < formularios.length; i++ ) {

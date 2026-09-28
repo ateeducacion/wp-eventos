@@ -985,3 +985,21 @@
 		background: none;
 	}
 }
+
+/* ─── mapa de la página de contacto (ADR-0046) ──────────────────────── */
+
+.evt-ev__mapa-caja {
+	margin-top: var(--evt-espacio);
+}
+
+/* Sin Leaflet la caja no ocupa nada: queda la lista de debajo. */
+.evt-ev__mapa--listo {
+	height: 380px;
+	margin-bottom: 1rem;
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__mapa-puntos {
+	margin: 0;
+	padding-left: 1.2em;
+}
