@@ -863,6 +863,60 @@
 	border-collapse: collapse;
 }
 
+/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. */
+.evt-ev__acceder,
+.evt-ev__cuenta summary {
+	margin-left: auto;
+	padding: 0.4rem 0.9rem;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	color: var(--evt-tinta);
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.evt-ev__cuenta {
+	position: relative;
+	margin-left: auto;
+}
+
+.evt-ev__cuenta summary {
+	display: block;
+	list-style: none;
+}
+
+.evt-ev__cuenta summary::-webkit-details-marker {
+	display: none;
+}
+
+.evt-ev__cuenta-menu {
+	position: absolute;
+	right: 0;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	width: max-content;
+	max-width: calc(100vw - 2rem);
+	margin-top: 0.3rem;
+	padding: 0.4rem 0;
+	background: var(--evt-papel);
+	border: 1px solid var(--evt-suave);
+	border-radius: 8px;
+	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.evt-ev__cuenta-menu a {
+	padding: 0.45rem 1rem;
+	color: var(--evt-tinta);
+	text-decoration: none;
+}
+
+.evt-ev__cuenta-menu a:hover,
+.evt-ev__cuenta-menu a:focus-visible {
+	background: var(--evt-suave);
+}
+
 /* ─── el pie institucional ────────────────────────────────────────────── */
 
 .evt-ev__pie {

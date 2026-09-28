@@ -7,10 +7,108 @@
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\Timeline;
+
 /**
  * Solo pinta: no lee la petición, no consulta, no decide.
  */
 final class TimelineView {
+
+	/**
+	 * The whole page: bar, heading, filter, timeline and footer.
+	 *
+	 * La barra y el pie son los de la página de un evento
+	 * ({@see EventChrome}), así que el logo, «Acceder» y los enlaces del pie
+	 * salen igual.
+	 *
+	 * @param string               $title Page heading.
+	 * @param array<string, mixed> $m     Model.
+	 * @return string
+	 */
+	public static function document( string $title, array $m ): string {
+		ob_start();
+		?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<?php
+		if ( ! current_theme_supports( 'title-tag' ) ) {
+			echo '<title>' . esc_html( wp_get_document_title() ) . "</title>\n";
+		}
+		wp_head();
+		echo EventChrome::consent(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- URL escapadas dentro.
+		?>
+</head>
+<body <?php body_class( array( 'evt-ev', 'evt-ev--linea' ) ); ?>>
+		<?php
+		wp_body_open();
+		echo '<a class="evt-ev__saltar visually-hidden-focusable" href="#contenido">Saltar al contenido</a>';
+		echo '<header class="evt-ev__cabecera">' . EventChrome::nav( array() ) . '</header>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		?>
+	<main id="contenido" class="evt-ev__main" tabindex="-1">
+		<div class="evt-ev__ancho">
+			<?php if ( '' !== $title ) : ?>
+				<h1 class="evt-linea__h1"><?php echo esc_html( $title ); ?></h1>
+			<?php endif; ?>
+			<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		</div>
+		<?php echo self::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+	</main>
+		<?php
+		echo EventChrome::footer(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		wp_footer();
+		echo EventChrome::analytics(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido en analytics().
+		?>
+</body>
+</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The filter: a text search and the scope, by GET, so it works without
+	 * JavaScript and the filtered link can be shared.
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return string
+	 */
+	public static function filter( array $m ): string {
+		$filtros = (array) ( $m['filters'] ?? array() );
+		$buscar  = (string) ( $filtros['search'] ?? '' );
+		$ambito  = (int) ( $filtros['area'] ?? 0 );
+		$aqui    = is_singular() ? (string) get_permalink( get_queried_object_id() ) : home_url( '/' );
+
+		ob_start();
+		?>
+		<form class="evt-linea__filtro" method="get" action="<?php echo esc_url( $aqui ); ?>" role="search">
+			<label class="evt-linea__campo">
+				<span>Buscar</span>
+				<input type="search" name="<?php echo esc_attr( Timeline::ARG_SEARCH ); ?>" value="<?php echo esc_attr( $buscar ); ?>" placeholder="Título, sede…" />
+			</label>
+			<?php if ( array() !== (array) ( $m['areas'] ?? array() ) ) : ?>
+				<label class="evt-linea__campo">
+					<span>Ámbito</span>
+					<select name="<?php echo esc_attr( Timeline::ARG_AREA ); ?>">
+						<option value="">Todos</option>
+						<?php foreach ( (array) $m['areas'] as $area ) : ?>
+							<option value="<?php echo esc_attr( (string) $area['id'] ); ?>"<?php selected( $ambito, (int) $area['id'] ); ?>><?php echo esc_html( str_repeat( '— ', (int) $area['depth'] ) . $area['name'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			<?php endif; ?>
+			<button class="evt-linea__boton evt-linea__boton--filtrar" type="submit">Filtrar</button>
+			<?php if ( ! empty( $m['filtered'] ) ) : ?>
+				<p class="evt-linea__resultado" role="status">
+					<?php echo esc_html( 1 === (int) $m['count'] ? '1 evento' : (int) $m['count'] . ' eventos' ); ?>
+					· <a href="<?php echo esc_url( $aqui ); ?>">Quitar filtros</a>
+				</p>
+			<?php endif; ?>
+		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
 
 	/**
 	 * The timeline.

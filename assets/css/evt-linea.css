@@ -344,3 +344,50 @@
 		scroll-behavior: auto;
 	}
 }
+
+/* ─── la página propia: título y filtro ─────────────────────────────── */
+
+.evt-linea__h1 {
+	margin: 2rem 0 1rem;
+	font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.evt-linea__filtro {
+	/* Fuera de `.evt-linea`: el botón necesita su azul aquí también. */
+	--evt-linea-azul: #1d4e89;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 1.5rem;
+}
+
+.evt-linea__campo {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: .9rem;
+	font-weight: 600;
+}
+
+.evt-linea__campo input,
+.evt-linea__campo select {
+	min-width: min(18rem, 100%);
+	max-width: 100%;
+	padding: 8px 10px;
+	border: 1px solid #c5ccd5;
+	border-radius: 8px;
+	font: inherit;
+	font-weight: 400;
+}
+
+.evt-linea__boton--filtrar {
+	width: auto;
+	padding-inline: 18px;
+}
+
+.evt-linea__resultado {
+	flex-basis: 100%;
+	margin: 0;
+}
+

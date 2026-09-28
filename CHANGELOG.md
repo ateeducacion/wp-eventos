@@ -8,6 +8,18 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.1] — 2026-09-28
+
+### Añadido
+
+- **La portada del sitio es la línea del tiempo de eventos, con su propia cabecera y su propio pie.** Se pinta como la página de un evento, sin nada del tema: el logo de quien publica arriba a la izquierda y el pie institucional abajo
+- **Arriba a la derecha, «Acceder»** para iniciar sesión; con la sesión iniciada, el nombre de quien ha entrado, con «Gestión de eventos» —si puede gestionarlos— y «Salir». Sale también en la página de cada evento
+- **Filtrar eventos en la portada** por texto (título, sede…) y por ámbito. Un ámbito incluye los que cuelgan de él: elegir un servicio trae los eventos de sus áreas. La línea abre en el mes con resultados más cercano, y el enlace filtrado se puede compartir
+
+### Cambiado
+
+- Al preparar el sitio, la línea del tiempo pasa a ser la página de inicio si no se había elegido otra
+
 ## [0.1.0] — 2026-09-12
 
 ### Añadido

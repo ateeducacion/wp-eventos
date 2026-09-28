@@ -124,4 +124,63 @@ class Test_Timeline extends WP_UnitTestCase {
 		$this->assertTrue( shortcode_exists( Timeline::SHORTCODE ) );
 		$this->assertStringContainsString( 'evt-linea', do_shortcode( '[' . Timeline::SHORTCODE . ']' ) );
 	}
+
+	/**
+	 * Buscar por texto deja solo lo que coincide y abre donde hay resultados.
+	 */
+	public function test_the_search_keeps_only_what_matches() {
+		$sale = $this->en( '2025-03-12', array(), array( 'post_title' => 'Jornadas de robótica' ) );
+		$no   = $this->en( '2026-10-09', array(), array( 'post_title' => 'Encuentro de bibliotecas' ) );
+		$m    = Timeline::model( '2026-09-27', array( 'search' => 'robótica' ) );
+		$ids  = array();
+		foreach ( $m['months'] as $mes ) {
+			$ids = array_merge( $ids, wp_list_pluck( $mes['events'], 'id' ) );
+		}
+
+		$this->assertSame( array( $sale ), $ids );
+		$this->assertNotContains( $no, $ids );
+		$this->assertTrue( $m['filtered'] );
+		$this->assertSame( 1, $m['count'] );
+		$this->assertSame( '2025-03', $m['months'][ $m['current'] ]['key'], 'abre en el mes con resultados, no en uno vacío' );
+	}
+
+	/**
+	 * Un ámbito trae también los eventos de los ámbitos que cuelgan de él.
+	 */
+	public function test_the_scope_includes_the_scopes_below_it() {
+		$servicio = $this->area( 'Servicio de Innovación' );
+		$area     = (int) wp_insert_term( 'Área STEAM', 'evt_area', array( 'parent' => $servicio ) )['term_id'];
+		$otra     = $this->area( 'Otro servicio' );
+		$dentro   = $this->event( $this->administrator(), array( $area ), array( EventMetaKeys::START_DATE => '2026-10-09' ) );
+		$fuera    = $this->event( $this->administrator(), array( $otra ), array( EventMetaKeys::START_DATE => '2026-10-10' ) );
+
+		$m   = Timeline::model( '2026-09-27', array( 'area' => $servicio ) );
+		$ids = wp_list_pluck( $this->meses( $m )['2026-10']['events'], 'id' );
+
+		$this->assertSame( array( $dentro ), $ids );
+		$this->assertNotContains( $fuera, $ids );
+
+		$opciones = wp_list_pluck( $m['areas'], 'depth', 'name' );
+		$this->assertSame( 1, $opciones['Área STEAM'], 'el desplegable enseña el árbol' );
+	}
+
+	/**
+	 * La página propia lleva la barra, el filtro, la línea y el pie; sin tema.
+	 */
+	public function test_the_page_is_a_whole_document_with_bar_filter_and_footer() {
+		$this->acting_as( 0 );
+		$html = TimelineView::document( 'Eventos', Timeline::model( '2026-09-27', array( 'search' => 'nada' ) ) );
+
+		$this->assertStringContainsString( '<!doctype html>', $html );
+		$this->assertStringContainsString( 'class="evt-ev__barra"', $html );
+		$this->assertStringContainsString( '>Acceder</a>', $html );
+		$this->assertStringContainsString( 'name="buscar"', $html );
+		$this->assertStringContainsString( 'value="nada"', $html );
+		$this->assertStringContainsString( 'Quitar filtros', $html );
+		$this->assertStringContainsString( 'class="evt-linea"', $html );
+		$this->assertStringContainsString( 'class="evt-ev__pie"', $html );
+
+		Timeline::register();
+		$this->assertNotFalse( has_action( 'template_redirect', array( Timeline::class, 'render_page' ) ) );
+	}
 }

@@ -319,7 +319,7 @@ final class EventView {
 	 * @return void
 	 */
 	public static function drop_page_assets(): void {
-		if ( ! self::takes_over() ) {
+		if ( ! self::takes_over() && ! Timeline::takes_over() ) {
 			return;
 		}
 
@@ -351,7 +351,7 @@ final class EventView {
 	 */
 	public static function drop_page_tag( string $tag, string $handle, string $src ): string {
 		unset( $handle );
-		if ( ! self::takes_over() ) {
+		if ( ! self::takes_over() && ! Timeline::takes_over() ) {
 			return $tag;
 		}
 		return self::is_droppable( $src ) ? '' : $tag;

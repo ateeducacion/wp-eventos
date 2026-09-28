@@ -147,6 +147,17 @@ function evt_setup_pages( string $evt_padre ): void {
 	// sin ella buscaría las páginas en la raíz y no las encontraría.
 	update_option( \Evt\App::PAGES_PARENT, $evt_padre );
 
+	// La línea del tiempo es la puerta pública: la portada del sitio, si nadie
+	// ha elegido otra.
+	if ( 'page' !== get_option( 'show_on_front' ) && isset( $evt_paginas['timeline'] ) ) {
+		$evt_linea = get_page_by_path( '' !== $evt_padre ? $evt_padre . '/' . $evt_paginas['timeline'] : $evt_paginas['timeline'] );
+		if ( $evt_linea instanceof WP_Post ) {
+			update_option( 'show_on_front', 'page' );
+			update_option( 'page_on_front', $evt_linea->ID );
+			echo esc_html( "«{$evt_linea->post_name}» es ahora la portada del sitio." ) . "\n";
+		}
+	}
+
 	echo esc_html(
 		sprintf(
 			'Páginas del aplicativo: %1$d creada(s), %2$d completada(s) con su shortcode, %3$d ya estaban, %4$d sin pantalla todavía. Madre: %5$s.',

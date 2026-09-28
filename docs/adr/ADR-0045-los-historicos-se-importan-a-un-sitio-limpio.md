@@ -227,3 +227,38 @@ nombre bajo su padre. Lanzarlo dos veces no duplica nada.
   decisión, cuando conste que nada lo lee.
 - La ADR-0008 se conserva por su contexto, que es la evidencia de cómo estaba
   hecho lo histórico; lo que ya no vale es su decisión.
+
+## Adenda — 2026-09-28
+
+La importación se hizo el mismo día sobre el sitio nuevo. Tres cosas salieron
+distintas de lo que decía la decisión, y una se añade:
+
+- **Los datos no se leyeron del sitio anterior con `switch_to_blog()`.** Lo
+  que se transforma —eventos, secciones, ponentes, actividades,
+  inscripciones— salió de un `datos.json` preparado fuera, a partir de lo
+  descargado del sitio anterior en solo lectura, y se subió desde la propia
+  página del importador. Así se reutilizó una transformación ya probada contra
+  una copia local en vez de reescribirla. Los datos subidos se guardan en una
+  opción sin autoload que el importador borra al cerrar. **Sí** se leyó del
+  sitio anterior lo que tiene que venir de él: los ficheros, que se copiaron
+  en el servidor, y los metadatos de cada adjunto.
+- **Los adjuntos conservan su ID y sus tamaños intermedios** cuando el ID está
+  libre: se copian también las miniaturas del sitio anterior y se reutilizan
+  sus metadatos, así que los enlaces antiguos a una miniatura también vuelven
+  a responder. Tres adjuntos no entraron con su ID y entraron con uno nuevo;
+  cuenta la ruta, no el número.
+- **Las páginas conservan su ID** cuando está libre, que en un sitio vacío es
+  siempre: los `?page_id=<N>` que circulan fuera siguen llevando al evento. La
+  consecuencia negativa que decía lo contrario no se ha dado.
+- **La portada del sitio es la línea del tiempo**
+  ([ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md)),
+  y se pinta entera, como la página de un evento: la misma barra —el logo de
+  quien publica y, a la derecha, «Acceder» o quién ha entrado— y el mismo pie,
+  sin nada del tema. Lleva un filtro por texto y por ámbito que va por la URL
+  (`buscar`, `ambito`): funciona sin JavaScript y el enlace filtrado se puede
+  compartir. No es `s` porque en la portada WordPress lo tomaría por una
+  búsqueda y dejaría de servir la página.
+
+Medido al terminar: 43 ámbitos, 832 ficheros (los cuatro que faltan ya daban
+404 en el sitio anterior), 34 eventos, 114 secciones, 481 ponentes, 975
+actividades y 808 inscripciones, lo mismo que la prueba local.

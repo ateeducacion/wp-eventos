@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.0
+ * @version 0.1.1
  */
 
 // phpcs:disable
@@ -21013,7 +21013,7 @@ final class EventView {
 
 
 	public static function drop_page_assets(): void {
-		if ( ! self::takes_over() ) {
+		if ( ! self::takes_over() && ! Timeline::takes_over() ) {
 			return;
 		}
 
@@ -21045,7 +21045,7 @@ final class EventView {
 
 	public static function drop_page_tag( string $tag, string $handle, string $src ): string {
 		unset( $handle );
-		if ( ! self::takes_over() ) {
+		if ( ! self::takes_over() && ! Timeline::takes_over() ) {
 			return $tag;
 		}
 		return self::is_droppable( $src ) ? '' : $tag;
@@ -21600,6 +21600,8 @@ final class EventView {
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\Shell;
+
 
 
 
@@ -21739,13 +21741,13 @@ final class EventChrome {
 
 
 
+
+
+
 	public static function nav( array $items ): string {
 		$chrome = self::chrome();
 		$logo   = (string) $chrome['brand_logo'];
 		$menu   = count( $items ) >= 2;
-		if ( '' === $logo && ! $menu ) {
-			return '';
-		}
 
 		ob_start();
 		?>
@@ -21773,8 +21775,39 @@ final class EventChrome {
 						</ul>
 					</nav>
 				<?php endif; ?>
+				<?php echo self::account(); ?>
 			</div>
 		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+	public static function account(): string {
+		$aqui = is_singular() ? (string) get_permalink( get_queried_object_id() ) : home_url( '/' );
+		if ( ! is_user_logged_in() ) {
+			return '<a class="evt-ev__acceder" href="' . esc_url( wp_login_url( $aqui ) ) . '">Acceder</a>';
+		}
+
+		$gestion = Shell::can_use() ? Shell::url( 'home' ) : '';
+		ob_start();
+		?>
+		<details class="evt-ev__cuenta">
+			<summary><?php echo esc_html( wp_get_current_user()->display_name ); ?></summary>
+			<div class="evt-ev__cuenta-menu">
+				<?php if ( '' !== $gestion ) : ?>
+					<a href="<?php echo esc_url( $gestion ); ?>">Gestión de eventos</a>
+				<?php endif; ?>
+				<a href="<?php echo esc_url( wp_logout_url( $aqui ) ); ?>">Salir</a>
+			</div>
+		</details>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -22283,10 +22316,108 @@ final class Home {
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\Timeline;
+
 
 
 
 final class TimelineView {
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function document( string $title, array $m ): string {
+		ob_start();
+		?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<?php
+		if ( ! current_theme_supports( 'title-tag' ) ) {
+			echo '<title>' . esc_html( wp_get_document_title() ) . "</title>\n";
+		}
+		wp_head();
+		echo EventChrome::consent(); 
+		?>
+</head>
+<body <?php body_class( array( 'evt-ev', 'evt-ev--linea' ) ); ?>>
+		<?php
+		wp_body_open();
+		echo '<a class="evt-ev__saltar visually-hidden-focusable" href="#contenido">Saltar al contenido</a>';
+		echo '<header class="evt-ev__cabecera">' . EventChrome::nav( array() ) . '</header>'; 
+		?>
+	<main id="contenido" class="evt-ev__main" tabindex="-1">
+		<div class="evt-ev__ancho">
+			<?php if ( '' !== $title ) : ?>
+				<h1 class="evt-linea__h1"><?php echo esc_html( $title ); ?></h1>
+			<?php endif; ?>
+			<?php echo self::filter( $m ); ?>
+		</div>
+		<?php echo self::html( $m ); ?>
+	</main>
+		<?php
+		echo EventChrome::footer(); 
+		wp_footer();
+		echo EventChrome::analytics(); 
+		?>
+</body>
+</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+	public static function filter( array $m ): string {
+		$filtros = (array) ( $m['filters'] ?? array() );
+		$buscar  = (string) ( $filtros['search'] ?? '' );
+		$ambito  = (int) ( $filtros['area'] ?? 0 );
+		$aqui    = is_singular() ? (string) get_permalink( get_queried_object_id() ) : home_url( '/' );
+
+		ob_start();
+		?>
+		<form class="evt-linea__filtro" method="get" action="<?php echo esc_url( $aqui ); ?>" role="search">
+			<label class="evt-linea__campo">
+				<span>Buscar</span>
+				<input type="search" name="<?php echo esc_attr( Timeline::ARG_SEARCH ); ?>" value="<?php echo esc_attr( $buscar ); ?>" placeholder="Título, sede…" />
+			</label>
+			<?php if ( array() !== (array) ( $m['areas'] ?? array() ) ) : ?>
+				<label class="evt-linea__campo">
+					<span>Ámbito</span>
+					<select name="<?php echo esc_attr( Timeline::ARG_AREA ); ?>">
+						<option value="">Todos</option>
+						<?php foreach ( (array) $m['areas'] as $area ) : ?>
+							<option value="<?php echo esc_attr( (string) $area['id'] ); ?>"<?php selected( $ambito, (int) $area['id'] ); ?>><?php echo esc_html( str_repeat( '— ', (int) $area['depth'] ) . $area['name'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			<?php endif; ?>
+			<button class="evt-linea__boton evt-linea__boton--filtrar" type="submit">Filtrar</button>
+			<?php if ( ! empty( $m['filtered'] ) ) : ?>
+				<p class="evt-linea__resultado" role="status">
+					<?php echo esc_html( 1 === (int) $m['count'] ? '1 evento' : (int) $m['count'] . ' eventos' ); ?>
+					· <a href="<?php echo esc_url( $aqui ); ?>">Quitar filtros</a>
+				</p>
+			<?php endif; ?>
+		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
 
 
 
@@ -22417,8 +22548,10 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventState;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
+use Evt\Taxonomy\EventTaxonomies;
 use Evt\PublicFront\View\EventChrome;
 use Evt\PublicFront\View\TimelineView;
+
 
 
 
@@ -22445,10 +22578,92 @@ final class Timeline {
 
 
 
+	public const ARG_SEARCH = 'buscar';
+	public const ARG_AREA   = 'ambito';
+
+
+
+
+
 
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_action( 'template_redirect', array( self::class, 'render_page' ), EventView::PRIORITY );
+		add_action( 'wp_head', array( self::class, 'print_head' ), EventView::HEAD_PRIORITY );
+	}
+
+
+
+
+
+
+	public static function takes_over(): bool {
+		if ( is_admin() || ! is_page() ) {
+			return false;
+		}
+		$post = get_post( get_queried_object_id() );
+		if ( ! $post instanceof \WP_Post || ! has_shortcode( (string) $post->post_content, self::SHORTCODE ) ) {
+			return false;
+		}
+
+		return (bool) apply_filters( 'evt_standalone_page', true );
+	}
+
+
+
+
+
+
+	public static function render_page(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$post = get_post( get_queried_object_id() );
+
+		status_header( 200 );
+		Shell::send_header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+
+		self::enqueue_assets();
+		echo TimelineView::document( (string) $post->post_title, self::model( '', self::filters() ) ); 
+		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+
+	public static function print_head(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$hoja = EventView::stylesheet();
+		if ( '' !== $hoja ) {
+			echo '<style id="evt-evento-css">' . $hoja . "</style>\n"; 
+		}
+
+		$vacia = array_fill_keys( array( 'bg', 'fg', 'accent', 'header_bg_image', 'title_font', 'body_font', 'shape' ), '' );
+		echo EventLayout::tokens( array( 'appearance' => $vacia ) ); 
+	}
+
+
+
+
+
+
+	public static function filters(): array {
+
+		$buscar = isset( $_GET[ self::ARG_SEARCH ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_SEARCH ] ) ) : '';
+		$ambito = isset( $_GET[ self::ARG_AREA ] ) ? absint( $_GET[ self::ARG_AREA ] ) : 0;
+
+		return array(
+			'search' => trim( $buscar ),
+			'area'   => $ambito,
+		);
 	}
 
 
@@ -22506,9 +22721,17 @@ final class Timeline {
 
 
 
-	public static function model( string $today = '' ): array {
+
+
+
+
+	public static function model( string $today = '', array $filters = array() ): array {
 		$today   = '' !== $today ? $today : current_time( 'Y-m-d' );
-		$eventos = self::events( $today );
+		$filters = array(
+			'search' => (string) ( $filters['search'] ?? '' ),
+			'area'   => (int) ( $filters['area'] ?? 0 ),
+		);
+		$eventos = self::events( $today, $filters );
 
 		$actual = substr( $today, 0, 7 );
 		$claves = array_merge( array( self::shift( $actual, -1 ), self::shift( $actual, 1 ) ), array_keys( $eventos ) );
@@ -22538,10 +22761,62 @@ final class Timeline {
 			}
 		}
 
+		$filtrado = '' !== $filters['search'] || $filters['area'] > 0;
+		if ( $filtrado && array() === $meses[ $indice ]['events'] ) {
+			$cerca   = PHP_INT_MAX;
+			$elegido = $indice;
+			foreach ( $meses as $i => $mes ) {
+				if ( array() !== $mes['events'] && abs( $i - $indice ) < $cerca ) {
+					$cerca   = abs( $i - $indice );
+					$elegido = $i;
+				}
+			}
+			$indice = $elegido;
+		}
+
 		return array(
-			'months'  => $meses,
-			'current' => $indice,
+			'months'   => $meses,
+			'current'  => $indice,
+			'filters'  => $filters,
+			'filtered' => $filtrado,
+			'count'    => array_sum( array_map( 'count', $eventos ) ),
+			'areas'    => self::area_options(),
 		);
+	}
+
+
+
+
+
+
+	public static function area_options(): array {
+		$terminos = get_terms(
+			array(
+				'taxonomy'   => EventTaxonomies::AREA,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( ! is_array( $terminos ) ) {
+			return array();
+		}
+		$hijos = array();
+		foreach ( $terminos as $t ) {
+			$hijos[ (int) $t->parent ][] = $t;
+		}
+		$lista = array();
+		$baja  = static function ( int $padre, int $nivel ) use ( &$baja, &$lista, $hijos ): void {
+			foreach ( $hijos[ $padre ] ?? array() as $t ) {
+				$lista[] = array(
+					'id'    => (int) $t->term_id,
+					'name'  => (string) $t->name,
+					'depth' => $nivel,
+				);
+				$baja( (int) $t->term_id, $nivel + 1 );
+			}
+		};
+		$baja( 0, 0 );
+		return $lista;
 	}
 
 
@@ -22553,9 +22828,26 @@ final class Timeline {
 
 
 
-	private static function events( string $today ): array {
+
+
+
+
+	private static function events( string $today, array $filters ): array {
+		$extra = array();
+		if ( '' !== $filters['search'] ) {
+			$extra['s'] = $filters['search'];
+		}
+		if ( $filters['area'] > 0 ) {
+			$extra['tax_query'] = array( 
+				array(
+					'taxonomy'         => EventTaxonomies::AREA,
+					'terms'            => $filters['area'],
+					'include_children' => true,
+				),
+			);
+		}
 		$posts = get_posts(
-			array(
+			$extra + array(
 				'post_type'              => EventPostType::POST_TYPE,
 				'post_parent'            => 0,
 				'post_status'            => 'publish',
@@ -25699,6 +25991,60 @@ body .swal2-container { z-index: 100010; }
 	border-collapse: collapse;
 }
 
+/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. */
+.evt-ev__acceder,
+.evt-ev__cuenta summary {
+	margin-left: auto;
+	padding: 0.4rem 0.9rem;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	color: var(--evt-tinta);
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.evt-ev__cuenta {
+	position: relative;
+	margin-left: auto;
+}
+
+.evt-ev__cuenta summary {
+	display: block;
+	list-style: none;
+}
+
+.evt-ev__cuenta summary::-webkit-details-marker {
+	display: none;
+}
+
+.evt-ev__cuenta-menu {
+	position: absolute;
+	right: 0;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	width: max-content;
+	max-width: calc(100vw - 2rem);
+	margin-top: 0.3rem;
+	padding: 0.4rem 0;
+	background: var(--evt-papel);
+	border: 1px solid var(--evt-suave);
+	border-radius: 8px;
+	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.evt-ev__cuenta-menu a {
+	padding: 0.45rem 1rem;
+	color: var(--evt-tinta);
+	text-decoration: none;
+}
+
+.evt-ev__cuenta-menu a:hover,
+.evt-ev__cuenta-menu a:focus-visible {
+	background: var(--evt-suave);
+}
+
 /* ─── el pie institucional ────────────────────────────────────────────── */
 
 .evt-ev__pie {
@@ -26092,6 +26438,53 @@ body .swal2-container { z-index: 100010; }
 		scroll-behavior: auto;
 	}
 }
+
+/* ─── la página propia: título y filtro ─────────────────────────────── */
+
+.evt-linea__h1 {
+	margin: 2rem 0 1rem;
+	font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.evt-linea__filtro {
+	/* Fuera de `.evt-linea`: el botón necesita su azul aquí también. */
+	--evt-linea-azul: #1d4e89;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 1.5rem;
+}
+
+.evt-linea__campo {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: .9rem;
+	font-weight: 600;
+}
+
+.evt-linea__campo input,
+.evt-linea__campo select {
+	min-width: min(18rem, 100%);
+	max-width: 100%;
+	padding: 8px 10px;
+	border: 1px solid #c5ccd5;
+	border-radius: 8px;
+	font: inherit;
+	font-weight: 400;
+}
+
+.evt-linea__boton--filtrar {
+	width: auto;
+	padding-inline: 18px;
+}
+
+.evt-linea__resultado {
+	flex-basis: 100%;
+	margin: 0;
+}
+
 ',
   'js/evt-app.js' => '/*
  * Lo mínimo que las pantallas del aplicativo no pueden hacer sin guion.

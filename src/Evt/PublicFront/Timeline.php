@@ -12,14 +12,16 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventState;
 use Evt\Meta\EventMetaKeys;
 use Evt\PostType\EventPostType;
+use Evt\Taxonomy\EventTaxonomies;
 use Evt\PublicFront\View\EventChrome;
 use Evt\PublicFront\View\TimelineView;
 
 /**
  * Todos los eventos publicados en una línea del tiempo horizontal (ADR-0041).
  *
- * Es la puerta pública: no pide sesión y va dentro del tema del sitio, no
- * en el armazón del aplicativo. Abre en el mes actual, con el anterior y el
+ * Es la puerta pública: no pide sesión. La página que la lleva se pinta
+ * entera, como la de un evento: con su barra —el logo, «Acceder» o quién ha
+ * entrado— y su pie, sin nada del tema. Abre en el mes actual, con el anterior y el
  * siguiente a los lados; hacia atrás quedan los pasados —también los
  * marcados como históricos— y hacia delante los que vienen. Sin JavaScript
  * es una tira que se desplaza como cualquier otra.
@@ -37,6 +39,13 @@ final class Timeline {
 	public const SLUG = 'eventos';
 
 	/**
+	 * Query arguments of the filter. Not `s`: on the front page WordPress
+	 * would take it as a search and stop serving the page.
+	 */
+	public const ARG_SEARCH = 'buscar';
+	public const ARG_AREA   = 'ambito';
+
+	/**
 	 * Hook registration.
 	 *
 	 * @return void
@@ -44,6 +53,81 @@ final class Timeline {
 	public static function register(): void {
 		add_shortcode( self::SHORTCODE, array( self::class, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_action( 'template_redirect', array( self::class, 'render_page' ), EventView::PRIORITY );
+		add_action( 'wp_head', array( self::class, 'print_head' ), EventView::HEAD_PRIORITY );
+	}
+
+	/**
+	 * Whether this request is the page that carries the timeline, and we paint it.
+	 *
+	 * @return bool
+	 */
+	public static function takes_over(): bool {
+		if ( is_admin() || ! is_page() ) {
+			return false;
+		}
+		$post = get_post( get_queried_object_id() );
+		if ( ! $post instanceof \WP_Post || ! has_shortcode( (string) $post->post_content, self::SHORTCODE ) ) {
+			return false;
+		}
+		/** This filter is documented in src/Evt/PublicFront/Shell.php */
+		return (bool) apply_filters( 'evt_standalone_page', true );
+	}
+
+	/**
+	 * Serve the whole document of the timeline page.
+	 *
+	 * @return void
+	 */
+	public static function render_page(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$post = get_post( get_queried_object_id() );
+
+		status_header( 200 );
+		Shell::send_header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+
+		self::enqueue_assets();
+		echo TimelineView::document( (string) $post->post_title, self::model( '', self::filters() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- documento montado escapado.
+		Shell::leave();
+	}
+
+	/**
+	 * The stylesheet of the public pages and the footer colour, in the head.
+	 *
+	 * Es la misma hoja que la página de un evento: la barra y el pie son los
+	 * mismos, y así se ven iguales.
+	 *
+	 * @return void
+	 */
+	public static function print_head(): void {
+		if ( ! self::takes_over() ) {
+			return;
+		}
+		$hoja = EventView::stylesheet();
+		if ( '' !== $hoja ) {
+			echo '<style id="evt-evento-css">' . $hoja . "</style>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es CSS, no texto.
+		}
+		// Sin evento no hay apariencia: solo sale el color del pie.
+		$vacia = array_fill_keys( array( 'bg', 'fg', 'accent', 'header_bg_image', 'title_font', 'body_font', 'shape' ), '' );
+		echo EventLayout::tokens( array( 'appearance' => $vacia ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido en tokens().
+	}
+
+	/**
+	 * The filter of this request: what to search and in which scope.
+	 *
+	 * @return array{search: string, area: int}
+	 */
+	public static function filters(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- un filtro público de lectura, sin efectos.
+		$buscar = isset( $_GET[ self::ARG_SEARCH ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_SEARCH ] ) ) : '';
+		$ambito = isset( $_GET[ self::ARG_AREA ] ) ? absint( $_GET[ self::ARG_AREA ] ) : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		return array(
+			'search' => trim( $buscar ),
+			'area'   => $ambito,
+		);
 	}
 
 	/**
@@ -98,12 +182,20 @@ final class Timeline {
 	/**
 	 * Everything the timeline paints.
 	 *
-	 * @param string $today Reference day, Y-m-d ('' = today in the site's zone).
-	 * @return array{months: array<int, array<string, mixed>>, current: int}
+	 * Con un filtro puesto, la línea abre en el mes con resultados más cercano
+	 * a hoy: abrir en un mes vacío escondería justo lo que se ha buscado.
+	 *
+	 * @param string                             $today   Reference day, Y-m-d ('' = today in the site's zone).
+	 * @param array{search?: string, area?: int} $filters What to search and in which scope.
+	 * @return array<string, mixed>
 	 */
-	public static function model( string $today = '' ): array {
+	public static function model( string $today = '', array $filters = array() ): array {
 		$today   = '' !== $today ? $today : current_time( 'Y-m-d' );
-		$eventos = self::events( $today );
+		$filters = array(
+			'search' => (string) ( $filters['search'] ?? '' ),
+			'area'   => (int) ( $filters['area'] ?? 0 ),
+		);
+		$eventos = self::events( $today, $filters );
 
 		$actual = substr( $today, 0, 7 );
 		$claves = array_merge( array( self::shift( $actual, -1 ), self::shift( $actual, 1 ) ), array_keys( $eventos ) );
@@ -133,10 +225,62 @@ final class Timeline {
 			}
 		}
 
+		$filtrado = '' !== $filters['search'] || $filters['area'] > 0;
+		if ( $filtrado && array() === $meses[ $indice ]['events'] ) {
+			$cerca   = PHP_INT_MAX;
+			$elegido = $indice;
+			foreach ( $meses as $i => $mes ) {
+				if ( array() !== $mes['events'] && abs( $i - $indice ) < $cerca ) {
+					$cerca   = abs( $i - $indice );
+					$elegido = $i;
+				}
+			}
+			$indice = $elegido;
+		}
+
 		return array(
-			'months'  => $meses,
-			'current' => $indice,
+			'months'   => $meses,
+			'current'  => $indice,
+			'filters'  => $filters,
+			'filtered' => $filtrado,
+			'count'    => array_sum( array_map( 'count', $eventos ) ),
+			'areas'    => self::area_options(),
 		);
+	}
+
+	/**
+	 * Every scope, in tree order, with its depth.
+	 *
+	 * @return array<int, array{id: int, name: string, depth: int}>
+	 */
+	public static function area_options(): array {
+		$terminos = get_terms(
+			array(
+				'taxonomy'   => EventTaxonomies::AREA,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( ! is_array( $terminos ) ) {
+			return array();
+		}
+		$hijos = array();
+		foreach ( $terminos as $t ) {
+			$hijos[ (int) $t->parent ][] = $t;
+		}
+		$lista = array();
+		$baja  = static function ( int $padre, int $nivel ) use ( &$baja, &$lista, $hijos ): void {
+			foreach ( $hijos[ $padre ] ?? array() as $t ) {
+				$lista[] = array(
+					'id'    => (int) $t->term_id,
+					'name'  => (string) $t->name,
+					'depth' => $nivel,
+				);
+				$baja( (int) $t->term_id, $nivel + 1 );
+			}
+		};
+		$baja( 0, 0 );
+		return $lista;
 	}
 
 	/**
@@ -145,12 +289,29 @@ final class Timeline {
 	 * Todos, sin tope: un área tiene pocos eventos y la línea entera pesa
 	 * poco. Solo las raíces: las páginas satélite no son eventos.
 	 *
-	 * @param string $today Reference day, Y-m-d.
+	 * Un ámbito trae también los eventos de los ámbitos que cuelgan de él: un
+	 * servicio lleva los de sus áreas.
+	 *
+	 * @param string                           $today   Reference day, Y-m-d.
+	 * @param array{search: string, area: int} $filters What to search and in which scope.
 	 * @return array<string, array<int, array<string, mixed>>> Y-m => rows.
 	 */
-	private static function events( string $today ): array {
+	private static function events( string $today, array $filters ): array {
+		$extra = array();
+		if ( '' !== $filters['search'] ) {
+			$extra['s'] = $filters['search'];
+		}
+		if ( $filters['area'] > 0 ) {
+			$extra['tax_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtrar por ámbito es lo que se pide.
+				array(
+					'taxonomy'         => EventTaxonomies::AREA,
+					'terms'            => $filters['area'],
+					'include_children' => true,
+				),
+			);
+		}
 		$posts = get_posts(
-			array(
+			$extra + array(
 				'post_type'              => EventPostType::POST_TYPE,
 				'post_parent'            => 0,
 				'post_status'            => 'publish',
