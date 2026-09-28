@@ -8,6 +8,16 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.11] — 2026-09-28
+
+### Añadido
+
+- **Una sección también puede quedarse fuera del menú de arriba**, con su tarjeta en la portada.
+  - Es la casilla «Mostrar esta sección en el menú de arriba del evento», al lado de la de la tarjeta, e independiente de ella.
+  - Viene marcada, así que las secciones que ya existen se ven igual.
+  - Sin ninguna de las dos casillas, a la sección solo se llega con su enlace.
+  - En la tabla de secciones, la que no sale en el menú lleva la etiqueta «Fuera del menú»
+
 ## [0.1.10] — 2026-09-28
 
 ### Añadido

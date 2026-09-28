@@ -159,6 +159,10 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_contact_points' ),
 			),
+			EventMetaKeys::MENU_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
 			EventMetaKeys::HOME_HIDDEN        => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),

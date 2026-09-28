@@ -121,7 +121,7 @@ final class PageFormView {
 						<label for="evt_order">Orden</label>
 						<input type="number" id="evt_order" name="evt_order" step="1" min="0"
 							value="<?php echo esc_attr( (string) $valores['menu_order'] ); ?>" />
-						<small>El lugar que ocupa en el menú del evento. El número más bajo va primero.</small>
+						<small>El lugar que ocupa en el menú y en la portada del evento. El número más bajo va primero.</small>
 					</div>
 				</div>
 
@@ -207,11 +207,16 @@ final class PageFormView {
 			<input type="hidden" name="evt_showcase" value="1" />
 			<div class="evt-form-campo">
 				<label class="evt-check">
+					<input type="checkbox" name="evt_in_menu" value="1" <?php checked( false !== ( $valores['in_menu'] ?? true ) ); ?> />
+					Mostrar esta sección en el menú de arriba del evento
+				</label>
+				<label class="evt-check">
 					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
 					Mostrar una tarjeta de esta sección en la portada del evento
 				</label>
-				<small>Sin marcar, la sección sigue en el menú de arriba y se sigue viendo, pero no ocupa
-					una tarjeta en la portada. Es lo habitual en la de contacto.</small>
+				<small>Las dos son independientes, y lo que desmarque se sigue viendo: solo deja de salir
+					ahí. Lo habitual es quitar la tarjeta de la de contacto, que ya está en el menú. Sin
+					ninguna de las dos, a la sección solo se llega con su enlace.</small>
 			</div>
 			<div class="evt-form-campo">
 				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
