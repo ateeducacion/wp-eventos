@@ -8,45 +8,42 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
-## [0.1.11] — 2026-09-28
+## [0.1.5] — 2026-09-28
 
 ### Añadido
 
-- **Una sección también puede quedarse fuera del menú de arriba**, con su tarjeta en la portada.
-  - Es la casilla «Mostrar esta sección en el menú de arriba del evento», al lado de la de la tarjeta, e independiente de ella.
-  - Viene marcada, así que las secciones que ya existen se ven igual.
-  - Sin ninguna de las dos casillas, a la sección solo se llega con su enlace.
-  - En la tabla de secciones, la que no sale en el menú lleva la etiqueta «Fuera del menú»
-
-## [0.1.10] — 2026-09-28
-
-### Añadido
-
+- **Cada sección decide por separado si sale en el menú de arriba y si tiene tarjeta en la portada del evento.**
+  - Son dos casillas en el formulario de la sección: «Mostrar esta sección en el menú de arriba del evento» y «Mostrar una tarjeta de esta sección en la portada del evento».
+  - Vienen marcadas, así que las secciones que ya existen se ven igual.
+  - Sin ninguna de las dos, a la sección solo se llega con su enlace.
+  - En la tabla de secciones, las etiquetas «Fuera del menú» y «Sin tarjeta en la portada» dicen cuál es cuál
+- **Iconos en las secciones.** Cada tipo de sección trae el suyo (un calendario el programa, un sobre el contacto…) y quien organiza puede elegir otro entre catorce dibujos. Salen junto al nombre en el menú del evento, en la tabla de secciones del taller y en la tarjeta de la portada cuando la sección no tiene imagen destacada
 - **Mapa en la página de contacto** ([ADR-0046](docs/adr/ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md)).
   - En «Datos de contacto», cada punto lleva sus coordenadas, tal como las copia cualquier mapa de internet (`28.4636, -16.2518`), un texto y, si se quiere, un enlace.
   - «Añadir otro punto» añade los que hagan falta.
   - En la página, un mapa con un marcador por punto y, debajo, la misma lista enlazada a OpenStreetMap, que es lo que queda si el mapa no carga.
   - El mapa se dibuja con Leaflet, desde jsDelivr con SRI, y solo se carga en la página de contacto que tiene puntos.
   - El servidor de teselas se cambia con el filtro `evt_map_tiles`
-
-### Corregido
-
-- **Al repintar el formulario de una sección tras un envío rechazado, se perdían los campos propios de su tipo**, como los de contacto
-
-## [0.1.9] — 2026-09-28
+- **Se avisa de las secciones que no siguen la apariencia del evento.** Si una sección tiene su propio color, tipografía, separador, forma de imágenes o logo:
+  - lleva la etiqueta «Apariencia propia» en la tabla de secciones;
+  - la pestaña «Apariencia» del evento dice cuáles son y en qué, con el enlace para abrirlas;
+  - dentro de la sección, «Apariencia de esta sección» se abre sola, explica qué no sigue al evento y ofrece «Volver a la apariencia del evento», que vacía esos campos de una vez al guardar
+- **Lo que solo puede hacer administración se marca en amarillo también dentro de los formularios**, con la misma etiqueta «Solo administración» del recuadro de siempre:
+  - en «Datos del evento», que puede asignar cualquier ámbito;
+  - en un evento histórico, que lo sigue pudiendo editar
 
 ### Cambiado
 
+- **Arriba a la derecha, quien ha entrado se ve igual en el aplicativo y en las páginas públicas.**
+  - Sale su nombre y apellidos —no el alias de la cuenta—, su correo y, si organiza eventos, su ámbito, que ocupa hasta dos líneas si es largo.
+  - Al lado, su imagen de perfil, la misma que en la barra de WordPress; si el sitio no las enseña, sus iniciales.
+  - El menú que abre trae «Mis eventos» —si gestiona eventos—, «Ajustes del aplicativo» —si administra— y «Salir».
+  - Sin sesión, sigue saliendo «Acceder»
 - **El menú «Eventos» del escritorio de WordPress solo lo ve administración.** Quien organiza gestiona su evento entero desde el aplicativo, así que en el escritorio ya no ve:
   - el menú «Eventos», con sus ponentes y actividades;
   - «Evento», «Ponente» y «Actividad» en el «+ Nuevo» de la barra de arriba.
 
   Si llega a esas pantallas con un enlace guardado, va a «Mis eventos». Lo que cada uno puede editar no cambia: sigue decidiéndolo el mismo guardián
-
-## [0.1.8] — 2026-09-28
-
-### Cambiado
-
 - **Los ámbitos de «Datos del evento» se eligen en un árbol.** Antes eran una lista de rutas largas («A › B › C»); ahora:
   - cada ámbito va sangrado bajo el suyo, con una raya que dice de quién cuelga;
   - los que están por encima de lo que uno puede elegir salen en gris y sin casilla, para saber de dónde cuelga cada cosa;
@@ -54,11 +51,6 @@ en el subsitio `eventos` se hace después.
   - la ruta entera sale al pasar el ratón.
 
   Sin JavaScript, el árbol sale entero y abierto
-
-## [0.1.7] — 2026-09-28
-
-### Cambiado
-
 - **El editor de preguntas de la inscripción es más claro.**
   - El campo «Opciones, una por línea» solo aparece en las preguntas de «Una opción» y «Varias opciones», y sale al cambiar el tipo.
   - El botón «Añadir otra pregunta» añade tantas como se quiera antes de guardar.
@@ -68,25 +60,7 @@ en el subsitio `eventos` se hace después.
 ### Corregido
 
 - **Al guardar varias preguntas nuevas a la vez, solo se guardaba la primera.** Llegaban todas sin identificador y se tomaban por repetidas
-
-## [0.1.6] — 2026-09-28
-
-### Añadido
-
-- **Se avisa de las secciones que no siguen la apariencia del evento.** Si una sección tiene su propio color, tipografía, separador, forma de imágenes o logo:
-  - lleva la etiqueta «Apariencia propia» en la tabla de secciones;
-  - la pestaña «Apariencia» del evento dice cuáles son y en qué, con el enlace para abrirlas;
-  - dentro de la sección, «Apariencia de esta sección» se abre sola, explica qué no sigue al evento y ofrece «Volver a la apariencia del evento», que vacía esos campos de una vez al guardar
-- **Lo que solo puede hacer administración se marca en amarillo también dentro de los formularios**, con la misma etiqueta «Solo administración» del recuadro de siempre:
-  - en «Datos del evento», que puede asignar cualquier ámbito;
-  - en un evento histórico, que lo sigue pudiendo editar
-
-## [0.1.5] — 2026-09-28
-
-### Añadido
-
-- **Una sección puede quedarse en el menú sin salir en la portada del evento.** En el formulario de la sección, la casilla «Mostrar una tarjeta de esta sección en la portada del evento». Viene marcada, así que las secciones que ya existen se ven igual; desmarcada, la sección sigue en el menú de arriba pero no ocupa tarjeta. Es lo habitual en la de contacto. En la tabla de secciones del taller, la que no sale lleva la etiqueta «Sin tarjeta en la portada»
-- **Iconos en las secciones.** Cada tipo de sección trae el suyo (un calendario el programa, un sobre el contacto…) y quien organiza puede elegir otro entre catorce dibujos. Salen junto al nombre en el menú del evento, en la tabla de secciones del taller y en la tarjeta de la portada cuando la sección no tiene imagen destacada
+- **Al repintar el formulario de una sección tras un envío rechazado, se perdían los campos propios de su tipo**, como los de contacto
 
 ## [0.1.4] — 2026-09-28
 

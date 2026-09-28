@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.11
+ * @version 0.1.5
  */
 
 // phpcs:disable
@@ -6469,33 +6469,84 @@ final class Shell {
 
 
 
+
+
 	public static function profile( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
-		if ( $user_id <= 0 ) {
+		$user = $user_id > 0 ? get_userdata( $user_id ) : false;
+		if ( ! $user instanceof \WP_User ) {
 			return array(
-				'cargo' => '',
+				'name'  => '',
+				'email' => '',
 				'area'  => '',
 			);
 		}
 
+		$nombre = trim( $user->first_name . ' ' . $user->last_name );
 		if ( EventAccess::is_manager( $user_id ) ) {
-			return array(
-				'cargo' => 'Administración',
-				'area'  => 'Todos los ámbitos',
-			);
+			$area = 'Todos los ámbitos';
+		} elseif ( user_can( $user_id, 'edit_evt_events' ) ) {
+			$area = self::area_names( $user_id );
+		} else {
+			$area = '';
 		}
-		if ( user_can( $user_id, 'edit_evt_events' ) ) {
-			return array(
-				'cargo' => 'Organización de eventos',
-				'area'  => self::area_names( $user_id ),
-			);
-		}
+
 		return array(
-			'cargo' => '',
-			'area'  => '',
+			'name'  => '' !== $nombre ? $nombre : $user->display_name,
+			'email' => $user->user_email,
+			'area'  => $area,
 		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function account( string $back ): string {
+		$perfil = self::profile();
+		if ( '' === $perfil['name'] ) {
+			return '';
+		}
+		$avatar = get_option( 'show_avatars' ) ? (string) get_avatar_url( get_current_user_id(), array( 'size' => 72 ) ) : '';
+
+		ob_start();
+		?>
+		<details class="evt-yo">
+			<summary>
+				<?php if ( '' !== $avatar ) : ?>
+					<img class="evt-yo-ava" src="<?php echo esc_url( $avatar ); ?>" alt="" width="36" height="36" />
+				<?php else : ?>
+					<span class="evt-yo-ava"><?php echo esc_html( self::initials( $perfil['name'] ) ); ?></span>
+				<?php endif; ?>
+				<span class="evt-yo-txt">
+					<span class="evt-yo-n"><?php echo esc_html( $perfil['name'] ); ?> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+					<span class="evt-yo-r"><?php echo esc_html( $perfil['email'] ); ?></span>
+					<?php if ( '' !== $perfil['area'] ) : ?>
+						<span class="evt-yo-r evt-yo-a"><?php echo esc_html( $perfil['area'] ); ?></span>
+					<?php endif; ?>
+				</span>
+			</summary>
+			<div class="evt-yo-menu">
+				<?php if ( self::can_use() && '' !== self::url( 'home' ) ) : ?>
+					<a href="<?php echo esc_url( self::url( 'home' ) ); ?>">Mis eventos</a>
+				<?php endif; ?>
+				<?php if ( EventAccess::is_manager() ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . EventPostType::POST_TYPE . '&page=' . Settings::PAGE ) ); ?>">Ajustes del aplicativo</a>
+				<?php endif; ?>
+				<a href="<?php echo esc_url( wp_logout_url( $back ) ); ?>">Salir</a>
+			</div>
+		</details>
+		<?php
+		return (string) ob_get_clean();
 	}
 
 
@@ -6578,12 +6629,10 @@ final class Shell {
 
 
 	private static function top(): string {
-		$perfil  = self::profile();
-		$usuario = wp_get_current_user();
-		$inicio  = self::home_url();
-		$chrome  = \Evt\PublicFront\View\EventChrome::chrome();
-		$duenio  = (string) $chrome['owner'];
-		$rotulo  = (string) $chrome['org'];
+		$inicio = self::home_url();
+		$chrome = \Evt\PublicFront\View\EventChrome::chrome();
+		$duenio = (string) $chrome['owner'];
+		$rotulo = (string) $chrome['org'];
 
 		ob_start();
 		?>
@@ -6598,24 +6647,7 @@ final class Shell {
 					</span>
 				<?php endif; ?>
 				<a class="evt-marca-app" href="<?php echo esc_url( $inicio ); ?>">Eventos</a>
-				<?php if ( '' !== $perfil['cargo'] ) : ?>
-					<details class="evt-yo">
-						<summary>
-							<span class="evt-yo-ava"><?php echo esc_html( self::initials( $usuario->display_name ) ); ?></span>
-							<span class="evt-yo-txt">
-								<span class="evt-yo-n"><?php echo esc_html( $usuario->display_name ); ?> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
-								<span class="evt-yo-r"><?php echo esc_html( $perfil['cargo'] ); ?></span>
-								<span class="evt-yo-r evt-yo-a"><?php echo esc_html( $perfil['area'] ); ?></span>
-							</span>
-						</summary>
-						<div class="evt-yo-menu">
-							<?php if ( EventAccess::is_manager() ) : ?>
-								<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . EventPostType::POST_TYPE . '&page=' . Settings::PAGE ) ); ?>">Ajustes del aplicativo</a>
-							<?php endif; ?>
-							<a href="<?php echo esc_url( wp_logout_url( $inicio ) ); ?>">Salir</a>
-						</div>
-					</details>
-				<?php endif; ?>
+				<?php echo self::account( $inicio ); ?>
 			</div>
 		</div>
 		<?php
@@ -22906,21 +22938,7 @@ final class EventChrome {
 		if ( ! is_user_logged_in() ) {
 			return '<a class="evt-ev__acceder" href="' . esc_url( wp_login_url( $aqui ) ) . '">Acceder</a>';
 		}
-
-		$gestion = Shell::can_use() ? Shell::url( 'home' ) : '';
-		ob_start();
-		?>
-		<details class="evt-ev__cuenta">
-			<summary><?php echo esc_html( wp_get_current_user()->display_name ); ?></summary>
-			<div class="evt-ev__cuenta-menu">
-				<?php if ( '' !== $gestion ) : ?>
-					<a href="<?php echo esc_url( $gestion ); ?>">Gestión de eventos</a>
-				<?php endif; ?>
-				<a href="<?php echo esc_url( wp_logout_url( $aqui ) ); ?>">Salir</a>
-			</div>
-		</details>
-		<?php
-		return (string) ob_get_clean();
+		return Shell::account( $aqui );
 	}
 
 
@@ -25057,11 +25075,13 @@ html:has(> body.evt-app) { overflow-x: clip; }
   gap: 10px;
   cursor: pointer;
   border-radius: 12px;
-  padding: 4px 6px;
+  padding: 6px 12px 6px 8px;
+  background: var(--evt-sup-2);
 }
 .evt-yo > summary::-webkit-details-marker { display: none; }
-.evt-yo > summary:hover, .evt-yo[open] > summary { background: var(--evt-sup-2); }
+.evt-yo > summary:hover, .evt-yo[open] > summary { background: var(--evt-linea); }
 .evt-yo-ava {
+  flex: none;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -25069,16 +25089,19 @@ html:has(> body.evt-app) { overflow-x: clip; }
   place-items: center;
   font-size: 13px;
   font-weight: 700;
-  background: var(--evt-sup-2);
+  background: var(--evt-sup);
   color: var(--evt-texto);
 }
-.evt-yo-txt { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
+/* El nombre y el correo, en una línea; el ámbito, que puede ser largo, crece
+   hasta dos. */
+.evt-yo-txt { display: flex; flex-direction: column; min-width: 0; max-width: 20rem; line-height: 1.25; text-align: left; }
 .evt-yo-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--evt-texto); }
-.evt-yo-r { font-size: 12.5px; color: var(--evt-texto-2); }
-.evt-yo-a { font-weight: 600; color: var(--evt-pri); }
+.evt-yo-r { font-size: 12.5px; color: var(--evt-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-yo-a { font-weight: 600; color: var(--evt-pri); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .evt-yo-a::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
 .evt-yo-menu {
   position: absolute;
+  left: 0;
   right: 0;
   top: calc(100% + 6px);
   min-width: 12rem;
@@ -27257,9 +27280,9 @@ body .swal2-container { z-index: 100010; }
 	border-collapse: collapse;
 }
 
-/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. */
-.evt-ev__acceder,
-.evt-ev__cuenta summary {
+/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. El bloque
+   de quien ha entrado es el mismo que en la cabecera del aplicativo. */
+.evt-ev__acceder {
 	margin-left: auto;
 	padding: 0.4rem 0.9rem;
 	border: 1px solid currentColor;
@@ -27267,48 +27290,129 @@ body .swal2-container { z-index: 100010; }
 	color: var(--evt-tinta);
 	font-weight: 600;
 	text-decoration: none;
-	cursor: pointer;
 }
 
-.evt-ev__cuenta {
+.evt-yo {
 	position: relative;
 	margin-left: auto;
 }
 
-.evt-ev__cuenta summary {
-	display: block;
+.evt-yo > summary {
+	display: flex;
+	gap: 0.6rem;
+	align-items: center;
+	padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+	border-radius: 12px;
+	background: var(--evt-suave);
 	list-style: none;
+	cursor: pointer;
 }
 
-.evt-ev__cuenta summary::-webkit-details-marker {
+.evt-yo > summary::-webkit-details-marker {
 	display: none;
 }
 
-.evt-ev__cuenta-menu {
+.evt-yo > summary:hover,
+.evt-yo[open] > summary {
+	background: var(--evt-borde);
+}
+
+.evt-yo-ava {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--evt-papel);
+	color: var(--evt-titulos);
+	font-size: 0.8rem;
+	font-weight: 700;
+}
+
+/* El nombre y el correo, en una línea; el ámbito, que puede ser largo, crece
+   hasta dos. */
+.evt-yo-txt {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	max-width: 20rem;
+	line-height: 1.25;
+	text-align: left;
+}
+
+.evt-yo-n {
+	display: flex;
+	gap: 0.4rem;
+	align-items: center;
+	color: var(--evt-titulos);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.evt-yo-r {
+	overflow: hidden;
+	color: var(--evt-tinta);
+	font-size: 0.8rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.evt-yo-a {
+	display: -webkit-box;
+	color: var(--evt-enlace);
+	font-weight: 600;
+	white-space: normal;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.evt-yo-a::before {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	content: "";
+	vertical-align: 1px;
+}
+
+.evt-yo-menu {
 	position: absolute;
 	right: 0;
 	z-index: 20;
 	display: flex;
 	flex-direction: column;
-	width: max-content;
+	width: max(100%, 12rem);
 	max-width: calc(100vw - 2rem);
 	margin-top: 0.3rem;
 	padding: 0.4rem 0;
 	background: var(--evt-papel);
-	border: 1px solid var(--evt-suave);
+	border: 1px solid var(--evt-borde);
 	border-radius: 8px;
 	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
 }
 
-.evt-ev__cuenta-menu a {
+.evt-yo-menu a {
 	padding: 0.45rem 1rem;
 	color: var(--evt-tinta);
 	text-decoration: none;
 }
 
-.evt-ev__cuenta-menu a:hover,
-.evt-ev__cuenta-menu a:focus-visible {
+.evt-yo-menu a:hover,
+.evt-yo-menu a:focus-visible {
 	background: var(--evt-suave);
+}
+
+@media (max-width: 600px) {
+	.evt-yo-txt {
+		display: none;
+	}
+
+	.evt-yo > summary {
+		padding: 0.25rem;
+	}
 }
 
 /* ─── el pie institucional ────────────────────────────────────────────── */

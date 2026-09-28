@@ -126,7 +126,7 @@ class Test_Shell extends WP_UnitTestCase {
 		// La cabecera dice lo que diga la configuración del armazón; el
 		// mu-plugin de desarrollo pone una de ejemplo.
 		$this->assertStringContainsString( 'Área de ejemplo', $html );
-		$this->assertStringContainsString( 'Organización de eventos', $html );
+		$this->assertStringContainsString( '@example.org</span>', $html, 'la cabecera dice el correo de quien mira' );
 		$this->assertStringContainsString( 'Formación del Profesorado', $html, 'la cabecera dice con qué área se mira' );
 		$this->assertStringContainsString( '<h1 class="evt-h1">Eventos</h1>', $html );
 		$this->assertStringContainsString( 'Solo los de su área.', $html );
@@ -300,30 +300,60 @@ class Test_Shell extends WP_UnitTestCase {
 	}
 
 	/**
-	 * El perfil de la cabecera: el cargo y el área con la que se está mirando.
+	 * El perfil de la cabecera: nombre y apellidos, correo y el área con la que
+	 * se está mirando.
 	 */
-	public function test_the_profile_says_the_role_and_the_area() {
+	public function test_the_profile_says_the_name_the_email_and_the_area() {
 		$this->acting_as( 0 );
 		$this->assertSame(
 			array(
-				'cargo' => '',
+				'name'  => '',
+				'email' => '',
 				'area'  => '',
 			),
 			Shell::profile()
 		);
 
-		$area = $this->area( 'Innovación' );
-		$this->acting_as( $this->organiser( array( $area ) ) );
-		$this->assertSame( 'Organización de eventos', Shell::profile()['cargo'] );
-		$this->assertSame( 'Innovación', Shell::profile()['area'] );
+		$area  = $this->area( 'Innovación' );
+		$quien = $this->organiser( array( $area ) );
+		wp_update_user(
+			array(
+				'ID'           => $quien,
+				'display_name' => 'Servicio de Innovación',
+				'first_name'   => 'Ana',
+				'last_name'    => 'Pérez Díaz',
+				'user_email'   => 'ana@example.org',
+			)
+		);
+		$this->acting_as( $quien );
+		$this->assertSame(
+			array(
+				'name'  => 'Ana Pérez Díaz',
+				'email' => 'ana@example.org',
+				'area'  => 'Innovación',
+			),
+			Shell::profile()
+		);
 
-		$this->acting_as( $this->organiser() );
+		// Sin nombre en la ficha, el que se muestra.
+		$sin_nombre = $this->organiser();
+		wp_update_user(
+			array(
+				'ID'           => $sin_nombre,
+				'display_name' => 'Alias',
+			)
+		);
+		$this->acting_as( $sin_nombre );
+		$this->assertSame( 'Alias', Shell::profile()['name'] );
 		$this->assertSame( 'Sin ámbito asignado', Shell::profile()['area'] );
 
 		$this->app();
 		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$this->assertSame( 'Administración', Shell::profile()['cargo'] );
 		$this->assertSame( 'Todos los ámbitos', Shell::profile()['area'] );
+
+		// Quien no organiza nada no tiene ámbito que enseñar.
+		$this->acting_as( (int) self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertSame( '', Shell::profile()['area'] );
 	}
 
 	/**
@@ -344,6 +374,14 @@ class Test_Shell extends WP_UnitTestCase {
 			)
 		);
 		$this->acting_as( $quien );
+
+		// Con los avatares encendidos sale el de WordPress; las iniciales, sin
+		// ellos. El mu-plugin de desarrollo los apaga: se le quita un momento.
+		remove_filter( 'pre_option_show_avatars', '__return_zero' );
+		update_option( 'show_avatars', 1 );
+		$this->assertMatchesRegularExpression( '/<img class="evt-yo-ava"/', Shell::render( 'Pantalla', '', '' ) );
+		update_option( 'show_avatars', 0 );
+		add_filter( 'pre_option_show_avatars', '__return_zero' );
 
 		$html = Shell::render( 'Pantalla', '', '<p>cuerpo</p>' );
 		$this->assertMatchesRegularExpression( '/evt-yo-ava[^>]*>\s*OI\s*</u', $html );

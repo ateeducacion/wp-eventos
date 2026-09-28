@@ -479,42 +479,93 @@ final class Shell {
 	}
 
 	/**
-	 * Who is looking: role and área, for the header.
+	 * Who is looking: name, e-mail and área, for the header.
 	 *
-	 * Dos líneas y no un rótulo: en un aplicativo acotado por área, saber con
-	 * qué área se está mirando es la mitad de la respuesta a «¿por qué no veo
-	 * este evento?».
+	 * El nombre es el de la ficha —nombre y apellidos—, no el alias: el alias
+	 * de una cuenta institucional suele ser el del servicio y no dice quién es.
+	 * El ámbito va porque, en un aplicativo acotado por área, saber con qué
+	 * área se está mirando es la mitad de la respuesta a «¿por qué no veo este
+	 * evento?». Quien no organiza nada no tiene ámbito que enseñar.
 	 *
 	 * @param int $user_id User ID (0 = current).
-	 * @return array{cargo:string, area:string} Empty strings when there is no role.
+	 * @return array{name:string, email:string, area:string} Empty strings without a session.
 	 */
 	public static function profile( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
-		if ( $user_id <= 0 ) {
+		$user = $user_id > 0 ? get_userdata( $user_id ) : false;
+		if ( ! $user instanceof \WP_User ) {
 			return array(
-				'cargo' => '',
+				'name'  => '',
+				'email' => '',
 				'area'  => '',
 			);
 		}
 
+		$nombre = trim( $user->first_name . ' ' . $user->last_name );
 		if ( EventAccess::is_manager( $user_id ) ) {
-			return array(
-				'cargo' => 'Administración',
-				'area'  => 'Todos los ámbitos',
-			);
+			$area = 'Todos los ámbitos';
+		} elseif ( user_can( $user_id, 'edit_evt_events' ) ) {
+			$area = self::area_names( $user_id );
+		} else {
+			$area = '';
 		}
-		if ( user_can( $user_id, 'edit_evt_events' ) ) {
-			return array(
-				'cargo' => 'Organización de eventos',
-				'area'  => self::area_names( $user_id ),
-			);
-		}
+
 		return array(
-			'cargo' => '',
-			'area'  => '',
+			'name'  => '' !== $nombre ? $nombre : $user->display_name,
+			'email' => $user->user_email,
+			'area'  => $area,
 		);
+	}
+
+	/**
+	 * The account block: avatar, name, e-mail and área, opening a menu.
+	 *
+	 * Es el mismo en la cabecera del aplicativo y en la de las páginas
+	 * públicas. Sin JavaScript: es un `<details>`. El avatar es el de WordPress
+	 * —Gravatar, como en la barra de arriba del escritorio— y, si el sitio los
+	 * tiene apagados, las iniciales.
+	 *
+	 * @param string $back Where «Salir» leaves the person.
+	 * @return string Empty without a session.
+	 */
+	public static function account( string $back ): string {
+		$perfil = self::profile();
+		if ( '' === $perfil['name'] ) {
+			return '';
+		}
+		$avatar = get_option( 'show_avatars' ) ? (string) get_avatar_url( get_current_user_id(), array( 'size' => 72 ) ) : '';
+
+		ob_start();
+		?>
+		<details class="evt-yo">
+			<summary>
+				<?php if ( '' !== $avatar ) : ?>
+					<img class="evt-yo-ava" src="<?php echo esc_url( $avatar ); ?>" alt="" width="36" height="36" />
+				<?php else : ?>
+					<span class="evt-yo-ava"><?php echo esc_html( self::initials( $perfil['name'] ) ); ?></span>
+				<?php endif; ?>
+				<span class="evt-yo-txt">
+					<span class="evt-yo-n"><?php echo esc_html( $perfil['name'] ); ?> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+					<span class="evt-yo-r"><?php echo esc_html( $perfil['email'] ); ?></span>
+					<?php if ( '' !== $perfil['area'] ) : ?>
+						<span class="evt-yo-r evt-yo-a"><?php echo esc_html( $perfil['area'] ); ?></span>
+					<?php endif; ?>
+				</span>
+			</summary>
+			<div class="evt-yo-menu">
+				<?php if ( self::can_use() && '' !== self::url( 'home' ) ) : ?>
+					<a href="<?php echo esc_url( self::url( 'home' ) ); ?>">Mis eventos</a>
+				<?php endif; ?>
+				<?php if ( EventAccess::is_manager() ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . EventPostType::POST_TYPE . '&page=' . Settings::PAGE ) ); ?>">Ajustes del aplicativo</a>
+				<?php endif; ?>
+				<a href="<?php echo esc_url( wp_logout_url( $back ) ); ?>">Salir</a>
+			</div>
+		</details>
+		<?php
+		return (string) ob_get_clean();
 	}
 
 	/**
@@ -597,12 +648,10 @@ final class Shell {
 	 * @return string
 	 */
 	private static function top(): string {
-		$perfil  = self::profile();
-		$usuario = wp_get_current_user();
-		$inicio  = self::home_url();
-		$chrome  = \Evt\PublicFront\View\EventChrome::chrome();
-		$duenio  = (string) $chrome['owner'];
-		$rotulo  = (string) $chrome['org'];
+		$inicio = self::home_url();
+		$chrome = \Evt\PublicFront\View\EventChrome::chrome();
+		$duenio = (string) $chrome['owner'];
+		$rotulo = (string) $chrome['org'];
 
 		ob_start();
 		?>
@@ -617,24 +666,7 @@ final class Shell {
 					</span>
 				<?php endif; ?>
 				<a class="evt-marca-app" href="<?php echo esc_url( $inicio ); ?>">Eventos</a>
-				<?php if ( '' !== $perfil['cargo'] ) : ?>
-					<details class="evt-yo">
-						<summary>
-							<span class="evt-yo-ava"><?php echo esc_html( self::initials( $usuario->display_name ) ); ?></span>
-							<span class="evt-yo-txt">
-								<span class="evt-yo-n"><?php echo esc_html( $usuario->display_name ); ?> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
-								<span class="evt-yo-r"><?php echo esc_html( $perfil['cargo'] ); ?></span>
-								<span class="evt-yo-r evt-yo-a"><?php echo esc_html( $perfil['area'] ); ?></span>
-							</span>
-						</summary>
-						<div class="evt-yo-menu">
-							<?php if ( EventAccess::is_manager() ) : ?>
-								<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . EventPostType::POST_TYPE . '&page=' . Settings::PAGE ) ); ?>">Ajustes del aplicativo</a>
-							<?php endif; ?>
-							<a href="<?php echo esc_url( wp_logout_url( $inicio ) ); ?>">Salir</a>
-						</div>
-					</details>
-				<?php endif; ?>
+				<?php echo self::account( $inicio ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			</div>
 		</div>
 		<?php

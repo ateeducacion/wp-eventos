@@ -193,8 +193,8 @@ final class EventChrome {
 	/**
 	 * Top right: «Acceder» without a session, who is looking with one.
 	 *
-	 * Con sesión, el nombre abre un menú con la gestión —solo para quien puede
-	 * usar el aplicativo— y la salida. Sin JavaScript: es un `<details>`.
+	 * Con sesión, el mismo bloque que la cabecera del aplicativo
+	 * ({@see Shell::account()}): quien entra ve lo mismo en los dos sitios.
 	 *
 	 * @return string
 	 */
@@ -203,21 +203,7 @@ final class EventChrome {
 		if ( ! is_user_logged_in() ) {
 			return '<a class="evt-ev__acceder" href="' . esc_url( wp_login_url( $aqui ) ) . '">Acceder</a>';
 		}
-
-		$gestion = Shell::can_use() ? Shell::url( 'home' ) : '';
-		ob_start();
-		?>
-		<details class="evt-ev__cuenta">
-			<summary><?php echo esc_html( wp_get_current_user()->display_name ); ?></summary>
-			<div class="evt-ev__cuenta-menu">
-				<?php if ( '' !== $gestion ) : ?>
-					<a href="<?php echo esc_url( $gestion ); ?>">Gestión de eventos</a>
-				<?php endif; ?>
-				<a href="<?php echo esc_url( wp_logout_url( $aqui ) ); ?>">Salir</a>
-			</div>
-		</details>
-		<?php
-		return (string) ob_get_clean();
+		return Shell::account( $aqui );
 	}
 
 	/**
