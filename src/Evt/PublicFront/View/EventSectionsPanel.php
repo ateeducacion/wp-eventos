@@ -9,6 +9,7 @@ namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 /**
@@ -83,7 +84,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Para que una salga en el menú pero no en la portada, desmarque su tarjeta al editarla.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -287,12 +288,20 @@ final class EventSectionsPanel {
 		?>
 		<tr>
 			<td class="evt-num" data-rotulo="Orden"><?php echo esc_html( (string) (int) $fila['order'] ); ?></td>
-			<td data-rotulo="Tipo"><?php echo esc_html( (string) $fila['type_label'] ); ?></td>
+			<td data-rotulo="Tipo">
+				<span class="evt-tipo-seccion">
+					<?php echo wp_kses( SectionIcons::svg( (string) ( $fila['icon'] ?? '' ), 18 ), SectionIcons::KSES ); ?>
+					<?php echo esc_html( (string) $fila['type_label'] ); ?>
+				</span>
+			</td>
 			<td data-rotulo="Título">
 				<?php if ( $fila['published'] && '' !== (string) $fila['view_url'] ) : ?>
 					<a href="<?php echo esc_url( (string) $fila['view_url'] ); ?>"><?php echo esc_html( $titulo ); ?></a>
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>
 			</td>
 			<td class="evt-slug" data-rotulo="Dirección"><?php echo esc_html( '' !== (string) $fila['slug'] ? (string) $fila['slug'] : '—' ); ?></td>

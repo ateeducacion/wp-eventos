@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.4
+ * @version 0.1.5
  */
 
 // phpcs:disable
@@ -229,6 +229,21 @@ final class EventMetaKeys {
 
 
 
+
+	public const HOME_HIDDEN = 'evt_home_hidden';
+
+
+
+
+	public const SECTION_ICON = 'evt_section_icon';
+
+
+
+
+
+
+
+
 	public const CUSTOM_CSS = 'evt_custom_css';
 
 
@@ -327,6 +342,8 @@ final class EventMetaKeys {
 			self::CONTACT_PHONE,
 			self::CONTACT_EMAIL,
 			self::CONTACT_MAP,
+			self::HOME_HIDDEN,
+			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
 			self::ARCHIVED,
@@ -365,6 +382,55 @@ final class EventMetaKeys {
 			'directo'           => 'Emisión en directo',
 			self::SECTION_OTHER => 'Otra',
 		);
+	}
+
+
+
+
+
+
+
+
+
+	public static function section_icons(): array {
+		return array(
+			'calendar'  => 'Calendario',
+			'people'    => 'Personas',
+			'form'      => 'Formulario',
+			'image'     => 'Imagen',
+			'mail'      => 'Sobre',
+			'bulb'      => 'Bombilla',
+			'chart'     => 'Gráfica',
+			'megaphone' => 'Megáfono',
+			'chat'      => 'Bocadillo',
+			'play'      => 'Vídeo',
+			'pin'       => 'Ubicación',
+			'star'      => 'Estrella',
+			'info'      => 'Información',
+			'page'      => 'Página',
+		);
+	}
+
+
+
+
+
+
+
+	public static function default_icon( string $type ): string {
+		$por_tipo = array(
+			'programa'      => 'calendar',
+			'ponentes'      => 'people',
+			'inscripcion'   => 'form',
+			'multimedia'    => 'image',
+			'contacto'      => 'mail',
+			'actividades'   => 'bulb',
+			'encuesta'      => 'chart',
+			'participacion' => 'megaphone',
+			'preguntas'     => 'chat',
+			'directo'       => 'play',
+		);
+		return $por_tipo[ $type ] ?? 'page';
 	}
 
 
@@ -644,6 +710,14 @@ final class EventMetaRegistration {
 			EventMetaKeys::CONTACT_MAP        => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
+			),
+			EventMetaKeys::HOME_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
+			EventMetaKeys::SECTION_ICON       => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_section_icon' ),
 			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
@@ -933,6 +1007,16 @@ final class EventMetaRegistration {
 			}
 		}
 		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_section_icon( $value ): string {
+		return EventMetaKeys::in_list( $value, EventMetaKeys::section_icons(), '' );
 	}
 
 
@@ -6707,6 +6791,112 @@ final class Shell {
 		return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">'
 			. '<path fill="currentColor" d="M12 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1Z"/>'
 			. '</svg>';
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+
+final class SectionIcons {
+
+
+
+
+
+
+	public const KSES = array(
+		'svg'  => array(
+			'class'       => true,
+			'viewbox'     => true,
+			'width'       => true,
+			'height'      => true,
+			'aria-hidden' => true,
+			'focusable'   => true,
+		),
+		'path' => array(
+			'fill'      => true,
+			'fill-rule' => true,
+			'd'         => true,
+		),
+	);
+
+
+
+
+
+
+
+
+
+	private const PATHS = array(
+		'calendar'  => 'M3 5h18v16H3zM5 10h14v9H5zM7 2h2v3H7zM15 2h2v3h-2zM7 12h4v4H7z',
+		'people'    => 'M12.5 8a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0zM2 20a7 7 0 0 1 14 0zM19.5 9a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM16.5 13.6c3.3-.5 5.5 1.6 5.5 6.4H18c0-2.6-.5-4.7-1.5-6.4z',
+		'form'      => 'M5 4h4v2h6V4h4v18H5zM7 8h10v12H7zM9 2h6v4H9zM9 10h6v1.8H9zM9 14h6v1.8H9z',
+		'image'     => 'M3 4h18v16H3zM5 6h14v12H5zM6 17l4-5 3 3.5 2-2 3 3.5zM16.5 8a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z',
+		'mail'      => 'M2 5h20v14H2zM4 7h16v10H4zM4 7l8 6 8-6v2.4l-8 6-8-6z',
+		'bulb'      => 'M12 2a7 7 0 0 1 4 12.75V17H8v-2.25A7 7 0 0 1 12 2zM9 18.5h6V20H9zM10 21h4v1h-4z',
+		'chart'     => 'M4 20v-9h4v9zM10 20V4h4v16zM16 20v-6h4v6z',
+		'megaphone' => 'M3 9h4l10-5v16L7 15H3zM6.5 16.5h3l1.5 4.5h-3zM19 9.5a3 3 0 0 1 0 5z',
+		'chat'      => 'M3 4h18v12H10l-5 4v-4H3zM5 6h14v8H5zM7.5 9h2v2h-2zM11 9h2v2h-2zM14.5 9h2v2h-2z',
+		'play'      => 'M2 4h20v14H2zM4 6h16v10H4zM10 8.5l5 2.5-5 2.5zM8 20h8v1.5H8z',
+		'pin'       => 'M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zM14.5 9a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z',
+		'star'      => 'M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z',
+		'info'      => 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zM11 10h2v7h-2zM11 6.5h2v2h-2z',
+		'page'      => 'M6 2h8l5 5v15H6zM8 4h5v4h4v12H8zM10 12h5v1.5h-5zM10 15.5h5V17h-5z',
+
+		'home'      => 'M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z',
+	);
+
+
+
+
+
+
+
+	public static function of( int $post_id ): string {
+		$elegido = EventMetaKeys::in_list( get_post_meta( $post_id, EventMetaKeys::SECTION_ICON, true ), EventMetaKeys::section_icons() );
+		if ( '' !== $elegido ) {
+			return $elegido;
+		}
+		return EventMetaKeys::default_icon( (string) get_post_meta( $post_id, EventMetaKeys::SECTION_TYPE, true ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function svg( string $slug, int $size = 24, string $css_class = '' ): string {
+		if ( ! isset( self::PATHS[ $slug ] ) ) {
+			return '';
+		}
+		return '<svg' . ( '' !== $css_class ? ' class="' . esc_attr( $css_class ) . '"' : '' )
+			. ' viewBox="0 0 24 24" width="' . $size . '" height="' . $size . '" aria-hidden="true" focusable="false">'
+			. '<path fill="currentColor" fill-rule="evenodd" d="' . self::PATHS[ $slug ] . '"/></svg>';
 	}
 }
 
@@ -14336,6 +14526,8 @@ final class EventWorkspace {
 				'order'        => $i + 1,
 				'type'         => $tipo,
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
+				'icon'         => SectionIcons::of( (int) $hija->ID ),
+				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,
 				'status'       => (string) $hija->post_status,
@@ -16196,6 +16388,7 @@ namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 
@@ -16270,7 +16463,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Para que una salga en el menú pero no en la portada, desmarque su tarjeta al editarla.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); ?>
@@ -16474,12 +16667,20 @@ final class EventSectionsPanel {
 		?>
 		<tr>
 			<td class="evt-num" data-rotulo="Orden"><?php echo esc_html( (string) (int) $fila['order'] ); ?></td>
-			<td data-rotulo="Tipo"><?php echo esc_html( (string) $fila['type_label'] ); ?></td>
+			<td data-rotulo="Tipo">
+				<span class="evt-tipo-seccion">
+					<?php echo wp_kses( SectionIcons::svg( (string) ( $fila['icon'] ?? '' ), 18 ), SectionIcons::KSES ); ?>
+					<?php echo esc_html( (string) $fila['type_label'] ); ?>
+				</span>
+			</td>
 			<td data-rotulo="Título">
 				<?php if ( $fila['published'] && '' !== (string) $fila['view_url'] ) : ?>
 					<a href="<?php echo esc_url( (string) $fila['view_url'] ); ?>"><?php echo esc_html( $titulo ); ?></a>
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>
 			</td>
 			<td class="evt-slug" data-rotulo="Dirección"><?php echo esc_html( '' !== (string) $fila['slug'] ? (string) $fila['slug'] : '—' ); ?></td>
@@ -18150,6 +18351,8 @@ final class PageForm {
 			update_post_meta( $id, EventMetaKeys::SECTION_TYPE, (string) $data['section_type'] );
 		}
 
+		self::save_showcase( $id, $fields );
+
 		foreach ( self::LOOK_KEYS as $clave ) {
 			$valor = (string) ( $fields['look'][ $clave ] ?? '' );
 			if ( '' === $valor || '0' === $valor ) {
@@ -18175,6 +18378,38 @@ final class PageForm {
 		self::save_code( $user_id, $event_id, $id, $fields );
 
 		return $id;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function save_showcase( int $page_id, array $fields ): void {
+		if ( null === $fields['home_card'] ) {
+			return;
+		}
+
+
+
+		if ( $fields['home_card'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
+		}
+
+
+
+		if ( '' === $fields['icon'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::SECTION_ICON );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::SECTION_ICON, $fields['icon'] );
+		}
 	}
 
 
@@ -18371,6 +18606,8 @@ final class PageForm {
 			'slug'         => '',
 			'section_type' => '',
 			'menu_order'   => 0,
+			'home_card'    => true,
+			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
@@ -18402,6 +18639,8 @@ final class PageForm {
 			'slug'         => (string) get_post_field( 'post_name', $page_id ),
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
+			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
@@ -18440,6 +18679,12 @@ final class PageForm {
 			'slug'         => isset( $raw['evt_slug'] ) ? sanitize_title( (string) $raw['evt_slug'] ) : '',
 			'section_type' => isset( $raw[ EventMetaKeys::SECTION_TYPE ] ) ? sanitize_key( (string) $raw[ EventMetaKeys::SECTION_TYPE ] ) : '',
 			'menu_order'   => isset( $raw['evt_order'] ) ? (int) $raw['evt_order'] : 0,
+
+
+			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
+				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
+				: '',
 
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
@@ -18559,6 +18804,7 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\CodeEditor;
 use Evt\PublicFront\PageForm;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 
@@ -18690,6 +18936,8 @@ final class PageFormView {
 				</div>
 			</fieldset>
 
+			<?php echo self::showcase( $valores ); ?>
+
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
 				<?php
@@ -18726,6 +18974,57 @@ final class PageFormView {
 				<?php endif; ?>
 			</p>
 		</form>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function showcase( array $valores ): string {
+		$elegido  = (string) ( $valores['icon'] ?? '' );
+		$tipo     = (string) $valores['section_type'];
+		$opciones = array( '' => 'El de su tipo' ) + EventMetaKeys::section_icons();
+
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>En la portada y en el menú del evento</legend>
+			<input type="hidden" name="evt_showcase" value="1" />
+			<div class="evt-form-campo">
+				<label class="evt-check">
+					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
+					Mostrar una tarjeta de esta sección en la portada del evento
+				</label>
+				<small>Sin marcar, la sección sigue en el menú de arriba y se sigue viendo, pero no ocupa
+					una tarjeta en la portada. Es lo habitual en la de contacto.</small>
+			</div>
+			<div class="evt-form-campo">
+				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
+				<div class="evt-iconos" role="radiogroup" aria-labelledby="evt-icono-rotulo">
+					<?php foreach ( $opciones as $slug => $rotulo ) : ?>
+						<?php
+						$dibujo = '' === $slug ? EventMetaKeys::default_icon( $tipo ) : (string) $slug;
+						?>
+						<label class="evt-icono-opcion" title="<?php echo esc_attr( (string) $rotulo ); ?>">
+							<input type="radio" name="<?php echo esc_attr( EventMetaKeys::SECTION_ICON ); ?>"
+								value="<?php echo esc_attr( (string) $slug ); ?>" <?php checked( $elegido, (string) $slug ); ?> />
+							<?php echo wp_kses( SectionIcons::svg( $dibujo, 28 ), SectionIcons::KSES ); ?>
+							<span class="<?php echo esc_attr( '' === $slug ? 'evt-icono-nombre' : 'screen-reader-text' ); ?>"><?php echo esc_html( (string) $rotulo ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+				<small>Sale junto al nombre de la sección en el menú, y en su tarjeta cuando la sección no
+					tiene imagen destacada.</small>
+			</div>
+		</fieldset>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -19830,6 +20129,8 @@ final class ProgrammeBlock {
 
 namespace Evt\PublicFront\Block;
 
+use Evt\PublicFront\SectionIcons;
+
 
 
 
@@ -19879,6 +20180,8 @@ final class SectionsBlock {
 				<div id="evt-seccion-<?php echo esc_attr( (string) $card['id'] ); ?>" class="evt-ev__tarjeta">
 					<?php if ( '' !== (string) $card['image'] ) : ?>
 						<img src="<?php echo esc_url( (string) $card['image'] ); ?>" alt="" loading="lazy" />
+					<?php elseif ( '' !== (string) ( $card['icon'] ?? '' ) ) : ?>
+						<span class="evt-ev__tarjeta-icono"><?php echo wp_kses( SectionIcons::svg( (string) $card['icon'], 96 ), SectionIcons::KSES ); ?></span>
 					<?php endif; ?>
 					<h3>
 						<a href="<?php echo esc_url( (string) $card['url'] ); ?>"><?php echo esc_html( (string) $card['title'] ); ?></a>
@@ -21502,12 +21805,15 @@ final class EventView {
 
 
 
+
+
 	private static function nav( int $event_id, int $current_id ): array {
 		$menu = array(
 			array(
 				'label'   => 'Inicio',
 				'url'     => (string) get_permalink( $event_id ),
 				'current' => $event_id === $current_id,
+				'icon'    => 'home',
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
@@ -21515,6 +21821,7 @@ final class EventView {
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
 				'current' => (int) $seccion->ID === $current_id,
+				'icon'    => SectionIcons::of( (int) $seccion->ID ),
 			);
 		}
 		return $menu;
@@ -21529,10 +21836,15 @@ final class EventView {
 
 
 
+
+
 	private static function cards( int $event_id ): array {
 		$tarjetas = array();
 		foreach ( self::sections( $event_id ) as $seccion ) {
-			$id    = (int) $seccion->ID;
+			$id = (int) $seccion->ID;
+			if ( (bool) get_post_meta( $id, EventMetaKeys::HOME_HIDDEN, true ) ) {
+				continue;
+			}
 			$tipo  = EventMetaKeys::in_list(
 				get_post_meta( $id, EventMetaKeys::SECTION_TYPE, true ),
 				EventMetaKeys::section_types()
@@ -21547,6 +21859,7 @@ final class EventView {
 				'title' => (string) get_the_title( $seccion ),
 				'url'   => (string) get_permalink( $seccion ),
 				'image' => self::card_image( $id, $tipo ),
+				'icon'  => SectionIcons::of( $id ),
 				'text'  => $texto,
 			);
 		}
@@ -21584,7 +21897,7 @@ final class EventView {
 
 	private static function card_image( int $post_id, string $type, string $size = 'medium' ): string {
 		$url = (string) get_the_post_thumbnail_url( $post_id, $size );
-		if ( '' !== $url ) {
+		if ( '' !== $url || '' !== (string) get_post_meta( $post_id, EventMetaKeys::SECTION_ICON, true ) ) {
 			return $url;
 		}
 
@@ -21642,6 +21955,7 @@ final class EventView {
 
 namespace Evt\PublicFront\View;
 
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 
@@ -21811,7 +22125,7 @@ final class EventChrome {
 							<?php foreach ( $items as $item ) : ?>
 								<li class="nav-item">
 									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo esc_html( (string) $item['label'] ); ?></a>
+										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
 								</li>
 							<?php endforeach; ?>
 						</ul>
@@ -24117,6 +24431,29 @@ body.evt-app .evt-hoja {
    el nombre de uno acaba al lado de la casilla del siguiente. */
 .evt-check { display: flex; gap: 8px; align-items: baseline; margin: 0 0 6px; }
 
+/* El icono de una sección se elige entre dibujos: cada opción es un botón
+   cuadrado con su radio dentro, escondido pero enfocable. */
+.evt-iconos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.evt-icono-opcion {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 8px;
+  justify-content: center;
+  border: 1px solid var(--evt-linea);
+  border-radius: 8px;
+  background: var(--evt-sup);
+  color: var(--evt-texto);
+  cursor: pointer;
+}
+.evt-icono-opcion input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.evt-icono-opcion:has(input:checked) { border-color: var(--evt-pri); background: var(--evt-pri-cont); color: var(--evt-pri); box-shadow: inset 0 0 0 1px var(--evt-pri); }
+.evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
+.evt-icono-nombre { font-size: 13px; }
+
 /* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
    tabla de la sede anterior y parece su pie, no el encabezado del bloque
    siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */
@@ -24290,6 +24627,11 @@ body.evt-app .evt-hoja {
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
 .evt-state-archived { background: #2b3036; color: #fff; }
 .evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
+
+/* Lo que se dice de una fila al lado de su título: va debajo, más pequeño. */
+.evt-marca-fila { display: table; margin-top: 4px; font-weight: 600; }
+.evt-tipo-seccion { display: inline-flex; gap: 6px; align-items: center; }
+.evt-tipo-seccion svg { flex: none; color: var(--evt-texto-2); }
 
 /* --- avisos -------------------------------------------------------------- */
 
@@ -25341,13 +25683,20 @@ body .swal2-container { z-index: 100010; }
 }
 
 .evt-ev__nav a {
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
 	padding: 0.35rem 0.6rem;
 	color: var(--evt-tinta);
 	font-family: var(--evt-tipo-texto);
 	font-size: 0.8125rem;
 	text-decoration: none;
 	text-transform: uppercase;
+}
+
+.evt-ev__nav-icono {
+	flex: none;
+	opacity: 0.75;
 }
 
 .evt-ev__nav a:hover,
@@ -25594,6 +25943,21 @@ body .swal2-container { z-index: 100010; }
 	width: 100%;
 	aspect-ratio: 1;
 	object-fit: contain;
+}
+
+/* La tarjeta sin imagen: el icono de la sección, en el color de acento y en
+   el mismo cuadrado que ocuparía la imagen. */
+.evt-ev__tarjeta-icono {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 1;
+	color: var(--evt-acento);
+}
+
+.evt-ev__tarjeta-icono svg {
+	width: 40%;
+	height: auto;
 }
 
 .evt-ev__tarjeta h3 {

@@ -7,6 +7,8 @@
 
 namespace Evt\PublicFront\Block;
 
+use Evt\PublicFront\SectionIcons;
+
 /**
  * La rejilla de tarjetas de sección de la portada.
  *
@@ -56,6 +58,8 @@ final class SectionsBlock {
 				<div id="evt-seccion-<?php echo esc_attr( (string) $card['id'] ); ?>" class="evt-ev__tarjeta">
 					<?php if ( '' !== (string) $card['image'] ) : ?>
 						<img src="<?php echo esc_url( (string) $card['image'] ); ?>" alt="" loading="lazy" />
+					<?php elseif ( '' !== (string) ( $card['icon'] ?? '' ) ) : ?>
+						<span class="evt-ev__tarjeta-icono"><?php echo wp_kses( SectionIcons::svg( (string) $card['icon'], 96 ), SectionIcons::KSES ); ?></span>
 					<?php endif; ?>
 					<h3>
 						<a href="<?php echo esc_url( (string) $card['url'] ); ?>"><?php echo esc_html( (string) $card['title'] ); ?></a>

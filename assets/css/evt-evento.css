@@ -198,13 +198,20 @@
 }
 
 .evt-ev__nav a {
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
 	padding: 0.35rem 0.6rem;
 	color: var(--evt-tinta);
 	font-family: var(--evt-tipo-texto);
 	font-size: 0.8125rem;
 	text-decoration: none;
 	text-transform: uppercase;
+}
+
+.evt-ev__nav-icono {
+	flex: none;
+	opacity: 0.75;
 }
 
 .evt-ev__nav a:hover,
@@ -451,6 +458,21 @@
 	width: 100%;
 	aspect-ratio: 1;
 	object-fit: contain;
+}
+
+/* La tarjeta sin imagen: el icono de la sección, en el color de acento y en
+   el mismo cuadrado que ocuparía la imagen. */
+.evt-ev__tarjeta-icono {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 1;
+	color: var(--evt-acento);
+}
+
+.evt-ev__tarjeta-icono svg {
+	width: 40%;
+	height: auto;
 }
 
 .evt-ev__tarjeta h3 {

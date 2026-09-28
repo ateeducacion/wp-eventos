@@ -155,6 +155,14 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
+			EventMetaKeys::HOME_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
+			EventMetaKeys::SECTION_ICON       => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_section_icon' ),
+			),
 			EventMetaKeys::CUSTOM_CSS         => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_custom_css' ),
@@ -443,6 +451,16 @@ final class EventMetaRegistration {
 			}
 		}
 		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
+	}
+
+	/**
+	 * One of the section icons; none —the one of its type— otherwise.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_section_icon( $value ): string {
+		return EventMetaKeys::in_list( $value, EventMetaKeys::section_icons(), '' );
 	}
 
 	/**

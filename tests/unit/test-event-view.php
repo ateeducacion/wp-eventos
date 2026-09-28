@@ -196,6 +196,85 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Una sección puede quedarse en el menú sin sacar tarjeta en la portada.
+	 *
+	 * Es lo que se hacía a mano con la de contacto: ya está arriba y no hace
+	 * falta repetirla abajo.
+	 */
+	public function test_a_section_can_stay_in_the_menu_without_a_card() {
+		$area     = $this->area( 'Innovación' );
+		$evento   = $this->event( $this->administrator(), array( $area ) );
+		$programa = $this->event_page(
+			$evento,
+			'programa',
+			array(
+				'post_title' => 'Programa',
+				'menu_order' => 10,
+			)
+		);
+		$contacto = $this->event_page(
+			$evento,
+			'contacto',
+			array(
+				'post_title' => 'Contacto',
+				'menu_order' => 20,
+			)
+		);
+		update_post_meta( $contacto, EventMetaKeys::HOME_HIDDEN, true );
+
+		$this->acting_as( 0 );
+		$m = EventView::model( $evento );
+
+		$this->assertSame( array( 'Inicio', 'Programa', 'Contacto' ), $this->menu( $m ), 'sigue en el menú' );
+		$this->assertSame( array( $programa ), array_column( (array) $m['cards'], 'id' ), 'pero sin tarjeta' );
+	}
+
+	/**
+	 * Cada sección lleva un icono: el que se eligió o el de su tipo.
+	 *
+	 * Sale en el menú y, cuando la tarjeta no tiene imagen, en la tarjeta. Uno
+	 * elegido a mano manda sobre la imagen genérica que ponga quien despliega.
+	 */
+	public function test_sections_carry_the_icon_of_their_type_or_the_chosen_one() {
+		$area     = $this->area( 'Innovación' );
+		$evento   = $this->event( $this->administrator(), array( $area ) );
+		$programa = $this->event_page(
+			$evento,
+			'programa',
+			array(
+				'post_title' => 'Programa',
+				'menu_order' => 10,
+			)
+		);
+		$contacto = $this->event_page(
+			$evento,
+			'contacto',
+			array(
+				'post_title' => 'Contacto',
+				'menu_order' => 20,
+			)
+		);
+		update_post_meta( $contacto, EventMetaKeys::SECTION_ICON, 'pin' );
+		$generica = static function (): string {
+			return 'https://example.org/generica.png';
+		};
+		add_filter( 'evt_section_default_image', $generica );
+
+		$this->acting_as( 0 );
+		$m = EventView::model( $evento );
+		remove_filter( 'evt_section_default_image', $generica );
+
+		$this->assertSame( array( 'home', 'calendar', 'pin' ), array_column( (array) $m['nav'], 'icon' ) );
+		$this->assertSame( 'https://example.org/generica.png', $m['cards'][0]['image'], 'el de su tipo cede ante la imagen genérica' );
+		$this->assertSame( '', $m['cards'][1]['image'], 'el elegido a mano, no' );
+		$this->assertSame( 'pin', $m['cards'][1]['icon'] );
+
+		$tarjetas = SectionsBlock::html( $m );
+		$this->assertSame( 1, substr_count( $tarjetas, 'evt-ev__tarjeta-icono' ), 'solo la tarjeta sin imagen pinta el icono' );
+		$this->assertStringContainsString( 'class="evt-ev__nav-icono"', EventChrome::nav( (array) $m['nav'] ) );
+	}
+
+	/**
 	 * La imagen de respaldo de una tarjeta la pone quien despliega, con su filtro.
 	 */
 	public function test_the_fallback_card_image_comes_from_a_filter() {
