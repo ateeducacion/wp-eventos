@@ -344,4 +344,80 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$this->assertStringContainsString( esc_attr( (string) wp_json_encode( array( 'path' => 'Organismo › Servicio de Innovación › Área STEAM' ) ) ), $html, 'la ruta, para buscar' );
 		$this->assertMatchesRegularExpression( '/value="' . $nieta . '" selected="selected"/', $html );
 	}
+
+	/**
+	 * La columna «Ámbito» del listado: nombre, ruta de título; solo administración.
+	 */
+	public function test_the_users_list_shows_the_scope_column() {
+		$raiz   = (int) wp_insert_term( 'Organismo', 'evt_area' )['term_id'];
+		$hija   = (int) wp_insert_term( 'Área de pruebas', 'evt_area', array( 'parent' => $raiz ) )['term_id'];
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$vacio  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$doble  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, 'evt_area', array( $hija ) );
+		update_user_meta( $doble, 'evt_area', array( $raiz, $hija ) );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->assertArrayNotHasKey( 'evt_area', evt_users_scope_column( array( 'role' => 'Rol' ) ), 'quien no administra no la ve' );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$columnas = evt_users_scope_column(
+			array(
+				'username' => 'Usuario',
+				'role'     => 'Rol',
+				'posts'    => 'Entradas',
+			)
+		);
+		$this->assertSame( array( 'username', 'role', 'evt_area', 'posts' ), array_keys( $columnas ), 'detrás del rol' );
+
+		$this->assertSame( '<span title="Organismo › Área de pruebas">Área de pruebas</span>', evt_users_scope_cell( '', 'evt_area', $editor ) );
+		$this->assertStringContainsString( 'Sin ámbito', evt_users_scope_cell( '', 'evt_area', $vacio ) );
+		$this->assertStringContainsString( 'Pendiente de resolver', evt_users_scope_cell( '', 'evt_area', $doble ) );
+		$this->assertSame( 'otra', evt_users_scope_cell( 'otra', 'posts', $editor ), 'las demás columnas, intactas' );
+	}
+
+	/**
+	 * El filtro del listado: por ámbito con lo que cuelga de él, o sin ámbito.
+	 */
+	public function test_the_users_list_filters_by_scope() {
+		global $pagenow;
+		$raiz  = (int) wp_insert_term( 'Organismo', 'evt_area' )['term_id'];
+		$hija  = (int) wp_insert_term( 'Área de pruebas', 'evt_area', array( 'parent' => $raiz ) )['term_id'];
+		$otra  = (int) wp_insert_term( 'Otra área', 'evt_area' )['term_id'];
+		$en_h  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$en_o  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$sin   = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		$viejo = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $en_h, 'evt_area', array( $hija ) );
+		update_user_meta( $en_o, 'evt_area', array( $otra ) );
+		update_user_meta( $viejo, 'evt_area', (string) $hija );
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		set_current_screen( 'users' );
+		$pagenow = 'users.php'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- es la pantalla que se simula.
+
+		$_GET['evt_ambito'] = (string) $raiz;
+		$ids                = wp_list_pluck( ( new WP_User_Query( array( 'role' => 'editor' ) ) )->get_results(), 'ID' );
+		$this->assertEqualsCanonicalizing( array( $en_h, $viejo ), array_map( 'intval', $ids ), 'el padre trae lo que cuelga de él, también en el formato antiguo' );
+
+		$_GET['evt_ambito'] = 'ninguno';
+		$ids                = array_map( 'intval', wp_list_pluck( ( new WP_User_Query( array( 'role' => 'editor' ) ) )->get_results(), 'ID' ) );
+		$this->assertContains( $sin, $ids );
+		$this->assertNotContains( $en_h, $ids );
+
+		$_GET['evt_ambito'] = (string) ( $otra + 1000 );
+		$this->assertSame( array(), ( new WP_User_Query( array( 'role' => 'editor' ) ) )->get_results(), 'un ámbito sin nadie no enseña a todos' );
+
+		ob_start();
+		evt_users_scope_filter( 'top' );
+		$html = (string) ob_get_clean();
+		$this->assertStringContainsString( 'name="evt_ambito"', $html );
+		$this->assertStringContainsString( '>— Área de pruebas</option>', $html );
+		ob_start();
+		evt_users_scope_filter( 'bottom' );
+		$this->assertSame( '', (string) ob_get_clean(), 'una vez, arriba' );
+
+		unset( $_GET['evt_ambito'] );
+		$pagenow = 'index.php'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- se devuelve como estaba.
+		set_current_screen( 'front' );
+	}
 }

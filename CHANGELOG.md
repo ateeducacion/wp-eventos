@@ -8,6 +8,18 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.4] — 2026-09-28
+
+### Añadido
+
+- **Dos flechas grandes a los lados de la línea del tiempo** de la portada, para ir al mes anterior y al siguiente sin tener que arrastrar. Los botones pequeños de arriba siguen ahí
+- **Columna «Ámbito» en el listado de usuarios**, detrás del rol, con el nombre del ámbito y la ruta entera al pasar el ratón. Los perfiles con varios ámbitos o con uno que ya no existe salen como «Pendiente de resolver»
+- **Filtrar el listado de usuarios por ámbito**, con el mismo árbol que el perfil y la opción «Sin ámbito». Un ámbito trae también a quien está en los que cuelgan de él, y se combina con el filtro por rol y con la búsqueda. La columna y el filtro solo los ve administración
+
+### Pendiente antes de desplegar
+
+- Actualizar los dos snippets: el aplicativo y «EVT — Roles y perfiles»
+
 ## [0.1.3] — 2026-09-28
 
 ### Cambiado
