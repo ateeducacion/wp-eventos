@@ -8,6 +8,17 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.3] — 2026-09-28
+
+### Cambiado
+
+- **El ámbito del perfil de usuario se elige como en un árbol.** El campo enseña solo el nombre del ámbito elegido; al abrirlo sale una caja de búsqueda y, debajo, los ámbitos en árbol, cada uno sangrado bajo el suyo. Se busca también por la ruta: escribir el nombre de un servicio encuentra lo que cuelga de él. La ruta entera sale al pasar el ratón por encima
+- El filtro por ámbito de la portada y el perfil de usuario usan el mismo árbol
+
+### Pendiente antes de desplegar
+
+- Actualizar los dos snippets: el aplicativo y «EVT — Roles y perfiles»
+
 ## [0.1.2] — 2026-09-28
 
 ### Corregido

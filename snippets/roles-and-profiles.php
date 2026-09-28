@@ -277,7 +277,9 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 		if ( ! class_exists( '\Evt\Taxonomy\EventTaxonomies' ) ) {
 			return;
 		}
-		$terms = \Evt\Taxonomy\EventTaxonomies::area_options();
+		// En árbol, como el filtro de la portada: cada ámbito con su nombre,
+		// sangrado por su profundidad. La ruta entera va aparte, para buscar.
+		$terms = \Evt\Taxonomy\EventTaxonomies::area_tree();
 
 		$assignment = \Evt\Access\EventAccess::scope_assignment_state( $user->ID );
 		$mine       = 'resolved' === $assignment['state'] ? $assignment['ids'][0] : 0;
@@ -294,12 +296,14 @@ if ( ! function_exists( 'evt_render_profile_fields' ) ) {
 			echo '<option value="__keep_unresolved__" selected="selected">Pendiente de resolver (conservar datos)</option>';
 		}
 		printf( '<option value=""%s>Sin ámbito</option>', 'empty' === $assignment['state'] ? ' selected="selected"' : '' );
-		foreach ( $terms as $term_id => $label ) {
+		foreach ( $terms as $term ) {
 			printf(
-				'<option value="%1$d"%2$s>%3$s</option>',
-				(int) $term_id,
-				(int) $term_id === $mine ? ' selected="selected"' : '',
-				esc_html( $label )
+				'<option value="%1$d"%2$s data-data="%3$s" title="%4$s">%5$s</option>',
+				(int) $term['id'],
+				(int) $term['id'] === $mine ? ' selected="selected"' : '',
+				esc_attr( (string) wp_json_encode( array( 'path' => $term['path'] ) ) ),
+				esc_attr( $term['path'] ),
+				esc_html( str_repeat( '— ', (int) $term['depth'] ) . $term['name'] )
 			);
 		}
 		echo '</select>';
@@ -417,9 +421,18 @@ if ( ! function_exists( 'evt_scope_select_assets' ) ) {
 		wp_enqueue_script( 'tom-select', $vendor['js'], array(), $vendor['ver'], true );
 		wp_add_inline_script(
 			'tom-select',
-			"document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('evt_area');if(s&&window.TomSelect){new TomSelect(s,{maxOptions:null,allowEmptyOption:true,placeholder:'Escriba para buscar un ámbito'});}});"
+			// Como Select2: el campo enseña solo el nombre del ámbito elegido y, al
+			// abrirlo, una caja de búsqueda sobre la lista en árbol. Se busca por
+			// la ruta entera, así que «innovación» encuentra también lo que
+			// cuelga del servicio.
+			"document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('evt_area');if(!s||!window.TomSelect){return;}"
+			. "var limpio=function(t){return String(t||'').replace(/^(— )+/,'');};"
+			. "new TomSelect(s,{maxOptions:null,allowEmptyOption:true,plugins:['dropdown_input'],searchField:['text','path'],"
+			. "render:{item:function(d,e){return '<div title=\"'+e(d.path||'')+'\">'+e(limpio(d.text))+'</div>';},"
+			. "option:function(d,e){return '<div title=\"'+e(d.path||'')+'\">'+e(d.text)+'</div>';},"
+			. "no_results:function(){return '<div class=\"no-results\">Ningún ámbito coincide</div>';}}});});"
 		);
-		wp_add_inline_style( 'tom-select', '#evt_area + .ts-wrapper,#evt_area.tomselected{max-width:40em}.ts-dropdown .option{white-space:normal}' );
+		wp_add_inline_style( 'tom-select', '#evt_area + .ts-wrapper,#evt_area.tomselected{max-width:30em}.ts-dropdown .option{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ts-dropdown .dropdown-input{padding:6px 8px}' );
 	}
 }
 

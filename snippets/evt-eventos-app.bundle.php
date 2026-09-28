@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.2
+ * @version 0.1.3
  */
 
 // phpcs:disable
@@ -5210,6 +5210,48 @@ final class EventTaxonomies {
 			);
 		}
 		return $options;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function area_tree(): array {
+		$terminos = get_terms(
+			array(
+				'taxonomy'   => self::AREA,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( ! is_array( $terminos ) ) {
+			return array();
+		}
+		$hijos = array();
+		foreach ( $terminos as $t ) {
+			$hijos[ (int) $t->parent ][] = $t;
+		}
+		$lista = array();
+		$baja  = static function ( int $padre, int $nivel, string $ruta ) use ( &$baja, &$lista, $hijos ): void {
+			foreach ( $hijos[ $padre ] ?? array() as $t ) {
+				$aqui    = '' === $ruta ? (string) $t->name : $ruta . ' › ' . $t->name;
+				$lista[] = array(
+					'id'    => (int) $t->term_id,
+					'name'  => (string) $t->name,
+					'depth' => $nivel,
+					'path'  => $aqui,
+				);
+				$baja( (int) $t->term_id, $nivel + 1, $aqui );
+			}
+		};
+		$baja( 0, 0, '' );
+		return $lista;
 	}
 
 
@@ -22780,43 +22822,8 @@ final class Timeline {
 			'filters'  => $filters,
 			'filtered' => $filtrado,
 			'count'    => array_sum( array_map( 'count', $eventos ) ),
-			'areas'    => self::area_options(),
+			'areas'    => EventTaxonomies::area_tree(),
 		);
-	}
-
-
-
-
-
-
-	public static function area_options(): array {
-		$terminos = get_terms(
-			array(
-				'taxonomy'   => EventTaxonomies::AREA,
-				'hide_empty' => false,
-				'orderby'    => 'name',
-			)
-		);
-		if ( ! is_array( $terminos ) ) {
-			return array();
-		}
-		$hijos = array();
-		foreach ( $terminos as $t ) {
-			$hijos[ (int) $t->parent ][] = $t;
-		}
-		$lista = array();
-		$baja  = static function ( int $padre, int $nivel ) use ( &$baja, &$lista, $hijos ): void {
-			foreach ( $hijos[ $padre ] ?? array() as $t ) {
-				$lista[] = array(
-					'id'    => (int) $t->term_id,
-					'name'  => (string) $t->name,
-					'depth' => $nivel,
-				);
-				$baja( (int) $t->term_id, $nivel + 1 );
-			}
-		};
-		$baja( 0, 0 );
-		return $lista;
 	}
 
 

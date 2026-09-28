@@ -197,4 +197,25 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Correo no válido', $notice );
 		$this->assertFalse( get_transient( 'evt_scope_error_' . $admin ) );
 	}
+
+	/**
+	 * El árbol de ámbitos: cada padre antes de sus hijos, con su profundidad y su ruta.
+	 */
+	public function test_the_scope_tree_keeps_parents_before_children() {
+		$raiz  = (int) wp_insert_term( 'Organismo', EventTaxonomies::AREA )['term_id'];
+		$hija  = (int) wp_insert_term( 'Departamento', EventTaxonomies::AREA, array( 'parent' => $raiz ) )['term_id'];
+		$nieta = (int) wp_insert_term( 'Unidad', EventTaxonomies::AREA, array( 'parent' => $hija ) )['term_id'];
+
+		$arbol = array();
+		foreach ( EventTaxonomies::area_tree() as $fila ) {
+			$arbol[ $fila['id'] ] = $fila;
+		}
+		$orden = array_keys( $arbol );
+
+		$this->assertLessThan( array_search( $hija, $orden, true ), array_search( $raiz, $orden, true ) );
+		$this->assertLessThan( array_search( $nieta, $orden, true ), array_search( $hija, $orden, true ) );
+		$this->assertSame( 2, $arbol[ $nieta ]['depth'] );
+		$this->assertSame( 'Unidad', $arbol[ $nieta ]['name'] );
+		$this->assertSame( 'Organismo › Departamento › Unidad', $arbol[ $nieta ]['path'] );
+	}
 }
