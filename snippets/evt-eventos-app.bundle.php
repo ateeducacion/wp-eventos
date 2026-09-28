@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.9
+ * @version 0.1.10
  */
 
 // phpcs:disable
@@ -228,6 +228,14 @@ final class EventMetaKeys {
 
 
 
+	public const CONTACT_POINTS = 'evt_contact_points';
+
+
+
+
+
+
+
 
 
 	public const HOME_HIDDEN = 'evt_home_hidden';
@@ -342,6 +350,7 @@ final class EventMetaKeys {
 			self::CONTACT_PHONE,
 			self::CONTACT_EMAIL,
 			self::CONTACT_MAP,
+			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
@@ -711,6 +720,10 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
+			EventMetaKeys::CONTACT_POINTS     => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_contact_points' ),
+			),
 			EventMetaKeys::HOME_HIDDEN        => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
@@ -1007,6 +1020,16 @@ final class EventMetaRegistration {
 			}
 		}
 		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_contact_points( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\ContactMap::clean( $value ) );
 	}
 
 
@@ -18495,6 +18518,16 @@ final class PageForm {
 			return;
 		}
 
+
+
+		if ( 'contacto' === $tipo && '' !== $fields['points_bad'] ) {
+			self::$rejected = array(
+				'message' => sprintf( 'Las coordenadas de «%s» no se entienden. Escríbalas como las copia el mapa: 28.4636, -16.2518.', $fields['points_bad'] ),
+				'errors'  => array( 'points' ),
+			);
+			return;
+		}
+
 		$saved = self::save( $user_id, $event_id, $page_id, $check['data'], $fields );
 		if ( is_wp_error( $saved ) ) {
 			self::$rejected['message'] = $saved->get_error_message();
@@ -18628,6 +18661,12 @@ final class PageForm {
 					continue;
 				}
 				update_post_meta( $id, $clave, $valor );
+			}
+			$puntos = ContactMap::clean( $fields['points_ok'] );
+			if ( array() === $puntos ) {
+				delete_post_meta( $id, EventMetaKeys::CONTACT_POINTS );
+			} else {
+				update_post_meta( $id, EventMetaKeys::CONTACT_POINTS, wp_slash( (string) wp_json_encode( $puntos ) ) );
 			}
 		}
 
@@ -18794,6 +18833,11 @@ final class PageForm {
 
 		$enviado = self::submitted_values();
 		if ( null !== $enviado ) {
+
+
+			if ( $page_id > 0 ) {
+				$enviado['section_type'] = (string) $m['values']['section_type'];
+			}
 			$m['values'] = $enviado;
 		}
 
@@ -18867,6 +18911,7 @@ final class PageForm {
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
+			'points'       => array(),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -18900,6 +18945,16 @@ final class PageForm {
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
+			'points'       => array_map(
+				static function ( array $punto ): array {
+					return array(
+						'coords' => $punto['lat'] . ', ' . $punto['lng'],
+						'text'   => $punto['text'],
+						'url'    => $punto['url'],
+					);
+				},
+				ContactMap::points( $page_id )
+			),
 			'code'         => $code,
 		);
 	}
@@ -18926,6 +18981,8 @@ final class PageForm {
 		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
 			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
 		}
+		list( $filas, $puntos, $mal ) = self::submitted_points( $raw );
+
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 
@@ -18948,8 +19005,65 @@ final class PageForm {
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
 			'contact'      => $contacto,
+
+
+			'points'       => $filas,
+			'points_ok'    => $puntos,
+			'points_bad'   => $mal,
 			'code'         => $code,
 		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function submitted_points( array $raw ): array {
+		$coords = isset( $raw['evt_cp_coords'] ) ? (array) $raw['evt_cp_coords'] : array();
+		$textos = isset( $raw['evt_cp_text'] ) ? (array) $raw['evt_cp_text'] : array();
+		$urls   = isset( $raw['evt_cp_url'] ) ? (array) $raw['evt_cp_url'] : array();
+
+		$filas  = array();
+		$puntos = array();
+		$mal    = '';
+		foreach ( $coords as $i => $coordenadas ) {
+			$fila = array(
+				'coords' => sanitize_text_field( (string) $coordenadas ),
+				'text'   => isset( $textos[ $i ] ) ? sanitize_text_field( (string) $textos[ $i ] ) : '',
+				'url'    => isset( $urls[ $i ] ) ? esc_url_raw( trim( (string) $urls[ $i ] ) ) : '',
+			);
+			if ( '' === $fila['coords'] && '' === $fila['text'] && '' === $fila['url'] ) {
+				continue;
+			}
+			$filas[] = $fila;
+
+			$par = ContactMap::parse_coordinates( $fila['coords'] );
+			if ( null === $par || array() === ContactMap::clean(
+				array(
+					array(
+						'lat' => $par[0],
+						'lng' => $par[1],
+					),
+				)
+			) ) {
+				$mal = '' !== $mal ? $mal : ( '' !== $fila['text'] ? $fila['text'] : $fila['coords'] );
+				continue;
+			}
+			$puntos[] = array(
+				'lat'  => $par[0],
+				'lng'  => $par[1],
+				'text' => $fila['text'],
+				'url'  => $fila['url'],
+			);
+		}
+		return array( $filas, $puntos, $mal );
 	}
 
 
@@ -19215,7 +19329,7 @@ final class PageFormView {
 			</fieldset>
 
 			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
-				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ), (array) ( $valores['points'] ?? array() ), in_array( 'points', $errores, true ) ); ?>
 			<?php endif; ?>
 
 			<?php echo self::look( (array) $valores['look'] ); ?>
@@ -19294,7 +19408,9 @@ final class PageFormView {
 
 
 
-	private static function contact( array $c ): string {
+
+
+	private static function contact( array $c, array $puntos = array(), bool $mal = false ): string {
 		ob_start();
 		?>
 		<fieldset class="evt-tarjeta">
@@ -19323,7 +19439,73 @@ final class PageFormView {
 					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
 				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
 			</div>
+
+			<?php echo self::map_points( $puntos, $mal ); ?>
 		</fieldset>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function map_points( array $puntos, bool $mal ): string {
+		$filas   = $puntos;
+		$filas[] = array(
+			'coords' => '',
+			'text'   => '',
+			'url'    => '',
+		);
+
+		ob_start();
+		?>
+		<div class="evt-form-campo evt-mapa-puntos">
+			<span class="evt-rotulo">Mapa</span>
+			<p class="evt-ayuda">
+				Cada punto sale en un mapa debajo de los datos de contacto: la sede, el aparcamiento,
+				la parada… Para sacar las coordenadas, pulse con el botón derecho sobre el sitio en
+				un mapa de internet y copie los dos números que le da. Sin ningún punto, no sale mapa.
+			</p>
+			<?php if ( $mal ) : ?>
+				<span class="evt-error" role="alert">Revise las coordenadas: tienen que ser dos números separados por una coma.</span>
+			<?php endif; ?>
+			<div class="evt-mapa-filas" data-evt-filas>
+				<?php foreach ( $filas as $i => $fila ) : ?>
+					<div class="evt-form-fila evt-mapa-fila" data-evt-fila>
+						<div>
+							<label for="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>">Coordenadas</label>
+							<input type="text" id="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_coords[<?php echo esc_attr( (string) $i ); ?>]"
+								inputmode="decimal" placeholder="28.4636, -16.2518" value="<?php echo esc_attr( (string) $fila['coords'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>">Texto del punto</label>
+							<input type="text" id="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_text[<?php echo esc_attr( (string) $i ); ?>]"
+								maxlength="200" placeholder="Sede del encuentro" value="<?php echo esc_attr( (string) $fila['text'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>">Enlace <span class="evt-opcional">(opcional)</span></label>
+							<input type="url" id="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_url[<?php echo esc_attr( (string) $i ); ?>]"
+								placeholder="https://" value="<?php echo esc_attr( (string) $fila['url'] ); ?>" />
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<p class="evt-acciones">
+				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>" data-evt-filas-nueva hidden>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir otro punto
+				</button>
+			</p>
+			<small>Para quitar un punto, vacíe sus tres campos y guarde.</small>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -19727,6 +19909,7 @@ use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\Programme;
 
 
@@ -20053,7 +20236,9 @@ final class ProgrammeBlock {
 			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
 		}
 
-		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+		$html = '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+
+		return $html . ContactMap::html( $pagina );
 	}
 
 
@@ -22238,6 +22423,255 @@ final class EventView {
 
 
 
+namespace Evt\PublicFront;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class ContactMap {
+
+
+
+
+
+
+
+
+	public const VERSION = '1.9.4';
+
+
+
+
+
+
+	public const VENDOR = array(
+		'evt-leaflet'     => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+			'sri' => 'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH',
+		),
+		'evt-leaflet-css' => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
+			'sri' => 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H',
+		),
+	);
+
+
+
+
+	public const MAX_POINTS = 20;
+
+
+
+
+
+
+	public static function register(): void {
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ), 20 );
+		add_filter( 'script_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+		add_filter( 'style_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+	}
+
+
+
+
+
+
+
+	public static function points( int $page_id ): array {
+		return self::clean( (string) get_post_meta( $page_id, EventMetaKeys::CONTACT_POINTS, true ) );
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function clean( $valor ): array {
+		$lista = is_array( $valor ) ? $valor : json_decode( (string) $valor, true );
+		$out   = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $punto ) {
+			if ( ! is_array( $punto ) || ! isset( $punto['lat'], $punto['lng'] ) || ! is_numeric( $punto['lat'] ) || ! is_numeric( $punto['lng'] ) ) {
+				continue;
+			}
+			$lat = (float) $punto['lat'];
+			$lng = (float) $punto['lng'];
+			if ( $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180 || ( 0.0 === $lat && 0.0 === $lng ) ) {
+				continue;
+			}
+			$url   = esc_url_raw( trim( (string) ( $punto['url'] ?? '' ) ), array( 'http', 'https' ) );
+			$out[] = array(
+				'lat'  => round( $lat, 6 ),
+				'lng'  => round( $lng, 6 ),
+				'text' => mb_substr( sanitize_text_field( (string) ( $punto['text'] ?? '' ) ), 0, 200 ),
+				'url'  => is_string( $url ) ? $url : '',
+			);
+			if ( count( $out ) >= self::MAX_POINTS ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function parse_coordinates( string $texto ): ?array {
+		$texto = trim( $texto );
+		if ( preg_match( '/^(-?\d{1,3}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/', $texto, $m ) ) {
+			return array( (float) $m[1], (float) $m[2] );
+		}
+
+		if ( preg_match( '/^(-?\d{1,3}(?:,\d+)?)\s*;\s*(-?\d{1,3}(?:,\d+)?)$/', $texto, $m ) ) {
+			return array( (float) str_replace( ',', '.', $m[1] ), (float) str_replace( ',', '.', $m[2] ) );
+		}
+		return null;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function tiles(): array {
+
+
+
+
+
+		$tiles = (array) apply_filters(
+			'evt_map_tiles',
+			array(
+				'url'         => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+				'attribution' => '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+			)
+		);
+
+
+		$url = trim( (string) ( $tiles['url'] ?? '' ) );
+		if ( ! preg_match( '#^https://[a-z0-9.-]+(?::\d+)?/[a-z0-9._~{}/@%=&?-]*$#i', $url ) ) {
+			$url = '';
+		}
+		return array(
+			'url'         => $url,
+			'attribution' => wp_kses( (string) ( $tiles['attribution'] ?? '' ), array( 'a' => array( 'href' => true ) ) ),
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function html( int $page_id ): string {
+		$puntos = self::points( $page_id );
+		if ( array() === $puntos ) {
+			return '';
+		}
+
+		$datos = array(
+			'points' => $puntos,
+			'tiles'  => self::tiles(),
+		);
+
+		$lista = '';
+		foreach ( $puntos as $punto ) {
+			$osm    = sprintf(
+				'https://www.openstreetmap.org/?mlat=%1$s&mlon=%2$s#map=17/%1$s/%2$s',
+				rawurlencode( (string) $punto['lat'] ),
+				rawurlencode( (string) $punto['lng'] )
+			);
+			$nombre = '' !== $punto['text'] ? $punto['text'] : 'Punto en el mapa';
+			$lista .= '<li><a href="' . esc_url( $osm ) . '">' . esc_html( $nombre ) . '</a>';
+			if ( '' !== $punto['url'] ) {
+				$lista .= ' · <a href="' . esc_url( $punto['url'] ) . '">Más información</a>';
+			}
+			$lista .= '</li>';
+		}
+
+		return '<div class="evt-ev__mapa-caja">'
+			. '<div class="evt-ev__mapa" data-evt-mapa="' . esc_attr( (string) wp_json_encode( $datos ) ) . '" role="region" aria-label="Mapa de cómo llegar"></div>'
+			. '<ul class="evt-ev__mapa-puntos">' . $lista . '</ul>'
+			. '</div>';
+	}
+
+
+
+
+
+
+	public static function enqueue(): void {
+		if ( ! EventView::takes_over() ) {
+			return;
+		}
+		$pagina = (int) get_queried_object_id();
+		if ( 'contacto' !== (string) get_post_meta( $pagina, EventMetaKeys::SECTION_TYPE, true ) || array() === self::points( $pagina ) ) {
+			return;
+		}
+
+
+		wp_enqueue_style( 'evt-leaflet-css', self::VENDOR['evt-leaflet-css']['url'], array(), null ); 
+		wp_enqueue_script( 'evt-leaflet', self::VENDOR['evt-leaflet']['url'], array(), null, true ); 
+		wp_add_inline_script( 'evt-leaflet', Assets::contents( 'js/evt-mapa.js' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function integrity( $tag, $handle, $src ): string {
+		if ( ! isset( self::VENDOR[ $handle ] ) || 0 !== strpos( (string) $src, 'https://cdn.jsdelivr.net/' ) ) {
+			return (string) $tag;
+		}
+		$atributos = ' integrity="' . esc_attr( self::VENDOR[ $handle ]['sri'] ) . '" crossorigin="anonymous"';
+		return (string) preg_replace( '/^<(script|link)\b/', '<$1' . $atributos, (string) $tag, 1 );
+	}
+}
+
+
+
+
+
+
+
+
 namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\SectionIcons;
@@ -24247,6 +24681,7 @@ use Evt\PublicFront\PageForm;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
@@ -24327,6 +24762,8 @@ final class App {
 
 
 		EventView::register();
+
+		ContactMap::register();
 
 
 
@@ -26884,6 +27321,24 @@ body .swal2-container { z-index: 100010; }
 		background: none;
 	}
 }
+
+/* ─── mapa de la página de contacto (ADR-0046) ──────────────────────── */
+
+.evt-ev__mapa-caja {
+	margin-top: var(--evt-espacio);
+}
+
+/* Sin Leaflet la caja no ocupa nada: queda la lista de debajo. */
+.evt-ev__mapa--listo {
+	height: 380px;
+	margin-bottom: 1rem;
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__mapa-puntos {
+	margin: 0;
+	padding-left: 1.2em;
+}
 ',
   'css/evt-linea.css' => '/*
  * La línea del tiempo pública (`[evt_timeline]`, ADR-0041).
@@ -28460,6 +28915,48 @@ body .swal2-container { z-index: 100010; }
 		} );
 	} );
 
+	/* --- 12. Filas que se repiten: «Añadir otro punto» ------------------ */
+
+	/*
+	 * `data-evt-filas` en la caja, `data-evt-fila` en cada fila y
+	 * `data-evt-filas-nueva` en el botón, dentro del mismo campo. El botón
+	 * copia la última fila vacía con el índice siguiente. Sin guion, la fila en
+	 * blanco del final, de una en una.
+	 */
+	document.addEventListener( \'DOMContentLoaded\', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-filas-nueva]\' ), function ( boton ) {
+			var campo = boton.closest( \'.evt-form-campo\' );
+			var caja = campo ? campo.querySelector( \'[data-evt-filas]\' ) : null;
+			var filas = caja ? caja.querySelectorAll( \'[data-evt-fila]\' ) : [];
+			if ( ! filas.length ) {
+				return;
+			}
+			var molde = filas[ filas.length - 1 ].cloneNode( true );
+			var siguiente = filas.length;
+			boton.hidden = false;
+			boton.addEventListener( \'click\', function () {
+				var fila = molde.cloneNode( true );
+				var i = siguiente++;
+				Array.prototype.forEach.call( fila.querySelectorAll( \'[name], [id], [for]\' ), function ( nodo ) {
+					[ \'name\', \'id\', \'for\' ].forEach( function ( atributo ) {
+						var valor = nodo.getAttribute( atributo );
+						if ( valor ) {
+							nodo.setAttribute( atributo, valor.replace( /\\[\\d+\\]$/, \'[\' + i + \']\' ).replace( /-\\d+$/, \'-\' + i ) );
+						}
+					} );
+					if ( \'value\' in nodo && \'INPUT\' === nodo.tagName ) {
+						nodo.value = \'\';
+					}
+				} );
+				caja.appendChild( fila );
+				var primero = fila.querySelector( \'input\' );
+				if ( primero ) {
+					primero.focus();
+				}
+			} );
+		} );
+	} );
+
 	window.addEventListener( \'beforeunload\', function ( e ) {
 		var formularios = document.querySelectorAll( \'form[data-evt-cambios]\' );
 		for ( var i = 0; i < formularios.length; i++ ) {
@@ -28653,6 +29150,72 @@ body .swal2-container { z-index: 100010; }
 	} else {
 		arrancar();
 	}
+}() );
+',
+  'js/evt-mapa.js' => '/*
+ * evt-mapa.js — el mapa de la página de contacto de un evento (ADR-0046).
+ *
+ * Lee los puntos de `data-evt-mapa`, que escribe el servidor ya limpios, y los
+ * pinta con Leaflet sobre las teselas que diga el mismo dato. Si Leaflet no
+ * llega, no hace nada: debajo del mapa está la lista de puntos con su enlace,
+ * que se lee igual.
+ */
+( function () {
+	\'use strict\';
+
+	if ( ! window.L ) {
+		return;
+	}
+
+	document.querySelectorAll( \'[data-evt-mapa]\' ).forEach( function ( caja ) {
+		var datos;
+		try {
+			datos = JSON.parse( caja.getAttribute( \'data-evt-mapa\' ) );
+		} catch ( e ) {
+			return;
+		}
+		if ( ! datos || ! datos.points || ! datos.points.length || ! datos.tiles || ! datos.tiles.url ) {
+			return;
+		}
+
+		// La altura, antes de crear el mapa: Leaflet mide la caja al centrarlo.
+		caja.classList.add( \'evt-ev__mapa--listo\' );
+		var mapa = window.L.map( caja, { scrollWheelZoom: false } );
+		window.L.tileLayer( datos.tiles.url, {
+			maxZoom: 19,
+			attribution: datos.tiles.attribution
+		} ).addTo( mapa );
+
+		var marcas = datos.points.map( function ( punto ) {
+			var marca = window.L.marker( [ punto.lat, punto.lng ], { title: punto.text || \'\' } ).addTo( mapa );
+			if ( punto.text || punto.url ) {
+				// Se arma con nodos y no con HTML: el texto lo escribe quien organiza.
+				var globo = document.createElement( \'div\' );
+				if ( punto.text ) {
+					var titulo = document.createElement( \'strong\' );
+					titulo.textContent = punto.text;
+					globo.appendChild( titulo );
+				}
+				if ( punto.url ) {
+					var enlace = document.createElement( \'a\' );
+					enlace.href = punto.url;
+					enlace.textContent = \'Más información\';
+					if ( punto.text ) {
+						globo.appendChild( document.createElement( \'br\' ) );
+					}
+					globo.appendChild( enlace );
+				}
+				marca.bindPopup( globo );
+			}
+			return marca;
+		} );
+
+		if ( 1 === marcas.length ) {
+			mapa.setView( marcas[ 0 ].getLatLng(), 16 );
+		} else {
+			mapa.fitBounds( window.L.featureGroup( marcas ).getBounds(), { padding: [ 30, 30 ] } );
+		}
+	} );
 }() );
 ',
 ) );

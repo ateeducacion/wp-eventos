@@ -8,6 +8,21 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.10] — 2026-09-28
+
+### Añadido
+
+- **Mapa en la página de contacto** ([ADR-0046](docs/adr/ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md)).
+  - En «Datos de contacto», cada punto lleva sus coordenadas, tal como las copia cualquier mapa de internet (`28.4636, -16.2518`), un texto y, si se quiere, un enlace.
+  - «Añadir otro punto» añade los que hagan falta.
+  - En la página, un mapa con un marcador por punto y, debajo, la misma lista enlazada a OpenStreetMap, que es lo que queda si el mapa no carga.
+  - El mapa se dibuja con Leaflet, desde jsDelivr con SRI, y solo se carga en la página de contacto que tiene puntos.
+  - El servidor de teselas se cambia con el filtro `evt_map_tiles`
+
+### Corregido
+
+- **Al repintar el formulario de una sección tras un envío rechazado, se perdían los campos propios de su tipo**, como los de contacto
+
 ## [0.1.9] — 2026-09-28
 
 ### Cambiado

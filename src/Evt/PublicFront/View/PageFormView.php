@@ -163,7 +163,7 @@ final class PageFormView {
 			</fieldset>
 
 			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
-				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ), (array) ( $valores['points'] ?? array() ), in_array( 'points', $errores, true ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php endif; ?>
 
 			<?php echo self::look( (array) $valores['look'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -239,10 +239,12 @@ final class PageFormView {
 	/**
 	 * The contact details of a contact page.
 	 *
-	 * @param array<string, string> $c Current values, by meta key.
+	 * @param array<string, string>             $c      Current values, by meta key.
+	 * @param array<int, array<string, string>> $puntos Map rows: coords, text and url.
+	 * @param bool                              $mal    Whether the last submit had coordinates that did not parse.
 	 * @return string
 	 */
-	private static function contact( array $c ): string {
+	private static function contact( array $c, array $puntos = array(), bool $mal = false ): string {
 		ob_start();
 		?>
 		<fieldset class="evt-tarjeta">
@@ -271,7 +273,73 @@ final class PageFormView {
 					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
 				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
 			</div>
+
+			<?php echo self::map_points( $puntos, $mal ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</fieldset>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The points of the map: coordinates, a text and a link each.
+	 *
+	 * Las coordenadas van en un solo campo porque así las copia cualquier mapa
+	 * de internet al pulsar sobre un sitio: «28.4636, -16.2518». La fila en
+	 * blanco del final sirve para añadir uno sin guion; con guion, «Añadir
+	 * otro punto» añade las que hagan falta antes de guardar.
+	 *
+	 * @param array<int, array<string, string>> $puntos Rows.
+	 * @param bool                              $mal    Whether some coordinates did not parse.
+	 * @return string
+	 */
+	private static function map_points( array $puntos, bool $mal ): string {
+		$filas   = $puntos;
+		$filas[] = array(
+			'coords' => '',
+			'text'   => '',
+			'url'    => '',
+		);
+
+		ob_start();
+		?>
+		<div class="evt-form-campo evt-mapa-puntos">
+			<span class="evt-rotulo">Mapa</span>
+			<p class="evt-ayuda">
+				Cada punto sale en un mapa debajo de los datos de contacto: la sede, el aparcamiento,
+				la parada… Para sacar las coordenadas, pulse con el botón derecho sobre el sitio en
+				un mapa de internet y copie los dos números que le da. Sin ningún punto, no sale mapa.
+			</p>
+			<?php if ( $mal ) : ?>
+				<span class="evt-error" role="alert">Revise las coordenadas: tienen que ser dos números separados por una coma.</span>
+			<?php endif; ?>
+			<div class="evt-mapa-filas" data-evt-filas>
+				<?php foreach ( $filas as $i => $fila ) : ?>
+					<div class="evt-form-fila evt-mapa-fila" data-evt-fila>
+						<div>
+							<label for="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>">Coordenadas</label>
+							<input type="text" id="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_coords[<?php echo esc_attr( (string) $i ); ?>]"
+								inputmode="decimal" placeholder="28.4636, -16.2518" value="<?php echo esc_attr( (string) $fila['coords'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>">Texto del punto</label>
+							<input type="text" id="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_text[<?php echo esc_attr( (string) $i ); ?>]"
+								maxlength="200" placeholder="Sede del encuentro" value="<?php echo esc_attr( (string) $fila['text'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>">Enlace <span class="evt-opcional">(opcional)</span></label>
+							<input type="url" id="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_url[<?php echo esc_attr( (string) $i ); ?>]"
+								placeholder="https://" value="<?php echo esc_attr( (string) $fila['url'] ); ?>" />
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<p class="evt-acciones">
+				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>" data-evt-filas-nueva hidden>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir otro punto
+				</button>
+			</p>
+			<small>Para quitar un punto, vacíe sus tres campos y guarde.</small>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
