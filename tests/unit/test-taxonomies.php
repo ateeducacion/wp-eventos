@@ -218,4 +218,43 @@ class Test_Taxonomies extends WP_UnitTestCase {
 		$this->assertSame( 'Unidad', $arbol[ $nieta ]['name'] );
 		$this->assertSame( 'Organismo › Departamento › Unidad', $arbol[ $nieta ]['path'] );
 	}
+
+	/**
+	 * El árbol que elige una persona: su rama para elegir y lo de encima como contexto.
+	 *
+	 * Lo que no es ni lo uno ni lo otro no sale: las ramas de al lado no
+	 * enseñan nada que no se pueda tocar.
+	 */
+	public function test_the_scope_tree_of_one_person_shows_its_branch_and_what_is_above() {
+		$raiz     = $this->area( 'Organismo' );
+		$servicio = $this->area( 'Servicio' );
+		$unidad   = $this->area( 'Unidad' );
+		$vecino   = $this->area( 'Servicio vecino' );
+		$suelto   = $this->area( 'Otro organismo' );
+		wp_update_term( $servicio, EventTaxonomies::AREA, array( 'parent' => $raiz ) );
+		wp_update_term( $unidad, EventTaxonomies::AREA, array( 'parent' => $servicio ) );
+		wp_update_term( $vecino, EventTaxonomies::AREA, array( 'parent' => $raiz ) );
+
+		$yo    = $this->organiser( array( $servicio ) );
+		$arbol = array();
+		foreach ( EventTaxonomies::area_tree_for( $yo ) as $fila ) {
+			$arbol[ $fila['id'] ] = $fila['selectable'];
+		}
+
+		$this->assertSame(
+			array(
+				$raiz     => false,
+				$servicio => true,
+				$unidad   => true,
+			),
+			$arbol,
+			'el organismo como contexto, su servicio y lo que cuelga para elegir, y nada más'
+		);
+
+		$todos = EventTaxonomies::area_tree_for( $this->administrator() );
+		$this->assertCount( 5, $todos, 'administración ve el árbol entero' );
+		$this->assertSame( array( true ), array_values( array_unique( array_column( $todos, 'selectable' ) ) ) );
+		$this->assertContains( $suelto, array_column( $todos, 'id' ) );
+		$this->assertContains( $vecino, array_column( $todos, 'id' ) );
+	}
 }

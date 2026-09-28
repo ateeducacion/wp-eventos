@@ -9,6 +9,7 @@ namespace Evt\PublicFront\View;
 
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 /**
@@ -83,7 +84,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Al editar cada una se elige si sale en el menú, si tiene tarjeta en la portada, o las dos cosas.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -154,9 +155,9 @@ final class EventSectionsPanel {
 		<p class="evt-sub">
 			Las secciones de este evento que se enviaron a la papelera. Nada se ha
 			perdido: al restaurar una vuelve en borrador, así que no reaparece en
-			el menú del evento hasta que la publique. Para borrar algo de verdad y
-			para siempre hay que ir al escritorio de WordPress: desde aquí no se
-			destruye nada.
+			el menú del evento hasta que la publique. Borrar algo de verdad y para
+			siempre lo hace quien administra, desde el escritorio de WordPress:
+			desde aquí no se destruye nada.
 		</p>
 
 		<p class="evt-acciones">
@@ -287,12 +288,26 @@ final class EventSectionsPanel {
 		?>
 		<tr>
 			<td class="evt-num" data-rotulo="Orden"><?php echo esc_html( (string) (int) $fila['order'] ); ?></td>
-			<td data-rotulo="Tipo"><?php echo esc_html( (string) $fila['type_label'] ); ?></td>
+			<td data-rotulo="Tipo">
+				<span class="evt-tipo-seccion">
+					<?php echo wp_kses( SectionIcons::svg( (string) ( $fila['icon'] ?? '' ), 18 ), SectionIcons::KSES ); ?>
+					<?php echo esc_html( (string) $fila['type_label'] ); ?>
+				</span>
+			</td>
 			<td data-rotulo="Título">
 				<?php if ( $fila['published'] && '' !== (string) $fila['view_url'] ) : ?>
 					<a href="<?php echo esc_url( (string) $fila['view_url'] ); ?>"><?php echo esc_html( $titulo ); ?></a>
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
+					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['menu_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Tiene tarjeta en la portada, o su enlace, pero no sale en el menú de arriba" data-bs-toggle="tooltip">Fuera del menú</span>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>
 			</td>
 			<td class="evt-slug" data-rotulo="Dirección"><?php echo esc_html( '' !== (string) $fila['slug'] ? (string) $fila['slug'] : '—' ); ?></td>

@@ -1027,6 +1027,147 @@
 		}
 	}, true );
 
+	/* --- 10. Las preguntas de la inscripción ------------------------------ */
+
+	/*
+	 * Dos cosas, y las dos sobre un formulario que ya funciona sin ellas.
+	 *
+	 * Las opciones, una por línea, solo valen para «Una opción» y «Varias
+	 * opciones»: se esconde el campo en las demás y se enseña al cambiar el
+	 * tipo. Qué tipos llevan opciones lo dice el servidor en
+	 * `data-evt-q-opciones`, para no repetir aquí la lista.
+	 *
+	 * «Añadir otra pregunta» copia la fila en blanco del final con el índice
+	 * siguiente, la abre y pone el cursor en el rótulo: se pueden añadir varias
+	 * antes de guardar. Sin guion, la fila en blanco de siempre, de una en una.
+	 */
+	function opcionesSegunTipo( fila ) {
+		var campo = fila.querySelector( '[data-evt-q-opciones]' );
+		var tipo = fila.querySelector( 'select[name^="evt_q_type"]' );
+		if ( ! campo || ! tipo ) {
+			return;
+		}
+		var llevan = campo.getAttribute( 'data-evt-q-opciones' ).split( ' ' );
+		campo.hidden = -1 === llevan.indexOf( tipo.value );
+	}
+
+	document.addEventListener( 'change', function ( e ) {
+		var tipo = e.target.closest ? e.target.closest( 'select[name^="evt_q_type"]' ) : null;
+		var fila = tipo ? tipo.closest( '.evt-pregunta' ) : null;
+		if ( fila ) {
+			opcionesSegunTipo( fila );
+		}
+	} );
+
+	function arrancarPreguntas() {
+		Array.prototype.forEach.call( document.querySelectorAll( '.evt-pregunta' ), opcionesSegunTipo );
+
+		var lista = document.querySelector( '[data-evt-preguntas]' );
+		var boton = document.querySelector( '[data-evt-pregunta-nueva]' );
+		var molde = lista ? lista.querySelector( '.evt-pregunta--nueva' ) : null;
+		if ( ! lista || ! boton || ! molde ) {
+			return;
+		}
+		// La copia se toma ahora, antes de que nadie escriba en la fila.
+		molde = molde.cloneNode( true );
+		var siguiente = lista.querySelectorAll( '.evt-pregunta' ).length;
+		boton.hidden = false;
+
+		boton.addEventListener( 'click', function () {
+			var fila = molde.cloneNode( true );
+			var i = siguiente++;
+			Array.prototype.forEach.call( fila.querySelectorAll( '[name], [id], [for]' ), function ( nodo ) {
+				[ 'name', 'id', 'for' ].forEach( function ( atributo ) {
+					var valor = nodo.getAttribute( atributo );
+					if ( valor ) {
+						nodo.setAttribute( atributo, valor.replace( /\[\d+\]$/, '[' + i + ']' ).replace( /-\d+$/, '-' + i ) );
+					}
+				} );
+			} );
+			fila.open = true;
+			lista.appendChild( fila );
+			opcionesSegunTipo( fila );
+			var rotulo = fila.querySelector( 'input[name^="evt_q_label"]' );
+			if ( rotulo ) {
+				rotulo.focus();
+			}
+		} );
+	}
+	document.addEventListener( 'DOMContentLoaded', arrancarPreguntas );
+
+	/* --- 11. El árbol de ámbitos: plegar y desplegar ramas ---------------- */
+
+	/*
+	 * Sin guion, el árbol entero abierto y sangrado, que se lee igual. Con
+	 * guion, cada rama tiene su flecha y arrancan abiertas solo las que llevan
+	 * algo marcado dentro: lo que ya es del evento se ve sin buscarlo.
+	 */
+	function plegar( boton, abierta ) {
+		var rama = boton.closest( '.evt-arbol__rama' );
+		var hijos = rama ? rama.querySelector( ':scope > ul' ) : null;
+		boton.setAttribute( 'aria-expanded', abierta ? 'true' : 'false' );
+		if ( hijos ) {
+			hijos.hidden = ! abierta;
+		}
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var boton = e.target.closest ? e.target.closest( '[data-evt-arbol-plegar]' ) : null;
+		if ( boton ) {
+			plegar( boton, 'true' !== boton.getAttribute( 'aria-expanded' ) );
+		}
+	} );
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-arbol-plegar]' ), function ( boton ) {
+			var rama = boton.closest( '.evt-arbol__rama' );
+			boton.hidden = false;
+			plegar( boton, !! ( rama && rama.querySelector( ':scope > ul input:checked' ) ) );
+		} );
+	} );
+
+	/* --- 12. Filas que se repiten: «Añadir otro punto» ------------------ */
+
+	/*
+	 * `data-evt-filas` en la caja, `data-evt-fila` en cada fila y
+	 * `data-evt-filas-nueva` en el botón, dentro del mismo campo. El botón
+	 * copia la última fila vacía con el índice siguiente. Sin guion, la fila en
+	 * blanco del final, de una en una.
+	 */
+	document.addEventListener( 'DOMContentLoaded', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-filas-nueva]' ), function ( boton ) {
+			var campo = boton.closest( '.evt-form-campo' );
+			var caja = campo ? campo.querySelector( '[data-evt-filas]' ) : null;
+			var filas = caja ? caja.querySelectorAll( '[data-evt-fila]' ) : [];
+			if ( ! filas.length ) {
+				return;
+			}
+			var molde = filas[ filas.length - 1 ].cloneNode( true );
+			var siguiente = filas.length;
+			boton.hidden = false;
+			boton.addEventListener( 'click', function () {
+				var fila = molde.cloneNode( true );
+				var i = siguiente++;
+				Array.prototype.forEach.call( fila.querySelectorAll( '[name], [id], [for]' ), function ( nodo ) {
+					[ 'name', 'id', 'for' ].forEach( function ( atributo ) {
+						var valor = nodo.getAttribute( atributo );
+						if ( valor ) {
+							nodo.setAttribute( atributo, valor.replace( /\[\d+\]$/, '[' + i + ']' ).replace( /-\d+$/, '-' + i ) );
+						}
+					} );
+					if ( 'value' in nodo && 'INPUT' === nodo.tagName ) {
+						nodo.value = '';
+					}
+				} );
+				caja.appendChild( fila );
+				var primero = fila.querySelector( 'input' );
+				if ( primero ) {
+					primero.focus();
+				}
+			} );
+		} );
+	} );
+
 	window.addEventListener( 'beforeunload', function ( e ) {
 		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
 		for ( var i = 0; i < formularios.length; i++ ) {

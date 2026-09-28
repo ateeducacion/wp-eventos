@@ -14,6 +14,7 @@ use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\Programme;
 
 /**
@@ -340,7 +341,9 @@ final class ProgrammeBlock {
 			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
 		}
 
-		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+		$html = '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+		// Debajo de las tres columnas, el mapa con sus puntos (ADR-0046).
+		return $html . ContactMap::html( $pagina );
 	}
 
 	/**

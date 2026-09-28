@@ -11,6 +11,7 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\CodeEditor;
 use Evt\PublicFront\PageForm;
+use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
 /**
@@ -120,7 +121,7 @@ final class PageFormView {
 						<label for="evt_order">Orden</label>
 						<input type="number" id="evt_order" name="evt_order" step="1" min="0"
 							value="<?php echo esc_attr( (string) $valores['menu_order'] ); ?>" />
-						<small>El lugar que ocupa en el menú del evento. El número más bajo va primero.</small>
+						<small>El lugar que ocupa en el menú y en la portada del evento. El número más bajo va primero.</small>
 					</div>
 				</div>
 
@@ -142,6 +143,8 @@ final class PageFormView {
 				</div>
 			</fieldset>
 
+			<?php echo self::showcase( $valores ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
 				<?php
@@ -160,7 +163,7 @@ final class PageFormView {
 			</fieldset>
 
 			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
-				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ), (array) ( $valores['points'] ?? array() ), in_array( 'points', $errores, true ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php endif; ?>
 
 			<?php echo self::look( (array) $valores['look'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -183,12 +186,70 @@ final class PageFormView {
 	}
 
 	/**
-	 * The contact details of a contact page.
+	 * How the section shows up: its card on the front page and its icon.
 	 *
-	 * @param array<string, string> $c Current values, by meta key.
+	 * El icono se elige entre dibujos y no en un desplegable de nombres: lo que
+	 * se decide es cómo se ve. La primera opción es «el de su tipo», que es lo
+	 * que lleva la sección mientras nadie elija otro.
+	 *
+	 * @param array<string, mixed> $valores Form values.
 	 * @return string
 	 */
-	private static function contact( array $c ): string {
+	private static function showcase( array $valores ): string {
+		$elegido  = (string) ( $valores['icon'] ?? '' );
+		$tipo     = (string) $valores['section_type'];
+		$opciones = array( '' => 'El de su tipo' ) + EventMetaKeys::section_icons();
+
+		ob_start();
+		?>
+		<fieldset class="evt-tarjeta">
+			<legend>En la portada y en el menú del evento</legend>
+			<input type="hidden" name="evt_showcase" value="1" />
+			<div class="evt-form-campo">
+				<label class="evt-check">
+					<input type="checkbox" name="evt_in_menu" value="1" <?php checked( false !== ( $valores['in_menu'] ?? true ) ); ?> />
+					Mostrar esta sección en el menú de arriba del evento
+				</label>
+				<label class="evt-check">
+					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
+					Mostrar una tarjeta de esta sección en la portada del evento
+				</label>
+				<small>Las dos son independientes, y lo que desmarque se sigue viendo: solo deja de salir
+					ahí. Lo habitual es quitar la tarjeta de la de contacto, que ya está en el menú. Sin
+					ninguna de las dos, a la sección solo se llega con su enlace.</small>
+			</div>
+			<div class="evt-form-campo">
+				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
+				<div class="evt-iconos" role="radiogroup" aria-labelledby="evt-icono-rotulo">
+					<?php foreach ( $opciones as $slug => $rotulo ) : ?>
+						<?php
+						$dibujo = '' === $slug ? EventMetaKeys::default_icon( $tipo ) : (string) $slug;
+						?>
+						<label class="evt-icono-opcion" title="<?php echo esc_attr( (string) $rotulo ); ?>">
+							<input type="radio" name="<?php echo esc_attr( EventMetaKeys::SECTION_ICON ); ?>"
+								value="<?php echo esc_attr( (string) $slug ); ?>" <?php checked( $elegido, (string) $slug ); ?> />
+							<?php echo wp_kses( SectionIcons::svg( $dibujo, 28 ), SectionIcons::KSES ); ?>
+							<span class="<?php echo esc_attr( '' === $slug ? 'evt-icono-nombre' : 'screen-reader-text' ); ?>"><?php echo esc_html( (string) $rotulo ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+				<small>Sale junto al nombre de la sección en el menú, y en su tarjeta cuando la sección no
+					tiene imagen destacada.</small>
+			</div>
+		</fieldset>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The contact details of a contact page.
+	 *
+	 * @param array<string, string>             $c      Current values, by meta key.
+	 * @param array<int, array<string, string>> $puntos Map rows: coords, text and url.
+	 * @param bool                              $mal    Whether the last submit had coordinates that did not parse.
+	 * @return string
+	 */
+	private static function contact( array $c, array $puntos = array(), bool $mal = false ): string {
 		ob_start();
 		?>
 		<fieldset class="evt-tarjeta">
@@ -217,7 +278,73 @@ final class PageFormView {
 					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
 				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
 			</div>
+
+			<?php echo self::map_points( $puntos, $mal ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</fieldset>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The points of the map: coordinates, a text and a link each.
+	 *
+	 * Las coordenadas van en un solo campo porque así las copia cualquier mapa
+	 * de internet al pulsar sobre un sitio: «28.4636, -16.2518». La fila en
+	 * blanco del final sirve para añadir uno sin guion; con guion, «Añadir
+	 * otro punto» añade las que hagan falta antes de guardar.
+	 *
+	 * @param array<int, array<string, string>> $puntos Rows.
+	 * @param bool                              $mal    Whether some coordinates did not parse.
+	 * @return string
+	 */
+	private static function map_points( array $puntos, bool $mal ): string {
+		$filas   = $puntos;
+		$filas[] = array(
+			'coords' => '',
+			'text'   => '',
+			'url'    => '',
+		);
+
+		ob_start();
+		?>
+		<div class="evt-form-campo evt-mapa-puntos">
+			<span class="evt-rotulo">Mapa</span>
+			<p class="evt-ayuda">
+				Cada punto sale en un mapa debajo de los datos de contacto: la sede, el aparcamiento,
+				la parada… Para sacar las coordenadas, pulse con el botón derecho sobre el sitio en
+				un mapa de internet y copie los dos números que le da. Sin ningún punto, no sale mapa.
+			</p>
+			<?php if ( $mal ) : ?>
+				<span class="evt-error" role="alert">Revise las coordenadas: tienen que ser dos números separados por una coma.</span>
+			<?php endif; ?>
+			<div class="evt-mapa-filas" data-evt-filas>
+				<?php foreach ( $filas as $i => $fila ) : ?>
+					<div class="evt-form-fila evt-mapa-fila" data-evt-fila>
+						<div>
+							<label for="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>">Coordenadas</label>
+							<input type="text" id="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_coords[<?php echo esc_attr( (string) $i ); ?>]"
+								inputmode="decimal" placeholder="28.4636, -16.2518" value="<?php echo esc_attr( (string) $fila['coords'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>">Texto del punto</label>
+							<input type="text" id="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_text[<?php echo esc_attr( (string) $i ); ?>]"
+								maxlength="200" placeholder="Sede del encuentro" value="<?php echo esc_attr( (string) $fila['text'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>">Enlace <span class="evt-opcional">(opcional)</span></label>
+							<input type="url" id="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_url[<?php echo esc_attr( (string) $i ); ?>]"
+								placeholder="https://" value="<?php echo esc_attr( (string) $fila['url'] ); ?>" />
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<p class="evt-acciones">
+				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>" data-evt-filas-nueva hidden>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir otro punto
+				</button>
+			</p>
+			<small>Para quitar un punto, vacíe sus tres campos y guarde.</small>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -232,11 +359,37 @@ final class PageFormView {
 	 * @return string
 	 */
 	private static function look( array $look ): string {
+		$propios = array();
+		foreach ( PageForm::look_labels() as $clave => $rotulo ) {
+			$valor = (string) ( $look[ $clave ] ?? '' );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+
 		ob_start();
 		?>
-		<details class="evt-tarjeta">
-			<summary>Apariencia de esta sección</summary>
+		<details class="evt-tarjeta"<?php echo array() !== $propios ? ' open' : ''; ?>>
+			<summary>
+				Apariencia de esta sección
+				<?php if ( array() !== $propios ) : ?>
+					<span class="evt-state evt-state-propia">Propia</span>
+				<?php endif; ?>
+			</summary>
 			<p>Lo que deje en blanco se hereda del evento. Solo hace falta tocarlo cuando esta sección tenga que verse distinta.</p>
+			<?php if ( array() !== $propios ) : ?>
+				<div class="evt-propia">
+					<p>
+						<strong>Esta sección no sigue la apariencia del evento</strong> en: <?php echo esc_html( implode( ', ', $propios ) ); ?>.
+						Si cambia eso en la apariencia del evento, aquí no se notará.
+					</p>
+					<?php // Una casilla y no un botón: con Intro se envía el primer botón del formulario, y sería este. ?>
+					<label class="evt-check">
+						<input type="checkbox" name="evt_look_reset" value="1" />
+						Volver a la apariencia del evento al guardar: se vacían los campos de abajo
+					</label>
+				</div>
+			<?php endif; ?>
 
 			<div class="evt-form-fila">
 				<?php

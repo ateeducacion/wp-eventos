@@ -8,8 +8,10 @@
 namespace Evt\PublicFront\View;
 
 use Evt\Meta\EventMetaKeys;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 /**
  * Dónde quien organiza abre la inscripción y redacta sus preguntas.
@@ -189,11 +191,19 @@ final class EventSignupPanel {
 			'required' => false,
 		);
 
+		$html .= '<div class="evt-preguntas__lista" data-evt-preguntas>';
 		foreach ( $filas as $i => $pregunta ) {
 			$html .= self::row( (int) $i, $pregunta, $tipos, array() === $preguntas );
 		}
+		$html .= '</div>';
 
-		$html .= '<p class="evt-ayuda">Para quitar una pregunta, borre su rótulo y guarde. '
+		// Con JavaScript, un botón que añade otra fila en blanco sin guardar
+		// antes: la copia la hace el guion a partir de la última. Sin él, la
+		// fila en blanco de siempre, y se añade de una en una.
+		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-pregunta-nueva hidden>'
+			. wp_kses( Shell::icon_plus(), PanelParts::SVG ) . ' Añadir otra pregunta</button></p>';
+
+		$html .= '<p class="evt-ayuda">Para quitar una pregunta, ábrala y marque «Quitar esta pregunta al guardar». '
 			. 'Lo que ya hubiera contestado alguien no se borra: deja de verse, y vuelve si la pregunta vuelve.</p>';
 
 		return $html . '</section>';
@@ -242,15 +252,28 @@ final class EventSignupPanel {
 		}
 		$html .= '</select></p></div>';
 
+		// Las opciones solo tienen sentido en las dos de elegir: el guion
+		// esconde el campo en las demás y lo enseña al cambiar el tipo. Sin
+		// guion se queda a la vista, con la nota que dice cuándo se usa.
 		$html .= sprintf(
-			'<p class="evt-campo"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
+			'<p class="evt-campo" data-evt-q-opciones="%3$s"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
 				. '<textarea id="evt-q-o-%1$d" name="evt_q_options[%1$d]" rows="3">%2$s</textarea>'
 				. '<small>Solo para «Una opción» y «Varias opciones».</small></p>',
 			$i,
-			esc_textarea( implode( "\n", (array) $p['options'] ) )
+			esc_textarea( implode( "\n", (array) $p['options'] ) ),
+			esc_attr( implode( ' ', array_filter( array_keys( $tipos ), array( RegistrationMetaKeys::class, 'has_options' ) ) ) )
 		);
 
 		$html .= self::toggle( 'evt_q_required[' . $i . ']', 'Obligatoria', (bool) $p['required'], 'evt-q-r-' . $i );
+
+		// Una casilla y no un botón: con Intro se envía el primer botón del
+		// formulario, y no puede ser el de quitar una pregunta.
+		if ( ! $nueva ) {
+			$html .= sprintf(
+				'<p class="evt-campo evt-pregunta__quitar"><label class="evt-check"><input type="checkbox" name="evt_q_remove[%1$d]" value="1"> Quitar esta pregunta al guardar</label></p>',
+				$i
+			);
+		}
 
 		return $html . '</div></details>';
 	}
