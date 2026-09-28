@@ -6,7 +6,9 @@
  */
 
 use Evt\Meta\EventMetaKeys;
+use Evt\PublicFront\EventView;
 use Evt\PublicFront\Timeline;
+use Evt\PublicFront\View\EventChrome;
 use Evt\PublicFront\View\TimelineView;
 
 /**
@@ -123,5 +125,178 @@ class Test_Timeline extends WP_UnitTestCase {
 
 		$this->assertTrue( shortcode_exists( Timeline::SHORTCODE ) );
 		$this->assertStringContainsString( 'evt-linea', do_shortcode( '[' . Timeline::SHORTCODE . ']' ) );
+	}
+
+	/**
+	 * Buscar por texto deja solo lo que coincide y abre donde hay resultados.
+	 */
+	public function test_the_search_keeps_only_what_matches() {
+		$sale = $this->en( '2025-03-12', array(), array( 'post_title' => 'Jornadas de robótica' ) );
+		$no   = $this->en( '2026-10-09', array(), array( 'post_title' => 'Encuentro de bibliotecas' ) );
+		$m    = Timeline::model( '2026-09-27', array( 'search' => 'robótica' ) );
+		$ids  = array();
+		foreach ( $m['months'] as $mes ) {
+			$ids = array_merge( $ids, wp_list_pluck( $mes['events'], 'id' ) );
+		}
+
+		$this->assertSame( array( $sale ), $ids );
+		$this->assertNotContains( $no, $ids );
+		$this->assertTrue( $m['filtered'] );
+		$this->assertSame( 1, $m['count'] );
+		$this->assertSame( '2025-03', $m['months'][ $m['current'] ]['key'], 'abre en el mes con resultados, no en uno vacío' );
+	}
+
+	/**
+	 * Un ámbito trae también los eventos de los ámbitos que cuelgan de él.
+	 */
+	public function test_the_scope_includes_the_scopes_below_it() {
+		$servicio = $this->area( 'Servicio de Innovación' );
+		$area     = (int) wp_insert_term( 'Área STEAM', 'evt_area', array( 'parent' => $servicio ) )['term_id'];
+		$otra     = $this->area( 'Otro servicio' );
+		$dentro   = $this->event( $this->administrator(), array( $area ), array( EventMetaKeys::START_DATE => '2026-10-09' ) );
+		$fuera    = $this->event( $this->administrator(), array( $otra ), array( EventMetaKeys::START_DATE => '2026-10-10' ) );
+
+		$m   = Timeline::model( '2026-09-27', array( 'area' => $servicio ) );
+		$ids = wp_list_pluck( $this->meses( $m )['2026-10']['events'], 'id' );
+
+		$this->assertSame( array( $dentro ), $ids );
+		$this->assertNotContains( $fuera, $ids );
+
+		$opciones = wp_list_pluck( $m['areas'], 'depth', 'name' );
+		$this->assertSame( 1, $opciones['Área STEAM'], 'el desplegable enseña el árbol' );
+	}
+
+	/**
+	 * La página propia lleva la barra, el filtro, la línea y el pie; sin tema.
+	 */
+	public function test_the_page_is_a_whole_document_with_bar_filter_and_footer() {
+		$this->acting_as( 0 );
+		$html = TimelineView::document( 'Eventos', Timeline::model( '2026-09-27', array( 'search' => 'nada' ) ) );
+
+		$this->assertStringContainsString( '<!doctype html>', $html );
+		$this->assertStringContainsString( 'class="evt-ev__barra"', $html );
+		$this->assertStringContainsString( '>Acceder</a>', $html );
+		$this->assertStringContainsString( 'name="buscar"', $html );
+		$this->assertStringContainsString( 'value="nada"', $html );
+		$this->assertStringContainsString( 'Quitar filtros', $html );
+		$this->assertStringContainsString( 'class="evt-linea"', $html );
+		$this->assertStringContainsString( 'class="evt-ev__pie"', $html );
+
+		Timeline::register();
+		$this->assertNotFalse( has_action( 'template_redirect', array( Timeline::class, 'render_page' ) ) );
+	}
+
+	/**
+	 * Una página con la línea del tiempo, publicada.
+	 *
+	 * @return int
+	 */
+	private function pagina_linea(): int {
+		return (int) self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Eventos',
+				'post_content' => '[' . Timeline::SHORTCODE . ']',
+			)
+		);
+	}
+
+	/**
+	 * Solo se hace cargo de la página que lleva la línea, y el filtro lo apaga.
+	 */
+	public function test_it_takes_over_only_the_page_that_carries_it() {
+		$otra = (int) self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$this->go_to( (string) get_permalink( $otra ) );
+		$this->assertFalse( Timeline::takes_over() );
+		$this->assertNull( $this->exit_url( array( Timeline::class, 'render_page' ) ), 'otra página sigue en el tema' );
+
+		$this->go_to( (string) get_permalink( $this->pagina_linea() ) );
+		$this->assertTrue( Timeline::takes_over() );
+
+		add_filter( 'evt_standalone_page', '__return_false' );
+		$this->assertFalse( Timeline::takes_over() );
+		remove_filter( 'evt_standalone_page', '__return_false' );
+	}
+
+	/**
+	 * Sirve el documento entero con el filtro de la URL ya aplicado.
+	 */
+	public function test_it_serves_the_whole_document_with_the_filter_of_the_url() {
+		$this->en( '2026-10-09', array(), array( 'post_title' => 'Jornadas de robótica' ) );
+		$this->en( '2026-10-10', array(), array( 'post_title' => 'Encuentro de bibliotecas' ) );
+		$this->acting_as( 0 );
+		$this->go_to( add_query_arg( Timeline::ARG_SEARCH, 'robótica', (string) get_permalink( $this->pagina_linea() ) ) );
+		$_GET[ Timeline::ARG_SEARCH ] = 'robótica';
+		$_GET[ Timeline::ARG_AREA ]   = '0';
+
+		$this->assertSame(
+			array(
+				'search' => 'robótica',
+				'area'   => 0,
+			),
+			Timeline::filters()
+		);
+
+		$html = $this->served( array( Timeline::class, 'render_page' ) );
+		unset( $_GET[ Timeline::ARG_SEARCH ], $_GET[ Timeline::ARG_AREA ] );
+
+		$this->assertStringContainsString( '<!doctype html>', $html );
+		$this->assertStringContainsString( '<h1 class="evt-linea__h1">Eventos</h1>', $html );
+		$this->assertStringContainsString( 'Jornadas de robótica', $html );
+		$this->assertStringNotContainsString( 'Encuentro de bibliotecas', $html );
+		$this->assertStringContainsString( '1 evento', $html );
+	}
+
+	/**
+	 * La cabecera lleva la hoja de las páginas públicas; fuera de la página, nada.
+	 */
+	public function test_the_head_carries_the_public_stylesheet_only_on_its_page() {
+		$otra = (int) self::factory()->post->create( array( 'post_type' => 'page' ) );
+		$this->go_to( (string) get_permalink( $otra ) );
+		ob_start();
+		Timeline::print_head();
+		$this->assertSame( '', (string) ob_get_clean() );
+
+		$pon = static function ( array $c ): array {
+			return array_merge( $c, array( 'footer_bg' => '#053556' ) );
+		};
+		add_filter( EventChrome::HOOK, $pon, 99 );
+		$this->go_to( (string) get_permalink( $this->pagina_linea() ) );
+		ob_start();
+		Timeline::print_head();
+		$cabecera = (string) ob_get_clean();
+		remove_filter( EventChrome::HOOK, $pon, 99 );
+
+		$this->assertStringContainsString( 'id="evt-evento-css"', $cabecera );
+		$this->assertStringContainsString( '--evt-pie:#053556', $cabecera, 'el color del pie, como en un evento' );
+	}
+
+	/**
+	 * En su página no se escribe nada del tema.
+	 */
+	public function test_its_page_drops_the_theme_assets() {
+		$this->go_to( (string) get_permalink( $this->pagina_linea() ) );
+		wp_enqueue_style( 'tema-prueba', 'https://example.org/wp-content/themes/tema/style.css', array(), '1' );
+
+		EventView::drop_page_assets();
+
+		$this->assertFalse( wp_style_is( 'tema-prueba', 'enqueued' ) );
+		$this->assertSame( '', EventView::drop_page_tag( '<link>', 'tema-prueba', 'https://example.org/wp-content/themes/tema/style.css' ) );
+	}
+
+	/**
+	 * Sin ámbitos no hay desplegable; sin filtro no hay recuento.
+	 */
+	public function test_the_filter_form_without_scopes_or_filter() {
+		$m          = Timeline::model( '2026-09-27' );
+		$m['areas'] = array();
+
+		$html = TimelineView::filter( $m );
+
+		$this->assertStringContainsString( 'name="buscar"', $html );
+		$this->assertStringNotContainsString( '<select', $html );
+		$this->assertStringNotContainsString( 'Quitar filtros', $html );
+		$this->assertFalse( $m['filtered'] );
 	}
 }

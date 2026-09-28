@@ -420,7 +420,7 @@ class Test_Event_View extends WP_UnitTestCase {
 		);
 		// El entorno de desarrollo pone un logo de ejemplo; sin nadie que lo configure, no hay.
 		remove_filter( EventChrome::HOOK, 'evt_dev_chrome' );
-		$this->assertSame( '', EventChrome::nav( $items ), 'sin logo y sin menú no hay barra' );
+		$this->assertStringNotContainsString( 'evt-ev__marca', EventChrome::nav( $items ), 'sin logo configurado no hay logo' );
 
 		$pon = static function ( array $c ): array {
 			return array_merge(
@@ -439,6 +439,36 @@ class Test_Event_View extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'class="evt-ev__marca"', $html );
 		$this->assertStringContainsString( 'alt="Organización"', $html );
 		$this->assertStringNotContainsString( '<nav', $html, 'un menú de una entrada no se pinta' );
+	}
+
+	/**
+	 * Arriba a la derecha: «Acceder» sin sesión; con ella, quién es y salir.
+	 */
+	public function test_the_bar_offers_the_login_or_shows_who_is_in() {
+		$this->acting_as( 0 );
+		$fuera = EventChrome::nav( array() );
+		$this->assertStringContainsString( 'class="evt-ev__acceder"', $fuera );
+		$this->assertStringContainsString( '>Acceder</a>', $fuera );
+		$this->assertStringContainsString( esc_url( wp_login_url() ), $fuera );
+
+		$admin = $this->administrator();
+		wp_update_user(
+			array(
+				'ID'           => $admin,
+				'display_name' => 'Ana Pérez',
+			)
+		);
+		$this->acting_as( $admin );
+		$dentro = EventChrome::nav( array() );
+		$this->assertStringNotContainsString( 'Acceder', $dentro );
+		$this->assertStringContainsString( 'Ana Pérez', $dentro );
+		$this->assertStringContainsString( '>Salir</a>', $dentro );
+
+		// Quien puede usar el aplicativo tiene además el camino a la gestión.
+		$gestion = \Evt\PublicFront\Shell::url( 'home' );
+		$this->assertNotSame( '', $gestion, 'el entorno de tests trae las páginas del aplicativo' );
+		$this->assertStringContainsString( esc_url( $gestion ), EventChrome::account() );
+		$this->assertStringContainsString( '>Gestión de eventos</a>', EventChrome::account() );
 	}
 
 	/**
