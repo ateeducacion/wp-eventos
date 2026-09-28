@@ -386,6 +386,11 @@ final class PageForm {
 		} else {
 			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
 		}
+		if ( $fields['in_menu'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true );
+		}
 
 		// Sin elegir, el de su tipo; y eso también se guarda no guardando, para
 		// que el icono siga al tipo si mañana cambia el de la lista.
@@ -596,6 +601,7 @@ final class PageForm {
 			'section_type' => '',
 			'menu_order'   => 0,
 			'home_card'    => true,
+			'in_menu'      => true,
 			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
@@ -630,6 +636,7 @@ final class PageForm {
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
@@ -687,6 +694,7 @@ final class PageForm {
 			// Una casilla sin marcar no viaja: su ausencia es el «no», pero
 			// solo si el bloque vino en el envío. Sin él, null: no se toca.
 			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'in_menu'      => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_in_menu'] ) : null,
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',

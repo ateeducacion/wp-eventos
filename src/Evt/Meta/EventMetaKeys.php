@@ -214,6 +214,16 @@ final class EventMetaKeys {
 	public const HOME_HIDDEN = 'evt_home_hidden';
 
 	/**
+	 * Sección que no sale en el menú de arriba del evento.
+	 *
+	 * La otra mitad de {@see HOME_HIDDEN}, y tan independiente como ella: una
+	 * sección secundaria puede tener su tarjeta y no ocupar sitio en el menú.
+	 * Sin ninguna de las dos, solo se llega por su enlace. Sin la marca, sale:
+	 * así se ven igual las secciones que ya existen.
+	 */
+	public const MENU_HIDDEN = 'evt_menu_hidden';
+
+	/**
 	 * Icono de la sección, de la lista cerrada. Vacío: el de su tipo.
 	 */
 	public const SECTION_ICON = 'evt_section_icon';
@@ -325,6 +335,7 @@ final class EventMetaKeys {
 			self::CONTACT_MAP,
 			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
+			self::MENU_HIDDEN,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,

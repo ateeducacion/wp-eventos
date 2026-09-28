@@ -100,8 +100,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertSame( array( 'color de fondo de la cabecera', 'tipografía de los títulos' ), $filas[ $propia ] );
 		$this->assertSame( array(), $filas[ $heredada ] );
 
+		update_post_meta( $heredada, EventMetaKeys::MENU_HIDDEN, true );
 		$tabla = $this->pintar( $evento, EventWorkspace::PANEL_SECTIONS );
 		$this->assertSame( 1, substr_count( $tabla, '>Apariencia propia</span>' ) );
+		$this->assertSame( 1, substr_count( $tabla, '>Fuera del menú</span>' ), 'la que no sale en el menú lo dice en su fila' );
 
 		$apariencia = wp_strip_all_tags( $this->pintar( $evento, EventWorkspace::PANEL_LOOK ) );
 		$this->assertStringContainsString( 'Estas secciones tienen apariencia propia', $apariencia );
