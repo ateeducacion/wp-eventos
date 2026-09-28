@@ -72,6 +72,44 @@ final class PageForm {
 	);
 
 	/**
+	 * What each of the seven appearance settings is called on screen.
+	 *
+	 * @return array<string, string> Meta key => rótulo.
+	 */
+	public static function look_labels(): array {
+		return array(
+			EventMetaKeys::HEADER_BG   => 'color de fondo de la cabecera',
+			EventMetaKeys::HEADER_TEXT => 'color del texto de la cabecera',
+			EventMetaKeys::SEPARATOR   => 'separador',
+			EventMetaKeys::LOGO_ID     => 'logo',
+			EventMetaKeys::IMAGE_SHAPE => 'forma de las imágenes',
+			EventMetaKeys::TITLE_FONT  => 'tipografía de los títulos',
+			EventMetaKeys::BODY_FONT   => 'tipografía del cuerpo',
+		);
+	}
+
+	/**
+	 * What a section does not take from its event.
+	 *
+	 * Es lo que se pregunta en el taller para avisar: quien cambia el color
+	 * del evento y no ve el cambio en una sección necesita saber que esa
+	 * sección tiene el suyo.
+	 *
+	 * @param int $page_id Section.
+	 * @return string[] Labels of the settings it has of its own; empty when it follows the event.
+	 */
+	public static function own_look( int $page_id ): array {
+		$propios = array();
+		foreach ( self::look_labels() as $clave => $rotulo ) {
+			$valor = (string) get_post_meta( $page_id, $clave, true );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+		return $propios;
+	}
+
+	/**
 	 * The contact details a contact page carries, and how each is cleaned.
 	 *
 	 * Campos y no HTML dentro del texto: quien organiza rellena la dirección,
@@ -589,9 +627,12 @@ final class PageForm {
 	 * @return array<string, mixed>
 	 */
 	private static function submitted_fields( array $raw ): array {
-		$look = array();
+		// «Volver a la del evento» vacía los siete de una vez: es lo mismo que
+		// dejarlos en blanco a mano, que es como se hereda.
+		$heredar = ! empty( $raw['evt_look_reset'] );
+		$look    = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
-			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
+			$look[ $clave ] = ! $heredar && isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
 		$contacto = array();
 		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {

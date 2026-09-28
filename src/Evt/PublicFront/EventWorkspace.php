@@ -2432,6 +2432,7 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,
 				'status'       => (string) $hija->post_status,

@@ -8,6 +8,18 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.6] — 2026-09-28
+
+### Añadido
+
+- **Se avisa de las secciones que no siguen la apariencia del evento.** Si una sección tiene su propio color, tipografía, separador, forma de imágenes o logo:
+  - lleva la etiqueta «Apariencia propia» en la tabla de secciones;
+  - la pestaña «Apariencia» del evento dice cuáles son y en qué, con el enlace para abrirlas;
+  - dentro de la sección, «Apariencia de esta sección» se abre sola, explica qué no sigue al evento y ofrece «Volver a la apariencia del evento», que vacía esos campos de una vez al guardar
+- **Lo que solo puede hacer administración se marca en amarillo también dentro de los formularios**, con la misma etiqueta «Solo administración» del recuadro de siempre:
+  - en «Datos del evento», que puede asignar cualquier ámbito;
+  - en un evento histórico, que lo sigue pudiendo editar
+
 ## [0.1.5] — 2026-09-28
 
 ### Añadido

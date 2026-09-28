@@ -300,6 +300,9 @@ final class EventSectionsPanel {
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
 				<?php endif; ?>
+				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
+					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
 				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
 					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>

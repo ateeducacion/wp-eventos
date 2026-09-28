@@ -355,6 +355,45 @@ class Test_Page_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Una sección con apariencia propia lo dice, y se devuelve al evento de una vez.
+	 */
+	public function test_a_section_with_its_own_look_says_so_and_goes_back_to_the_event() {
+		$area    = $this->area( 'Innovación' );
+		$yo      = $this->organiser( array( $area ) );
+		$evento  = $this->event( $yo, array( $area ) );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		update_post_meta( $seccion, EventMetaKeys::HEADER_BG, '#aa0000' );
+		update_post_meta( $seccion, EventMetaKeys::SEPARATOR, 'wave' );
+
+		$this->assertSame( array( 'color de fondo de la cabecera', 'separador' ), PageForm::own_look( $seccion ) );
+
+		$this->acting_as( $yo );
+		$_GET['seccion'] = (string) $seccion;
+		$html            = \Evt\PublicFront\View\PageFormView::html( PageForm::model() );
+		$this->assertStringContainsString( '<details class="evt-tarjeta" open>', $html, 'abierto: hay algo que mirar' );
+		$this->assertStringContainsString( 'Esta sección no sigue la apariencia del evento', $html );
+		$this->assertStringContainsString( 'name="evt_look_reset"', $html );
+
+		// Marcar la casilla vacía los siete, aunque el envío traiga valores.
+		$this->submit(
+			$yo,
+			array(
+				'evt_page_id'            => (string) $seccion,
+				'evt_title'              => 'Programa',
+				'evt_look_reset'         => '1',
+				EventMetaKeys::HEADER_BG => '#aa0000',
+				EventMetaKeys::SEPARATOR => 'wave',
+			)
+		);
+		$this->assertSame( array(), PageForm::own_look( $seccion ) );
+		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::HEADER_BG ) );
+
+		$html = \Evt\PublicFront\View\PageFormView::html( PageForm::model() );
+		$this->assertStringNotContainsString( 'no sigue la apariencia', $html );
+		$this->assertStringContainsString( '<details class="evt-tarjeta">', $html, 'plegado otra vez' );
+	}
+
+	/**
 	 * Una página de contacto guarda su dirección, teléfono, correo y mapa, y los pinta.
 	 *
 	 * Campos y no HTML en el texto: es lo que rellena quien organiza.

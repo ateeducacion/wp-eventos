@@ -629,6 +629,11 @@ body.evt-app .evt-hoja {
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
 .evt-state-archived { background: #2b3036; color: #fff; }
 .evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-state-propia { background: var(--evt-inf-cont); color: var(--evt-inf); }
+.evt-propia ul { margin: 0 0 8px; padding-left: 1.2em; }
+.evt-propia p { margin: 0 0 8px; }
+details .evt-propia { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; background: var(--evt-inf-cont); color: #143a63; }
+details > summary .evt-state { margin-left: 8px; vertical-align: middle; }
 
 /* Lo que se dice de una fila al lado de su título: va debajo, más pequeño. */
 .evt-marca-fila { display: table; margin-top: 4px; font-weight: 600; }
@@ -838,6 +843,18 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-adm-texto);
 }
 .evt-solo-admin + .evt-solo-admin { margin-top: 18px; }
+
+/* La línea: una posibilidad de más dentro de un campo que ven todos. */
+.evt-solo-admin--nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+.evt-solo-admin--nota .evt-solo-admin-marca { margin: 0; }
 
 /* La etiqueta en texto, para quien no distingue el color. */
 .evt-solo-admin-marca {

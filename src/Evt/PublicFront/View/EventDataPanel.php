@@ -10,6 +10,7 @@ namespace Evt\PublicFront\View;
 use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 /**
  * Qué es el evento: identidad, cuándo y dónde, clasificación e inscripción.
@@ -46,7 +47,8 @@ final class EventDataPanel {
 			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
-				: 'Seleccione solo ámbitos dentro de su subárbol.'
+				: 'Seleccione solo ámbitos dentro de su subárbol.',
+			(bool) $m['can_set_area']
 		);
 		$sel_tipo  = self::term_select(
 			'evt-type',
@@ -160,9 +162,10 @@ final class EventDataPanel {
 	 * @param string             $elegidos Comma-separated selected term IDs.
 	 * @param string[]           $foreign Read-only organiser labels.
 	 * @param string             $ayuda   Help text.
+	 * @param bool               $todos   Whether any scope may be chosen, which only the administration can.
 	 * @return string
 	 */
-	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda ): string {
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda, bool $todos = false ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
@@ -171,6 +174,9 @@ final class EventDataPanel {
 			<?php foreach ( $terminos as $term_id => $texto ) : ?>
 				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
 			<?php endforeach; ?>
+			<?php if ( $todos ) : ?>
+				<?php echo Shell::admin_note( 'Puede asignar cualquier ámbito, no solo los de su subárbol.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php endif; ?>
 			<?php if ( $foreign ) : ?>
 				<p>Otros ámbitos organizadores (solo lectura):</p>
 				<ul>

@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.5
+ * @version 0.1.6
  */
 
 // phpcs:disable
@@ -6649,6 +6649,28 @@ final class Shell {
 
 
 
+	private const ADMIN_SHIELD = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>';
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function admin_note( string $texto ): string {
+		return '<p class="evt-solo-admin evt-solo-admin--nota"><span class="evt-solo-admin-marca">'
+			. self::ADMIN_SHIELD . ' Solo administración</span> ' . esc_html( $texto ) . '</p>';
+	}
+
+
+
+
 
 
 
@@ -6672,7 +6694,7 @@ final class Shell {
 		?>
 		<section class="evt-solo-admin">
 			<p class="evt-solo-admin-marca">
-				<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>
+				<?php echo self::ADMIN_SHIELD; ?>
 				Solo administración
 			</p>
 			<?php if ( '' !== $titulo ) : ?>
@@ -14528,6 +14550,7 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,
 				'status'       => (string) $hija->post_status,
@@ -16679,6 +16702,9 @@ final class EventSectionsPanel {
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
 				<?php endif; ?>
+				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
+					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
 				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
 					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>
@@ -16757,6 +16783,7 @@ namespace Evt\PublicFront\View;
 use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 
 
@@ -16793,7 +16820,8 @@ final class EventDataPanel {
 			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
-				: 'Seleccione solo ámbitos dentro de su subárbol.'
+				: 'Seleccione solo ámbitos dentro de su subárbol.',
+			(bool) $m['can_set_area']
 		);
 		$sel_tipo  = self::term_select(
 			'evt-type',
@@ -16909,7 +16937,8 @@ final class EventDataPanel {
 
 
 
-	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda ): string {
+
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda, bool $todos = false ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
@@ -16918,6 +16947,9 @@ final class EventDataPanel {
 			<?php foreach ( $terminos as $term_id => $texto ) : ?>
 				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
 			<?php endforeach; ?>
+			<?php if ( $todos ) : ?>
+				<?php echo Shell::admin_note( 'Puede asignar cualquier ámbito, no solo los de su subárbol.' ); ?>
+			<?php endif; ?>
 			<?php if ( $foreign ) : ?>
 				<p>Otros ámbitos organizadores (solo lectura):</p>
 				<ul>
@@ -16998,6 +17030,49 @@ final class EventAppearancePanel {
 
 
 	private const SHAPE_SAMPLE = 'data:image/svg+xml;charset=utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2272%22%20height%3D%2272%22%3E%3Crect%20width%3D%2272%22%20height%3D%2272%22%20fill%3D%22%23c3cad2%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2226%22%20r%3D%2213%22%20fill%3D%22%238a97a6%22%2F%3E%3Cpath%20d%3D%22M8%2072c0-16%2012-26%2028-26s28%2010%2028%2026z%22%20fill%3D%22%238a97a6%22%2F%3E%3C%2Fsvg%3E';
+
+
+
+
+
+
+
+
+
+
+
+	private static function own_look_notice( array $filas ): string {
+		$propias = array_filter(
+			$filas,
+			static function ( $fila ): bool {
+				return ! empty( $fila['own_look'] );
+			}
+		);
+		if ( array() === $propias ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( Assets::alert_class( 'info' ) . ' evt-propia' ); ?>">
+			<p><strong>Estas secciones tienen apariencia propia</strong> y no cambian con lo que elija aquí en lo que se indica:</p>
+			<ul>
+				<?php foreach ( $propias as $fila ) : ?>
+					<li>
+						<?php if ( '' !== (string) ( $fila['edit_url'] ?? '' ) ) : ?>
+							<a class="evt-abre-marco" href="<?php echo esc_url( (string) $fila['edit_url'] ); ?>"><?php echo esc_html( (string) $fila['title'] ); ?></a>:
+						<?php else : ?>
+							<?php echo esc_html( (string) $fila['title'] ); ?>:
+						<?php endif; ?>
+						<?php echo esc_html( implode( ', ', (array) $fila['own_look'] ) ); ?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<p>Lo normal es que todas sigan al evento. Para devolver una, ábrala y, en «Apariencia de esta sección», marque «Volver a la apariencia del evento».</p>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
 
 
 
@@ -17132,6 +17207,7 @@ final class EventAppearancePanel {
 		ob_start();
 		?>
 		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Apariencia</h2><p class="evt-sub">Se aplica a todas las páginas del evento. La muestra cambia al momento; nada se guarda hasta pulsar «Guardar la apariencia».</p></div></div>
+		<?php echo self::own_look_notice( (array) ( $m['sections'] ?? array() ) ); ?>
 		<form class="evt-form" method="post" action="" enctype="multipart/form-data" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_LOOK ), EventWorkspace::nonce_name( EventWorkspace::PANEL_LOOK ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />
@@ -17839,11 +17915,13 @@ final class EventWorkspaceView {
 		if ( true !== $m['archived'] ) {
 			return '';
 		}
-		$texto = true === $m['can_edit']
-			? 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.'
-			: 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.';
 
-		return Shell::notice( 'aviso', $texto );
+
+		if ( true === $m['can_edit'] ) {
+			return Shell::admin_note( 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.' );
+		}
+
+		return Shell::notice( 'aviso', 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.' );
 	}
 
 
@@ -18140,6 +18218,44 @@ final class PageForm {
 		EventMetaKeys::TITLE_FONT,
 		EventMetaKeys::BODY_FONT,
 	);
+
+
+
+
+
+
+	public static function look_labels(): array {
+		return array(
+			EventMetaKeys::HEADER_BG   => 'color de fondo de la cabecera',
+			EventMetaKeys::HEADER_TEXT => 'color del texto de la cabecera',
+			EventMetaKeys::SEPARATOR   => 'separador',
+			EventMetaKeys::LOGO_ID     => 'logo',
+			EventMetaKeys::IMAGE_SHAPE => 'forma de las imágenes',
+			EventMetaKeys::TITLE_FONT  => 'tipografía de los títulos',
+			EventMetaKeys::BODY_FONT   => 'tipografía del cuerpo',
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function own_look( int $page_id ): array {
+		$propios = array();
+		foreach ( self::look_labels() as $clave => $rotulo ) {
+			$valor = (string) get_post_meta( $page_id, $clave, true );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+		return $propios;
+	}
 
 
 
@@ -18659,9 +18775,12 @@ final class PageForm {
 
 
 	private static function submitted_fields( array $raw ): array {
-		$look = array();
+
+
+		$heredar = ! empty( $raw['evt_look_reset'] );
+		$look    = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
-			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
+			$look[ $clave ] = ! $heredar && isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
 		$contacto = array();
 		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
@@ -19079,11 +19198,37 @@ final class PageFormView {
 
 
 	private static function look( array $look ): string {
+		$propios = array();
+		foreach ( PageForm::look_labels() as $clave => $rotulo ) {
+			$valor = (string) ( $look[ $clave ] ?? '' );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+
 		ob_start();
 		?>
-		<details class="evt-tarjeta">
-			<summary>Apariencia de esta sección</summary>
+		<details class="evt-tarjeta"<?php echo array() !== $propios ? ' open' : ''; ?>>
+			<summary>
+				Apariencia de esta sección
+				<?php if ( array() !== $propios ) : ?>
+					<span class="evt-state evt-state-propia">Propia</span>
+				<?php endif; ?>
+			</summary>
 			<p>Lo que deje en blanco se hereda del evento. Solo hace falta tocarlo cuando esta sección tenga que verse distinta.</p>
+			<?php if ( array() !== $propios ) : ?>
+				<div class="evt-propia">
+					<p>
+						<strong>Esta sección no sigue la apariencia del evento</strong> en: <?php echo esc_html( implode( ', ', $propios ) ); ?>.
+						Si cambia eso en la apariencia del evento, aquí no se notará.
+					</p>
+					<?php ?>
+					<label class="evt-check">
+						<input type="checkbox" name="evt_look_reset" value="1" />
+						Volver a la apariencia del evento al guardar: se vacían los campos de abajo
+					</label>
+				</div>
+			<?php endif; ?>
 
 			<div class="evt-form-fila">
 				<?php
@@ -24627,6 +24772,11 @@ body.evt-app .evt-hoja {
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
 .evt-state-archived { background: #2b3036; color: #fff; }
 .evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-state-propia { background: var(--evt-inf-cont); color: var(--evt-inf); }
+.evt-propia ul { margin: 0 0 8px; padding-left: 1.2em; }
+.evt-propia p { margin: 0 0 8px; }
+details .evt-propia { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; background: var(--evt-inf-cont); color: #143a63; }
+details > summary .evt-state { margin-left: 8px; vertical-align: middle; }
 
 /* Lo que se dice de una fila al lado de su título: va debajo, más pequeño. */
 .evt-marca-fila { display: table; margin-top: 4px; font-weight: 600; }
@@ -24836,6 +24986,18 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-adm-texto);
 }
 .evt-solo-admin + .evt-solo-admin { margin-top: 18px; }
+
+/* La línea: una posibilidad de más dentro de un campo que ven todos. */
+.evt-solo-admin--nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+.evt-solo-admin--nota .evt-solo-admin-marca { margin: 0; }
 
 /* La etiqueta en texto, para quien no distingue el color. */
 .evt-solo-admin-marca {

@@ -84,6 +84,53 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Lo que una sección no toma del evento se ve en la tabla y en «Apariencia».
+	 *
+	 * Sin esto, quien cambia el color del evento y no lo ve en una sección
+	 * piensa que no se ha guardado.
+	 */
+	public function test_sections_with_their_own_look_are_pointed_out() {
+		$evento   = $this->evento();
+		$propia   = $this->event_page( $evento, 'contacto', array( 'post_title' => 'Contacto' ) );
+		$heredada = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		update_post_meta( $propia, EventMetaKeys::HEADER_BG, '#aa0000' );
+		update_post_meta( $propia, EventMetaKeys::TITLE_FONT, 'lato' );
+
+		$filas = array_column( (array) $this->modelo( $evento, EventWorkspace::PANEL_SECTIONS )['sections'], 'own_look', 'id' );
+		$this->assertSame( array( 'color de fondo de la cabecera', 'tipografía de los títulos' ), $filas[ $propia ] );
+		$this->assertSame( array(), $filas[ $heredada ] );
+
+		$tabla = $this->pintar( $evento, EventWorkspace::PANEL_SECTIONS );
+		$this->assertSame( 1, substr_count( $tabla, '>Apariencia propia</span>' ) );
+
+		$apariencia = wp_strip_all_tags( $this->pintar( $evento, EventWorkspace::PANEL_LOOK ) );
+		$this->assertStringContainsString( 'Estas secciones tienen apariencia propia', $apariencia );
+		$this->assertStringContainsString( 'color de fondo de la cabecera, tipografía de los títulos', $apariencia );
+		$this->assertStringNotContainsString( 'Programa:', $apariencia );
+
+		delete_post_meta( $propia, EventMetaKeys::HEADER_BG );
+		delete_post_meta( $propia, EventMetaKeys::TITLE_FONT );
+		$this->assertStringNotContainsString( 'apariencia propia', $this->pintar( $evento, EventWorkspace::PANEL_LOOK ), 'si todas siguen al evento, no se dice nada' );
+	}
+
+	/**
+	 * Elegir cualquier ámbito es de administración, y se pinta en amarillo.
+	 */
+	public function test_choosing_any_scope_is_marked_as_administration_only() {
+		$area   = $this->area( 'Innovación' );
+		$evento = $this->event( $this->administrator(), array( $area ) );
+
+		$this->acting_as( $this->administrator() );
+		$admin = $this->pintar( $evento, EventWorkspace::PANEL_SETTINGS );
+		$this->assertStringContainsString( 'evt-solo-admin--nota', $admin );
+		$this->assertStringContainsString( 'Puede asignar cualquier ámbito', $admin );
+
+		$this->acting_as( $this->organiser( array( $area ) ) );
+		$suyo = $this->pintar( $evento, EventWorkspace::PANEL_SETTINGS );
+		$this->assertStringNotContainsString( 'evt-solo-admin', $suyo );
+	}
+
+	/**
 	 * Lo que se pinta de una pestaña.
 	 *
 	 * @param int    $evento Event ID.

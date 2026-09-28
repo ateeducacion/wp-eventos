@@ -286,11 +286,37 @@ final class PageFormView {
 	 * @return string
 	 */
 	private static function look( array $look ): string {
+		$propios = array();
+		foreach ( PageForm::look_labels() as $clave => $rotulo ) {
+			$valor = (string) ( $look[ $clave ] ?? '' );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+
 		ob_start();
 		?>
-		<details class="evt-tarjeta">
-			<summary>Apariencia de esta sección</summary>
+		<details class="evt-tarjeta"<?php echo array() !== $propios ? ' open' : ''; ?>>
+			<summary>
+				Apariencia de esta sección
+				<?php if ( array() !== $propios ) : ?>
+					<span class="evt-state evt-state-propia">Propia</span>
+				<?php endif; ?>
+			</summary>
 			<p>Lo que deje en blanco se hereda del evento. Solo hace falta tocarlo cuando esta sección tenga que verse distinta.</p>
+			<?php if ( array() !== $propios ) : ?>
+				<div class="evt-propia">
+					<p>
+						<strong>Esta sección no sigue la apariencia del evento</strong> en: <?php echo esc_html( implode( ', ', $propios ) ); ?>.
+						Si cambia eso en la apariencia del evento, aquí no se notará.
+					</p>
+					<?php // Una casilla y no un botón: con Intro se envía el primer botón del formulario, y sería este. ?>
+					<label class="evt-check">
+						<input type="checkbox" name="evt_look_reset" value="1" />
+						Volver a la apariencia del evento al guardar: se vacían los campos de abajo
+					</label>
+				</div>
+			<?php endif; ?>
 
 			<div class="evt-form-fila">
 				<?php

@@ -148,11 +148,13 @@ final class EventWorkspaceView {
 		if ( true !== $m['archived'] ) {
 			return '';
 		}
-		$texto = true === $m['can_edit']
-			? 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.'
-			: 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.';
+		// Quien administra sigue pudiendo editarlo, y eso es suyo y de nadie
+		// más: va en amarillo, como todo lo que solo puede hacer administración.
+		if ( true === $m['can_edit'] ) {
+			return Shell::admin_note( 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.' );
+		}
 
-		return Shell::notice( 'aviso', $texto );
+		return Shell::notice( 'aviso', 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.' );
 	}
 
 	/**
