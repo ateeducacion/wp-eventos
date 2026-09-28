@@ -369,6 +369,90 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 }
 
 add_action( 'init', 'evt_register_roles', 5 );
+if ( ! function_exists( 'evt_scope_select_vendor' ) ) {
+	/**
+	 * Pinned Tom Select build (script and stylesheet) and their SRI hashes.
+	 *
+	 * Con un árbol de ámbitos de varios niveles, cada opción lleva la ruta
+	 * entera y el desplegable nativo se vuelve inmanejable: Tom Select deja
+	 * escribir para buscar. No depende de jQuery.
+	 *
+	 * Los hashes se calculan pidiendo cada fichero al mismo CDN que lo sirve:
+	 *
+	 *   curl -s https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/js/tom-select.complete.min.js \
+	 *     | openssl dgst -sha384 -binary | openssl base64 -A
+	 *
+	 * Calculados el 2026-09-28, dos veces y con el mismo resultado. La versión
+	 * está clavada aquí, en las URL y en `package.json` (ADR-0015).
+	 *
+	 * @return array{ver:string, js:string, js_sri:string, css:string, css_sri:string}
+	 */
+	function evt_scope_select_vendor(): array {
+		return array(
+			'ver'     => '2.6.2',
+			'js'      => 'https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/js/tom-select.complete.min.js',
+			'js_sri'  => 'sha384-1mYKSrq1Nu5YJmWrIU9cvwWQlUyyukJJM9XMkAxY03nb/T69CK+Sn7rjFxVU3SSM',
+			'css'     => 'https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/css/tom-select.min.css',
+			'css_sri' => 'sha384-TmpK/k9hjDn5j0CYqLHMnHXcBwdFN8NvMbPDxOC5sxl76DGqYfHOjiSobNSHB4NS',
+		);
+	}
+}
+
+if ( ! function_exists( 'evt_scope_select_assets' ) ) {
+	/**
+	 * Load Tom Select on the profile screens, only for whoever can set the scope.
+	 *
+	 * Si no llega, el campo sigue siendo el `<select>` de siempre: se puede
+	 * elegir igual, solo que sin buscar.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	function evt_scope_select_assets( $hook_suffix ): void {
+		if ( ! in_array( $hook_suffix, array( 'profile.php', 'user-edit.php' ), true ) || ! evt_can_edit_admin_only_fields() ) {
+			return;
+		}
+		$vendor = evt_scope_select_vendor();
+		wp_enqueue_style( 'tom-select', $vendor['css'], array(), $vendor['ver'] );
+		wp_enqueue_script( 'tom-select', $vendor['js'], array(), $vendor['ver'], true );
+		wp_add_inline_script(
+			'tom-select',
+			"document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('evt_area');if(s&&window.TomSelect){new TomSelect(s,{maxOptions:null,allowEmptyOption:true,placeholder:'Escriba para buscar un ámbito'});}});"
+		);
+		wp_add_inline_style( 'tom-select', '#evt_area + .ts-wrapper,#evt_area.tomselected{max-width:40em}.ts-dropdown .option{white-space:normal}' );
+	}
+}
+
+if ( ! function_exists( 'evt_scope_select_sri' ) ) {
+	/**
+	 * Add the integrity attributes to the two Tom Select tags.
+	 *
+	 * Solo cuando la URL es la del CDN: en desarrollo el mu-plugin la reescribe
+	 * a `node_modules` y ahí el hash no aplica.
+	 *
+	 * @param string $tag    Tag WordPress is about to print.
+	 * @param string $handle Its handle.
+	 * @param string $src    Its URL.
+	 * @return string
+	 */
+	function evt_scope_select_sri( $tag, $handle, $src ): string {
+		$tag = (string) $tag;
+		if ( 'tom-select' !== $handle || 0 !== strpos( (string) $src, 'https://cdn.jsdelivr.net/' ) ) {
+			return $tag;
+		}
+		$vendor = evt_scope_select_vendor();
+		$es_js  = false !== strpos( $tag, '<script' );
+		return str_replace(
+			$es_js ? ' src=' : ' href=',
+			' integrity="' . ( $es_js ? $vendor['js_sri'] : $vendor['css_sri'] ) . '" crossorigin="anonymous"' . ( $es_js ? ' src=' : ' href=' ),
+			$tag
+		);
+	}
+}
+
+add_action( 'admin_enqueue_scripts', 'evt_scope_select_assets' );
+add_filter( 'script_loader_tag', 'evt_scope_select_sri', 10, 3 );
+add_filter( 'style_loader_tag', 'evt_scope_select_sri', 10, 3 );
 add_action( 'show_user_profile', 'evt_render_profile_fields' );
 add_action( 'edit_user_profile', 'evt_render_profile_fields' );
 add_action( 'personal_options_update', 'evt_save_profile_fields' );
