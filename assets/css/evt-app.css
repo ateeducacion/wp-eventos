@@ -223,11 +223,13 @@ html:has(> body.evt-app) { overflow-x: clip; }
   gap: 10px;
   cursor: pointer;
   border-radius: 12px;
-  padding: 4px 6px;
+  padding: 6px 12px 6px 8px;
+  background: var(--evt-sup-2);
 }
 .evt-yo > summary::-webkit-details-marker { display: none; }
-.evt-yo > summary:hover, .evt-yo[open] > summary { background: var(--evt-sup-2); }
+.evt-yo > summary:hover, .evt-yo[open] > summary { background: var(--evt-linea); }
 .evt-yo-ava {
+  flex: none;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -235,16 +237,19 @@ html:has(> body.evt-app) { overflow-x: clip; }
   place-items: center;
   font-size: 13px;
   font-weight: 700;
-  background: var(--evt-sup-2);
+  background: var(--evt-sup);
   color: var(--evt-texto);
 }
-.evt-yo-txt { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
+/* El nombre y el correo, en una línea; el ámbito, que puede ser largo, crece
+   hasta dos. */
+.evt-yo-txt { display: flex; flex-direction: column; min-width: 0; max-width: 20rem; line-height: 1.25; text-align: left; }
 .evt-yo-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--evt-texto); }
-.evt-yo-r { font-size: 12.5px; color: var(--evt-texto-2); }
-.evt-yo-a { font-weight: 600; color: var(--evt-pri); }
+.evt-yo-r { font-size: 12.5px; color: var(--evt-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-yo-a { font-weight: 600; color: var(--evt-pri); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .evt-yo-a::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
 .evt-yo-menu {
   position: absolute;
+  left: 0;
   right: 0;
   top: calc(100% + 6px);
   min-width: 12rem;

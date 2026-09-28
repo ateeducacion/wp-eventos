@@ -175,12 +175,15 @@
 }
 
 .evt-ev__barra > div {
+	position: relative;
 	display: flex;
-	flex-wrap: wrap;
+	gap: 1rem;
 	align-items: center;
-	justify-content: space-between;
-	gap: 0.5rem 2rem;
 	min-height: 90px;
+}
+
+.evt-ev__marca {
+	flex: none;
 }
 
 .evt-ev__marca img {
@@ -189,16 +192,82 @@
 	width: auto;
 }
 
+/* Todo en una línea: las secciones ocupan lo que sobra, pegadas a la cuenta. */
+.evt-ev__nav {
+	display: flex;
+	flex: 1;
+	justify-content: flex-end;
+}
+
 .evt-ev__nav ul {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	margin: 0;
 	padding: 0.5rem 0;
 	list-style: none;
 }
 
-.evt-ev__nav a {
+/* El menú plegado, solo cuando la línea no da para todo. */
+.evt-ev__menu {
+	display: none;
+}
+
+.evt-ev__menu > summary {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--evt-radio);
+	color: var(--evt-titulos);
+	list-style: none;
+	cursor: pointer;
+}
+
+.evt-ev__menu > summary::-webkit-details-marker {
+	display: none;
+}
+
+.evt-ev__menu[open] > summary {
+	background: var(--evt-suave);
+}
+
+.evt-ev__menu > nav {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	left: 0;
+	z-index: 20;
+	padding: 0.5rem var(--evt-espacio);
+	background: var(--evt-papel);
+	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.evt-ev__menu ul {
 	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__menu a {
+	padding-block: 0.75rem;
+}
+
+@media (max-width: 1280px) {
+	.evt-ev__nav {
+		display: none;
+	}
+
+	.evt-ev__menu {
+		display: block;
+	}
+}
+
+.evt-ev__nav a,
+.evt-ev__menu a {
+	display: flex;
+	white-space: nowrap;
 	align-items: center;
 	gap: 0.35rem;
 	padding: 0.35rem 0.6rem;
@@ -215,7 +284,9 @@
 }
 
 .evt-ev__nav a:hover,
-.evt-ev__nav [aria-current="page"] {
+.evt-ev__nav [aria-current="page"],
+.evt-ev__menu a:hover,
+.evt-ev__menu [aria-current="page"] {
 	color: var(--evt-titulos);
 	box-shadow: inset 0 -2px 0 var(--evt-acento);
 }
@@ -885,9 +956,9 @@
 	border-collapse: collapse;
 }
 
-/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. */
-.evt-ev__acceder,
-.evt-ev__cuenta summary {
+/* La cuenta, siempre a la derecha: «Acceder» o quién ha entrado. El bloque
+   de quien ha entrado es el mismo que en la cabecera del aplicativo. */
+.evt-ev__acceder {
 	margin-left: auto;
 	padding: 0.4rem 0.9rem;
 	border: 1px solid currentColor;
@@ -895,48 +966,129 @@
 	color: var(--evt-tinta);
 	font-weight: 600;
 	text-decoration: none;
-	cursor: pointer;
 }
 
-.evt-ev__cuenta {
+.evt-yo {
 	position: relative;
 	margin-left: auto;
 }
 
-.evt-ev__cuenta summary {
-	display: block;
+.evt-yo > summary {
+	display: flex;
+	gap: 0.6rem;
+	align-items: center;
+	padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+	border-radius: 12px;
+	background: var(--evt-suave);
 	list-style: none;
+	cursor: pointer;
 }
 
-.evt-ev__cuenta summary::-webkit-details-marker {
+.evt-yo > summary::-webkit-details-marker {
 	display: none;
 }
 
-.evt-ev__cuenta-menu {
+.evt-yo > summary:hover,
+.evt-yo[open] > summary {
+	background: var(--evt-borde);
+}
+
+.evt-yo-ava {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--evt-papel);
+	color: var(--evt-titulos);
+	font-size: 0.8rem;
+	font-weight: 700;
+}
+
+/* El nombre y el correo, en una línea; el ámbito, que puede ser largo, crece
+   hasta dos. */
+.evt-yo-txt {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	max-width: 20rem;
+	line-height: 1.25;
+	text-align: left;
+}
+
+.evt-yo-n {
+	display: flex;
+	gap: 0.4rem;
+	align-items: center;
+	color: var(--evt-titulos);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.evt-yo-r {
+	overflow: hidden;
+	color: var(--evt-tinta);
+	font-size: 0.8rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.evt-yo-a {
+	display: -webkit-box;
+	color: var(--evt-enlace);
+	font-weight: 600;
+	white-space: normal;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.evt-yo-a::before {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	content: "";
+	vertical-align: 1px;
+}
+
+.evt-yo-menu {
 	position: absolute;
 	right: 0;
 	z-index: 20;
 	display: flex;
 	flex-direction: column;
-	width: max-content;
+	width: max(100%, 12rem);
 	max-width: calc(100vw - 2rem);
 	margin-top: 0.3rem;
 	padding: 0.4rem 0;
 	background: var(--evt-papel);
-	border: 1px solid var(--evt-suave);
+	border: 1px solid var(--evt-borde);
 	border-radius: 8px;
 	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
 }
 
-.evt-ev__cuenta-menu a {
+.evt-yo-menu a {
 	padding: 0.45rem 1rem;
 	color: var(--evt-tinta);
 	text-decoration: none;
 }
 
-.evt-ev__cuenta-menu a:hover,
-.evt-ev__cuenta-menu a:focus-visible {
+.evt-yo-menu a:hover,
+.evt-yo-menu a:focus-visible {
 	background: var(--evt-suave);
+}
+
+@media (max-width: 600px) {
+	.evt-yo-txt {
+		display: none;
+	}
+
+	.evt-yo > summary {
+		padding: 0.25rem;
+	}
 }
 
 /* ─── el pie institucional ────────────────────────────────────────────── */
@@ -975,6 +1127,7 @@
 
 @media print {
 	.evt-ev__barra,
+	.evt-ev__menu,
 	.evt-ev__saltar,
 	.evt-ev__acciones {
 		display: none;

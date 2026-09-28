@@ -146,6 +146,8 @@ final class EventChrome {
 	 *
 	 * El logo es de quien despliega ({@see chrome()}): sin configurar no sale.
 	 * El menú, con una sola entrada, tampoco: un menú de un elemento es ruido.
+	 * Todo va en una línea; cuando no cabe, las secciones pasan a un menú
+	 * plegado (la misma lista, dentro de un `<details>`).
 	 * La cuenta sale siempre, a la derecha: «Acceder» sin sesión y, con ella,
 	 * quién es y a dónde puede ir.
 	 *
@@ -172,18 +174,30 @@ final class EventChrome {
 					<?php echo '' !== $url ? '</a>' : '</span>'; ?>
 				<?php endif; ?>
 				<?php if ( $menu ) : ?>
-					<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
-						<ul class="nav">
-							<?php foreach ( $items as $item ) : ?>
-								<li class="nav-item">
-									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
-								</li>
-							<?php endforeach; ?>
-						</ul>
-					</nav>
+					<?php
+					ob_start();
+					?>
+					<ul class="nav">
+						<?php foreach ( $items as $item ) : ?>
+							<li class="nav-item">
+								<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
+									<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+					<?php
+					$lista = (string) ob_get_clean();
+					?>
+					<nav class="evt-ev__nav" aria-label="Secciones del evento"><?php echo $lista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construida escapada arriba. ?></nav>
 				<?php endif; ?>
 				<?php echo self::account(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php if ( $menu ) : ?>
+					<?php // En pantallas estrechas, las secciones van en un menú plegado; sin JavaScript: es un `<details>`. ?>
+					<details class="evt-ev__menu">
+						<summary><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg><span class="screen-reader-text">Secciones del evento</span></summary>
+						<nav aria-label="Secciones del evento"><?php echo $lista; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construida escapada arriba. ?></nav>
+					</details>
+				<?php endif; ?>
 			</div>
 		</div>
 		<?php
@@ -193,8 +207,8 @@ final class EventChrome {
 	/**
 	 * Top right: «Acceder» without a session, who is looking with one.
 	 *
-	 * Con sesión, el nombre abre un menú con la gestión —solo para quien puede
-	 * usar el aplicativo— y la salida. Sin JavaScript: es un `<details>`.
+	 * Con sesión, el mismo bloque que la cabecera del aplicativo
+	 * ({@see Shell::account()}): quien entra ve lo mismo en los dos sitios.
 	 *
 	 * @return string
 	 */
@@ -203,21 +217,7 @@ final class EventChrome {
 		if ( ! is_user_logged_in() ) {
 			return '<a class="evt-ev__acceder" href="' . esc_url( wp_login_url( $aqui ) ) . '">Acceder</a>';
 		}
-
-		$gestion = Shell::can_use() ? Shell::url( 'home' ) : '';
-		ob_start();
-		?>
-		<details class="evt-ev__cuenta">
-			<summary><?php echo esc_html( wp_get_current_user()->display_name ); ?></summary>
-			<div class="evt-ev__cuenta-menu">
-				<?php if ( '' !== $gestion ) : ?>
-					<a href="<?php echo esc_url( $gestion ); ?>">Gestión de eventos</a>
-				<?php endif; ?>
-				<a href="<?php echo esc_url( wp_logout_url( $aqui ) ); ?>">Salir</a>
-			</div>
-		</details>
-		<?php
-		return (string) ob_get_clean();
+		return Shell::account( $aqui );
 	}
 
 	/**
