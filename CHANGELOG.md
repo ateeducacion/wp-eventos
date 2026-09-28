@@ -17,6 +17,11 @@ en el subsitio `eventos` se hace después.
   - Vienen marcadas, así que las secciones que ya existen se ven igual.
   - Sin ninguna de las dos, a la sección solo se llega con su enlace.
   - En la tabla de secciones, las etiquetas «Fuera del menú» y «Sin tarjeta en la portada» dicen cuál es cuál
+- **Con la sesión iniciada, la inscripción ya viene con los datos de la cuenta** ([ADR-0048](docs/adr/ADR-0048-con-sesion-la-inscripcion-toma-los-datos-de-la-cuenta.md)).
+  - Nombre, apellidos, correo y centro salen rellenos y en gris, y no se pueden cambiar en el formulario; el documento de identidad y el teléfono se siguen escribiendo.
+  - El centro sale del catálogo por el código que la cuenta tiene guardado; si el código no está en el catálogo, se elige como siempre.
+  - Lo que falte en la cuenta se escribe a mano.
+  - Sin sesión, la página de una inscripción que la pide lleva directamente a iniciar sesión y vuelve a ella
 - **Iconos en las secciones.** Cada tipo de sección trae el suyo (un calendario el programa, un sobre el contacto…) y quien organiza puede elegir otro entre catorce dibujos. Salen junto al nombre en el menú del evento, en la tabla de secciones del taller y en la tarjeta de la portada cuando la sección no tiene imagen destacada
 - **Mapa en la página de contacto** ([ADR-0046](docs/adr/ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md)).
   - En «Datos de contacto», cada punto lleva sus coordenadas, tal como las copia cualquier mapa de internet (`28.4636, -16.2518`), un texto y, si se quiere, un enlace.
@@ -59,6 +64,10 @@ en el subsitio `eventos` se hace después.
   - El botón «Añadir otra pregunta» añade tantas como se quiera antes de guardar.
   - Cada pregunta guardada tiene la casilla «Quitar esta pregunta al guardar», en vez de tener que borrar su rótulo.
   - Sin JavaScript, todo sigue como antes
+
+### Pendiente antes de desplegar
+
+- Para que la inscripción venga rellena, el sitio tiene que guardar al iniciar sesión el nombre, los apellidos, el correo y el código del centro (meta de usuario `codigo`) en la ficha de cada persona. El aplicativo solo los lee
 
 ### Corregido
 
