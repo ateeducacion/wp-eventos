@@ -39,6 +39,9 @@ en el subsitio `eventos` se hace después.
   - Al lado, su imagen de perfil, la misma que en la barra de WordPress; si el sitio no las enseña, sus iniciales.
   - El menú que abre trae «Mis eventos» —si gestiona eventos—, «Ajustes del aplicativo» —si administra— y «Salir».
   - Sin sesión, sigue saliendo «Acceder»
+- **La barra de arriba de las páginas públicas cabe en una línea**: el logo, las secciones y la cuenta.
+  - Cuando la pantalla no da para todo, las secciones pasan a un menú plegado, con el botón de las tres rayas a la derecha.
+  - Funciona sin JavaScript
 - **El menú «Eventos» del escritorio de WordPress solo lo ve administración.** Quien organiza gestiona su evento entero desde el aplicativo, así que en el escritorio ya no ve:
   - el menú «Eventos», con sus ponentes y actividades;
   - «Evento», «Ponente» y «Actividad» en el «+ Nuevo» de la barra de arriba.

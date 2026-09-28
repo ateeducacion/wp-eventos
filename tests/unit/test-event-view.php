@@ -318,7 +318,11 @@ class Test_Event_View extends WP_UnitTestCase {
 
 		$tarjetas = SectionsBlock::html( $m );
 		$this->assertSame( 1, substr_count( $tarjetas, 'evt-ev__tarjeta-icono' ), 'solo la tarjeta sin imagen pinta el icono' );
-		$this->assertStringContainsString( 'class="evt-ev__nav-icono"', EventChrome::nav( (array) $m['nav'] ) );
+		$barra = EventChrome::nav( (array) $m['nav'] );
+		$this->assertStringContainsString( 'class="evt-ev__nav-icono"', $barra );
+		// La misma lista va también en el menú plegado de las pantallas estrechas.
+		$this->assertStringContainsString( '<details class="evt-ev__menu">', $barra );
+		$this->assertSame( 2, substr_count( $barra, 'aria-current="page"' ) );
 	}
 
 	/**

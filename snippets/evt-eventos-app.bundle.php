@@ -22887,6 +22887,8 @@ final class EventChrome {
 
 
 
+
+
 	public static function nav( array $items ): string {
 		$chrome = self::chrome();
 		$logo   = (string) $chrome['brand_logo'];
@@ -22907,18 +22909,30 @@ final class EventChrome {
 					<?php echo '' !== $url ? '</a>' : '</span>'; ?>
 				<?php endif; ?>
 				<?php if ( $menu ) : ?>
-					<nav class="evt-ev__nav navbar navbar-expand-lg" aria-label="Secciones del evento">
-						<ul class="nav">
-							<?php foreach ( $items as $item ) : ?>
-								<li class="nav-item">
-									<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
-										<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
-								</li>
-							<?php endforeach; ?>
-						</ul>
-					</nav>
+					<?php
+					ob_start();
+					?>
+					<ul class="nav">
+						<?php foreach ( $items as $item ) : ?>
+							<li class="nav-item">
+								<a class="nav-link" href="<?php echo esc_url( (string) $item['url'] ); ?>"
+									<?php echo ! empty( $item['current'] ) ? ' aria-current="page"' : ''; ?>><?php echo wp_kses( SectionIcons::svg( (string) ( $item['icon'] ?? '' ), 16, 'evt-ev__nav-icono' ), SectionIcons::KSES ); ?><?php echo esc_html( (string) $item['label'] ); ?></a>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+					<?php
+					$lista = (string) ob_get_clean();
+					?>
+					<nav class="evt-ev__nav" aria-label="Secciones del evento"><?php echo $lista; ?></nav>
 				<?php endif; ?>
 				<?php echo self::account(); ?>
+				<?php if ( $menu ) : ?>
+					<?php ?>
+					<details class="evt-ev__menu">
+						<summary><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg><span class="screen-reader-text">Secciones del evento</span></summary>
+						<nav aria-label="Secciones del evento"><?php echo $lista; ?></nav>
+					</details>
+				<?php endif; ?>
 			</div>
 		</div>
 		<?php
@@ -26570,12 +26584,15 @@ body .swal2-container { z-index: 100010; }
 }
 
 .evt-ev__barra > div {
+	position: relative;
 	display: flex;
-	flex-wrap: wrap;
+	gap: 1rem;
 	align-items: center;
-	justify-content: space-between;
-	gap: 0.5rem 2rem;
 	min-height: 90px;
+}
+
+.evt-ev__marca {
+	flex: none;
 }
 
 .evt-ev__marca img {
@@ -26584,16 +26601,82 @@ body .swal2-container { z-index: 100010; }
 	width: auto;
 }
 
+/* Todo en una línea: las secciones ocupan lo que sobra, pegadas a la cuenta. */
+.evt-ev__nav {
+	display: flex;
+	flex: 1;
+	justify-content: flex-end;
+}
+
 .evt-ev__nav ul {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	margin: 0;
 	padding: 0.5rem 0;
 	list-style: none;
 }
 
-.evt-ev__nav a {
+/* El menú plegado, solo cuando la línea no da para todo. */
+.evt-ev__menu {
+	display: none;
+}
+
+.evt-ev__menu > summary {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--evt-radio);
+	color: var(--evt-titulos);
+	list-style: none;
+	cursor: pointer;
+}
+
+.evt-ev__menu > summary::-webkit-details-marker {
+	display: none;
+}
+
+.evt-ev__menu[open] > summary {
+	background: var(--evt-suave);
+}
+
+.evt-ev__menu > nav {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	left: 0;
+	z-index: 20;
+	padding: 0.5rem var(--evt-espacio);
+	background: var(--evt-papel);
+	box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.evt-ev__menu ul {
 	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.evt-ev__menu a {
+	padding-block: 0.75rem;
+}
+
+@media (max-width: 1280px) {
+	.evt-ev__nav {
+		display: none;
+	}
+
+	.evt-ev__menu {
+		display: block;
+	}
+}
+
+.evt-ev__nav a,
+.evt-ev__menu a {
+	display: flex;
+	white-space: nowrap;
 	align-items: center;
 	gap: 0.35rem;
 	padding: 0.35rem 0.6rem;
@@ -26610,7 +26693,9 @@ body .swal2-container { z-index: 100010; }
 }
 
 .evt-ev__nav a:hover,
-.evt-ev__nav [aria-current="page"] {
+.evt-ev__nav [aria-current="page"],
+.evt-ev__menu a:hover,
+.evt-ev__menu [aria-current="page"] {
 	color: var(--evt-titulos);
 	box-shadow: inset 0 -2px 0 var(--evt-acento);
 }
@@ -27451,6 +27536,7 @@ body .swal2-container { z-index: 100010; }
 
 @media print {
 	.evt-ev__barra,
+	.evt-ev__menu,
 	.evt-ev__saltar,
 	.evt-ev__acciones {
 		display: none;
