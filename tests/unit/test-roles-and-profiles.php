@@ -62,6 +62,51 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$this->assertFalse( $editor->has_cap( 'manage_options' ) );
 	}
 
+	/** Everybody sees their centre code; only administración changes it. */
+	public function test_the_centre_code_is_read_only_except_for_administracion() {
+		add_filter(
+			'evt_centres',
+			static function (): array {
+				return array( '38000002' => 'IES El Mirador' );
+			}
+		);
+		$quien = (int) self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		update_user_meta( $quien, 'codigo', '38000002' );
+		wp_set_current_user( $quien );
+
+		ob_start();
+		evt_render_centre_field( get_user_by( 'id', $quien ) );
+		$html = (string) ob_get_clean();
+		$this->assertStringContainsString( 'Código de centro', $html );
+		$this->assertStringContainsString( 'value="38000002"', $html );
+		$this->assertStringContainsString( ' readonly', $html );
+		$this->assertStringContainsString( 'IES El Mirador', $html, 'con el nombre del catálogo' );
+
+		// Aunque lo envíe con un nonce válido, no lo cambia.
+		$_POST = array(
+			'evt_profile_centre_nonce' => wp_create_nonce( 'evt_profile_centre_' . $quien ),
+			'evt_codigo'               => '38000001',
+		);
+		evt_save_centre_field( $quien );
+		$this->assertSame( '38000002', get_user_meta( $quien, 'codigo', true ) );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		ob_start();
+		evt_render_centre_field( get_user_by( 'id', $quien ) );
+		$this->assertStringNotContainsString( ' readonly', (string) ob_get_clean() );
+
+		$_POST = array(
+			'evt_profile_centre_nonce' => wp_create_nonce( 'evt_profile_centre_' . $quien ),
+			'evt_codigo'               => 'no-es-un-codigo',
+		);
+		evt_save_centre_field( $quien );
+		$this->assertSame( '38000002', get_user_meta( $quien, 'codigo', true ), 'solo 8 cifras' );
+		$_POST['evt_codigo'] = '38000001';
+		evt_save_centre_field( $quien );
+		$this->assertSame( '38000001', get_user_meta( $quien, 'codigo', true ) );
+		$_POST = array();
+	}
+
 	/** Editors cannot see or change their own authorization scope. */
 	public function test_editor_scope_field_is_admin_only() {
 		$area   = (int) self::factory()->term->create( array( 'taxonomy' => 'evt_area' ) );

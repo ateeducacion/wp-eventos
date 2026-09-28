@@ -99,3 +99,18 @@ lo que el sitio de destino tenga para eso, fuera de este repositorio.
 ### Neutras
 
 - La inscripción pública sin sesión no cambia.
+
+## Adenda — 2026-09-28
+
+- **Los datos de la cuenta se dan por buenos.** Esta ADR no decide quién los
+  rellena ni cómo: el aplicativo parte de que el nombre, los apellidos, el
+  correo y la meta `codigo` de la cuenta son correctos.
+- **La meta `codigo` se ve en el perfil**, como «Código de centro», con el
+  nombre del centro sacado del catálogo. Vive en el snippet «EVT — Roles y
+  perfiles» (`snippets/roles-and-profiles.php`), no en el aplicativo. La
+  cambia solo administración, y solo con un código de 8 cifras; los demás la
+  ven de solo lectura, y el guardado lo comprueba en el servidor, no solo la
+  pantalla. Así, donde la cuenta traiga un código equivocado, administración
+  lo corrige sin salir del perfil.
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

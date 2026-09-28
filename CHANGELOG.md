@@ -22,6 +22,9 @@ en el subsitio `eventos` se hace después.
   - El centro sale del catálogo por el código que la cuenta tiene guardado; si el código no está en el catálogo, se elige como siempre.
   - Lo que falte en la cuenta se escribe a mano.
   - Sin sesión, la página de una inscripción que la pide lleva directamente a iniciar sesión y vuelve a ella
+- **«Código de centro» en el perfil de cada usuario**, con el nombre del centro sacado del catálogo.
+  - Lo cambia administración, que solo guarda códigos de 8 cifras; los demás lo ven de solo lectura.
+  - Es el código con el que se rellena el centro de la inscripción
 - **Textos de protección de datos por defecto** ([ADR-0020](docs/adr/ADR-0020-el-consentimiento-es-una-casilla.md), adenda).
   - En «Ajustes» del aplicativo, la «Información sobre el tratamiento de sus datos» y el «Consentimiento informado» con los que empieza cada evento nuevo.
   - Al crear un evento se copian en él; después se cambian en la «Inscripción» del propio evento, y cambiar los de «Ajustes» no toca los eventos que ya existen.
@@ -72,7 +75,7 @@ en el subsitio `eventos` se hace después.
 ### Pendiente antes de desplegar
 
 - Revisar y guardar en «Ajustes» los textos de protección de datos por defecto
-- Para que la inscripción venga rellena, el sitio tiene que guardar al iniciar sesión el nombre, los apellidos, el correo y el código del centro (meta de usuario `codigo`) en la ficha de cada persona. El aplicativo solo los lee
+- Actualizar también el snippet «EVT — Roles y perfiles», que es donde vive el campo «Código de centro» del perfil
 
 ### Corregido
 
