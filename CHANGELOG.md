@@ -72,15 +72,15 @@ en el subsitio `eventos` se hace después.
   - Cada pregunta guardada tiene la casilla «Quitar esta pregunta al guardar», en vez de tener que borrar su rótulo.
   - Sin JavaScript, todo sigue como antes
 
-### Pendiente antes de desplegar
-
-- Revisar y guardar en «Ajustes» los textos de protección de datos por defecto
-- Actualizar también el snippet «EVT — Roles y perfiles», que es donde vive el campo «Código de centro» del perfil
-
 ### Corregido
 
 - **Al guardar varias preguntas nuevas a la vez, solo se guardaba la primera.** Llegaban todas sin identificador y se tomaban por repetidas
 - **Al repintar el formulario de una sección tras un envío rechazado, se perdían los campos propios de su tipo**, como los de contacto
+
+### Pendiente antes de desplegar
+
+- Actualizar los dos snippets: el aplicativo y «EVT — Roles y perfiles», que es donde vive el campo «Código de centro» del perfil
+- Revisar y guardar en «Ajustes» los textos de protección de datos por defecto
 
 ## [0.1.4] — 2026-09-28
 
