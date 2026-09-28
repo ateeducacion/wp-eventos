@@ -84,7 +84,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Para que una salga en el menú pero no en la portada, desmarque su tarjeta al editarla.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Al editar cada una se elige si sale en el menú, si tiene tarjeta en la portada, o las dos cosas.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -302,6 +302,9 @@ final class EventSectionsPanel {
 				<?php endif; ?>
 				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
 					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['menu_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Tiene tarjeta en la portada, o su enlace, pero no sale en el menú de arriba" data-bs-toggle="tooltip">Fuera del menú</span>
 				<?php endif; ?>
 				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
 					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>

@@ -26,6 +26,7 @@
     "altcha": "3.2.3",
     "bootstrap": "5.3.8",
     "bootstrap-icons": "1.13.1",
+    "leaflet": "1.9.4",
     "playwright": "^1.49.0",
     "sweetalert2": "11.26.25",
     "tom-select": "2.6.2"
