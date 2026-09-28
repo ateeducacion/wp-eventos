@@ -36,6 +36,49 @@ final class EventAppearancePanel {
 	private const SHAPE_SAMPLE = 'data:image/svg+xml;charset=utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2272%22%20height%3D%2272%22%3E%3Crect%20width%3D%2272%22%20height%3D%2272%22%20fill%3D%22%23c3cad2%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2226%22%20r%3D%2213%22%20fill%3D%22%238a97a6%22%2F%3E%3Cpath%20d%3D%22M8%2072c0-16%2012-26%2028-26s28%2010%2028%2026z%22%20fill%3D%22%238a97a6%22%2F%3E%3C%2Fsvg%3E';
 
 	/**
+	 * Which sections will not follow what is chosen here.
+	 *
+	 * Sin este aviso, quien cambia el color del evento y no lo ve en una
+	 * sección piensa que no se ha guardado: esa sección tiene el suyo. Se
+	 * dicen cuáles, en qué, y cómo se abren para devolverlas al evento.
+	 *
+	 * @param array<int, array<string, mixed>> $filas Rows of the sections table.
+	 * @return string
+	 */
+	private static function own_look_notice( array $filas ): string {
+		$propias = array_filter(
+			$filas,
+			static function ( $fila ): bool {
+				return ! empty( $fila['own_look'] );
+			}
+		);
+		if ( array() === $propias ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( Assets::alert_class( 'info' ) . ' evt-propia' ); ?>">
+			<p><strong>Estas secciones tienen apariencia propia</strong> y no cambian con lo que elija aquí en lo que se indica:</p>
+			<ul>
+				<?php foreach ( $propias as $fila ) : ?>
+					<li>
+						<?php if ( '' !== (string) ( $fila['edit_url'] ?? '' ) ) : ?>
+							<a class="evt-abre-marco" href="<?php echo esc_url( (string) $fila['edit_url'] ); ?>"><?php echo esc_html( (string) $fila['title'] ); ?></a>:
+						<?php else : ?>
+							<?php echo esc_html( (string) $fila['title'] ); ?>:
+						<?php endif; ?>
+						<?php echo esc_html( implode( ', ', (array) $fila['own_look'] ) ); ?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<p>Lo normal es que todas sigan al evento. Para devolver una, ábrala y, en «Apariencia de esta sección», marque «Volver a la apariencia del evento».</p>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * Paint the panel.
 	 *
 	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
@@ -168,6 +211,7 @@ final class EventAppearancePanel {
 		ob_start();
 		?>
 		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Apariencia</h2><p class="evt-sub">Se aplica a todas las páginas del evento. La muestra cambia al momento; nada se guarda hasta pulsar «Guardar la apariencia».</p></div></div>
+		<?php echo self::own_look_notice( (array) ( $m['sections'] ?? array() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<form class="evt-form" method="post" action="" enctype="multipart/form-data" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_LOOK ), EventWorkspace::nonce_name( EventWorkspace::PANEL_LOOK ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />

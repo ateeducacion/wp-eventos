@@ -72,6 +72,44 @@ final class PageForm {
 	);
 
 	/**
+	 * What each of the seven appearance settings is called on screen.
+	 *
+	 * @return array<string, string> Meta key => rótulo.
+	 */
+	public static function look_labels(): array {
+		return array(
+			EventMetaKeys::HEADER_BG   => 'color de fondo de la cabecera',
+			EventMetaKeys::HEADER_TEXT => 'color del texto de la cabecera',
+			EventMetaKeys::SEPARATOR   => 'separador',
+			EventMetaKeys::LOGO_ID     => 'logo',
+			EventMetaKeys::IMAGE_SHAPE => 'forma de las imágenes',
+			EventMetaKeys::TITLE_FONT  => 'tipografía de los títulos',
+			EventMetaKeys::BODY_FONT   => 'tipografía del cuerpo',
+		);
+	}
+
+	/**
+	 * What a section does not take from its event.
+	 *
+	 * Es lo que se pregunta en el taller para avisar: quien cambia el color
+	 * del evento y no ve el cambio en una sección necesita saber que esa
+	 * sección tiene el suyo.
+	 *
+	 * @param int $page_id Section.
+	 * @return string[] Labels of the settings it has of its own; empty when it follows the event.
+	 */
+	public static function own_look( int $page_id ): array {
+		$propios = array();
+		foreach ( self::look_labels() as $clave => $rotulo ) {
+			$valor = (string) get_post_meta( $page_id, $clave, true );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+		return $propios;
+	}
+
+	/**
 	 * The contact details a contact page carries, and how each is cleaned.
 	 *
 	 * Campos y no HTML dentro del texto: quien organiza rellena la dirección,
@@ -165,6 +203,16 @@ final class PageForm {
 			self::$rejected = array(
 				'message' => self::error_message( $check['errors'] ),
 				'errors'  => $check['errors'],
+			);
+			return;
+		}
+
+		// Un punto del mapa con coordenadas que no se entienden no se tira en
+		// silencio: se dice cuál, y el formulario vuelve con lo escrito.
+		if ( 'contacto' === $tipo && '' !== $fields['points_bad'] ) {
+			self::$rejected = array(
+				'message' => sprintf( 'Las coordenadas de «%s» no se entienden. Escríbalas como las copia el mapa: 28.4636, -16.2518.', $fields['points_bad'] ),
+				'errors'  => array( 'points' ),
 			);
 			return;
 		}
@@ -303,6 +351,12 @@ final class PageForm {
 				}
 				update_post_meta( $id, $clave, $valor );
 			}
+			$puntos = ContactMap::clean( $fields['points_ok'] );
+			if ( array() === $puntos ) {
+				delete_post_meta( $id, EventMetaKeys::CONTACT_POINTS );
+			} else {
+				update_post_meta( $id, EventMetaKeys::CONTACT_POINTS, wp_slash( (string) wp_json_encode( $puntos ) ) );
+			}
 		}
 
 		self::save_code( $user_id, $event_id, $id, $fields );
@@ -331,6 +385,11 @@ final class PageForm {
 			delete_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN );
 		} else {
 			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
+		}
+		if ( $fields['in_menu'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true );
 		}
 
 		// Sin elegir, el de su tipo; y eso también se guarda no guardando, para
@@ -468,6 +527,11 @@ final class PageForm {
 		// sección todavía tiene lo viejo y repintarlo borraría la corrección.
 		$enviado = self::submitted_values();
 		if ( null !== $enviado ) {
+			// El tipo no viaja al editar —no se cambia—: sin esto, el repintado
+			// de un envío rechazado perdía los campos propios del tipo.
+			if ( $page_id > 0 ) {
+				$enviado['section_type'] = (string) $m['values']['section_type'];
+			}
 			$m['values'] = $enviado;
 		}
 
@@ -537,10 +601,12 @@ final class PageForm {
 			'section_type' => '',
 			'menu_order'   => 0,
 			'home_card'    => true,
+			'in_menu'      => true,
 			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
+			'points'       => array(),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -570,10 +636,21 @@ final class PageForm {
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
+			'points'       => array_map(
+				static function ( array $punto ): array {
+					return array(
+						'coords' => $punto['lat'] . ', ' . $punto['lng'],
+						'text'   => $punto['text'],
+						'url'    => $punto['url'],
+					);
+				},
+				ContactMap::points( $page_id )
+			),
 			'code'         => $code,
 		);
 	}
@@ -589,14 +666,19 @@ final class PageForm {
 	 * @return array<string, mixed>
 	 */
 	private static function submitted_fields( array $raw ): array {
-		$look = array();
+		// «Volver a la del evento» vacía los siete de una vez: es lo mismo que
+		// dejarlos en blanco a mano, que es como se hereda.
+		$heredar = ! empty( $raw['evt_look_reset'] );
+		$look    = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
-			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
+			$look[ $clave ] = ! $heredar && isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
 		$contacto = array();
 		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
 			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
 		}
+		list( $filas, $puntos, $mal ) = self::submitted_points( $raw );
+
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 			// Tal cual llega: es código. Quien decide si se guarda es
@@ -612,6 +694,7 @@ final class PageForm {
 			// Una casilla sin marcar no viaja: su ausencia es el «no», pero
 			// solo si el bloque vino en el envío. Sin él, null: no se toca.
 			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'in_menu'      => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_in_menu'] ) : null,
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',
@@ -619,8 +702,65 @@ final class PageForm {
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
 			'contact'      => $contacto,
+			// Las filas tal cual, para repintar; los puntos, para guardar; y el
+			// texto del primero que no se entiende, para decirlo.
+			'points'       => $filas,
+			'points_ok'    => $puntos,
+			'points_bad'   => $mal,
 			'code'         => $code,
 		);
+	}
+
+	/**
+	 * The map rows of a submit: as typed, as points, and the first one that does not parse.
+	 *
+	 * Campos paralelos, como las preguntas de la inscripción: una fila por
+	 * índice. La fila sin nada escrito no cuenta; la que tiene texto o enlace
+	 * pero unas coordenadas que no se entienden, sí, y se devuelve para
+	 * decirlo.
+	 *
+	 * @param array<string, mixed> $raw Unslashed $_POST.
+	 * @return array{0: array<int, array<string, string>>, 1: array<int, array<string, mixed>>, 2: string}
+	 */
+	private static function submitted_points( array $raw ): array {
+		$coords = isset( $raw['evt_cp_coords'] ) ? (array) $raw['evt_cp_coords'] : array();
+		$textos = isset( $raw['evt_cp_text'] ) ? (array) $raw['evt_cp_text'] : array();
+		$urls   = isset( $raw['evt_cp_url'] ) ? (array) $raw['evt_cp_url'] : array();
+
+		$filas  = array();
+		$puntos = array();
+		$mal    = '';
+		foreach ( $coords as $i => $coordenadas ) {
+			$fila = array(
+				'coords' => sanitize_text_field( (string) $coordenadas ),
+				'text'   => isset( $textos[ $i ] ) ? sanitize_text_field( (string) $textos[ $i ] ) : '',
+				'url'    => isset( $urls[ $i ] ) ? esc_url_raw( trim( (string) $urls[ $i ] ) ) : '',
+			);
+			if ( '' === $fila['coords'] && '' === $fila['text'] && '' === $fila['url'] ) {
+				continue;
+			}
+			$filas[] = $fila;
+
+			$par = ContactMap::parse_coordinates( $fila['coords'] );
+			if ( null === $par || array() === ContactMap::clean(
+				array(
+					array(
+						'lat' => $par[0],
+						'lng' => $par[1],
+					),
+				)
+			) ) {
+				$mal = '' !== $mal ? $mal : ( '' !== $fila['text'] ? $fila['text'] : $fila['coords'] );
+				continue;
+			}
+			$puntos[] = array(
+				'lat'  => $par[0],
+				'lng'  => $par[1],
+				'text' => $fila['text'],
+				'url'  => $fila['url'],
+			);
+		}
+		return array( $filas, $puntos, $mal );
 	}
 
 	/**

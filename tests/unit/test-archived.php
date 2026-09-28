@@ -436,11 +436,13 @@ class Test_Archived extends WP_UnitTestCase {
 		$html = EventWorkspace::render();
 		$this->assertStringContainsString( 'Volver a abrir el evento', $html );
 		$this->assertStringContainsString( 'evt-solo-admin', $html );
+		$this->assertStringContainsString( 'evt-solo-admin--nota', $html, 'y que lo sigue editando, también en amarillo' );
 
 		$this->acting_as( $uid );
 		$suyo = EventWorkspace::render();
 		$this->assertStringNotContainsString( 'Volver a abrir el evento', $suyo );
 		$this->assertStringNotContainsString( 'Marcar como histórico', $suyo, 'ya está marcado' );
+		$this->assertStringNotContainsString( 'evt-solo-admin', $suyo, 'a su ámbito se le dice sin amarillo' );
 	}
 
 	// ─── el listado ────────────────────────────────────────────────────────

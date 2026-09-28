@@ -183,6 +183,47 @@ final class EventTaxonomies {
 	}
 
 	/**
+	 * The scope tree one person picks from: what they may choose, and what hangs above it.
+	 *
+	 * Los que puede elegir llevan `selectable`; los de encima se dejan como
+	 * contexto, sin casilla, para que el árbol se lea entero y se sepa de
+	 * dónde cuelga cada uno. Lo que no es ni lo uno ni lo otro no sale.
+	 *
+	 * @param int $user_id User ID, or current user.
+	 * @return array<int, array{id: int, name: string, depth: int, path: string, selectable: bool}>
+	 */
+	public static function area_tree_for( int $user_id = 0 ): array {
+		$elegibles = array_map( 'intval', array_keys( self::area_options( $user_id ) ) );
+		$arbol     = self::area_tree();
+
+		// Se recorre de abajo arriba: una rama sale si algo por debajo sale.
+		$sale  = array();
+		$pila  = array();
+		$total = count( $arbol );
+		for ( $i = $total - 1; $i >= 0; $i-- ) {
+			$nodo       = $arbol[ $i ];
+			$debajo     = ! empty( $pila[ $nodo['depth'] + 1 ] );
+			$elegible   = in_array( $nodo['id'], $elegibles, true );
+			$sale[ $i ] = $elegible || $debajo;
+			// Lo de debajo ya se contó para este nodo: su nivel se reinicia.
+			$pila[ $nodo['depth'] + 1 ] = false;
+			$pila[ $nodo['depth'] ]     = ! empty( $pila[ $nodo['depth'] ] ) || $sale[ $i ];
+
+			$arbol[ $i ]['selectable'] = $elegible;
+		}
+
+		return array_values(
+			array_filter(
+				$arbol,
+				static function ( $i ) use ( $sale ): bool {
+					return $sale[ $i ];
+				},
+				ARRAY_FILTER_USE_KEY
+			)
+		);
+	}
+
+	/**
 	 * Replace the native scope box with choices from the same access rule.
 	 *
 	 * @param \WP_Post $post Edited event.

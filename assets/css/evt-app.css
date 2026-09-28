@@ -456,6 +456,40 @@ body.evt-app .evt-hoja {
 .evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-icono-nombre { font-size: 13px; }
 
+/* El árbol de ámbitos: cada uno sangrado bajo el suyo, con una raya que
+   dice de quién cuelga. Lo que no se puede elegir sale en gris, sin casilla. */
+/* `clear`: Bootstrap flota el `<legend>` a todo lo ancho, y una fila flex
+   junto a un flotante se queda con cero de ancho. */
+.evt-arbol { clear: both; }
+.evt-arbol, .evt-arbol ul { list-style: none; margin: 0; padding: 0; }
+.evt-arbol ul { margin-left: 11px; padding-left: 14px; border-left: 1px solid var(--evt-linea); }
+.evt-arbol ul[hidden] { display: none; }
+.evt-arbol__fila { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+.evt-arbol__fila label { display: flex; align-items: baseline; gap: 8px; margin: 0; font-weight: 400; }
+.evt-arbol li:not(.evt-arbol__rama) > .evt-arbol__fila { padding-left: 28px; }
+.evt-arbol__contexto { color: var(--evt-texto-2); font-weight: 600; }
+.evt-arbol__plegar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--evt-texto-2);
+  cursor: pointer;
+}
+.evt-arbol__plegar::before { content: "▾"; display: inline-block; font-size: 18px; line-height: 22px; }
+.evt-arbol__plegar[aria-expanded="false"]::before { content: "▸"; }
+.evt-arbol__plegar:hover { background: var(--evt-sup-2); }
+/* Sin guion no hay flecha: la rama no lleva hueco de más. */
+.evt-arbol__rama > .evt-arbol__fila { padding-left: 28px; }
+.evt-app-js .evt-arbol__rama > .evt-arbol__fila { padding-left: 0; }
+
+/* Las opciones de una pregunta: el guion las esconde en los tipos sin lista. */
+[data-evt-q-opciones][hidden] { display: none; }
+.evt-pregunta__quitar { margin-top: 10px; color: var(--evt-mal); }
+
 /* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
    tabla de la sede anterior y parece su pie, no el encabezado del bloque
    siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */
@@ -629,6 +663,11 @@ body.evt-app .evt-hoja {
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
 .evt-state-archived { background: #2b3036; color: #fff; }
 .evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-state-propia { background: var(--evt-inf-cont); color: var(--evt-inf); }
+.evt-propia ul { margin: 0 0 8px; padding-left: 1.2em; }
+.evt-propia p { margin: 0 0 8px; }
+details .evt-propia { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; background: var(--evt-inf-cont); color: #143a63; }
+details > summary .evt-state { margin-left: 8px; vertical-align: middle; }
 
 /* Lo que se dice de una fila al lado de su título: va debajo, más pequeño. */
 .evt-marca-fila { display: table; margin-top: 4px; font-weight: 600; }
@@ -838,6 +877,18 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-adm-texto);
 }
 .evt-solo-admin + .evt-solo-admin { margin-top: 18px; }
+
+/* La línea: una posibilidad de más dentro de un campo que ven todos. */
+.evt-solo-admin--nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+.evt-solo-admin--nota .evt-solo-admin-marca { margin: 0; }
 
 /* La etiqueta en texto, para quien no distingue el color. */
 .evt-solo-admin-marca {

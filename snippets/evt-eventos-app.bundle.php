@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.5
+ * @version 0.1.11
  */
 
 // phpcs:disable
@@ -228,9 +228,27 @@ final class EventMetaKeys {
 
 
 
+	public const CONTACT_POINTS = 'evt_contact_points';
+
+
+
+
+
+
+
 
 
 	public const HOME_HIDDEN = 'evt_home_hidden';
+
+
+
+
+
+
+
+
+
+	public const MENU_HIDDEN = 'evt_menu_hidden';
 
 
 
@@ -342,7 +360,9 @@ final class EventMetaKeys {
 			self::CONTACT_PHONE,
 			self::CONTACT_EMAIL,
 			self::CONTACT_MAP,
+			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
+			self::MENU_HIDDEN,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
@@ -711,6 +731,14 @@ final class EventMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_url' ),
 			),
+			EventMetaKeys::CONTACT_POINTS     => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_contact_points' ),
+			),
+			EventMetaKeys::MENU_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
 			EventMetaKeys::HOME_HIDDEN        => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
@@ -1007,6 +1035,16 @@ final class EventMetaRegistration {
 			}
 		}
 		return (string) wp_json_encode( array_slice( $limpia, 0, 40 ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_contact_points( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\ContactMap::clean( $value ) );
 	}
 
 
@@ -1983,11 +2021,19 @@ final class SignupQuestions {
 				continue;
 			}
 			$pregunta = self::one( $raw );
-			if ( '' === $pregunta['label'] || isset( $vistos[ $pregunta['id'] ] ) ) {
+			if ( '' === $pregunta['label'] ) {
 				continue;
 			}
-			$vistos[ $pregunta['id'] ] = true;
-			$out[]                     = $pregunta;
+
+
+
+			if ( '' !== $pregunta['id'] ) {
+				if ( isset( $vistos[ $pregunta['id'] ] ) ) {
+					continue;
+				}
+				$vistos[ $pregunta['id'] ] = true;
+			}
+			$out[] = $pregunta;
 		}
 		return $out;
 	}
@@ -5344,6 +5390,47 @@ final class EventTaxonomies {
 
 
 
+
+
+
+
+	public static function area_tree_for( int $user_id = 0 ): array {
+		$elegibles = array_map( 'intval', array_keys( self::area_options( $user_id ) ) );
+		$arbol     = self::area_tree();
+
+
+		$sale  = array();
+		$pila  = array();
+		$total = count( $arbol );
+		for ( $i = $total - 1; $i >= 0; $i-- ) {
+			$nodo       = $arbol[ $i ];
+			$debajo     = ! empty( $pila[ $nodo['depth'] + 1 ] );
+			$elegible   = in_array( $nodo['id'], $elegibles, true );
+			$sale[ $i ] = $elegible || $debajo;
+
+			$pila[ $nodo['depth'] + 1 ] = false;
+			$pila[ $nodo['depth'] ]     = ! empty( $pila[ $nodo['depth'] ] ) || $sale[ $i ];
+
+			$arbol[ $i ]['selectable'] = $elegible;
+		}
+
+		return array_values(
+			array_filter(
+				$arbol,
+				static function ( $i ) use ( $sale ): bool {
+					return $sale[ $i ];
+				},
+				ARRAY_FILTER_USE_KEY
+			)
+		);
+	}
+
+
+
+
+
+
+
 	public static function area_meta_box( $post ): void {
 		$selected = $post instanceof \WP_Post ? EventAccess::post_areas( $post->ID ) : array();
 		$allowed  = EventAccess::can_edit_all_areas() ? $selected : EventAccess::scope_areas();
@@ -6649,6 +6736,28 @@ final class Shell {
 
 
 
+	private const ADMIN_SHIELD = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>';
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function admin_note( string $texto ): string {
+		return '<p class="evt-solo-admin evt-solo-admin--nota"><span class="evt-solo-admin-marca">'
+			. self::ADMIN_SHIELD . ' Solo administración</span> ' . esc_html( $texto ) . '</p>';
+	}
+
+
+
+
 
 
 
@@ -6672,7 +6781,7 @@ final class Shell {
 		?>
 		<section class="evt-solo-admin">
 			<p class="evt-solo-admin-marca">
-				<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>
+				<?php echo self::ADMIN_SHIELD; ?>
 				Solo administración
 			</p>
 			<?php if ( '' !== $titulo ) : ?>
@@ -9000,7 +9109,7 @@ final class EventListView {
 		<p class="evt-acciones">
 			<?php if ( $dentro ) : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_ACTIVE ) ) ); ?>">Volver al listado</a>
-				<span>Restaurar devuelve el evento a borrador. Para borrar algo de verdad y para siempre hay que ir al escritorio de WordPress: desde aquí no se destruye nada.</span>
+				<span>Restaurar devuelve el evento a borrador. Borrar algo de verdad y para siempre lo hace quien administra, desde el escritorio de WordPress: desde aquí no se destruye nada.</span>
 			<?php else : ?>
 				<a href="<?php echo esc_url( EventList::url( $m['selection'], array( 'state' => EventList::FILTER_TRASH ) ) ); ?>">
 					<?php echo esc_html( sprintf( 'Papelera (%d)', $cuantos ) ); ?>
@@ -13906,13 +14015,16 @@ final class EventWorkspace {
 		$tipos     = (array) wp_unslash( $_POST['evt_q_type'] ?? array() );
 		$opciones  = (array) wp_unslash( $_POST['evt_q_options'] ?? array() );
 		$obligadas = (array) wp_unslash( $_POST['evt_q_required'] ?? array() );
+		$quitadas  = (array) wp_unslash( $_POST['evt_q_remove'] ?? array() );
 
 
 		$out = array();
 		foreach ( $rotulos as $i => $rotulo ) {
 			$out[] = array(
 				'id'       => isset( $ids[ $i ] ) ? sanitize_text_field( (string) $ids[ $i ] ) : '',
-				'label'    => sanitize_text_field( (string) $rotulo ),
+
+
+				'label'    => empty( $quitadas[ $i ] ) ? sanitize_text_field( (string) $rotulo ) : '',
 				'type'     => isset( $tipos[ $i ] ) ? sanitize_key( (string) $tipos[ $i ] ) : 'text',
 				'options'  => isset( $opciones[ $i ] ) ? sanitize_textarea_field( (string) $opciones[ $i ] ) : '',
 				'required' => ! empty( $obligadas[ $i ] ),
@@ -14483,6 +14595,8 @@ final class EventWorkspace {
 		return array(
 
 			'area'   => EventTaxonomies::area_options( $user_id ),
+
+			'tree'   => EventTaxonomies::area_tree_for( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
@@ -14528,6 +14642,8 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'menu_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::MENU_HIDDEN, true ),
+				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,
 				'status'       => (string) $hija->post_status,
@@ -16052,8 +16168,10 @@ final class EventParticipantsPanel {
 namespace Evt\PublicFront\View;
 
 use Evt\Meta\EventMetaKeys;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 
 
@@ -16233,11 +16351,19 @@ final class EventSignupPanel {
 			'required' => false,
 		);
 
+		$html .= '<div class="evt-preguntas__lista" data-evt-preguntas>';
 		foreach ( $filas as $i => $pregunta ) {
 			$html .= self::row( (int) $i, $pregunta, $tipos, array() === $preguntas );
 		}
+		$html .= '</div>';
 
-		$html .= '<p class="evt-ayuda">Para quitar una pregunta, borre su rótulo y guarde. '
+
+
+
+		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-pregunta-nueva hidden>'
+			. wp_kses( Shell::icon_plus(), PanelParts::SVG ) . ' Añadir otra pregunta</button></p>';
+
+		$html .= '<p class="evt-ayuda">Para quitar una pregunta, ábrala y marque «Quitar esta pregunta al guardar». '
 			. 'Lo que ya hubiera contestado alguien no se borra: deja de verse, y vuelve si la pregunta vuelve.</p>';
 
 		return $html . '</section>';
@@ -16286,15 +16412,28 @@ final class EventSignupPanel {
 		}
 		$html .= '</select></p></div>';
 
+
+
+
 		$html .= sprintf(
-			'<p class="evt-campo"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
+			'<p class="evt-campo" data-evt-q-opciones="%3$s"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
 				. '<textarea id="evt-q-o-%1$d" name="evt_q_options[%1$d]" rows="3">%2$s</textarea>'
 				. '<small>Solo para «Una opción» y «Varias opciones».</small></p>',
 			$i,
-			esc_textarea( implode( "\n", (array) $p['options'] ) )
+			esc_textarea( implode( "\n", (array) $p['options'] ) ),
+			esc_attr( implode( ' ', array_filter( array_keys( $tipos ), array( RegistrationMetaKeys::class, 'has_options' ) ) ) )
 		);
 
 		$html .= self::toggle( 'evt_q_required[' . $i . ']', 'Obligatoria', (bool) $p['required'], 'evt-q-r-' . $i );
+
+
+
+		if ( ! $nueva ) {
+			$html .= sprintf(
+				'<p class="evt-campo evt-pregunta__quitar"><label class="evt-check"><input type="checkbox" name="evt_q_remove[%1$d]" value="1"> Quitar esta pregunta al guardar</label></p>',
+				$i
+			);
+		}
 
 		return $html . '</div></details>';
 	}
@@ -16463,7 +16602,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Para que una salga en el menú pero no en la portada, desmarque su tarjeta al editarla.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Al editar cada una se elige si sale en el menú, si tiene tarjeta en la portada, o las dos cosas.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); ?>
@@ -16534,9 +16673,9 @@ final class EventSectionsPanel {
 		<p class="evt-sub">
 			Las secciones de este evento que se enviaron a la papelera. Nada se ha
 			perdido: al restaurar una vuelve en borrador, así que no reaparece en
-			el menú del evento hasta que la publique. Para borrar algo de verdad y
-			para siempre hay que ir al escritorio de WordPress: desde aquí no se
-			destruye nada.
+			el menú del evento hasta que la publique. Borrar algo de verdad y para
+			siempre lo hace quien administra, desde el escritorio de WordPress:
+			desde aquí no se destruye nada.
 		</p>
 
 		<p class="evt-acciones">
@@ -16679,6 +16818,12 @@ final class EventSectionsPanel {
 				<?php else : ?>
 					<?php echo esc_html( $titulo ); ?>
 				<?php endif; ?>
+				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
+					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['menu_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Tiene tarjeta en la portada, o su enlace, pero no sale en el menú de arriba" data-bs-toggle="tooltip">Fuera del menú</span>
+				<?php endif; ?>
 				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
 					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
 				<?php endif; ?>
@@ -16757,6 +16902,7 @@ namespace Evt\PublicFront\View;
 use Evt\Meta\EventMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 
 
@@ -16788,12 +16934,13 @@ final class EventDataPanel {
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
 			'Ámbitos organizativos',
-			(array) ( $listas['area'] ?? array() ),
+			(array) ( $listas['tree'] ?? array() ),
 			(string) $v[ EventWorkspace::FIELD_AREA ],
 			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
 				? 'Los ámbitos que organizan el evento. Cualquiera de ellos puede editarlo.'
-				: 'Seleccione solo ámbitos dentro de su subárbol.'
+				: 'Seleccione solo ámbitos dentro de su subárbol.',
+			(bool) $m['can_set_area']
 		);
 		$sel_tipo  = self::term_select(
 			'evt-type',
@@ -16909,15 +17056,24 @@ final class EventDataPanel {
 
 
 
-	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda ): string {
+
+
+
+
+
+
+
+
+	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda, bool $todos = false ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
 		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
 			<input type="hidden" name="evt_area_present" value="1" />
-			<?php foreach ( $terminos as $term_id => $texto ) : ?>
-				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
-			<?php endforeach; ?>
+			<?php echo self::area_tree( $nombre, $terminos, $ids ); ?>
+			<?php if ( $todos ) : ?>
+				<?php echo Shell::admin_note( 'Puede asignar cualquier ámbito, no solo los de su subárbol.' ); ?>
+			<?php endif; ?>
 			<?php if ( $foreign ) : ?>
 				<p>Otros ámbitos organizadores (solo lectura):</p>
 				<ul>
@@ -16931,6 +17087,64 @@ final class EventDataPanel {
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function area_tree( string $nombre, array $filas, array $ids ): string {
+		if ( array() === $filas ) {
+			return '<p class="evt-ayuda">No hay ningún ámbito que pueda elegir. Pídalo a quien administre el aplicativo.</p>';
+		}
+
+		$html  = '<ul class="evt-arbol" data-evt-arbol>';
+		$nivel = (int) $filas[0]['depth'];
+		$total = count( $filas );
+		foreach ( $filas as $i => $fila ) {
+			$profundidad = (int) $fila['depth'];
+			$tiene_hijos = $i + 1 < $total && (int) $filas[ $i + 1 ]['depth'] > $profundidad;
+
+			$html .= '<li' . ( $tiene_hijos ? ' class="evt-arbol__rama"' : '' ) . '><div class="evt-arbol__fila">';
+			if ( $tiene_hijos ) {
+				$html .= '<button type="button" class="evt-arbol__plegar" aria-expanded="true" hidden data-evt-arbol-plegar>'
+					. '<span class="screen-reader-text">' . esc_html( sprintf( 'Mostrar u ocultar lo que cuelga de %s', (string) $fila['name'] ) ) . '</span></button>';
+			}
+			if ( ! empty( $fila['selectable'] ) ) {
+				$html .= sprintf(
+					'<label title="%4$s"><input type="checkbox" name="%1$s[]" value="%2$d"%3$s /> %5$s</label>',
+					esc_attr( $nombre ),
+					(int) $fila['id'],
+					checked( in_array( (int) $fila['id'], $ids, true ), true, false ),
+					esc_attr( (string) $fila['path'] ),
+					esc_html( (string) $fila['name'] )
+				);
+			} else {
+				$html .= '<span class="evt-arbol__contexto" title="' . esc_attr( (string) $fila['path'] ) . '">'
+					. esc_html( (string) $fila['name'] ) . '</span>';
+			}
+			$html .= '</div>';
+
+			if ( $tiene_hijos ) {
+				$html .= '<ul>';
+				continue;
+			}
+			$html .= '</li>';
+
+
+			$siguiente = $i + 1 < $total ? (int) $filas[ $i + 1 ]['depth'] : $nivel;
+			for ( $d = $profundidad; $d > $siguiente; $d-- ) {
+				$html .= '</ul></li>';
+			}
+		}
+		return $html . '</ul>';
 	}
 
 
@@ -16998,6 +17212,49 @@ final class EventAppearancePanel {
 
 
 	private const SHAPE_SAMPLE = 'data:image/svg+xml;charset=utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2272%22%20height%3D%2272%22%3E%3Crect%20width%3D%2272%22%20height%3D%2272%22%20fill%3D%22%23c3cad2%22%2F%3E%3Ccircle%20cx%3D%2236%22%20cy%3D%2226%22%20r%3D%2213%22%20fill%3D%22%238a97a6%22%2F%3E%3Cpath%20d%3D%22M8%2072c0-16%2012-26%2028-26s28%2010%2028%2026z%22%20fill%3D%22%238a97a6%22%2F%3E%3C%2Fsvg%3E';
+
+
+
+
+
+
+
+
+
+
+
+	private static function own_look_notice( array $filas ): string {
+		$propias = array_filter(
+			$filas,
+			static function ( $fila ): bool {
+				return ! empty( $fila['own_look'] );
+			}
+		);
+		if ( array() === $propias ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( Assets::alert_class( 'info' ) . ' evt-propia' ); ?>">
+			<p><strong>Estas secciones tienen apariencia propia</strong> y no cambian con lo que elija aquí en lo que se indica:</p>
+			<ul>
+				<?php foreach ( $propias as $fila ) : ?>
+					<li>
+						<?php if ( '' !== (string) ( $fila['edit_url'] ?? '' ) ) : ?>
+							<a class="evt-abre-marco" href="<?php echo esc_url( (string) $fila['edit_url'] ); ?>"><?php echo esc_html( (string) $fila['title'] ); ?></a>:
+						<?php else : ?>
+							<?php echo esc_html( (string) $fila['title'] ); ?>:
+						<?php endif; ?>
+						<?php echo esc_html( implode( ', ', (array) $fila['own_look'] ) ); ?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<p>Lo normal es que todas sigan al evento. Para devolver una, ábrala y, en «Apariencia de esta sección», marque «Volver a la apariencia del evento».</p>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
 
 
 
@@ -17132,6 +17389,7 @@ final class EventAppearancePanel {
 		ob_start();
 		?>
 		<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Apariencia</h2><p class="evt-sub">Se aplica a todas las páginas del evento. La muestra cambia al momento; nada se guarda hasta pulsar «Guardar la apariencia».</p></div></div>
+		<?php echo self::own_look_notice( (array) ( $m['sections'] ?? array() ) ); ?>
 		<form class="evt-form" method="post" action="" enctype="multipart/form-data" data-evt-cambios>
 			<?php wp_nonce_field( EventWorkspace::nonce_action( EventWorkspace::PANEL_LOOK ), EventWorkspace::nonce_name( EventWorkspace::PANEL_LOOK ), false ); ?>
 			<input type="hidden" name="<?php echo esc_attr( EventWorkspace::FIELD_DO ); ?>" value="<?php echo esc_attr( EventWorkspace::PANEL_LOOK ); ?>" />
@@ -17839,11 +18097,13 @@ final class EventWorkspaceView {
 		if ( true !== $m['archived'] ) {
 			return '';
 		}
-		$texto = true === $m['can_edit']
-			? 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.'
-			: 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.';
 
-		return Shell::notice( 'aviso', $texto );
+
+		if ( true === $m['can_edit'] ) {
+			return Shell::admin_note( 'Este evento está marcado como histórico: su ámbito ya no puede editarlo. Usted sí, porque administra el aplicativo.' );
+		}
+
+		return Shell::notice( 'aviso', 'Este evento está marcado como histórico: se puede consultar y exportar, pero ya no se edita. Para volver a abrirlo, pídalo a quien administre el aplicativo.' );
 	}
 
 
@@ -18146,6 +18406,44 @@ final class PageForm {
 
 
 
+	public static function look_labels(): array {
+		return array(
+			EventMetaKeys::HEADER_BG   => 'color de fondo de la cabecera',
+			EventMetaKeys::HEADER_TEXT => 'color del texto de la cabecera',
+			EventMetaKeys::SEPARATOR   => 'separador',
+			EventMetaKeys::LOGO_ID     => 'logo',
+			EventMetaKeys::IMAGE_SHAPE => 'forma de las imágenes',
+			EventMetaKeys::TITLE_FONT  => 'tipografía de los títulos',
+			EventMetaKeys::BODY_FONT   => 'tipografía del cuerpo',
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function own_look( int $page_id ): array {
+		$propios = array();
+		foreach ( self::look_labels() as $clave => $rotulo ) {
+			$valor = (string) get_post_meta( $page_id, $clave, true );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+		return $propios;
+	}
+
+
+
+
+
+
 
 
 
@@ -18235,6 +18533,16 @@ final class PageForm {
 			self::$rejected = array(
 				'message' => self::error_message( $check['errors'] ),
 				'errors'  => $check['errors'],
+			);
+			return;
+		}
+
+
+
+		if ( 'contacto' === $tipo && '' !== $fields['points_bad'] ) {
+			self::$rejected = array(
+				'message' => sprintf( 'Las coordenadas de «%s» no se entienden. Escríbalas como las copia el mapa: 28.4636, -16.2518.', $fields['points_bad'] ),
+				'errors'  => array( 'points' ),
 			);
 			return;
 		}
@@ -18373,6 +18681,12 @@ final class PageForm {
 				}
 				update_post_meta( $id, $clave, $valor );
 			}
+			$puntos = ContactMap::clean( $fields['points_ok'] );
+			if ( array() === $puntos ) {
+				delete_post_meta( $id, EventMetaKeys::CONTACT_POINTS );
+			} else {
+				update_post_meta( $id, EventMetaKeys::CONTACT_POINTS, wp_slash( (string) wp_json_encode( $puntos ) ) );
+			}
 		}
 
 		self::save_code( $user_id, $event_id, $id, $fields );
@@ -18401,6 +18715,11 @@ final class PageForm {
 			delete_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN );
 		} else {
 			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
+		}
+		if ( $fields['in_menu'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true );
 		}
 
 
@@ -18538,6 +18857,11 @@ final class PageForm {
 
 		$enviado = self::submitted_values();
 		if ( null !== $enviado ) {
+
+
+			if ( $page_id > 0 ) {
+				$enviado['section_type'] = (string) $m['values']['section_type'];
+			}
 			$m['values'] = $enviado;
 		}
 
@@ -18607,10 +18931,12 @@ final class PageForm {
 			'section_type' => '',
 			'menu_order'   => 0,
 			'home_card'    => true,
+			'in_menu'      => true,
 			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
+			'points'       => array(),
 			'code'         => array_fill_keys( EventMetaKeys::code_keys(), '' ),
 		);
 	}
@@ -18640,10 +18966,21 @@ final class PageForm {
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
+			'points'       => array_map(
+				static function ( array $punto ): array {
+					return array(
+						'coords' => $punto['lat'] . ', ' . $punto['lng'],
+						'text'   => $punto['text'],
+						'url'    => $punto['url'],
+					);
+				},
+				ContactMap::points( $page_id )
+			),
 			'code'         => $code,
 		);
 	}
@@ -18659,14 +18996,19 @@ final class PageForm {
 
 
 	private static function submitted_fields( array $raw ): array {
-		$look = array();
+
+
+		$heredar = ! empty( $raw['evt_look_reset'] );
+		$look    = array();
 		foreach ( self::LOOK_KEYS as $clave ) {
-			$look[ $clave ] = isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
+			$look[ $clave ] = ! $heredar && isset( $raw[ $clave ] ) ? sanitize_text_field( (string) $raw[ $clave ] ) : '';
 		}
 		$contacto = array();
 		foreach ( self::CONTACT_KEYS as $clave => $limpia ) {
 			$contacto[ $clave ] = isset( $raw[ $clave ] ) ? (string) call_user_func( $limpia, (string) $raw[ $clave ] ) : '';
 		}
+		list( $filas, $puntos, $mal ) = self::submitted_points( $raw );
+
 		$code = array();
 		foreach ( EventMetaKeys::code_keys() as $clave ) {
 
@@ -18682,6 +19024,7 @@ final class PageForm {
 
 
 			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'in_menu'      => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_in_menu'] ) : null,
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',
@@ -18689,8 +19032,65 @@ final class PageForm {
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
 			'contact'      => $contacto,
+
+
+			'points'       => $filas,
+			'points_ok'    => $puntos,
+			'points_bad'   => $mal,
 			'code'         => $code,
 		);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function submitted_points( array $raw ): array {
+		$coords = isset( $raw['evt_cp_coords'] ) ? (array) $raw['evt_cp_coords'] : array();
+		$textos = isset( $raw['evt_cp_text'] ) ? (array) $raw['evt_cp_text'] : array();
+		$urls   = isset( $raw['evt_cp_url'] ) ? (array) $raw['evt_cp_url'] : array();
+
+		$filas  = array();
+		$puntos = array();
+		$mal    = '';
+		foreach ( $coords as $i => $coordenadas ) {
+			$fila = array(
+				'coords' => sanitize_text_field( (string) $coordenadas ),
+				'text'   => isset( $textos[ $i ] ) ? sanitize_text_field( (string) $textos[ $i ] ) : '',
+				'url'    => isset( $urls[ $i ] ) ? esc_url_raw( trim( (string) $urls[ $i ] ) ) : '',
+			);
+			if ( '' === $fila['coords'] && '' === $fila['text'] && '' === $fila['url'] ) {
+				continue;
+			}
+			$filas[] = $fila;
+
+			$par = ContactMap::parse_coordinates( $fila['coords'] );
+			if ( null === $par || array() === ContactMap::clean(
+				array(
+					array(
+						'lat' => $par[0],
+						'lng' => $par[1],
+					),
+				)
+			) ) {
+				$mal = '' !== $mal ? $mal : ( '' !== $fila['text'] ? $fila['text'] : $fila['coords'] );
+				continue;
+			}
+			$puntos[] = array(
+				'lat'  => $par[0],
+				'lng'  => $par[1],
+				'text' => $fila['text'],
+				'url'  => $fila['url'],
+			);
+		}
+		return array( $filas, $puntos, $mal );
 	}
 
 
@@ -18914,7 +19314,7 @@ final class PageFormView {
 						<label for="evt_order">Orden</label>
 						<input type="number" id="evt_order" name="evt_order" step="1" min="0"
 							value="<?php echo esc_attr( (string) $valores['menu_order'] ); ?>" />
-						<small>El lugar que ocupa en el menú del evento. El número más bajo va primero.</small>
+						<small>El lugar que ocupa en el menú y en la portada del evento. El número más bajo va primero.</small>
 					</div>
 				</div>
 
@@ -18956,7 +19356,7 @@ final class PageFormView {
 			</fieldset>
 
 			<?php if ( 'contacto' === (string) $valores['section_type'] ) : ?>
-				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ) ); ?>
+				<?php echo self::contact( (array) ( $valores['contact'] ?? array() ), (array) ( $valores['points'] ?? array() ), in_array( 'points', $errores, true ) ); ?>
 			<?php endif; ?>
 
 			<?php echo self::look( (array) $valores['look'] ); ?>
@@ -19000,11 +19400,16 @@ final class PageFormView {
 			<input type="hidden" name="evt_showcase" value="1" />
 			<div class="evt-form-campo">
 				<label class="evt-check">
+					<input type="checkbox" name="evt_in_menu" value="1" <?php checked( false !== ( $valores['in_menu'] ?? true ) ); ?> />
+					Mostrar esta sección en el menú de arriba del evento
+				</label>
+				<label class="evt-check">
 					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
 					Mostrar una tarjeta de esta sección en la portada del evento
 				</label>
-				<small>Sin marcar, la sección sigue en el menú de arriba y se sigue viendo, pero no ocupa
-					una tarjeta en la portada. Es lo habitual en la de contacto.</small>
+				<small>Las dos son independientes, y lo que desmarque se sigue viendo: solo deja de salir
+					ahí. Lo habitual es quitar la tarjeta de la de contacto, que ya está en el menú. Sin
+					ninguna de las dos, a la sección solo se llega con su enlace.</small>
 			</div>
 			<div class="evt-form-campo">
 				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
@@ -19035,7 +19440,9 @@ final class PageFormView {
 
 
 
-	private static function contact( array $c ): string {
+
+
+	private static function contact( array $c, array $puntos = array(), bool $mal = false ): string {
 		ob_start();
 		?>
 		<fieldset class="evt-tarjeta">
@@ -19064,6 +19471,8 @@ final class PageFormView {
 					value="<?php echo esc_attr( (string) ( $c[ EventMetaKeys::CONTACT_MAP ] ?? '' ) ); ?>" />
 				<small>Opcional: sale como «Ver en el mapa» bajo la dirección.</small>
 			</div>
+
+			<?php echo self::map_points( $puntos, $mal ); ?>
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
@@ -19078,12 +19487,102 @@ final class PageFormView {
 
 
 
-	private static function look( array $look ): string {
+
+
+
+	private static function map_points( array $puntos, bool $mal ): string {
+		$filas   = $puntos;
+		$filas[] = array(
+			'coords' => '',
+			'text'   => '',
+			'url'    => '',
+		);
+
 		ob_start();
 		?>
-		<details class="evt-tarjeta">
-			<summary>Apariencia de esta sección</summary>
+		<div class="evt-form-campo evt-mapa-puntos">
+			<span class="evt-rotulo">Mapa</span>
+			<p class="evt-ayuda">
+				Cada punto sale en un mapa debajo de los datos de contacto: la sede, el aparcamiento,
+				la parada… Para sacar las coordenadas, pulse con el botón derecho sobre el sitio en
+				un mapa de internet y copie los dos números que le da. Sin ningún punto, no sale mapa.
+			</p>
+			<?php if ( $mal ) : ?>
+				<span class="evt-error" role="alert">Revise las coordenadas: tienen que ser dos números separados por una coma.</span>
+			<?php endif; ?>
+			<div class="evt-mapa-filas" data-evt-filas>
+				<?php foreach ( $filas as $i => $fila ) : ?>
+					<div class="evt-form-fila evt-mapa-fila" data-evt-fila>
+						<div>
+							<label for="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>">Coordenadas</label>
+							<input type="text" id="evt-cp-c-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_coords[<?php echo esc_attr( (string) $i ); ?>]"
+								inputmode="decimal" placeholder="28.4636, -16.2518" value="<?php echo esc_attr( (string) $fila['coords'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>">Texto del punto</label>
+							<input type="text" id="evt-cp-t-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_text[<?php echo esc_attr( (string) $i ); ?>]"
+								maxlength="200" placeholder="Sede del encuentro" value="<?php echo esc_attr( (string) $fila['text'] ); ?>" />
+						</div>
+						<div>
+							<label for="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>">Enlace <span class="evt-opcional">(opcional)</span></label>
+							<input type="url" id="evt-cp-u-<?php echo esc_attr( (string) $i ); ?>" name="evt_cp_url[<?php echo esc_attr( (string) $i ); ?>]"
+								placeholder="https://" value="<?php echo esc_attr( (string) $fila['url'] ); ?>" />
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<p class="evt-acciones">
+				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>" data-evt-filas-nueva hidden>
+					<?php echo wp_kses( Shell::icon_plus(), PanelParts::SVG ); ?> Añadir otro punto
+				</button>
+			</p>
+			<small>Para quitar un punto, vacíe sus tres campos y guarde.</small>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function look( array $look ): string {
+		$propios = array();
+		foreach ( PageForm::look_labels() as $clave => $rotulo ) {
+			$valor = (string) ( $look[ $clave ] ?? '' );
+			if ( '' !== $valor && '0' !== $valor ) {
+				$propios[] = $rotulo;
+			}
+		}
+
+		ob_start();
+		?>
+		<details class="evt-tarjeta"<?php echo array() !== $propios ? ' open' : ''; ?>>
+			<summary>
+				Apariencia de esta sección
+				<?php if ( array() !== $propios ) : ?>
+					<span class="evt-state evt-state-propia">Propia</span>
+				<?php endif; ?>
+			</summary>
 			<p>Lo que deje en blanco se hereda del evento. Solo hace falta tocarlo cuando esta sección tenga que verse distinta.</p>
+			<?php if ( array() !== $propios ) : ?>
+				<div class="evt-propia">
+					<p>
+						<strong>Esta sección no sigue la apariencia del evento</strong> en: <?php echo esc_html( implode( ', ', $propios ) ); ?>.
+						Si cambia eso en la apariencia del evento, aquí no se notará.
+					</p>
+					<?php ?>
+					<label class="evt-check">
+						<input type="checkbox" name="evt_look_reset" value="1" />
+						Volver a la apariencia del evento al guardar: se vacían los campos de abajo
+					</label>
+				</div>
+			<?php endif; ?>
 
 			<div class="evt-form-fila">
 				<?php
@@ -19442,6 +19941,7 @@ use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\Programme;
 
 
@@ -19768,7 +20268,9 @@ final class ProgrammeBlock {
 			$columnas .= '<div class="evt-ev__contacto-correo"><h3 class="screen-reader-text">Correo</h3><p><a href="' . esc_url( 'mailto:' . $correo ) . '">' . esc_html( $correo ) . '</a></p></div>';
 		}
 
-		return '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+		$html = '' !== $columnas ? '<div class="evt-ev__contacto">' . $columnas . '</div>' : '';
+
+		return $html . ContactMap::html( $pagina );
 	}
 
 
@@ -21817,6 +22319,10 @@ final class EventView {
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
+
+			if ( (bool) get_post_meta( (int) $seccion->ID, EventMetaKeys::MENU_HIDDEN, true ) ) {
+				continue;
+			}
 			$menu[] = array(
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
@@ -21943,6 +22449,255 @@ final class EventView {
 			_prime_post_caches( $imagenes, false, true );
 		}
 		return self::$sections[ $event_id ];
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
+use Evt\Meta\EventMetaKeys;
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class ContactMap {
+
+
+
+
+
+
+
+
+	public const VERSION = '1.9.4';
+
+
+
+
+
+
+	public const VENDOR = array(
+		'evt-leaflet'     => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+			'sri' => 'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH',
+		),
+		'evt-leaflet-css' => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
+			'sri' => 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H',
+		),
+	);
+
+
+
+
+	public const MAX_POINTS = 20;
+
+
+
+
+
+
+	public static function register(): void {
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ), 20 );
+		add_filter( 'script_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+		add_filter( 'style_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+	}
+
+
+
+
+
+
+
+	public static function points( int $page_id ): array {
+		return self::clean( (string) get_post_meta( $page_id, EventMetaKeys::CONTACT_POINTS, true ) );
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function clean( $valor ): array {
+		$lista = is_array( $valor ) ? $valor : json_decode( (string) $valor, true );
+		$out   = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $punto ) {
+			if ( ! is_array( $punto ) || ! isset( $punto['lat'], $punto['lng'] ) || ! is_numeric( $punto['lat'] ) || ! is_numeric( $punto['lng'] ) ) {
+				continue;
+			}
+			$lat = (float) $punto['lat'];
+			$lng = (float) $punto['lng'];
+			if ( $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180 || ( 0.0 === $lat && 0.0 === $lng ) ) {
+				continue;
+			}
+			$url   = esc_url_raw( trim( (string) ( $punto['url'] ?? '' ) ), array( 'http', 'https' ) );
+			$out[] = array(
+				'lat'  => round( $lat, 6 ),
+				'lng'  => round( $lng, 6 ),
+				'text' => mb_substr( sanitize_text_field( (string) ( $punto['text'] ?? '' ) ), 0, 200 ),
+				'url'  => is_string( $url ) ? $url : '',
+			);
+			if ( count( $out ) >= self::MAX_POINTS ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function parse_coordinates( string $texto ): ?array {
+		$texto = trim( $texto );
+		if ( preg_match( '/^(-?\d{1,3}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/', $texto, $m ) ) {
+			return array( (float) $m[1], (float) $m[2] );
+		}
+
+		if ( preg_match( '/^(-?\d{1,3}(?:,\d+)?)\s*;\s*(-?\d{1,3}(?:,\d+)?)$/', $texto, $m ) ) {
+			return array( (float) str_replace( ',', '.', $m[1] ), (float) str_replace( ',', '.', $m[2] ) );
+		}
+		return null;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function tiles(): array {
+
+
+
+
+
+		$tiles = (array) apply_filters(
+			'evt_map_tiles',
+			array(
+				'url'         => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+				'attribution' => '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+			)
+		);
+
+
+		$url = trim( (string) ( $tiles['url'] ?? '' ) );
+		if ( ! preg_match( '#^https://[a-z0-9.-]+(?::\d+)?/[a-z0-9._~{}/@%=&?-]*$#i', $url ) ) {
+			$url = '';
+		}
+		return array(
+			'url'         => $url,
+			'attribution' => wp_kses( (string) ( $tiles['attribution'] ?? '' ), array( 'a' => array( 'href' => true ) ) ),
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function html( int $page_id ): string {
+		$puntos = self::points( $page_id );
+		if ( array() === $puntos ) {
+			return '';
+		}
+
+		$datos = array(
+			'points' => $puntos,
+			'tiles'  => self::tiles(),
+		);
+
+		$lista = '';
+		foreach ( $puntos as $punto ) {
+			$osm    = sprintf(
+				'https://www.openstreetmap.org/?mlat=%1$s&mlon=%2$s#map=17/%1$s/%2$s',
+				rawurlencode( (string) $punto['lat'] ),
+				rawurlencode( (string) $punto['lng'] )
+			);
+			$nombre = '' !== $punto['text'] ? $punto['text'] : 'Punto en el mapa';
+			$lista .= '<li><a href="' . esc_url( $osm ) . '">' . esc_html( $nombre ) . '</a>';
+			if ( '' !== $punto['url'] ) {
+				$lista .= ' · <a href="' . esc_url( $punto['url'] ) . '">Más información</a>';
+			}
+			$lista .= '</li>';
+		}
+
+		return '<div class="evt-ev__mapa-caja">'
+			. '<div class="evt-ev__mapa" data-evt-mapa="' . esc_attr( (string) wp_json_encode( $datos ) ) . '" role="region" aria-label="Mapa de cómo llegar"></div>'
+			. '<ul class="evt-ev__mapa-puntos">' . $lista . '</ul>'
+			. '</div>';
+	}
+
+
+
+
+
+
+	public static function enqueue(): void {
+		if ( ! EventView::takes_over() ) {
+			return;
+		}
+		$pagina = (int) get_queried_object_id();
+		if ( 'contacto' !== (string) get_post_meta( $pagina, EventMetaKeys::SECTION_TYPE, true ) || array() === self::points( $pagina ) ) {
+			return;
+		}
+
+
+		wp_enqueue_style( 'evt-leaflet-css', self::VENDOR['evt-leaflet-css']['url'], array(), null ); 
+		wp_enqueue_script( 'evt-leaflet', self::VENDOR['evt-leaflet']['url'], array(), null, true ); 
+		wp_add_inline_script( 'evt-leaflet', Assets::contents( 'js/evt-mapa.js' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function integrity( $tag, $handle, $src ): string {
+		if ( ! isset( self::VENDOR[ $handle ] ) || 0 !== strpos( (string) $src, 'https://cdn.jsdelivr.net/' ) ) {
+			return (string) $tag;
+		}
+		$atributos = ' integrity="' . esc_attr( self::VENDOR[ $handle ]['sri'] ) . '" crossorigin="anonymous"';
+		return (string) preg_replace( '/^<(script|link)\b/', '<$1' . $atributos, (string) $tag, 1 );
 	}
 }
 
@@ -23321,6 +24076,7 @@ use Evt\Meta\EventMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
+use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
 
 
@@ -23342,6 +24098,83 @@ final class EventAdmin {
 		add_filter( 'manage_' . EventPostType::POST_TYPE . '_posts_columns', array( self::class, 'columns' ) );
 		add_action( 'manage_' . EventPostType::POST_TYPE . '_posts_custom_column', array( self::class, 'column_content' ), 10, 2 );
 		add_action( 'admin_menu', array( self::class, 'add_new_submenus' ), 20 );
+		add_action( 'admin_menu', array( self::class, 'hide_desk_menu' ), 999 );
+		add_action( 'admin_bar_menu', array( self::class, 'hide_desk_new_items' ), 999 );
+		add_action( 'current_screen', array( self::class, 'send_to_the_app' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function uses_the_desk( int $user_id = 0 ): bool {
+		return EventAccess::is_manager( $user_id );
+	}
+
+
+
+
+
+
+	public static function hide_desk_menu(): void {
+		if ( ! self::uses_the_desk() ) {
+			remove_menu_page( 'edit.php?post_type=' . EventPostType::POST_TYPE );
+		}
+	}
+
+
+
+
+
+
+
+	public static function hide_desk_new_items( $barra ): void {
+		if ( ! ( $barra instanceof \WP_Admin_Bar ) || self::uses_the_desk() ) {
+			return;
+		}
+		foreach ( self::desk_post_types() as $tipo ) {
+			$barra->remove_node( 'new-' . $tipo );
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function send_to_the_app( $pantalla ): void {
+		if ( ! ( $pantalla instanceof \WP_Screen ) || self::uses_the_desk() ) {
+			return;
+		}
+		if ( ! in_array( $pantalla->base, array( 'edit', 'post' ), true ) || ! in_array( $pantalla->post_type, self::desk_post_types(), true ) ) {
+			return;
+		}
+		$destino = Shell::url( 'events' );
+		Shell::leave( '' !== $destino ? $destino : home_url( '/' ) );
+	}
+
+
+
+
+
+
+	public static function desk_post_types(): array {
+		return array( EventPostType::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE );
 	}
 
 
@@ -23884,6 +24717,7 @@ use Evt\PublicFront\PageForm;
 use Evt\PublicFront\RegistrationFiles;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
+use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\SignupForm;
 use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
@@ -23964,6 +24798,8 @@ final class App {
 
 
 		EventView::register();
+
+		ContactMap::register();
 
 
 
@@ -24454,6 +25290,40 @@ body.evt-app .evt-hoja {
 .evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-icono-nombre { font-size: 13px; }
 
+/* El árbol de ámbitos: cada uno sangrado bajo el suyo, con una raya que
+   dice de quién cuelga. Lo que no se puede elegir sale en gris, sin casilla. */
+/* `clear`: Bootstrap flota el `<legend>` a todo lo ancho, y una fila flex
+   junto a un flotante se queda con cero de ancho. */
+.evt-arbol { clear: both; }
+.evt-arbol, .evt-arbol ul { list-style: none; margin: 0; padding: 0; }
+.evt-arbol ul { margin-left: 11px; padding-left: 14px; border-left: 1px solid var(--evt-linea); }
+.evt-arbol ul[hidden] { display: none; }
+.evt-arbol__fila { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+.evt-arbol__fila label { display: flex; align-items: baseline; gap: 8px; margin: 0; font-weight: 400; }
+.evt-arbol li:not(.evt-arbol__rama) > .evt-arbol__fila { padding-left: 28px; }
+.evt-arbol__contexto { color: var(--evt-texto-2); font-weight: 600; }
+.evt-arbol__plegar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--evt-texto-2);
+  cursor: pointer;
+}
+.evt-arbol__plegar::before { content: "▾"; display: inline-block; font-size: 18px; line-height: 22px; }
+.evt-arbol__plegar[aria-expanded="false"]::before { content: "▸"; }
+.evt-arbol__plegar:hover { background: var(--evt-sup-2); }
+/* Sin guion no hay flecha: la rama no lleva hueco de más. */
+.evt-arbol__rama > .evt-arbol__fila { padding-left: 28px; }
+.evt-app-js .evt-arbol__rama > .evt-arbol__fila { padding-left: 0; }
+
+/* Las opciones de una pregunta: el guion las esconde en los tipos sin lista. */
+[data-evt-q-opciones][hidden] { display: none; }
+.evt-pregunta__quitar { margin-top: 10px; color: var(--evt-mal); }
+
 /* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
    tabla de la sede anterior y parece su pie, no el encabezado del bloque
    siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */
@@ -24627,6 +25497,11 @@ body.evt-app .evt-hoja {
 .evt-state-publish { background: var(--evt-ok-cont); color: var(--evt-ok); }
 .evt-state-archived { background: #2b3036; color: #fff; }
 .evt-state-trash { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-state-propia { background: var(--evt-inf-cont); color: var(--evt-inf); }
+.evt-propia ul { margin: 0 0 8px; padding-left: 1.2em; }
+.evt-propia p { margin: 0 0 8px; }
+details .evt-propia { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; background: var(--evt-inf-cont); color: #143a63; }
+details > summary .evt-state { margin-left: 8px; vertical-align: middle; }
 
 /* Lo que se dice de una fila al lado de su título: va debajo, más pequeño. */
 .evt-marca-fila { display: table; margin-top: 4px; font-weight: 600; }
@@ -24836,6 +25711,18 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   color: var(--evt-adm-texto);
 }
 .evt-solo-admin + .evt-solo-admin { margin-top: 18px; }
+
+/* La línea: una posibilidad de más dentro de un campo que ven todos. */
+.evt-solo-admin--nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+.evt-solo-admin--nota .evt-solo-admin-marca { margin: 0; }
 
 /* La etiqueta en texto, para quien no distingue el color. */
 .evt-solo-admin-marca {
@@ -26470,6 +27357,24 @@ body .swal2-container { z-index: 100010; }
 		background: none;
 	}
 }
+
+/* ─── mapa de la página de contacto (ADR-0046) ──────────────────────── */
+
+.evt-ev__mapa-caja {
+	margin-top: var(--evt-espacio);
+}
+
+/* Sin Leaflet la caja no ocupa nada: queda la lista de debajo. */
+.evt-ev__mapa--listo {
+	height: 380px;
+	margin-bottom: 1rem;
+	border-radius: var(--evt-radio);
+}
+
+.evt-ev__mapa-puntos {
+	margin: 0;
+	padding-left: 1.2em;
+}
 ',
   'css/evt-linea.css' => '/*
  * La línea del tiempo pública (`[evt_timeline]`, ADR-0041).
@@ -27947,6 +28852,147 @@ body .swal2-container { z-index: 100010; }
 		}
 	}, true );
 
+	/* --- 10. Las preguntas de la inscripción ------------------------------ */
+
+	/*
+	 * Dos cosas, y las dos sobre un formulario que ya funciona sin ellas.
+	 *
+	 * Las opciones, una por línea, solo valen para «Una opción» y «Varias
+	 * opciones»: se esconde el campo en las demás y se enseña al cambiar el
+	 * tipo. Qué tipos llevan opciones lo dice el servidor en
+	 * `data-evt-q-opciones`, para no repetir aquí la lista.
+	 *
+	 * «Añadir otra pregunta» copia la fila en blanco del final con el índice
+	 * siguiente, la abre y pone el cursor en el rótulo: se pueden añadir varias
+	 * antes de guardar. Sin guion, la fila en blanco de siempre, de una en una.
+	 */
+	function opcionesSegunTipo( fila ) {
+		var campo = fila.querySelector( \'[data-evt-q-opciones]\' );
+		var tipo = fila.querySelector( \'select[name^="evt_q_type"]\' );
+		if ( ! campo || ! tipo ) {
+			return;
+		}
+		var llevan = campo.getAttribute( \'data-evt-q-opciones\' ).split( \' \' );
+		campo.hidden = -1 === llevan.indexOf( tipo.value );
+	}
+
+	document.addEventListener( \'change\', function ( e ) {
+		var tipo = e.target.closest ? e.target.closest( \'select[name^="evt_q_type"]\' ) : null;
+		var fila = tipo ? tipo.closest( \'.evt-pregunta\' ) : null;
+		if ( fila ) {
+			opcionesSegunTipo( fila );
+		}
+	} );
+
+	function arrancarPreguntas() {
+		Array.prototype.forEach.call( document.querySelectorAll( \'.evt-pregunta\' ), opcionesSegunTipo );
+
+		var lista = document.querySelector( \'[data-evt-preguntas]\' );
+		var boton = document.querySelector( \'[data-evt-pregunta-nueva]\' );
+		var molde = lista ? lista.querySelector( \'.evt-pregunta--nueva\' ) : null;
+		if ( ! lista || ! boton || ! molde ) {
+			return;
+		}
+		// La copia se toma ahora, antes de que nadie escriba en la fila.
+		molde = molde.cloneNode( true );
+		var siguiente = lista.querySelectorAll( \'.evt-pregunta\' ).length;
+		boton.hidden = false;
+
+		boton.addEventListener( \'click\', function () {
+			var fila = molde.cloneNode( true );
+			var i = siguiente++;
+			Array.prototype.forEach.call( fila.querySelectorAll( \'[name], [id], [for]\' ), function ( nodo ) {
+				[ \'name\', \'id\', \'for\' ].forEach( function ( atributo ) {
+					var valor = nodo.getAttribute( atributo );
+					if ( valor ) {
+						nodo.setAttribute( atributo, valor.replace( /\\[\\d+\\]$/, \'[\' + i + \']\' ).replace( /-\\d+$/, \'-\' + i ) );
+					}
+				} );
+			} );
+			fila.open = true;
+			lista.appendChild( fila );
+			opcionesSegunTipo( fila );
+			var rotulo = fila.querySelector( \'input[name^="evt_q_label"]\' );
+			if ( rotulo ) {
+				rotulo.focus();
+			}
+		} );
+	}
+	document.addEventListener( \'DOMContentLoaded\', arrancarPreguntas );
+
+	/* --- 11. El árbol de ámbitos: plegar y desplegar ramas ---------------- */
+
+	/*
+	 * Sin guion, el árbol entero abierto y sangrado, que se lee igual. Con
+	 * guion, cada rama tiene su flecha y arrancan abiertas solo las que llevan
+	 * algo marcado dentro: lo que ya es del evento se ve sin buscarlo.
+	 */
+	function plegar( boton, abierta ) {
+		var rama = boton.closest( \'.evt-arbol__rama\' );
+		var hijos = rama ? rama.querySelector( \':scope > ul\' ) : null;
+		boton.setAttribute( \'aria-expanded\', abierta ? \'true\' : \'false\' );
+		if ( hijos ) {
+			hijos.hidden = ! abierta;
+		}
+	}
+
+	document.addEventListener( \'click\', function ( e ) {
+		var boton = e.target.closest ? e.target.closest( \'[data-evt-arbol-plegar]\' ) : null;
+		if ( boton ) {
+			plegar( boton, \'true\' !== boton.getAttribute( \'aria-expanded\' ) );
+		}
+	} );
+
+	document.addEventListener( \'DOMContentLoaded\', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-arbol-plegar]\' ), function ( boton ) {
+			var rama = boton.closest( \'.evt-arbol__rama\' );
+			boton.hidden = false;
+			plegar( boton, !! ( rama && rama.querySelector( \':scope > ul input:checked\' ) ) );
+		} );
+	} );
+
+	/* --- 12. Filas que se repiten: «Añadir otro punto» ------------------ */
+
+	/*
+	 * `data-evt-filas` en la caja, `data-evt-fila` en cada fila y
+	 * `data-evt-filas-nueva` en el botón, dentro del mismo campo. El botón
+	 * copia la última fila vacía con el índice siguiente. Sin guion, la fila en
+	 * blanco del final, de una en una.
+	 */
+	document.addEventListener( \'DOMContentLoaded\', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-filas-nueva]\' ), function ( boton ) {
+			var campo = boton.closest( \'.evt-form-campo\' );
+			var caja = campo ? campo.querySelector( \'[data-evt-filas]\' ) : null;
+			var filas = caja ? caja.querySelectorAll( \'[data-evt-fila]\' ) : [];
+			if ( ! filas.length ) {
+				return;
+			}
+			var molde = filas[ filas.length - 1 ].cloneNode( true );
+			var siguiente = filas.length;
+			boton.hidden = false;
+			boton.addEventListener( \'click\', function () {
+				var fila = molde.cloneNode( true );
+				var i = siguiente++;
+				Array.prototype.forEach.call( fila.querySelectorAll( \'[name], [id], [for]\' ), function ( nodo ) {
+					[ \'name\', \'id\', \'for\' ].forEach( function ( atributo ) {
+						var valor = nodo.getAttribute( atributo );
+						if ( valor ) {
+							nodo.setAttribute( atributo, valor.replace( /\\[\\d+\\]$/, \'[\' + i + \']\' ).replace( /-\\d+$/, \'-\' + i ) );
+						}
+					} );
+					if ( \'value\' in nodo && \'INPUT\' === nodo.tagName ) {
+						nodo.value = \'\';
+					}
+				} );
+				caja.appendChild( fila );
+				var primero = fila.querySelector( \'input\' );
+				if ( primero ) {
+					primero.focus();
+				}
+			} );
+		} );
+	} );
+
 	window.addEventListener( \'beforeunload\', function ( e ) {
 		var formularios = document.querySelectorAll( \'form[data-evt-cambios]\' );
 		for ( var i = 0; i < formularios.length; i++ ) {
@@ -28140,6 +29186,72 @@ body .swal2-container { z-index: 100010; }
 	} else {
 		arrancar();
 	}
+}() );
+',
+  'js/evt-mapa.js' => '/*
+ * evt-mapa.js — el mapa de la página de contacto de un evento (ADR-0046).
+ *
+ * Lee los puntos de `data-evt-mapa`, que escribe el servidor ya limpios, y los
+ * pinta con Leaflet sobre las teselas que diga el mismo dato. Si Leaflet no
+ * llega, no hace nada: debajo del mapa está la lista de puntos con su enlace,
+ * que se lee igual.
+ */
+( function () {
+	\'use strict\';
+
+	if ( ! window.L ) {
+		return;
+	}
+
+	document.querySelectorAll( \'[data-evt-mapa]\' ).forEach( function ( caja ) {
+		var datos;
+		try {
+			datos = JSON.parse( caja.getAttribute( \'data-evt-mapa\' ) );
+		} catch ( e ) {
+			return;
+		}
+		if ( ! datos || ! datos.points || ! datos.points.length || ! datos.tiles || ! datos.tiles.url ) {
+			return;
+		}
+
+		// La altura, antes de crear el mapa: Leaflet mide la caja al centrarlo.
+		caja.classList.add( \'evt-ev__mapa--listo\' );
+		var mapa = window.L.map( caja, { scrollWheelZoom: false } );
+		window.L.tileLayer( datos.tiles.url, {
+			maxZoom: 19,
+			attribution: datos.tiles.attribution
+		} ).addTo( mapa );
+
+		var marcas = datos.points.map( function ( punto ) {
+			var marca = window.L.marker( [ punto.lat, punto.lng ], { title: punto.text || \'\' } ).addTo( mapa );
+			if ( punto.text || punto.url ) {
+				// Se arma con nodos y no con HTML: el texto lo escribe quien organiza.
+				var globo = document.createElement( \'div\' );
+				if ( punto.text ) {
+					var titulo = document.createElement( \'strong\' );
+					titulo.textContent = punto.text;
+					globo.appendChild( titulo );
+				}
+				if ( punto.url ) {
+					var enlace = document.createElement( \'a\' );
+					enlace.href = punto.url;
+					enlace.textContent = \'Más información\';
+					if ( punto.text ) {
+						globo.appendChild( document.createElement( \'br\' ) );
+					}
+					globo.appendChild( enlace );
+				}
+				marca.bindPopup( globo );
+			}
+			return marca;
+		} );
+
+		if ( 1 === marcas.length ) {
+			mapa.setView( marcas[ 0 ].getLatLng(), 16 );
+		} else {
+			mapa.fitBounds( window.L.featureGroup( marcas ).getBounds(), { padding: [ 30, 30 ] } );
+		}
+	} );
 }() );
 ',
 ) );

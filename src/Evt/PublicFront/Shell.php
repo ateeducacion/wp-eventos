@@ -753,6 +753,28 @@ final class Shell {
 	public const ADMIN_BOX_WHY = 'Este recuadro solo lo ve quien administra el aplicativo. Ningún otro perfil lo ve ni puede cambiar lo que hay dentro.';
 
 	/**
+	 * The shield of the «Solo administración» label.
+	 */
+	private const ADMIN_SHIELD = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>';
+
+	/**
+	 * The yellow line: one thing that only the administration can do here.
+	 *
+	 * La hermana pequeña de {@see admin_box()}, para cuando lo que solo puede
+	 * hacer administración no es un bloque aparte sino una posibilidad de más
+	 * dentro de un campo que ven todos: elegir cualquier ámbito, seguir
+	 * editando un evento histórico. Misma etiqueta y mismo amarillo, en una
+	 * línea.
+	 *
+	 * @param string $texto What only the administration can do, and why.
+	 * @return string
+	 */
+	public static function admin_note( string $texto ): string {
+		return '<p class="evt-solo-admin evt-solo-admin--nota"><span class="evt-solo-admin-marca">'
+			. self::ADMIN_SHIELD . ' Solo administración</span> ' . esc_html( $texto ) . '</p>';
+	}
+
+	/**
 	 * The yellow box: what only the administration sees.
 	 *
 	 * Una convención del aplicativo, no un adorno de una pantalla: cualquier
@@ -778,7 +800,7 @@ final class Shell {
 		?>
 		<section class="evt-solo-admin">
 			<p class="evt-solo-admin-marca">
-				<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm0 6a2 2 0 0 1 2 2v1h.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5H10V9a2 2 0 0 1 2-2Zm0 1.2A.8.8 0 0 0 11.2 9v1h1.6V9a.8.8 0 0 0-.8-.8Z"/></svg>
+				<?php echo self::ADMIN_SHIELD; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- constante. ?>
 				Solo administración
 			</p>
 			<?php if ( '' !== $titulo ) : ?>
