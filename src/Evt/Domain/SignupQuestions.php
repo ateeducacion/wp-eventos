@@ -61,11 +61,19 @@ final class SignupQuestions {
 				continue;
 			}
 			$pregunta = self::one( $raw );
-			if ( '' === $pregunta['label'] || isset( $vistos[ $pregunta['id'] ] ) ) {
+			if ( '' === $pregunta['label'] ) {
 				continue;
 			}
-			$vistos[ $pregunta['id'] ] = true;
-			$out[]                     = $pregunta;
+			// Solo se descartan los repetidos de verdad. Las preguntas nuevas
+			// llegan todas sin identificador —se lo da `with_ids()` después—,
+			// y con varias a la vez la segunda no es copia de la primera.
+			if ( '' !== $pregunta['id'] ) {
+				if ( isset( $vistos[ $pregunta['id'] ] ) ) {
+					continue;
+				}
+				$vistos[ $pregunta['id'] ] = true;
+			}
+			$out[] = $pregunta;
 		}
 		return $out;
 	}

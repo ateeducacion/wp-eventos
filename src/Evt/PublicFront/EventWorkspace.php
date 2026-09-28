@@ -1810,13 +1810,16 @@ final class EventWorkspace {
 		$tipos     = (array) wp_unslash( $_POST['evt_q_type'] ?? array() );
 		$opciones  = (array) wp_unslash( $_POST['evt_q_options'] ?? array() );
 		$obligadas = (array) wp_unslash( $_POST['evt_q_required'] ?? array() );
+		$quitadas  = (array) wp_unslash( $_POST['evt_q_remove'] ?? array() );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$out = array();
 		foreach ( $rotulos as $i => $rotulo ) {
 			$out[] = array(
 				'id'       => isset( $ids[ $i ] ) ? sanitize_text_field( (string) $ids[ $i ] ) : '',
-				'label'    => sanitize_text_field( (string) $rotulo ),
+				// Quitarla es dejarla sin rótulo: se cae al normalizar, igual
+				// que si se hubiera borrado el rótulo a mano.
+				'label'    => empty( $quitadas[ $i ] ) ? sanitize_text_field( (string) $rotulo ) : '',
 				'type'     => isset( $tipos[ $i ] ) ? sanitize_key( (string) $tipos[ $i ] ) : 'text',
 				'options'  => isset( $opciones[ $i ] ) ? sanitize_textarea_field( (string) $opciones[ $i ] ) : '',
 				'required' => ! empty( $obligadas[ $i ] ),

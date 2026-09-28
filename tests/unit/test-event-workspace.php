@@ -1079,6 +1079,46 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * «Quitar esta pregunta al guardar» la quita; varias filas nuevas se añaden de una vez.
+	 */
+	public function test_signup_questions_are_removed_and_added_in_one_go() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_q_id'      => array( '', '', '' ),
+				'evt_q_label'   => array( 'Alergias', 'Talla de camiseta', '' ),
+				'evt_q_type'    => array( 'text', 'one', 'text' ),
+				'evt_q_options' => array( '', "S\nM\nL", '' ),
+			)
+		);
+		$preguntas = \Evt\PublicFront\Registrations::questions( $evento );
+		$this->assertSame( array( 'Alergias', 'Talla de camiseta' ), array_column( $preguntas, 'label' ), 'dos filas nuevas, y la vacía no cuenta' );
+
+		$ids = array_column( $preguntas, 'id' );
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_q_id'      => $ids,
+				'evt_q_label'   => array( 'Alergias', 'Talla de camiseta' ),
+				'evt_q_type'    => array( 'text', 'one' ),
+				'evt_q_options' => array( '', "S\nM\nL" ),
+				'evt_q_remove'  => array( 0 => '1' ),
+			)
+		);
+		$this->assertSame( array( 'Talla de camiseta' ), array_column( \Evt\PublicFront\Registrations::questions( $evento ), 'label' ) );
+	}
+
+	/**
 	 * Un alta de ponente que no pasa vuelve con el panel lateral abierto.
 	 */
 	public function test_a_failed_speaker_reopens_the_side_panel() {

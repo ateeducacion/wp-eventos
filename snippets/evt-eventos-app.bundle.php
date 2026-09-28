@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.6
+ * @version 0.1.7
  */
 
 // phpcs:disable
@@ -1983,11 +1983,19 @@ final class SignupQuestions {
 				continue;
 			}
 			$pregunta = self::one( $raw );
-			if ( '' === $pregunta['label'] || isset( $vistos[ $pregunta['id'] ] ) ) {
+			if ( '' === $pregunta['label'] ) {
 				continue;
 			}
-			$vistos[ $pregunta['id'] ] = true;
-			$out[]                     = $pregunta;
+
+
+
+			if ( '' !== $pregunta['id'] ) {
+				if ( isset( $vistos[ $pregunta['id'] ] ) ) {
+					continue;
+				}
+				$vistos[ $pregunta['id'] ] = true;
+			}
+			$out[] = $pregunta;
 		}
 		return $out;
 	}
@@ -13928,13 +13936,16 @@ final class EventWorkspace {
 		$tipos     = (array) wp_unslash( $_POST['evt_q_type'] ?? array() );
 		$opciones  = (array) wp_unslash( $_POST['evt_q_options'] ?? array() );
 		$obligadas = (array) wp_unslash( $_POST['evt_q_required'] ?? array() );
+		$quitadas  = (array) wp_unslash( $_POST['evt_q_remove'] ?? array() );
 
 
 		$out = array();
 		foreach ( $rotulos as $i => $rotulo ) {
 			$out[] = array(
 				'id'       => isset( $ids[ $i ] ) ? sanitize_text_field( (string) $ids[ $i ] ) : '',
-				'label'    => sanitize_text_field( (string) $rotulo ),
+
+
+				'label'    => empty( $quitadas[ $i ] ) ? sanitize_text_field( (string) $rotulo ) : '',
 				'type'     => isset( $tipos[ $i ] ) ? sanitize_key( (string) $tipos[ $i ] ) : 'text',
 				'options'  => isset( $opciones[ $i ] ) ? sanitize_textarea_field( (string) $opciones[ $i ] ) : '',
 				'required' => ! empty( $obligadas[ $i ] ),
@@ -16075,8 +16086,10 @@ final class EventParticipantsPanel {
 namespace Evt\PublicFront\View;
 
 use Evt\Meta\EventMetaKeys;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Assets;
 use Evt\PublicFront\EventWorkspace;
+use Evt\PublicFront\Shell;
 
 
 
@@ -16256,11 +16269,19 @@ final class EventSignupPanel {
 			'required' => false,
 		);
 
+		$html .= '<div class="evt-preguntas__lista" data-evt-preguntas>';
 		foreach ( $filas as $i => $pregunta ) {
 			$html .= self::row( (int) $i, $pregunta, $tipos, array() === $preguntas );
 		}
+		$html .= '</div>';
 
-		$html .= '<p class="evt-ayuda">Para quitar una pregunta, borre su rótulo y guarde. '
+
+
+
+		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-pregunta-nueva hidden>'
+			. wp_kses( Shell::icon_plus(), PanelParts::SVG ) . ' Añadir otra pregunta</button></p>';
+
+		$html .= '<p class="evt-ayuda">Para quitar una pregunta, ábrala y marque «Quitar esta pregunta al guardar». '
 			. 'Lo que ya hubiera contestado alguien no se borra: deja de verse, y vuelve si la pregunta vuelve.</p>';
 
 		return $html . '</section>';
@@ -16309,15 +16330,28 @@ final class EventSignupPanel {
 		}
 		$html .= '</select></p></div>';
 
+
+
+
 		$html .= sprintf(
-			'<p class="evt-campo"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
+			'<p class="evt-campo" data-evt-q-opciones="%3$s"><label for="evt-q-o-%1$d">Opciones, una por línea</label>'
 				. '<textarea id="evt-q-o-%1$d" name="evt_q_options[%1$d]" rows="3">%2$s</textarea>'
 				. '<small>Solo para «Una opción» y «Varias opciones».</small></p>',
 			$i,
-			esc_textarea( implode( "\n", (array) $p['options'] ) )
+			esc_textarea( implode( "\n", (array) $p['options'] ) ),
+			esc_attr( implode( ' ', array_filter( array_keys( $tipos ), array( RegistrationMetaKeys::class, 'has_options' ) ) ) )
 		);
 
 		$html .= self::toggle( 'evt_q_required[' . $i . ']', 'Obligatoria', (bool) $p['required'], 'evt-q-r-' . $i );
+
+
+
+		if ( ! $nueva ) {
+			$html .= sprintf(
+				'<p class="evt-campo evt-pregunta__quitar"><label class="evt-check"><input type="checkbox" name="evt_q_remove[%1$d]" value="1"> Quitar esta pregunta al guardar</label></p>',
+				$i
+			);
+		}
 
 		return $html . '</div></details>';
 	}
@@ -24599,6 +24633,10 @@ body.evt-app .evt-hoja {
 .evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-icono-nombre { font-size: 13px; }
 
+/* Las opciones de una pregunta: el guion las esconde en los tipos sin lista. */
+[data-evt-q-opciones][hidden] { display: none; }
+.evt-pregunta__quitar { margin-top: 10px; color: var(--evt-mal); }
+
 /* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
    tabla de la sede anterior y parece su pie, no el encabezado del bloque
    siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */
@@ -28108,6 +28146,74 @@ body .swal2-container { z-index: 100010; }
 			e.target.evtSucio = false;
 		}
 	}, true );
+
+	/* --- 10. Las preguntas de la inscripción ------------------------------ */
+
+	/*
+	 * Dos cosas, y las dos sobre un formulario que ya funciona sin ellas.
+	 *
+	 * Las opciones, una por línea, solo valen para «Una opción» y «Varias
+	 * opciones»: se esconde el campo en las demás y se enseña al cambiar el
+	 * tipo. Qué tipos llevan opciones lo dice el servidor en
+	 * `data-evt-q-opciones`, para no repetir aquí la lista.
+	 *
+	 * «Añadir otra pregunta» copia la fila en blanco del final con el índice
+	 * siguiente, la abre y pone el cursor en el rótulo: se pueden añadir varias
+	 * antes de guardar. Sin guion, la fila en blanco de siempre, de una en una.
+	 */
+	function opcionesSegunTipo( fila ) {
+		var campo = fila.querySelector( \'[data-evt-q-opciones]\' );
+		var tipo = fila.querySelector( \'select[name^="evt_q_type"]\' );
+		if ( ! campo || ! tipo ) {
+			return;
+		}
+		var llevan = campo.getAttribute( \'data-evt-q-opciones\' ).split( \' \' );
+		campo.hidden = -1 === llevan.indexOf( tipo.value );
+	}
+
+	document.addEventListener( \'change\', function ( e ) {
+		var tipo = e.target.closest ? e.target.closest( \'select[name^="evt_q_type"]\' ) : null;
+		var fila = tipo ? tipo.closest( \'.evt-pregunta\' ) : null;
+		if ( fila ) {
+			opcionesSegunTipo( fila );
+		}
+	} );
+
+	function arrancarPreguntas() {
+		Array.prototype.forEach.call( document.querySelectorAll( \'.evt-pregunta\' ), opcionesSegunTipo );
+
+		var lista = document.querySelector( \'[data-evt-preguntas]\' );
+		var boton = document.querySelector( \'[data-evt-pregunta-nueva]\' );
+		var molde = lista ? lista.querySelector( \'.evt-pregunta--nueva\' ) : null;
+		if ( ! lista || ! boton || ! molde ) {
+			return;
+		}
+		// La copia se toma ahora, antes de que nadie escriba en la fila.
+		molde = molde.cloneNode( true );
+		var siguiente = lista.querySelectorAll( \'.evt-pregunta\' ).length;
+		boton.hidden = false;
+
+		boton.addEventListener( \'click\', function () {
+			var fila = molde.cloneNode( true );
+			var i = siguiente++;
+			Array.prototype.forEach.call( fila.querySelectorAll( \'[name], [id], [for]\' ), function ( nodo ) {
+				[ \'name\', \'id\', \'for\' ].forEach( function ( atributo ) {
+					var valor = nodo.getAttribute( atributo );
+					if ( valor ) {
+						nodo.setAttribute( atributo, valor.replace( /\\[\\d+\\]$/, \'[\' + i + \']\' ).replace( /-\\d+$/, \'-\' + i ) );
+					}
+				} );
+			} );
+			fila.open = true;
+			lista.appendChild( fila );
+			opcionesSegunTipo( fila );
+			var rotulo = fila.querySelector( \'input[name^="evt_q_label"]\' );
+			if ( rotulo ) {
+				rotulo.focus();
+			}
+		} );
+	}
+	document.addEventListener( \'DOMContentLoaded\', arrancarPreguntas );
 
 	window.addEventListener( \'beforeunload\', function ( e ) {
 		var formularios = document.querySelectorAll( \'form[data-evt-cambios]\' );

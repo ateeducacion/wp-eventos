@@ -456,6 +456,10 @@ body.evt-app .evt-hoja {
 .evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-icono-nombre { font-size: 13px; }
 
+/* Las opciones de una pregunta: el guion las esconde en los tipos sin lista. */
+[data-evt-q-opciones][hidden] { display: none; }
+.evt-pregunta__quitar { margin-top: 10px; color: var(--evt-mal); }
+
 /* El rótulo de la segunda sede de un día: sin este aire queda pegado a la
    tabla de la sede anterior y parece su pie, no el encabezado del bloque
    siguiente. Solo aparece cuando el día tiene más de una sede (ADR-0024). */

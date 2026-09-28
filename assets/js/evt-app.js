@@ -1027,6 +1027,74 @@
 		}
 	}, true );
 
+	/* --- 10. Las preguntas de la inscripción ------------------------------ */
+
+	/*
+	 * Dos cosas, y las dos sobre un formulario que ya funciona sin ellas.
+	 *
+	 * Las opciones, una por línea, solo valen para «Una opción» y «Varias
+	 * opciones»: se esconde el campo en las demás y se enseña al cambiar el
+	 * tipo. Qué tipos llevan opciones lo dice el servidor en
+	 * `data-evt-q-opciones`, para no repetir aquí la lista.
+	 *
+	 * «Añadir otra pregunta» copia la fila en blanco del final con el índice
+	 * siguiente, la abre y pone el cursor en el rótulo: se pueden añadir varias
+	 * antes de guardar. Sin guion, la fila en blanco de siempre, de una en una.
+	 */
+	function opcionesSegunTipo( fila ) {
+		var campo = fila.querySelector( '[data-evt-q-opciones]' );
+		var tipo = fila.querySelector( 'select[name^="evt_q_type"]' );
+		if ( ! campo || ! tipo ) {
+			return;
+		}
+		var llevan = campo.getAttribute( 'data-evt-q-opciones' ).split( ' ' );
+		campo.hidden = -1 === llevan.indexOf( tipo.value );
+	}
+
+	document.addEventListener( 'change', function ( e ) {
+		var tipo = e.target.closest ? e.target.closest( 'select[name^="evt_q_type"]' ) : null;
+		var fila = tipo ? tipo.closest( '.evt-pregunta' ) : null;
+		if ( fila ) {
+			opcionesSegunTipo( fila );
+		}
+	} );
+
+	function arrancarPreguntas() {
+		Array.prototype.forEach.call( document.querySelectorAll( '.evt-pregunta' ), opcionesSegunTipo );
+
+		var lista = document.querySelector( '[data-evt-preguntas]' );
+		var boton = document.querySelector( '[data-evt-pregunta-nueva]' );
+		var molde = lista ? lista.querySelector( '.evt-pregunta--nueva' ) : null;
+		if ( ! lista || ! boton || ! molde ) {
+			return;
+		}
+		// La copia se toma ahora, antes de que nadie escriba en la fila.
+		molde = molde.cloneNode( true );
+		var siguiente = lista.querySelectorAll( '.evt-pregunta' ).length;
+		boton.hidden = false;
+
+		boton.addEventListener( 'click', function () {
+			var fila = molde.cloneNode( true );
+			var i = siguiente++;
+			Array.prototype.forEach.call( fila.querySelectorAll( '[name], [id], [for]' ), function ( nodo ) {
+				[ 'name', 'id', 'for' ].forEach( function ( atributo ) {
+					var valor = nodo.getAttribute( atributo );
+					if ( valor ) {
+						nodo.setAttribute( atributo, valor.replace( /\[\d+\]$/, '[' + i + ']' ).replace( /-\d+$/, '-' + i ) );
+					}
+				} );
+			} );
+			fila.open = true;
+			lista.appendChild( fila );
+			opcionesSegunTipo( fila );
+			var rotulo = fila.querySelector( 'input[name^="evt_q_label"]' );
+			if ( rotulo ) {
+				rotulo.focus();
+			}
+		} );
+	}
+	document.addEventListener( 'DOMContentLoaded', arrancarPreguntas );
+
 	window.addEventListener( 'beforeunload', function ( e ) {
 		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
 		for ( var i = 0; i < formularios.length; i++ ) {

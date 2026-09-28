@@ -461,6 +461,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'evt_q_label[0]', $html );
 		$this->assertStringContainsString( 'evt_q_label[1]', $html, 'la fila en blanco del final' );
 		$this->assertStringContainsString( 'Añadir una pregunta', $html );
+		$this->assertStringContainsString( 'name="evt_q_remove[0]"', $html, 'la guardada se quita con una casilla' );
+		$this->assertStringNotContainsString( 'name="evt_q_remove[1]"', $html, 'la fila en blanco no tiene nada que quitar' );
+		$this->assertStringContainsString( 'data-evt-q-opciones="one many"', $html, 'el guion sabe qué tipos llevan opciones' );
+		$this->assertStringContainsString( 'data-evt-pregunta-nueva hidden', $html, 'el botón de añadir otra lo enseña el guion' );
 		$this->assertStringContainsString( 'role="switch"', $html, 'los interruptores son interruptores' );
 		$this->assertStringContainsString( 'data-evt-guardar', $html, 'la barra de guardar' );
 

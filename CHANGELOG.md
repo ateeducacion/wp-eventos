@@ -8,6 +8,20 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.7] — 2026-09-28
+
+### Cambiado
+
+- **El editor de preguntas de la inscripción es más claro.**
+  - El campo «Opciones, una por línea» solo aparece en las preguntas de «Una opción» y «Varias opciones», y sale al cambiar el tipo.
+  - El botón «Añadir otra pregunta» añade tantas como se quiera antes de guardar.
+  - Cada pregunta guardada tiene la casilla «Quitar esta pregunta al guardar», en vez de tener que borrar su rótulo.
+  - Sin JavaScript, todo sigue como antes
+
+### Corregido
+
+- **Al guardar varias preguntas nuevas a la vez, solo se guardaba la primera.** Llegaban todas sin identificador y se tomaban por repetidas
+
 ## [0.1.6] — 2026-09-28
 
 ### Añadido
