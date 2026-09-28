@@ -110,6 +110,9 @@ class Test_Timeline extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'class="evt-linea"', $html );
 		$this->assertStringContainsString( 'data-actual="1"', $html );
 		$this->assertStringContainsString( 'data-evt-linea="hoy"', $html );
+		$this->assertSame( 2, substr_count( $html, 'class="evt-linea__flecha' ), 'las dos flechas grandes, a los lados' );
+		$this->assertStringContainsString( 'evt-linea__flecha--atras" type="button" data-evt-linea="atras"', $html );
+		$this->assertStringContainsString( 'evt-linea__flecha--adelante" type="button" data-evt-linea="adelante"', $html );
 		$this->assertStringContainsString( 'Encuentro de coordinación', $html );
 		$this->assertStringContainsString( esc_url( get_permalink( $evento ) ), $html );
 		$this->assertStringContainsString( 'Sin eventos este mes.', $html );

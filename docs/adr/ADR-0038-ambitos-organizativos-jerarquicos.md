@@ -44,3 +44,42 @@ En REST, una persona editora acotada crea primero un borrador y luego lo publica
 La asignación compartida se resuelve en `EventAccess::resolve_area_assignment()`: un Editor solo cambia términos de su subárbol, conserva los ajenos y puede retirar todos los propios si queda otro organizador. En tal caso pierde acceso al guardar y el taller lo comunica. Si el conjunto final queda vacío, se rechaza. Los organizadores ajenos existentes son visibles en solo lectura en el taller y en wp-admin.
 
 El perfil interpreta de forma centralizada meta escalar, cadena separada por comas o lista. Un único ID válido resuelve el ámbito y se normaliza a una lista unitaria al guardar el perfil; varios válidos son ambiguos, y la mezcla de un ID válido con otro inexistente es inválida. Ambos estados bloquean acceso y su meta se preserva literalmente mientras administración no elija explícitamente un único ámbito o «Sin ámbito». Como aún no hay cuentas reales, no hace falta una migración masiva; Ajustes y diagnóstico enumera perfiles problemáticos antes del despliegue.
+
+## Adenda — 2026-09-28
+
+Con el árbol real de ámbitos —varios niveles, desde el organismo hasta cada
+área y cada centro— el selector del perfil dejó de poder usarse: cada opción
+llevaba la ruta entera («raíz › … › área») y el desplegable nativo no cabía
+en la pantalla. Se corrigió en dos pasos (v0.1.2 y v0.1.3) y se añadió lo que
+administración necesita para organizarse. Nada de esto cambia la regla de
+acceso: un perfil sigue teniendo **un** ámbito, que incluye sus descendientes.
+
+- **Un solo árbol, en un solo sitio.** `EventTaxonomies::area_tree()` devuelve
+  cada ámbito en orden de árbol —el padre antes que sus hijos— con su nombre,
+  su profundidad y su ruta. Lo usan el perfil, el filtro de la portada y el
+  filtro del listado de usuarios; antes el filtro de la portada tenía su propia
+  copia en `Timeline`.
+- **El selector del perfil, como en Select2.** Cada opción se pinta con el
+  nombre sangrado por su profundidad («— — Área»); la ruta va como título y
+  como dato de búsqueda. Con **Tom Select** (sin jQuery), el campo cerrado
+  enseña solo el nombre elegido y, al abrirlo, una caja de búsqueda sobre la
+  lista en árbol que busca también por la ruta: escribir un servicio encuentra
+  lo que cuelga de él. Se carga desde jsDelivr con SRI y versión clavada en
+  `package.json` ([ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md)),
+  solo en `profile.php` y `user-edit.php` y solo para quien puede fijar el
+  ámbito. Si no llega, queda el `<select>` nativo, que ya se lee porque la
+  etiqueta es el nombre sangrado y no la ruta.
+- **El listado de usuarios enseña y filtra el ámbito.** Una columna «Ámbito»,
+  detrás del rol, con el nombre y la ruta como título; «Pendiente de resolver»
+  para los perfiles ambiguos o inválidos. Encima del listado, un desplegable
+  con el mismo árbol y «Sin ámbito». Un ámbito trae también a quien está en
+  los que cuelgan de él. El filtro **lee cada perfil con
+  `EventAccess::scope_assignment_state()`** y no con un `LIKE` sobre la meta:
+  la meta admite formatos antiguos, y un filtro que los leyera distinto
+  enseñaría a alguien en un ámbito que no le da acceso. Columna y filtro son
+  solo de administración, como el campo.
+
+Alternativas descartadas: **Select2**, que arrastra jQuery a una pantalla que
+no lo necesita para nada más; y **dejar el `<select>` nativo con las rutas
+recortadas**, que evita el desbordamiento pero no deja buscar entre medio
+centenar de ámbitos.

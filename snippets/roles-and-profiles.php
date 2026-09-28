@@ -463,6 +463,183 @@ if ( ! function_exists( 'evt_scope_select_sri' ) ) {
 	}
 }
 
+if ( ! function_exists( 'evt_users_scope_paths' ) ) {
+	/**
+	 * Every scope ID with its name and full path.
+	 *
+	 * @return array<int, array{name:string, path:string}>
+	 */
+	function evt_users_scope_paths(): array {
+		$rutas = array();
+		foreach ( \Evt\Taxonomy\EventTaxonomies::area_tree() as $fila ) {
+			$rutas[ $fila['id'] ] = array(
+				'name' => $fila['name'],
+				'path' => $fila['path'],
+			);
+		}
+		return $rutas;
+	}
+}
+
+if ( ! function_exists( 'evt_users_scope_column' ) ) {
+	/**
+	 * Add the «Ámbito» column to the users list, for whoever can set it.
+	 *
+	 * @param array<string, string> $columnas Columns.
+	 * @return array<string, string>
+	 */
+	function evt_users_scope_column( $columnas ): array {
+		$columnas = (array) $columnas;
+		if ( ! evt_can_edit_admin_only_fields() || ! class_exists( '\Evt\Access\EventAccess' ) ) {
+			return $columnas;
+		}
+		$nuevas = array();
+		foreach ( $columnas as $clave => $rotulo ) {
+			$nuevas[ $clave ] = $rotulo;
+			if ( 'role' === $clave ) {
+				$nuevas['evt_area'] = 'Ámbito';
+			}
+		}
+		if ( ! isset( $nuevas['evt_area'] ) ) {
+			$nuevas['evt_area'] = 'Ámbito';
+		}
+		return $nuevas;
+	}
+}
+
+if ( ! function_exists( 'evt_users_scope_cell' ) ) {
+	/**
+	 * The scope of one user: its name, with the full path as a tooltip.
+	 *
+	 * @param string $salida  Current output.
+	 * @param string $columna Column key.
+	 * @param int    $user_id User.
+	 * @return string
+	 */
+	function evt_users_scope_cell( $salida, $columna, $user_id ): string {
+		if ( 'evt_area' !== $columna || ! class_exists( '\Evt\Access\EventAccess' ) ) {
+			return (string) $salida;
+		}
+		$estado = \Evt\Access\EventAccess::scope_assignment_state( (int) $user_id );
+		if ( 'empty' === $estado['state'] ) {
+			return '<span aria-hidden="true">—</span><span class="screen-reader-text">Sin ámbito</span>';
+		}
+		if ( 'resolved' !== $estado['state'] ) {
+			return '<em>Pendiente de resolver</em>';
+		}
+		$ruta = evt_users_scope_paths()[ $estado['ids'][0] ] ?? null;
+		if ( null === $ruta ) {
+			return '<em>Pendiente de resolver</em>';
+		}
+		return '<span title="' . esc_attr( $ruta['path'] ) . '">' . esc_html( $ruta['name'] ) . '</span>';
+	}
+}
+
+if ( ! function_exists( 'evt_users_scope_filter' ) ) {
+	/**
+	 * The scope filter above the users list.
+	 *
+	 * Va en el mismo formulario GET del listado, así que se combina con el
+	 * filtro por rol y con la búsqueda, y el enlace filtrado se puede guardar.
+	 *
+	 * @param string $donde `top` or `bottom`.
+	 * @return void
+	 */
+	function evt_users_scope_filter( $donde = 'top' ): void {
+		if ( 'top' !== $donde || ! evt_can_edit_admin_only_fields() || ! class_exists( '\Evt\Taxonomy\EventTaxonomies' ) ) {
+			return;
+		}
+		$elegido = evt_users_scope_request();
+		echo '<div class="alignleft actions">';
+		echo '<label class="screen-reader-text" for="evt_ambito">Filtrar por ámbito</label>';
+		echo '<select name="evt_ambito" id="evt_ambito">';
+		echo '<option value="">Todos los ámbitos</option>';
+		printf( '<option value="ninguno"%s>Sin ámbito</option>', 'ninguno' === $elegido ? ' selected="selected"' : '' );
+		foreach ( \Evt\Taxonomy\EventTaxonomies::area_tree() as $fila ) {
+			printf(
+				'<option value="%1$d"%2$s title="%3$s">%4$s</option>',
+				(int) $fila['id'],
+				(string) $fila['id'] === $elegido ? ' selected="selected"' : '',
+				esc_attr( $fila['path'] ),
+				esc_html( str_repeat( '— ', (int) $fila['depth'] ) . $fila['name'] )
+			);
+		}
+		echo '</select>';
+		submit_button( 'Filtrar', '', 'evt_filtrar', false );
+		echo '</div>';
+	}
+}
+
+if ( ! function_exists( 'evt_users_scope_request' ) ) {
+	/**
+	 * The scope asked for in the users list: '' (all), 'ninguno' or a term ID.
+	 *
+	 * @return string
+	 */
+	function evt_users_scope_request(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- un filtro de lectura del listado, sin efectos.
+		$valor = isset( $_GET['evt_ambito'] ) ? sanitize_text_field( wp_unslash( $_GET['evt_ambito'] ) ) : '';
+		return 'ninguno' === $valor || ctype_digit( $valor ) ? $valor : '';
+	}
+}
+
+if ( ! function_exists( 'evt_users_scope_query' ) ) {
+	/**
+	 * Narrow the users list to one scope (and the scopes below it), or to nobody's.
+	 *
+	 * Se decide leyendo cada perfil con la misma regla que el acceso
+	 * ({@see \Evt\Access\EventAccess::scope_assignment_state()}) y no con un
+	 * `LIKE` sobre la meta: la meta admite formatos antiguos, y un filtro que
+	 * los leyera distinto enseñaría a alguien en un ámbito que no le da acceso.
+	 *
+	 * @param WP_User_Query $consulta The users query.
+	 * @return void
+	 */
+	function evt_users_scope_query( $consulta ): void {
+		static $dentro = false;
+		global $pagenow;
+		$pedido = evt_users_scope_request();
+		if ( $dentro || '' === $pedido || ! is_admin() || 'users.php' !== $pagenow || ! evt_can_edit_admin_only_fields() || ! class_exists( '\Evt\Access\EventAccess' ) ) {
+			return;
+		}
+		$dentro = true;
+		if ( 'ninguno' === $pedido ) {
+			$candidatos = get_users(
+				array(
+					'role__in' => array( 'editor', 'evt_organiser' ),
+					'fields'   => 'ID',
+				)
+			);
+			$validos    = array( 'empty' );
+			$buscados   = array();
+		} else {
+			$candidatos = get_users(
+				array(
+					'meta_key' => 'evt_area', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- solo quien tiene ámbito.
+					'fields'   => 'ID',
+				)
+			);
+			$validos    = array( 'resolved' );
+			$buscados   = array_merge( array( (int) $pedido ), array_map( 'intval', (array) get_term_children( (int) $pedido, 'evt_area' ) ) );
+		}
+		$dentro = false;
+
+		$ids = array();
+		foreach ( $candidatos as $user_id ) {
+			$estado = \Evt\Access\EventAccess::scope_assignment_state( (int) $user_id );
+			if ( in_array( $estado['state'], $validos, true ) && ( array() === $buscados || array() !== array_intersect( $estado['ids'], $buscados ) ) ) {
+				$ids[] = (int) $user_id;
+			}
+		}
+		// Sin nadie, nadie: `include` vacío querría decir «todos».
+		$consulta->set( 'include', $ids ? $ids : array( 0 ) );
+	}
+}
+
+add_filter( 'manage_users_columns', 'evt_users_scope_column' );
+add_filter( 'manage_users_custom_column', 'evt_users_scope_cell', 10, 3 );
+add_action( 'restrict_manage_users', 'evt_users_scope_filter' );
+add_action( 'pre_get_users', 'evt_users_scope_query' );
 add_action( 'admin_enqueue_scripts', 'evt_scope_select_assets' );
 add_filter( 'script_loader_tag', 'evt_scope_select_sri', 10, 3 );
 add_filter( 'style_loader_tag', 'evt_scope_select_sri', 10, 3 );

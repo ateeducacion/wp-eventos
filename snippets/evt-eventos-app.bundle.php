@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.3
+ * @version 0.1.4
  */
 
 // phpcs:disable
@@ -22479,12 +22479,20 @@ final class TimelineView {
 					<button class="evt-linea__boton" type="button" data-evt-linea="adelante" aria-label="Mes siguiente">&rsaquo;</button>
 				</div>
 			</div>
+			<div class="evt-linea__marco">
+			<button class="evt-linea__flecha evt-linea__flecha--atras" type="button" data-evt-linea="atras" aria-label="Mes anterior">
+				<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="M16 4 L6 12 L16 20 Z" fill="currentColor"/></svg>
+			</button>
+			<button class="evt-linea__flecha evt-linea__flecha--adelante" type="button" data-evt-linea="adelante" aria-label="Mes siguiente">
+				<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="M8 4 L18 12 L8 20 Z" fill="currentColor"/></svg>
+			</button>
 			<div class="evt-linea__pista" tabindex="0" role="region" aria-label="Línea del tiempo de eventos">
 				<ol class="evt-linea__meses">
 					<?php foreach ( (array) $m['months'] as $mes ) : ?>
 						<?php echo self::month( (array) $mes ); ?>
 					<?php endforeach; ?>
 				</ol>
+			</div>
 			</div>
 		</div>
 		<?php
@@ -26178,6 +26186,7 @@ body .swal2-container { z-index: 100010; }
 }
 
 /* Sin guion los botones no hacen nada: no se enseñan. */
+.evt-linea:not(.evt-linea--viva) .evt-linea__flecha,
 .evt-linea:not(.evt-linea--viva) .evt-linea__botones {
 	display: none;
 }
@@ -26490,6 +26499,58 @@ body .swal2-container { z-index: 100010; }
 .evt-linea__resultado {
 	flex-basis: 100%;
 	margin: 0;
+}
+
+/* ─── las flechas grandes a los lados de la línea ────────────────────── */
+
+.evt-linea__marco {
+	position: relative;
+}
+
+.evt-linea__flecha {
+	position: absolute;
+	top: 50%;
+	z-index: 5;
+	display: grid;
+	place-items: center;
+	width: 56px;
+	height: 56px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--evt-linea-azul);
+	color: #fff;
+	box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+	cursor: pointer;
+	transform: translateY(-50%);
+	opacity: .9;
+	transition: opacity .15s, transform .15s;
+}
+
+.evt-linea__flecha:hover,
+.evt-linea__flecha:focus-visible {
+	opacity: 1;
+	transform: translateY(-50%) scale(1.08);
+}
+
+.evt-linea__flecha:focus-visible {
+	outline: 3px solid var(--evt-linea-azul-claro);
+	outline-offset: 3px;
+}
+
+.evt-linea__flecha--atras {
+	left: 4px;
+}
+
+.evt-linea__flecha--adelante {
+	right: 4px;
+}
+
+@media (max-width: 600px) {
+	.evt-linea__flecha {
+		width: 44px;
+		height: 44px;
+	}
 }
 
 ',
