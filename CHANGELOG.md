@@ -22,6 +22,10 @@ en el subsitio `eventos` se hace después.
   - El centro sale del catálogo por el código que la cuenta tiene guardado; si el código no está en el catálogo, se elige como siempre.
   - Lo que falte en la cuenta se escribe a mano.
   - Sin sesión, la página de una inscripción que la pide lleva directamente a iniciar sesión y vuelve a ella
+- **Textos de protección de datos por defecto** ([ADR-0020](docs/adr/ADR-0020-el-consentimiento-es-una-casilla.md), adenda).
+  - En «Ajustes» del aplicativo, la «Información sobre el tratamiento de sus datos» y el «Consentimiento informado» con los que empieza cada evento nuevo.
+  - Al crear un evento se copian en él; después se cambian en la «Inscripción» del propio evento, y cambiar los de «Ajustes» no toca los eventos que ya existen.
+  - Mientras no se guarden, «Ajustes» propone los del evento más reciente que los tiene
 - **Iconos en las secciones.** Cada tipo de sección trae el suyo (un calendario el programa, un sobre el contacto…) y quien organiza puede elegir otro entre catorce dibujos. Salen junto al nombre en el menú del evento, en la tabla de secciones del taller y en la tarjeta de la portada cuando la sección no tiene imagen destacada
 - **Mapa en la página de contacto** ([ADR-0046](docs/adr/ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md)).
   - En «Datos de contacto», cada punto lleva sus coordenadas, tal como las copia cualquier mapa de internet (`28.4636, -16.2518`), un texto y, si se quiere, un enlace.
@@ -67,6 +71,7 @@ en el subsitio `eventos` se hace después.
 
 ### Pendiente antes de desplegar
 
+- Revisar y guardar en «Ajustes» los textos de protección de datos por defecto
 - Para que la inscripción venga rellena, el sitio tiene que guardar al iniciar sesión el nombre, los apellidos, el correo y el código del centro (meta de usuario `codigo`) en la ficha de cada persona. El aplicativo solo los lee
 
 ### Corregido

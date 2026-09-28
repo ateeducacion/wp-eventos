@@ -7,6 +7,7 @@
 
 use Evt\Access\EventAccess;
 use Evt\Meta\EventMetaKeys;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\EventPostType;
 use Evt\PublicFront\EventWorkspace;
 use Evt\Taxonomy\EventTaxonomies;
@@ -994,6 +995,60 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 		$this->assertSame( '2026-11-10', get_post_meta( $creado->ID, EventMetaKeys::START_DATE, true ) );
 		$this->assertSame( array( $area ), EventAccess::post_areas( $creado->ID ), 'con el área de quien lo crea' );
 		$this->assertSame( (string) $creado->ID, $this->query_arg( (string) $url, EventWorkspace::ARG_EVENT ), 'y abre su taller' );
+	}
+
+	/**
+	 * Crear un evento a través del formulario, y el creado.
+	 *
+	 * @param string $titulo Title.
+	 * @return int Event ID.
+	 */
+	private function crear( string $titulo ): int {
+		$this->acting_as( $this->organiser( array( $this->area( 'Área de ' . $titulo ) ) ) );
+		$op = EventWorkspace::PANEL_SETTINGS;
+		$this->post(
+			array(
+				EventWorkspace::FIELD_DO    => $op,
+				EventWorkspace::FIELD_EVENT => '0',
+				EventWorkspace::FIELD_TITLE => $titulo,
+				EventMetaKeys::START_DATE   => '2026-11-10',
+				EventMetaKeys::END_DATE     => '2026-11-12',
+			),
+			EventWorkspace::nonce_action( $op ),
+			EventWorkspace::nonce_name( $op )
+		);
+		$url = $this->exit_url( array( EventWorkspace::class, 'handle' ) );
+		return (int) $this->query_arg( (string) $url, EventWorkspace::ARG_EVENT );
+	}
+
+	/**
+	 * Un evento nuevo nace con una copia de los textos de protección de datos
+	 * de Ajustes; sin guardar, se proponen los del evento más reciente.
+	 */
+	public function test_a_new_event_starts_with_the_default_consent_texts() {
+		// Sin nada en ningún sitio, el evento nace sin textos.
+		$vacio = $this->crear( 'Sin textos' );
+		$this->assertSame( '', get_post_meta( $vacio, RegistrationMetaKeys::CONSENT_PRIVACY, true ) );
+
+		// Sin guardar en Ajustes, se toman los del evento más reciente que los tiene.
+		update_post_meta( $vacio, RegistrationMetaKeys::CONSENT_PRIVACY, '<p>Tratamiento de antes</p>' );
+		update_post_meta( $vacio, RegistrationMetaKeys::CONSENT_IMAGE, '<p>Cesión de antes</p>' );
+		$propuesto = \Evt\Admin\Settings::default_consent();
+		$this->assertSame( $vacio, $propuesto['from'] );
+		$copia = $this->crear( 'Copia del anterior' );
+		$this->assertSame( '<p>Cesión de antes</p>', get_post_meta( $copia, RegistrationMetaKeys::CONSENT_IMAGE, true ) );
+		$this->assertSame( '1', get_post_meta( $copia, RegistrationMetaKeys::CONSENT_VERSION, true ) );
+
+		// Guardados en Ajustes, mandan los guardados.
+		update_option( \Evt\Admin\Settings::OPTION_CONSENT_PRIVACY, '<p>Tratamiento</p>' );
+		update_option( \Evt\Admin\Settings::OPTION_CONSENT_IMAGE, '<p>Cesión</p>' );
+		$nuevo = $this->crear( 'Con los de Ajustes' );
+		$this->assertSame( '<p>Tratamiento</p>', get_post_meta( $nuevo, RegistrationMetaKeys::CONSENT_PRIVACY, true ) );
+		$this->assertSame( '<p>Cesión</p>', get_post_meta( $nuevo, RegistrationMetaKeys::CONSENT_IMAGE, true ) );
+
+		// Es una copia: cambiar Ajustes no toca el evento ya creado.
+		update_option( \Evt\Admin\Settings::OPTION_CONSENT_PRIVACY, '<p>Otro</p>' );
+		$this->assertSame( '<p>Tratamiento</p>', get_post_meta( $nuevo, RegistrationMetaKeys::CONSENT_PRIVACY, true ) );
 	}
 
 	/**

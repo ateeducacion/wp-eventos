@@ -10,6 +10,7 @@ namespace Evt\Admin;
 use Evt\Access\EventAccess;
 use Evt\Centre\CentreCatalogue;
 use Evt\Centre\CentreCatalogueSync;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
@@ -39,6 +40,20 @@ final class Settings {
 	 * Nonce action of the URL form.
 	 */
 	public const NONCE_URLS = 'evt_root_urls';
+
+	/**
+	 * Nonce action for the default consent texts.
+	 */
+	public const NONCE_CONSENT = 'evt_default_consent';
+
+	/**
+	 * The two consent texts every new event starts with.
+	 *
+	 * Se copian en el evento al crearlo; a partir de ahí son del evento y se
+	 * cambian allí sin tocar estos (ADR-0020).
+	 */
+	public const OPTION_CONSENT_PRIVACY = 'evt_default_consent_privacy';
+	public const OPTION_CONSENT_IMAGE   = 'evt_default_consent_image';
 
 	/**
 	 * Register hooks.
@@ -97,6 +112,26 @@ final class Settings {
 
 		if (
 			isset( $_POST['evt_action'] ) &&
+			'consent' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_CONSENT, '_evt_consent_nonce' )
+		) {
+			update_option( self::OPTION_CONSENT_PRIVACY, wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_privacy'] ?? '' ) ) ), false );
+			update_option( self::OPTION_CONSENT_IMAGE, wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_image'] ?? '' ) ) ), false );
+			self::leave(
+				add_query_arg(
+					array(
+						'post_type' => EventPostType::POST_TYPE,
+						'page'      => self::PAGE,
+						'updated'   => 'synced',
+						'msg'       => rawurlencode( 'Guardados los textos de protección de datos de los eventos nuevos.' ),
+					),
+					admin_url( 'edit.php' )
+				)
+			);
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
 			'sync_centres' === $_POST['evt_action'] &&
 			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
 		) {
@@ -122,6 +157,53 @@ final class Settings {
 
 			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
 		}
+	}
+
+	/**
+	 * The consent texts a new event starts with.
+	 *
+	 * Mientras administración no los guarde, se proponen los del evento más
+	 * reciente que los tenga: son los que se vienen usando, y así nadie tiene
+	 * que ir a buscarlos. Guardados —aunque sea en blanco—, mandan los guardados.
+	 *
+	 * @return array{privacy:string, image:string, from:int} `from` is the event they come from; 0 when saved.
+	 */
+	public static function default_consent(): array {
+		$privacidad = get_option( self::OPTION_CONSENT_PRIVACY, null );
+		$imagen     = get_option( self::OPTION_CONSENT_IMAGE, null );
+		if ( null !== $privacidad || null !== $imagen ) {
+			return array(
+				'privacy' => (string) $privacidad,
+				'image'   => (string) $imagen,
+				'from'    => 0,
+			);
+		}
+
+		$ultimo = get_posts(
+			array(
+				'post_type'        => EventPostType::POST_TYPE,
+				'post_parent'      => 0,
+				'post_status'      => 'any',
+				'numberposts'      => 1,
+				'orderby'          => 'date',
+				'order'            => 'DESC',
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+				'meta_query'       => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- una sola vez, en ajustes y al crear un evento.
+					array(
+						'key'     => RegistrationMetaKeys::CONSENT_PRIVACY,
+						'value'   => '',
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+		$evento = (int) ( $ultimo[0] ?? 0 );
+		return array(
+			'privacy' => $evento > 0 ? (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, true ) : '',
+			'image'   => $evento > 0 ? (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_IMAGE, true ) : '',
+			'from'    => $evento,
+		);
 	}
 
 	/**
@@ -188,6 +270,31 @@ final class Settings {
 					Es la forma que tienen hoy las páginas de los eventos, y la que conservan al migrarlos.
 					Sin marcar, van bajo <code><?php echo esc_html( home_url( '/evento/' ) ); ?></code>.
 					Si en la raíz hay una página con la misma dirección, gana la página.
+				</p>
+				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
+			</form>
+
+			<?php $consent = self::default_consent(); ?>
+			<h2>Protección de datos de los eventos nuevos</h2>
+			<form method="post" action="" style="max-width:46rem">
+				<?php wp_nonce_field( self::NONCE_CONSENT, '_evt_consent_nonce' ); ?>
+				<input type="hidden" name="evt_action" value="consent" />
+				<p class="description">
+					Cada evento nuevo empieza con una copia de estos dos textos. Después se cambian en el propio
+					evento, en «Inscripción», sin tocar estos; y cambiar estos no toca los eventos que ya existen.
+				</p>
+				<?php if ( $consent['from'] > 0 ) : ?>
+					<div class="notice notice-info inline"><p>
+						<?php echo esc_html( sprintf( 'Todavía no se han guardado: se proponen los de «%s», el evento más reciente que los tiene. Guárdelos para fijarlos.', get_the_title( $consent['from'] ) ) ); ?>
+					</p></div>
+				<?php endif; ?>
+				<p>
+					<label for="evt-default-consent-privacy"><strong>Información sobre el tratamiento de sus datos</strong></label><br />
+					<textarea class="large-text" id="evt-default-consent-privacy" name="evt_consent_privacy" rows="8"><?php echo esc_textarea( $consent['privacy'] ); ?></textarea>
+				</p>
+				<p>
+					<label for="evt-default-consent-image"><strong>Consentimiento informado</strong></label><br />
+					<textarea class="large-text" id="evt-default-consent-image" name="evt_consent_image" rows="8"><?php echo esc_textarea( $consent['image'] ); ?></textarea>
 				</p>
 				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
 			</form>
