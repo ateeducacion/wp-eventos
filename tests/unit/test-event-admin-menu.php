@@ -177,4 +177,18 @@ class Test_Event_Admin_Menu extends WP_UnitTestCase {
 			)
 		);
 	}
+
+	/**
+	 * El arranque engancha lo que esconde el escritorio a quien no administra.
+	 *
+	 * `register()` corre al arrancar, antes de que se mida nada: se vuelve a
+	 * llamar aquí para comprobar que los tres enganches están.
+	 */
+	public function test_register_hooks_what_hides_the_desk() {
+		EventAdmin::register();
+
+		$this->assertSame( 999, has_action( 'admin_menu', array( EventAdmin::class, 'hide_desk_menu' ) ) );
+		$this->assertSame( 999, has_action( 'admin_bar_menu', array( EventAdmin::class, 'hide_desk_new_items' ) ) );
+		$this->assertSame( 10, has_action( 'current_screen', array( EventAdmin::class, 'send_to_the_app' ) ) );
+	}
 }
