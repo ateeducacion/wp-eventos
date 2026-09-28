@@ -231,3 +231,18 @@ Protección de datos»):
 - **ADR-0007** — dónde viven hoy las inscripciones.
 - [ADR-0012](ADR-0012-politica-de-edicion-y-auditoria.md) — qué se registra de
   quién hace qué.
+
+## Adenda — 2026-09-28
+
+Los dos textos tienen ahora un **valor por defecto** en «Ajustes» del
+aplicativo (`evt_default_consent_privacy` y `evt_default_consent_image`,
+`src/Evt/Admin/Settings.php`). Al crear un evento desde el aplicativo se copian
+en él con la versión 1, y desde ahí son del evento: se cambian en su
+«Inscripción» con las mismas reglas de versión de esta ADR, y cambiar los de
+«Ajustes» no toca ningún evento ya creado.
+
+Mientras administración no los guarde, «Ajustes» propone los del evento más
+reciente que los tiene, que son los que se vienen usando. El texto en sí no se
+versiona en el repositorio: es de quien despliega (ADR-0030).
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.
