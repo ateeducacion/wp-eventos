@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -281,6 +281,7 @@ después; lo que ya no vale es su decisión.
 | [ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) | La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas | Propuesta | 2026-09-27 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) |
 | [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | Los eventos históricos se importan a un sitio limpio y el antiguo se conserva al lado | Propuesta | 2026-09-28 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
 | [ADR-0046](ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md) | El mapa de la página de contacto es Leaflet con puntos propios, y debajo la misma lista | Propuesta | 2026-09-28 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
+| [ADR-0047](ADR-0047-un-evento-en-dos-idiomas-son-dos-eventos-enlazados.md) | Un evento en dos idiomas son dos eventos enlazados | Propuesta | 2026-09-28 | [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
