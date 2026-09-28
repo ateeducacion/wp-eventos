@@ -316,6 +316,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 			)
 		);
 		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::HOME_HIDDEN, true ), 'sin marcar, sin tarjeta' );
+		$this->assertTrue( (bool) get_post_meta( $seccion, EventMetaKeys::MENU_HIDDEN, true ), 'ni en el menú' );
 		$this->assertSame( 'pin', get_post_meta( $seccion, EventMetaKeys::SECTION_ICON, true ) );
 
 		// Sin el bloque en el envío, lo guardado se queda.
@@ -337,10 +338,12 @@ class Test_Page_Form extends WP_UnitTestCase {
 				'evt_title'                 => 'Contacto',
 				'evt_showcase'              => '1',
 				'evt_home_card'             => '1',
+				'evt_in_menu'               => '1',
 				EventMetaKeys::SECTION_ICON => 'no-existe',
 			)
 		);
 		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::HOME_HIDDEN ) );
+		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::MENU_HIDDEN ) );
 		$this->assertFalse( metadata_exists( 'post', $seccion, EventMetaKeys::SECTION_ICON ), 'un icono fuera de la lista es el de su tipo' );
 
 		// Y el formulario lo repinta: la casilla marcada y «El de su tipo» elegido.
@@ -348,6 +351,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 		$_GET['seccion'] = (string) $seccion;
 		$m               = PageForm::model();
 		$this->assertTrue( $m['values']['home_card'] );
+		$this->assertTrue( $m['values']['in_menu'] );
 		$this->assertSame( '', $m['values']['icon'] );
 		$html = \Evt\PublicFront\View\PageFormView::html( $m );
 		$this->assertStringContainsString( 'name="evt_home_card" value="1"  checked=\'checked\'', $html );

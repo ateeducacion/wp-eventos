@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.10
+ * @version 0.1.11
  */
 
 // phpcs:disable
@@ -243,6 +243,16 @@ final class EventMetaKeys {
 
 
 
+
+
+
+
+
+	public const MENU_HIDDEN = 'evt_menu_hidden';
+
+
+
+
 	public const SECTION_ICON = 'evt_section_icon';
 
 
@@ -352,6 +362,7 @@ final class EventMetaKeys {
 			self::CONTACT_MAP,
 			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
+			self::MENU_HIDDEN,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
@@ -723,6 +734,10 @@ final class EventMetaRegistration {
 			EventMetaKeys::CONTACT_POINTS     => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_contact_points' ),
+			),
+			EventMetaKeys::MENU_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
 			EventMetaKeys::HOME_HIDDEN        => array(
 				'type'     => 'boolean',
@@ -14627,6 +14642,7 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'menu_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::MENU_HIDDEN, true ),
 				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,
@@ -16586,7 +16602,7 @@ final class EventSectionsPanel {
 		?>
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Páginas</h2>
-			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Para que una salga en el menú pero no en la portada, desmarque su tarjeta al editarla.</p>
+			<p class="evt-sub">En el orden en que salen en el menú del evento. Despublicar una la quita del menú sin perder nada de lo escrito. Al editar cada una se elige si sale en el menú, si tiene tarjeta en la portada, o las dos cosas.</p>
 		</div></div>
 
 		<?php echo self::trash_link( $m ); ?>
@@ -16804,6 +16820,9 @@ final class EventSectionsPanel {
 				<?php endif; ?>
 				<?php if ( ! empty( $fila['own_look'] ) ) : ?>
 					<span class="evt-state evt-state-propia evt-marca-fila" title="<?php echo esc_attr( 'No sigue al evento en: ' . implode( ', ', (array) $fila['own_look'] ) ); ?>" data-bs-toggle="tooltip">Apariencia propia</span>
+				<?php endif; ?>
+				<?php if ( ! empty( $fila['menu_hidden'] ) ) : ?>
+					<span class="evt-state evt-marca-fila" title="Tiene tarjeta en la portada, o su enlace, pero no sale en el menú de arriba" data-bs-toggle="tooltip">Fuera del menú</span>
 				<?php endif; ?>
 				<?php if ( ! empty( $fila['home_hidden'] ) ) : ?>
 					<span class="evt-state evt-marca-fila" title="Sale en el menú, pero no tiene tarjeta en la portada del evento" data-bs-toggle="tooltip">Sin tarjeta en la portada</span>
@@ -18697,6 +18716,11 @@ final class PageForm {
 		} else {
 			update_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true );
 		}
+		if ( $fields['in_menu'] ) {
+			delete_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN );
+		} else {
+			update_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true );
+		}
 
 
 
@@ -18907,6 +18931,7 @@ final class PageForm {
 			'section_type' => '',
 			'menu_order'   => 0,
 			'home_card'    => true,
+			'in_menu'      => true,
 			'icon'         => '',
 			'content'      => '',
 			'look'         => $look,
@@ -18941,6 +18966,7 @@ final class PageForm {
 			'section_type' => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_TYPE, true ),
 			'menu_order'   => (int) get_post_field( 'menu_order', $page_id ),
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
+			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
@@ -18998,6 +19024,7 @@ final class PageForm {
 
 
 			'home_card'    => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_home_card'] ) : null,
+			'in_menu'      => isset( $raw['evt_showcase'] ) ? ! empty( $raw['evt_in_menu'] ) : null,
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',
@@ -19287,7 +19314,7 @@ final class PageFormView {
 						<label for="evt_order">Orden</label>
 						<input type="number" id="evt_order" name="evt_order" step="1" min="0"
 							value="<?php echo esc_attr( (string) $valores['menu_order'] ); ?>" />
-						<small>El lugar que ocupa en el menú del evento. El número más bajo va primero.</small>
+						<small>El lugar que ocupa en el menú y en la portada del evento. El número más bajo va primero.</small>
 					</div>
 				</div>
 
@@ -19373,11 +19400,16 @@ final class PageFormView {
 			<input type="hidden" name="evt_showcase" value="1" />
 			<div class="evt-form-campo">
 				<label class="evt-check">
+					<input type="checkbox" name="evt_in_menu" value="1" <?php checked( false !== ( $valores['in_menu'] ?? true ) ); ?> />
+					Mostrar esta sección en el menú de arriba del evento
+				</label>
+				<label class="evt-check">
 					<input type="checkbox" name="evt_home_card" value="1" <?php checked( false !== ( $valores['home_card'] ?? true ) ); ?> />
 					Mostrar una tarjeta de esta sección en la portada del evento
 				</label>
-				<small>Sin marcar, la sección sigue en el menú de arriba y se sigue viendo, pero no ocupa
-					una tarjeta en la portada. Es lo habitual en la de contacto.</small>
+				<small>Las dos son independientes, y lo que desmarque se sigue viendo: solo deja de salir
+					ahí. Lo habitual es quitar la tarjeta de la de contacto, que ya está en el menú. Sin
+					ninguna de las dos, a la sección solo se llega con su enlace.</small>
 			</div>
 			<div class="evt-form-campo">
 				<span class="evt-rotulo" id="evt-icono-rotulo">Icono</span>
@@ -22287,6 +22319,10 @@ final class EventView {
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
+
+			if ( (bool) get_post_meta( (int) $seccion->ID, EventMetaKeys::MENU_HIDDEN, true ) ) {
+				continue;
+			}
 			$menu[] = array(
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),

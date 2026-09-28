@@ -778,6 +778,10 @@ final class EventView {
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
+			// Fuera del menú, pero se sigue viendo: su tarjeta o su enlace llevan a ella.
+			if ( (bool) get_post_meta( (int) $seccion->ID, EventMetaKeys::MENU_HIDDEN, true ) ) {
+				continue;
+			}
 			$menu[] = array(
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
