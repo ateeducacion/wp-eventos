@@ -1810,13 +1810,16 @@ final class EventWorkspace {
 		$tipos     = (array) wp_unslash( $_POST['evt_q_type'] ?? array() );
 		$opciones  = (array) wp_unslash( $_POST['evt_q_options'] ?? array() );
 		$obligadas = (array) wp_unslash( $_POST['evt_q_required'] ?? array() );
+		$quitadas  = (array) wp_unslash( $_POST['evt_q_remove'] ?? array() );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$out = array();
 		foreach ( $rotulos as $i => $rotulo ) {
 			$out[] = array(
 				'id'       => isset( $ids[ $i ] ) ? sanitize_text_field( (string) $ids[ $i ] ) : '',
-				'label'    => sanitize_text_field( (string) $rotulo ),
+				// Quitarla es dejarla sin rótulo: se cae al normalizar, igual
+				// que si se hubiera borrado el rótulo a mano.
+				'label'    => empty( $quitadas[ $i ] ) ? sanitize_text_field( (string) $rotulo ) : '',
 				'type'     => isset( $tipos[ $i ] ) ? sanitize_key( (string) $tipos[ $i ] ) : 'text',
 				'options'  => isset( $opciones[ $i ] ) ? sanitize_textarea_field( (string) $opciones[ $i ] ) : '',
 				'required' => ! empty( $obligadas[ $i ] ),
@@ -2387,6 +2390,8 @@ final class EventWorkspace {
 		return array(
 			// Ya acotada al ámbito de quien mira: es la misma lista del escritorio.
 			'area'   => EventTaxonomies::area_options( $user_id ),
+			// El mismo acotado, en árbol y con lo de encima como contexto.
+			'tree'   => EventTaxonomies::area_tree_for( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
@@ -2432,6 +2437,7 @@ final class EventWorkspace {
 				'type_label'   => (string) ( $tipos[ $tipo ] ?? 'Sin tipo' ),
 				'icon'         => SectionIcons::of( (int) $hija->ID ),
 				'home_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::HOME_HIDDEN, true ),
+				'menu_hidden'  => (bool) get_post_meta( (int) $hija->ID, EventMetaKeys::MENU_HIDDEN, true ),
 				'own_look'     => PageForm::own_look( (int) $hija->ID ),
 				'title'        => (string) $hija->post_title,
 				'slug'         => (string) $hija->post_name,

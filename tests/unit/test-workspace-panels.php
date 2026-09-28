@@ -100,8 +100,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertSame( array( 'color de fondo de la cabecera', 'tipografía de los títulos' ), $filas[ $propia ] );
 		$this->assertSame( array(), $filas[ $heredada ] );
 
+		update_post_meta( $heredada, EventMetaKeys::MENU_HIDDEN, true );
 		$tabla = $this->pintar( $evento, EventWorkspace::PANEL_SECTIONS );
 		$this->assertSame( 1, substr_count( $tabla, '>Apariencia propia</span>' ) );
+		$this->assertSame( 1, substr_count( $tabla, '>Fuera del menú</span>' ), 'la que no sale en el menú lo dice en su fila' );
 
 		$apariencia = wp_strip_all_tags( $this->pintar( $evento, EventWorkspace::PANEL_LOOK ) );
 		$this->assertStringContainsString( 'Estas secciones tienen apariencia propia', $apariencia );
@@ -111,6 +113,33 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		delete_post_meta( $propia, EventMetaKeys::HEADER_BG );
 		delete_post_meta( $propia, EventMetaKeys::TITLE_FONT );
 		$this->assertStringNotContainsString( 'apariencia propia', $this->pintar( $evento, EventWorkspace::PANEL_LOOK ), 'si todas siguen al evento, no se dice nada' );
+	}
+
+	/**
+	 * «Datos del evento» pinta los ámbitos en árbol, con las listas bien anidadas.
+	 */
+	public function test_the_scopes_are_painted_as_a_tree() {
+		$raiz   = $this->area( 'Organismo' );
+		$hija   = $this->area( 'Servicio' );
+		$nieta  = $this->area( 'Unidad' );
+		$suelta = $this->area( 'Otro organismo' );
+		wp_update_term( $hija, 'evt_area', array( 'parent' => $raiz ) );
+		wp_update_term( $nieta, 'evt_area', array( 'parent' => $hija ) );
+		$evento = $this->event( $this->administrator(), array( $nieta ) );
+
+		$this->acting_as( $this->organiser( array( $hija ) ) );
+		$html = $this->pintar( $evento, EventWorkspace::PANEL_SETTINGS );
+
+		$this->assertStringContainsString( 'data-evt-arbol', $html );
+		$this->assertStringContainsString( '<span class="evt-arbol__contexto" title="Organismo">Organismo</span>', $html, 'lo de encima, sin casilla' );
+		$this->assertMatchesRegularExpression( '/value="' . $nieta . '"\s+checked/', $html, 'lo del evento, marcado' );
+		$this->assertStringNotContainsString( 'Otro organismo', $html );
+
+		// Tantas listas abiertas como cerradas: el anidado cuadra.
+		$arbol = substr( $html, strpos( $html, '<ul class="evt-arbol"' ) );
+		$arbol = substr( $arbol, 0, strpos( $arbol, '</fieldset>' ) );
+		$this->assertSame( substr_count( $arbol, '<ul' ), substr_count( $arbol, '</ul>' ) );
+		$this->assertSame( substr_count( $arbol, '<li' ), substr_count( $arbol, '</li>' ) );
 	}
 
 	/**
@@ -461,6 +490,10 @@ class Test_Workspace_Panels extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'evt_q_label[0]', $html );
 		$this->assertStringContainsString( 'evt_q_label[1]', $html, 'la fila en blanco del final' );
 		$this->assertStringContainsString( 'Añadir una pregunta', $html );
+		$this->assertStringContainsString( 'name="evt_q_remove[0]"', $html, 'la guardada se quita con una casilla' );
+		$this->assertStringNotContainsString( 'name="evt_q_remove[1]"', $html, 'la fila en blanco no tiene nada que quitar' );
+		$this->assertStringContainsString( 'data-evt-q-opciones="one many"', $html, 'el guion sabe qué tipos llevan opciones' );
+		$this->assertStringContainsString( 'data-evt-pregunta-nueva hidden', $html, 'el botón de añadir otra lo enseña el guion' );
 		$this->assertStringContainsString( 'role="switch"', $html, 'los interruptores son interruptores' );
 		$this->assertStringContainsString( 'data-evt-guardar', $html, 'la barra de guardar' );
 

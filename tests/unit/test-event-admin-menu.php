@@ -89,4 +89,106 @@ class Test_Event_Admin_Menu extends WP_UnitTestCase {
 			);
 		}
 	}
+
+	/**
+	 * El menú «Eventos» del escritorio solo sale a administración.
+	 *
+	 * Quien organiza trabaja en el aplicativo; el escritorio es donde se
+	 * guardan los datos, no donde se trabaja con ellos.
+	 */
+	public function test_only_the_administration_keeps_the_events_menu() {
+		global $menu;
+		$ruta = 'edit.php?post_type=' . EventPostType::POST_TYPE;
+
+		foreach ( array(
+			$this->organiser()     => false,
+			$this->administrator() => true,
+		) as $uid => $lo_ve ) {
+			$menu = array( array( 'Eventos', 'edit_evt_events', $ruta ) );
+			wp_set_current_user( $uid );
+			EventAdmin::hide_desk_menu();
+			$this->assertSame( $lo_ve, in_array( $ruta, wp_list_pluck( $menu, 2 ), true ) );
+		}
+	}
+
+	/**
+	 * Ni «+ Nuevo › Evento» en la barra de arriba.
+	 */
+	public function test_the_toolbar_new_items_are_only_for_the_administration() {
+		require_once ABSPATH . WPINC . '/class-wp-admin-bar.php';
+
+		foreach ( array(
+			$this->organiser()     => false,
+			$this->administrator() => true,
+		) as $uid => $lo_ve ) {
+			$barra = new WP_Admin_Bar();
+			foreach ( EventAdmin::desk_post_types() as $tipo ) {
+				$barra->add_node(
+					array(
+						'id'    => 'new-' . $tipo,
+						'title' => $tipo,
+					)
+				);
+			}
+			$barra->add_node(
+				array(
+					'id'    => 'new-post',
+					'title' => 'Entrada',
+				)
+			);
+			wp_set_current_user( $uid );
+			EventAdmin::hide_desk_new_items( $barra );
+
+			$this->assertSame( $lo_ve, null !== $barra->get_node( 'new-' . EventPostType::POST_TYPE ) );
+			$this->assertNotNull( $barra->get_node( 'new-post' ), 'lo que no es de eventos no se toca' );
+		}
+	}
+
+	/**
+	 * Quien organiza y llega a una pantalla de eventos del escritorio va a «Mis eventos».
+	 */
+	public function test_organisers_are_sent_from_the_desk_screens_to_the_app() {
+		$this->pages();
+
+		wp_set_current_user( $this->organiser() );
+		foreach ( array( 'edit-' . EventPostType::POST_TYPE, EventPostType::POST_TYPE, 'edit-' . SpeakerPostType::POST_TYPE ) as $id ) {
+			$destino = $this->exit_url(
+				static function () use ( $id ): void {
+					EventAdmin::send_to_the_app( WP_Screen::get( $id ) );
+				}
+			);
+			$this->assertSame( \Evt\PublicFront\Shell::url( 'events' ), $destino, $id );
+		}
+		$this->assertNull(
+			$this->exit_url(
+				static function (): void {
+					EventAdmin::send_to_the_app( WP_Screen::get( 'upload' ) );
+				}
+			),
+			'las demás pantallas del escritorio no se tocan'
+		);
+
+		wp_set_current_user( $this->administrator() );
+		$this->assertNull(
+			$this->exit_url(
+				static function (): void {
+					EventAdmin::send_to_the_app( WP_Screen::get( 'edit-' . EventPostType::POST_TYPE ) );
+				}
+			)
+		);
+	}
+
+	/**
+	 * El arranque engancha lo que esconde el escritorio a quien no administra.
+	 *
+	 * `register()` corre al arrancar, antes de que se mida nada: se vuelve a
+	 * llamar aquí para comprobar que los tres enganches están.
+	 */
+	public function test_register_hooks_what_hides_the_desk() {
+		EventAdmin::register();
+
+		$this->assertSame( 999, has_action( 'admin_menu', array( EventAdmin::class, 'hide_desk_menu' ) ) );
+		$this->assertSame( 999, has_action( 'admin_bar_menu', array( EventAdmin::class, 'hide_desk_new_items' ) ) );
+		$this->assertSame( 10, has_action( 'current_screen', array( EventAdmin::class, 'send_to_the_app' ) ) );
+	}
 }

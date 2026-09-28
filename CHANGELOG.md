@@ -8,6 +8,67 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.11] — 2026-09-28
+
+### Añadido
+
+- **Una sección también puede quedarse fuera del menú de arriba**, con su tarjeta en la portada.
+  - Es la casilla «Mostrar esta sección en el menú de arriba del evento», al lado de la de la tarjeta, e independiente de ella.
+  - Viene marcada, así que las secciones que ya existen se ven igual.
+  - Sin ninguna de las dos casillas, a la sección solo se llega con su enlace.
+  - En la tabla de secciones, la que no sale en el menú lleva la etiqueta «Fuera del menú»
+
+## [0.1.10] — 2026-09-28
+
+### Añadido
+
+- **Mapa en la página de contacto** ([ADR-0046](docs/adr/ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md)).
+  - En «Datos de contacto», cada punto lleva sus coordenadas, tal como las copia cualquier mapa de internet (`28.4636, -16.2518`), un texto y, si se quiere, un enlace.
+  - «Añadir otro punto» añade los que hagan falta.
+  - En la página, un mapa con un marcador por punto y, debajo, la misma lista enlazada a OpenStreetMap, que es lo que queda si el mapa no carga.
+  - El mapa se dibuja con Leaflet, desde jsDelivr con SRI, y solo se carga en la página de contacto que tiene puntos.
+  - El servidor de teselas se cambia con el filtro `evt_map_tiles`
+
+### Corregido
+
+- **Al repintar el formulario de una sección tras un envío rechazado, se perdían los campos propios de su tipo**, como los de contacto
+
+## [0.1.9] — 2026-09-28
+
+### Cambiado
+
+- **El menú «Eventos» del escritorio de WordPress solo lo ve administración.** Quien organiza gestiona su evento entero desde el aplicativo, así que en el escritorio ya no ve:
+  - el menú «Eventos», con sus ponentes y actividades;
+  - «Evento», «Ponente» y «Actividad» en el «+ Nuevo» de la barra de arriba.
+
+  Si llega a esas pantallas con un enlace guardado, va a «Mis eventos». Lo que cada uno puede editar no cambia: sigue decidiéndolo el mismo guardián
+
+## [0.1.8] — 2026-09-28
+
+### Cambiado
+
+- **Los ámbitos de «Datos del evento» se eligen en un árbol.** Antes eran una lista de rutas largas («A › B › C»); ahora:
+  - cada ámbito va sangrado bajo el suyo, con una raya que dice de quién cuelga;
+  - los que están por encima de lo que uno puede elegir salen en gris y sin casilla, para saber de dónde cuelga cada cosa;
+  - las ramas se pliegan y se despliegan con una flecha, y arrancan abiertas solo las que tienen algo marcado;
+  - la ruta entera sale al pasar el ratón.
+
+  Sin JavaScript, el árbol sale entero y abierto
+
+## [0.1.7] — 2026-09-28
+
+### Cambiado
+
+- **El editor de preguntas de la inscripción es más claro.**
+  - El campo «Opciones, una por línea» solo aparece en las preguntas de «Una opción» y «Varias opciones», y sale al cambiar el tipo.
+  - El botón «Añadir otra pregunta» añade tantas como se quiera antes de guardar.
+  - Cada pregunta guardada tiene la casilla «Quitar esta pregunta al guardar», en vez de tener que borrar su rótulo.
+  - Sin JavaScript, todo sigue como antes
+
+### Corregido
+
+- **Al guardar varias preguntas nuevas a la vez, solo se guardaba la primera.** Llegaban todas sin identificador y se tomaban por repetidas
+
 ## [0.1.6] — 2026-09-28
 
 ### Añadido

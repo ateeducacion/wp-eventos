@@ -42,7 +42,7 @@ final class EventDataPanel {
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
 			'Ámbitos organizativos',
-			(array) ( $listas['area'] ?? array() ),
+			(array) ( $listas['tree'] ?? array() ),
 			(string) $v[ EventWorkspace::FIELD_AREA ],
 			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
@@ -153,16 +153,23 @@ final class EventDataPanel {
 	}
 
 	/**
-	 * Multi-value scope choices, with their help line.
+	 * Multi-value scope choices, as a tree, with their help line.
 	 *
-	 * @param string             $id      Field id.
-	 * @param string             $nombre  Field name.
-	 * @param string             $rotulo  Label.
-	 * @param array<int, string> $terminos term_id => nombre.
-	 * @param string             $elegidos Comma-separated selected term IDs.
-	 * @param string[]           $foreign Read-only organiser labels.
-	 * @param string             $ayuda   Help text.
-	 * @param bool               $todos   Whether any scope may be chosen, which only the administration can.
+	 * Un árbol y no una lista de rutas: con «A › B › C» en cada casilla, el
+	 * ámbito que se elige queda al final de una línea larga, y los de la
+	 * misma rama no se ven juntos. Cada ámbito va sangrado bajo el suyo; los
+	 * que están encima de lo que esta persona puede elegir salen sin casilla,
+	 * como contexto. Con guion, las ramas se pliegan y se despliegan, y
+	 * arrancan abiertas solo las que tienen algo marcado.
+	 *
+	 * @param string            $id      Field id.
+	 * @param string            $nombre  Field name.
+	 * @param string            $rotulo  Label.
+	 * @param array<int, array> $terminos Rows of EventTaxonomies::area_tree_for().
+	 * @param string            $elegidos Comma-separated selected term IDs.
+	 * @param string[]          $foreign Read-only organiser labels.
+	 * @param string            $ayuda   Help text.
+	 * @param bool              $todos   Whether any scope may be chosen, which only the administration can.
 	 * @return string
 	 */
 	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda, bool $todos = false ): string {
@@ -171,9 +178,7 @@ final class EventDataPanel {
 		?>
 		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
 			<input type="hidden" name="evt_area_present" value="1" />
-			<?php foreach ( $terminos as $term_id => $texto ) : ?>
-				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
-			<?php endforeach; ?>
+			<?php echo self::area_tree( $nombre, $terminos, $ids ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php if ( $todos ) : ?>
 				<?php echo Shell::admin_note( 'Puede asignar cualquier ámbito, no solo los de su subárbol.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 			<?php endif; ?>
@@ -190,6 +195,64 @@ final class EventDataPanel {
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The nested lists of the scope tree.
+	 *
+	 * Las filas llegan en orden de árbol con su profundidad; aquí se abren y
+	 * se cierran las listas anidadas según sube o baja.
+	 *
+	 * @param string                           $nombre Field name.
+	 * @param array<int, array<string, mixed>> $filas  Tree rows.
+	 * @param int[]                            $ids    Selected term IDs.
+	 * @return string
+	 */
+	private static function area_tree( string $nombre, array $filas, array $ids ): string {
+		if ( array() === $filas ) {
+			return '<p class="evt-ayuda">No hay ningún ámbito que pueda elegir. Pídalo a quien administre el aplicativo.</p>';
+		}
+
+		$html  = '<ul class="evt-arbol" data-evt-arbol>';
+		$nivel = (int) $filas[0]['depth'];
+		$total = count( $filas );
+		foreach ( $filas as $i => $fila ) {
+			$profundidad = (int) $fila['depth'];
+			$tiene_hijos = $i + 1 < $total && (int) $filas[ $i + 1 ]['depth'] > $profundidad;
+
+			$html .= '<li' . ( $tiene_hijos ? ' class="evt-arbol__rama"' : '' ) . '><div class="evt-arbol__fila">';
+			if ( $tiene_hijos ) {
+				$html .= '<button type="button" class="evt-arbol__plegar" aria-expanded="true" hidden data-evt-arbol-plegar>'
+					. '<span class="screen-reader-text">' . esc_html( sprintf( 'Mostrar u ocultar lo que cuelga de %s', (string) $fila['name'] ) ) . '</span></button>';
+			}
+			if ( ! empty( $fila['selectable'] ) ) {
+				$html .= sprintf(
+					'<label title="%4$s"><input type="checkbox" name="%1$s[]" value="%2$d"%3$s /> %5$s</label>',
+					esc_attr( $nombre ),
+					(int) $fila['id'],
+					checked( in_array( (int) $fila['id'], $ids, true ), true, false ),
+					esc_attr( (string) $fila['path'] ),
+					esc_html( (string) $fila['name'] )
+				);
+			} else {
+				$html .= '<span class="evt-arbol__contexto" title="' . esc_attr( (string) $fila['path'] ) . '">'
+					. esc_html( (string) $fila['name'] ) . '</span>';
+			}
+			$html .= '</div>';
+
+			if ( $tiene_hijos ) {
+				$html .= '<ul>';
+				continue;
+			}
+			$html .= '</li>';
+
+			// Al volver a un nivel de arriba se cierran las ramas que acaban aquí.
+			$siguiente = $i + 1 < $total ? (int) $filas[ $i + 1 ]['depth'] : $nivel;
+			for ( $d = $profundidad; $d > $siguiente; $d-- ) {
+				$html .= '</ul></li>';
+			}
+		}
+		return $html . '</ul>';
 	}
 
 	/**
