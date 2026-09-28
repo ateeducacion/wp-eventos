@@ -638,6 +638,37 @@ final class Registrations {
 	}
 
 	/**
+	 * The core fields the account of whoever is signing up already answers.
+	 *
+	 * Con sesión, el nombre, los apellidos, el correo y el centro salen de la
+	 * ficha del usuario y no se teclean: el formulario los enseña de solo
+	 * lectura y {@see SignupForm} los vuelve a poner al recibir el envío, que
+	 * un `readonly` en el navegador no protege nada. Solo cuenta lo que la
+	 * ficha trae relleno —y el centro, si su código está en el catálogo—: lo
+	 * que falte se sigue escribiendo a mano.
+	 *
+	 * @param int $user_id User ID (0 = current).
+	 * @return array<string, string> Subset of name, surname, email and centre (the code).
+	 */
+	public static function from_profile( int $user_id = 0 ): array {
+		$user = get_userdata( $user_id > 0 ? $user_id : get_current_user_id() );
+		if ( ! $user instanceof \WP_User ) {
+			return array();
+		}
+
+		$out = array(
+			'name'    => trim( $user->first_name ),
+			'surname' => trim( $user->last_name ),
+			'email'   => is_email( $user->user_email ) ? strtolower( $user->user_email ) : '',
+			'centre'  => trim( (string) get_user_meta( $user->ID, RegistrationMetaKeys::USER_CENTRE_CODE, true ) ),
+		);
+		if ( ! isset( self::centres()[ $out['centre'] ] ) ) {
+			$out['centre'] = '';
+		}
+		return array_filter( $out, 'strlen' );
+	}
+
+	/**
 	 * Validate a signup payload against the event, without writing anything.
 	 *
 	 * @param int                  $event_id Event post ID.

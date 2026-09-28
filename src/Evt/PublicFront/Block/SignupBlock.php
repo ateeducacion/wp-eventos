@@ -117,11 +117,15 @@ final class SignupBlock {
 		$html  = '<form class="evt-ins" method="post" enctype="multipart/form-data">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
 
+		$ficha = Registrations::from_profile();
 		$html .= '<fieldset class="evt-ins__nucleo"><legend class="h5">Sus datos</legend>';
-		foreach ( self::core_fields() as $nombre => $campo ) {
-			$html .= self::field( $nombre, $campo );
+		if ( array() !== $ficha ) {
+			$html .= '<p class="form-text">Los datos en gris salen de su cuenta y no se pueden cambiar aquí.</p>';
 		}
-		$html .= self::centre();
+		foreach ( self::core_fields() as $nombre => $campo ) {
+			$html .= self::field( $nombre, $campo, $ficha[ $nombre ] ?? '' );
+		}
+		$html .= self::centre( $ficha['centre'] ?? '' );
 		$html .= '</fieldset>';
 
 		$html .= self::questions( $evento );
@@ -232,22 +236,26 @@ final class SignupBlock {
 	/**
 	 * One field of the core.
 	 *
+	 * Con un valor de la ficha, el campo va relleno y de solo lectura.
+	 *
 	 * @param string                                                               $nombre Field name.
 	 * @param array{label:string, type:string, required:bool, autocomplete:string} $campo  Its shape.
+	 * @param string                                                               $valor  Value from the account; '' when typed.
 	 * @return string
 	 */
-	private static function field( string $nombre, array $campo ): string {
+	private static function field( string $nombre, array $campo, string $valor = '' ): string {
 		$id = 'evt-ins-' . $nombre;
 		return sprintf(
 			'<p class="evt-campo mb-3"><label class="form-label" for="%1$s">%2$s%3$s</label>'
-				. '<input class="form-control" type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s></p>',
+				. '<input class="form-control" type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s%8$s></p>',
 			esc_attr( $id ),
 			esc_html( $campo['label'] ),
 			$campo['required'] ? ' <span class="evt-campo__obl" aria-hidden="true">*</span>' : '',
 			esc_attr( $campo['type'] ),
 			esc_attr( $nombre ),
 			esc_attr( $campo['autocomplete'] ),
-			$campo['required'] ? ' required' : ''
+			$campo['required'] ? ' required' : '',
+			'' !== $valor ? ' value="' . esc_attr( $valor ) . '" readonly' : ''
 		);
 	}
 
@@ -258,13 +266,27 @@ final class SignupBlock {
 	 * escrito de cinco maneras, y a partir de ahí no hay recuento ni cruce que
 	 * valga (ADR-0031). Se dice, en vez de fabricar variantes en silencio.
 	 *
+	 * Si la cuenta ya trae el código, el centro sale de solo lectura con su
+	 * nombre del catálogo, y el código viaja oculto.
+	 *
+	 * @param string $codigo Centre code from the account; '' to choose it.
 	 * @return string
 	 */
-	private static function centre(): string {
+	private static function centre( string $codigo = '' ): string {
 		$centros = Registrations::centres();
 		if ( array() === $centros ) {
 			return '<p class="evt-aviso evt-aviso--error alert alert-danger">No hay catálogo de centros configurado, '
 				. 'así que no se puede completar la inscripción. Avise a quien organiza el evento.</p>';
+		}
+
+		if ( isset( $centros[ $codigo ] ) ) {
+			return sprintf(
+				'<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-centre">Centro</label>'
+					. '<input class="form-control" type="text" id="evt-ins-centre" value="%1$s" readonly>'
+					. '<input type="hidden" name="centre" value="%2$s"></p>',
+				esc_attr( $centros[ $codigo ] . ' (' . $codigo . ')' ),
+				esc_attr( $codigo )
+			);
 		}
 
 		$html = '<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'

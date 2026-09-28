@@ -372,6 +372,74 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 	}
 }
 
+if ( ! function_exists( 'evt_render_centre_field' ) ) {
+	/**
+	 * Render the centre code on the user profile screens.
+	 *
+	 * Lo tiene todo el mundo, no solo quien organiza: es el centro con el que
+	 * se rellena la inscripción. Lo cambia administración; los demás lo ven
+	 * de solo lectura, que es un dato de su cuenta y no algo que se elija.
+	 *
+	 * @param WP_User $user User being shown.
+	 * @return void
+	 */
+	function evt_render_centre_field( $user ): void {
+		if ( ! ( $user instanceof WP_User ) ) {
+			return;
+		}
+		$codigo   = (string) get_user_meta( $user->ID, 'codigo', true );
+		$centros  = class_exists( '\Evt\PublicFront\Registrations' ) ? \Evt\PublicFront\Registrations::centres() : array();
+		$nombre   = $centros[ $codigo ] ?? '';
+		$editable = evt_can_edit_admin_only_fields();
+
+		echo '<h2>Centro</h2><table class="form-table" role="presentation"><tr>';
+		echo '<th><label for="evt_codigo">Código de centro</label></th><td>';
+		if ( $editable ) {
+			wp_nonce_field( 'evt_profile_centre_' . $user->ID, 'evt_profile_centre_nonce' );
+		}
+		printf(
+			'<input type="text" name="evt_codigo" id="evt_codigo" class="regular-text" value="%1$s" inputmode="numeric" maxlength="8" pattern="\d{8}"%2$s />',
+			esc_attr( $codigo ),
+			$editable ? '' : ' readonly'
+		);
+		if ( '' !== $nombre ) {
+			echo '<p><strong>' . esc_html( $nombre ) . '</strong></p>';
+		} elseif ( '' !== $codigo ) {
+			echo '<p class="description">Este código no está en el catálogo de centros.</p>';
+		}
+		echo '<p class="description">' . ( $editable
+			? 'Código oficial de 8 cifras. Con él se rellena el centro al inscribirse en un evento.'
+			: 'Sale de su cuenta y lo cambia administración. Con él se rellena el centro al inscribirse en un evento.' ) . '</p>';
+		echo '</td></tr></table>';
+	}
+}
+
+if ( ! function_exists( 'evt_save_centre_field' ) ) {
+	/**
+	 * Persist the centre code, only from administración.
+	 *
+	 * El `readonly` de la pantalla no protege nada: quien no es
+	 * administración no lo escribe aunque lo envíe.
+	 *
+	 * @param int $user_id User ID being saved.
+	 * @return void
+	 */
+	function evt_save_centre_field( int $user_id ): void {
+		if ( ! evt_can_edit_admin_only_fields() || ! current_user_can( 'edit_user', $user_id ) ) {
+			return;
+		}
+		if ( ! isset( $_POST['evt_profile_centre_nonce'], $_POST['evt_codigo'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['evt_profile_centre_nonce'] ) ), 'evt_profile_centre_' . $user_id ) ) {
+			return;
+		}
+		$codigo = trim( sanitize_text_field( wp_unslash( (string) $_POST['evt_codigo'] ) ) );
+		if ( '' === $codigo ) {
+			delete_user_meta( $user_id, 'codigo' );
+		} elseif ( 1 === preg_match( '/^\d{8}$/', $codigo ) ) {
+			update_user_meta( $user_id, 'codigo', $codigo );
+		}
+	}
+}
+
 add_action( 'init', 'evt_register_roles', 5 );
 if ( ! function_exists( 'evt_scope_select_vendor' ) ) {
 	/**
@@ -647,3 +715,7 @@ add_action( 'show_user_profile', 'evt_render_profile_fields' );
 add_action( 'edit_user_profile', 'evt_render_profile_fields' );
 add_action( 'personal_options_update', 'evt_save_profile_fields' );
 add_action( 'edit_user_profile_update', 'evt_save_profile_fields' );
+add_action( 'show_user_profile', 'evt_render_centre_field' );
+add_action( 'edit_user_profile', 'evt_render_centre_field' );
+add_action( 'personal_options_update', 'evt_save_centre_field' );
+add_action( 'edit_user_profile_update', 'evt_save_centre_field' );

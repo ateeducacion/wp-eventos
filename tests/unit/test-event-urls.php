@@ -144,6 +144,37 @@ class Test_Event_Urls extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Los textos de protección de datos por defecto se guardan desde Ajustes.
+	 */
+	public function test_the_default_consent_texts_are_saved_from_the_settings_screen() {
+		set_current_screen( 'dashboard' );
+		$this->acting_as( $this->administrator() );
+
+		$this->post(
+			array(
+				'evt_action'          => 'consent',
+				'evt_consent_privacy' => '<p>Tratamiento</p><script>x</script>',
+				'evt_consent_image'   => '',
+			),
+			\Evt\Admin\Settings::NONCE_CONSENT,
+			'_evt_consent_nonce'
+		);
+		$url = $this->exit_url( array( \Evt\Admin\Settings::class, 'handle_actions' ) );
+		$this->assertSame( 'synced', $this->query_arg( (string) $url, 'updated' ) );
+
+		$textos = \Evt\Admin\Settings::default_consent();
+		$this->assertSame( '<p>Tratamiento</p>x', $textos['privacy'], 'sin lo que no es HTML de un texto' );
+		$this->assertSame( '', $textos['image'], 'en blanco también se guarda' );
+		$this->assertSame( 0, $textos['from'] );
+
+		ob_start();
+		\Evt\Admin\Settings::render();
+		$html = (string) ob_get_clean();
+		$this->assertStringContainsString( 'Protección de datos de los eventos nuevos', $html );
+		$this->assertStringContainsString( '&lt;p&gt;Tratamiento&lt;/p&gt;x', $html );
+	}
+
+	/**
 	 * Lo que no es un evento publicado en la raíz no se toca.
 	 */
 	public function test_what_is_not_a_root_event_is_left_alone() {

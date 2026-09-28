@@ -9,7 +9,10 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
+use Evt\Meta\EventMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\PostType\EventPostType;
+use Evt\PublicFront\Block\SignupBlock;
 
 /**
  * El formulario de inscripción: quién lo puede ver, y qué pasa al enviarlo.
@@ -64,6 +67,33 @@ final class SignupForm {
 	 */
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'maybe_handle_submit' ), 20 );
+		// Antes de que se pinte la página del evento.
+		add_action( 'template_redirect', array( self::class, 'require_login' ), EventView::PRIORITY - 1 );
+	}
+
+	/**
+	 * Send whoever opens a signup that needs a session straight to log in.
+	 *
+	 * Sin sesión, la página de inscripción de un evento que la pide no tiene
+	 * nada que hacer más que decir «inicie sesión»; así se ahorra el clic y se
+	 * vuelve aquí con el formulario ya relleno con los datos de la cuenta. Una
+	 * inscripción cerrada no redirige: lo que hay que leer es por qué.
+	 *
+	 * @return void
+	 */
+	public static function require_login(): void {
+		if ( is_user_logged_in() || ! is_singular( EventPostType::POST_TYPE ) ) {
+			return;
+		}
+		$seccion = get_queried_object_id();
+		if ( SignupBlock::NAME !== get_post_meta( $seccion, EventMetaKeys::SECTION_TYPE, true ) ) {
+			return;
+		}
+		$evento = EventAccess::root_id( $seccion );
+		if ( '' !== self::closed_because( $evento ) || '' === self::login_needed( $evento ) ) {
+			return;
+		}
+		Shell::leave( wp_login_url( (string) get_permalink( $seccion ) ) );
 	}
 
 	/**
@@ -135,7 +165,9 @@ final class SignupForm {
 			? $raw[ self::FIELD_ANSWERS ]
 			: array();
 
-		$v = Registrations::validate( $event_id, $raw, $respuestas );
+		// Lo que la ficha ya dice manda sobre lo que llegue en el envío.
+		$raw = array_merge( $raw, Registrations::from_profile() );
+		$v   = Registrations::validate( $event_id, $raw, $respuestas );
 
 		// Los ficheros se comprueban **antes** de crear nada: si una pregunta
 		// obligatoria viene sin documento, o el que viene no pasa la política,

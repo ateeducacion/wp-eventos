@@ -1471,6 +1471,15 @@ final class RegistrationMetaKeys {
 
 
 
+
+	public const USER_CENTRE_CODE = 'codigo';
+
+
+
+
+
+
+
 	public const REG_CONSENT_VERSION = 'evt_reg_consent_version';
 	public const REG_CONSENT_AT      = 'evt_reg_consent_at';
 
@@ -10776,6 +10785,37 @@ final class Registrations {
 
 
 
+
+
+
+
+
+	public static function from_profile( int $user_id = 0 ): array {
+		$user = get_userdata( $user_id > 0 ? $user_id : get_current_user_id() );
+		if ( ! $user instanceof \WP_User ) {
+			return array();
+		}
+
+		$out = array(
+			'name'    => trim( $user->first_name ),
+			'surname' => trim( $user->last_name ),
+			'email'   => is_email( $user->user_email ) ? strtolower( $user->user_email ) : '',
+			'centre'  => trim( (string) get_user_meta( $user->ID, RegistrationMetaKeys::USER_CENTRE_CODE, true ) ),
+		);
+		if ( ! isset( self::centres()[ $out['centre'] ] ) ) {
+			$out['centre'] = '';
+		}
+		return array_filter( $out, 'strlen' );
+	}
+
+
+
+
+
+
+
+
+
 	public static function validate( int $event_id, array $raw, array $answers ): array {
 		$nucleo     = RegistrationInput::core( $raw, self::centres() );
 		$preguntas  = self::questions( $event_id );
@@ -11852,7 +11892,10 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
+use Evt\Meta\EventMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\PostType\EventPostType;
+use Evt\PublicFront\Block\SignupBlock;
 
 
 
@@ -11907,6 +11950,33 @@ final class SignupForm {
 
 	public static function register(): void {
 		add_action( 'init', array( self::class, 'maybe_handle_submit' ), 20 );
+
+		add_action( 'template_redirect', array( self::class, 'require_login' ), EventView::PRIORITY - 1 );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function require_login(): void {
+		if ( is_user_logged_in() || ! is_singular( EventPostType::POST_TYPE ) ) {
+			return;
+		}
+		$seccion = get_queried_object_id();
+		if ( SignupBlock::NAME !== get_post_meta( $seccion, EventMetaKeys::SECTION_TYPE, true ) ) {
+			return;
+		}
+		$evento = EventAccess::root_id( $seccion );
+		if ( '' !== self::closed_because( $evento ) || '' === self::login_needed( $evento ) ) {
+			return;
+		}
+		Shell::leave( wp_login_url( (string) get_permalink( $seccion ) ) );
 	}
 
 
@@ -11978,7 +12048,9 @@ final class SignupForm {
 			? $raw[ self::FIELD_ANSWERS ]
 			: array();
 
-		$v = Registrations::validate( $event_id, $raw, $respuestas );
+
+		$raw = array_merge( $raw, Registrations::from_profile() );
+		$v   = Registrations::validate( $event_id, $raw, $respuestas );
 
 
 
@@ -12245,6 +12317,7 @@ final class SignupForm {
 namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
+use Evt\Admin\Settings;
 use Evt\Domain\ActivityInput;
 use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
@@ -13384,6 +13457,15 @@ final class EventWorkspace {
 		self::save_meta( $id, $valores, $revisado['data'] );
 		self::save_terms( $id, $area_ids, $valores );
 		EventAccess::stamp_area( $id );
+
+
+
+		$textos = Settings::default_consent();
+		if ( '' !== $textos['privacy'] || '' !== $textos['image'] ) {
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_PRIVACY, $textos['privacy'] );
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_IMAGE, $textos['image'] );
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_VERSION, 1 );
+		}
 
 		self::set_flash( 'ok', 'Evento creado, en borrador. Añada sus páginas, sus ponentes y su programa, y publíquelo cuando esté listo.' );
 		Shell::leave( self::url( $id, self::PANEL_SECTIONS ) );
@@ -20850,11 +20932,15 @@ final class SignupBlock {
 		$html  = '<form class="evt-ins" method="post" enctype="multipart/form-data">';
 		$html .= self::hidden( $evento, SignupForm::OP_SIGNUP );
 
+		$ficha = Registrations::from_profile();
 		$html .= '<fieldset class="evt-ins__nucleo"><legend class="h5">Sus datos</legend>';
-		foreach ( self::core_fields() as $nombre => $campo ) {
-			$html .= self::field( $nombre, $campo );
+		if ( array() !== $ficha ) {
+			$html .= '<p class="form-text">Los datos en gris salen de su cuenta y no se pueden cambiar aquí.</p>';
 		}
-		$html .= self::centre();
+		foreach ( self::core_fields() as $nombre => $campo ) {
+			$html .= self::field( $nombre, $campo, $ficha[ $nombre ] ?? '' );
+		}
+		$html .= self::centre( $ficha['centre'] ?? '' );
 		$html .= '</fieldset>';
 
 		$html .= self::questions( $evento );
@@ -20969,18 +21055,22 @@ final class SignupBlock {
 
 
 
-	private static function field( string $nombre, array $campo ): string {
+
+
+
+	private static function field( string $nombre, array $campo, string $valor = '' ): string {
 		$id = 'evt-ins-' . $nombre;
 		return sprintf(
 			'<p class="evt-campo mb-3"><label class="form-label" for="%1$s">%2$s%3$s</label>'
-				. '<input class="form-control" type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s></p>',
+				. '<input class="form-control" type="%4$s" id="%1$s" name="%5$s" autocomplete="%6$s"%7$s%8$s></p>',
 			esc_attr( $id ),
 			esc_html( $campo['label'] ),
 			$campo['required'] ? ' <span class="evt-campo__obl" aria-hidden="true">*</span>' : '',
 			esc_attr( $campo['type'] ),
 			esc_attr( $nombre ),
 			esc_attr( $campo['autocomplete'] ),
-			$campo['required'] ? ' required' : ''
+			$campo['required'] ? ' required' : '',
+			'' !== $valor ? ' value="' . esc_attr( $valor ) . '" readonly' : ''
 		);
 	}
 
@@ -20993,11 +21083,25 @@ final class SignupBlock {
 
 
 
-	private static function centre(): string {
+
+
+
+
+	private static function centre( string $codigo = '' ): string {
 		$centros = Registrations::centres();
 		if ( array() === $centros ) {
 			return '<p class="evt-aviso evt-aviso--error alert alert-danger">No hay catálogo de centros configurado, '
 				. 'así que no se puede completar la inscripción. Avise a quien organiza el evento.</p>';
+		}
+
+		if ( isset( $centros[ $codigo ] ) ) {
+			return sprintf(
+				'<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-centre">Centro</label>'
+					. '<input class="form-control" type="text" id="evt-ins-centre" value="%1$s" readonly>'
+					. '<input type="hidden" name="centre" value="%2$s"></p>',
+				esc_attr( $centros[ $codigo ] . ' (' . $codigo . ')' ),
+				esc_attr( $codigo )
+			);
 		}
 
 		$html = '<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-centre">Centro <span class="evt-campo__obl" aria-hidden="true">*</span></label>'
@@ -24351,6 +24455,7 @@ namespace Evt\Admin;
 use Evt\Access\EventAccess;
 use Evt\Centre\CentreCatalogue;
 use Evt\Centre\CentreCatalogueSync;
+use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
@@ -24380,6 +24485,20 @@ final class Settings {
 
 
 	public const NONCE_URLS = 'evt_root_urls';
+
+
+
+
+	public const NONCE_CONSENT = 'evt_default_consent';
+
+
+
+
+
+
+
+	public const OPTION_CONSENT_PRIVACY = 'evt_default_consent_privacy';
+	public const OPTION_CONSENT_IMAGE   = 'evt_default_consent_image';
 
 
 
@@ -24438,6 +24557,26 @@ final class Settings {
 
 		if (
 			isset( $_POST['evt_action'] ) &&
+			'consent' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_CONSENT, '_evt_consent_nonce' )
+		) {
+			update_option( self::OPTION_CONSENT_PRIVACY, wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_privacy'] ?? '' ) ) ), false );
+			update_option( self::OPTION_CONSENT_IMAGE, wp_kses_post( wp_unslash( (string) ( $_POST['evt_consent_image'] ?? '' ) ) ), false );
+			self::leave(
+				add_query_arg(
+					array(
+						'post_type' => EventPostType::POST_TYPE,
+						'page'      => self::PAGE,
+						'updated'   => 'synced',
+						'msg'       => rawurlencode( 'Guardados los textos de protección de datos de los eventos nuevos.' ),
+					),
+					admin_url( 'edit.php' )
+				)
+			);
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
 			'sync_centres' === $_POST['evt_action'] &&
 			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
 		) {
@@ -24463,6 +24602,53 @@ final class Settings {
 
 			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
 		}
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function default_consent(): array {
+		$privacidad = get_option( self::OPTION_CONSENT_PRIVACY, null );
+		$imagen     = get_option( self::OPTION_CONSENT_IMAGE, null );
+		if ( null !== $privacidad || null !== $imagen ) {
+			return array(
+				'privacy' => (string) $privacidad,
+				'image'   => (string) $imagen,
+				'from'    => 0,
+			);
+		}
+
+		$ultimo = get_posts(
+			array(
+				'post_type'        => EventPostType::POST_TYPE,
+				'post_parent'      => 0,
+				'post_status'      => 'any',
+				'numberposts'      => 1,
+				'orderby'          => 'date',
+				'order'            => 'DESC',
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+				'meta_query'       => array( 
+					array(
+						'key'     => RegistrationMetaKeys::CONSENT_PRIVACY,
+						'value'   => '',
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+		$evento = (int) ( $ultimo[0] ?? 0 );
+		return array(
+			'privacy' => $evento > 0 ? (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, true ) : '',
+			'image'   => $evento > 0 ? (string) get_post_meta( $evento, RegistrationMetaKeys::CONSENT_IMAGE, true ) : '',
+			'from'    => $evento,
+		);
 	}
 
 
@@ -24529,6 +24715,31 @@ final class Settings {
 					Es la forma que tienen hoy las páginas de los eventos, y la que conservan al migrarlos.
 					Sin marcar, van bajo <code><?php echo esc_html( home_url( '/evento/' ) ); ?></code>.
 					Si en la raíz hay una página con la misma dirección, gana la página.
+				</p>
+				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
+			</form>
+
+			<?php $consent = self::default_consent(); ?>
+			<h2>Protección de datos de los eventos nuevos</h2>
+			<form method="post" action="" style="max-width:46rem">
+				<?php wp_nonce_field( self::NONCE_CONSENT, '_evt_consent_nonce' ); ?>
+				<input type="hidden" name="evt_action" value="consent" />
+				<p class="description">
+					Cada evento nuevo empieza con una copia de estos dos textos. Después se cambian en el propio
+					evento, en «Inscripción», sin tocar estos; y cambiar estos no toca los eventos que ya existen.
+				</p>
+				<?php if ( $consent['from'] > 0 ) : ?>
+					<div class="notice notice-info inline"><p>
+						<?php echo esc_html( sprintf( 'Todavía no se han guardado: se proponen los de «%s», el evento más reciente que los tiene. Guárdelos para fijarlos.', get_the_title( $consent['from'] ) ) ); ?>
+					</p></div>
+				<?php endif; ?>
+				<p>
+					<label for="evt-default-consent-privacy"><strong>Información sobre el tratamiento de sus datos</strong></label><br />
+					<textarea class="large-text" id="evt-default-consent-privacy" name="evt_consent_privacy" rows="8"><?php echo esc_textarea( $consent['privacy'] ); ?></textarea>
+				</p>
+				<p>
+					<label for="evt-default-consent-image"><strong>Consentimiento informado</strong></label><br />
+					<textarea class="large-text" id="evt-default-consent-image" name="evt_consent_image" rows="8"><?php echo esc_textarea( $consent['image'] ); ?></textarea>
 				</p>
 				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
 			</form>
@@ -27498,6 +27709,13 @@ body .swal2-container { z-index: 100010; }
 	.evt-yo > summary {
 		padding: 0.25rem;
 	}
+}
+
+/* En la inscripción, lo que sale de la cuenta de quien se inscribe: en gris,
+   porque no se puede cambiar. */
+.evt-ins input[readonly] {
+	background-color: var(--bs-secondary-bg, #e9ecef);
+	color: var(--evt-tinta);
 }
 
 /* ─── el pie institucional ────────────────────────────────────────────── */

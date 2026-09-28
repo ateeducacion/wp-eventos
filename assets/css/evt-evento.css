@@ -1091,6 +1091,13 @@
 	}
 }
 
+/* En la inscripción, lo que sale de la cuenta de quien se inscribe: en gris,
+   porque no se puede cambiar. */
+.evt-ins input[readonly] {
+	background-color: var(--bs-secondary-bg, #e9ecef);
+	color: var(--evt-tinta);
+}
+
 /* ─── el pie institucional ────────────────────────────────────────────── */
 
 .evt-ev__pie {

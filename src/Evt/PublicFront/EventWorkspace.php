@@ -8,6 +8,7 @@
 namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
+use Evt\Admin\Settings;
 use Evt\Domain\ActivityInput;
 use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
@@ -1147,6 +1148,15 @@ final class EventWorkspace {
 		self::save_meta( $id, $valores, $revisado['data'] );
 		self::save_terms( $id, $area_ids, $valores );
 		EventAccess::stamp_area( $id );
+
+		// Nace con una copia de los textos de protección de datos de Ajustes:
+		// a partir de aquí son del evento y se cambian en su «Inscripción».
+		$textos = Settings::default_consent();
+		if ( '' !== $textos['privacy'] || '' !== $textos['image'] ) {
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_PRIVACY, $textos['privacy'] );
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_IMAGE, $textos['image'] );
+			update_post_meta( $id, RegistrationMetaKeys::CONSENT_VERSION, 1 );
+		}
 
 		self::set_flash( 'ok', 'Evento creado, en borrador. Añada sus páginas, sus ponentes y su programa, y publíquelo cuando esté listo.' );
 		Shell::leave( self::url( $id, self::PANEL_SECTIONS ) );

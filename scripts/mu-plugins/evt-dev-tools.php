@@ -522,20 +522,23 @@ if ( ! function_exists( 'evt_dev_centres' ) ) {
 	/**
 	 * A short made-up catalogue of centres.
 	 *
-	 * @param string[] $centros Centres so far.
-	 * @return string[]
+	 * El contrato de `evt_centres` es código oficial de 8 dígitos => nombre;
+	 * los códigos de aquí son inventados.
+	 *
+	 * @param array<string, string> $centros Centres so far.
+	 * @return array<string, string>
 	 */
 	function evt_dev_centres( array $centros ): array {
 		if ( array() !== $centros ) {
 			return $centros;
 		}
 		return array(
-			'CEIP El Molino',
-			'CEIP La Vega',
-			'CEIP El Roque',
-			'CEO Las Dunas',
-			'IES El Mirador',
-			'Instituto Sur',
+			'00000001' => 'CEIP El Molino',
+			'00000002' => 'CEIP La Vega',
+			'00000003' => 'CEIP El Roque',
+			'00000004' => 'CEO Las Dunas',
+			'00000005' => 'IES El Mirador',
+			'00000006' => 'Instituto Sur',
 		);
 	}
 }

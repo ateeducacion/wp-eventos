@@ -35,6 +35,15 @@ final class RegistrationMetaKeys {
 	public const REG_CENTRE_CODE = 'evt_reg_centre_code';
 
 	/**
+	 * User meta with the official code of the person's centre.
+	 *
+	 * No la escribe el aplicativo: la rellena, al iniciar sesión, lo que el
+	 * sitio tenga para eso. El aplicativo solo la lee para completar la
+	 * inscripción ({@see \Evt\PublicFront\Registrations::from_profile()}).
+	 */
+	public const USER_CENTRE_CODE = 'codigo';
+
+	/**
 	 * Which version of the consent texts this person accepted, and when.
 	 *
 	 * Las dos juntas son la constancia que pide la ADR-0020: una casilla sin

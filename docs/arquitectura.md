@@ -87,6 +87,13 @@ El catálogo de centros educativos no es un tipo de contenido: es un dato
 maestro externo con una copia local cacheada. La inscripción guarda el código
 oficial del centro y su nombre como foto de ese momento (ADR-0037).
 
+Con sesión, el nombre, los apellidos, el correo y el centro salen de la cuenta
+de quien se inscribe —`first_name`, `last_name`, `user_email` y la meta de
+usuario `codigo`— y no se pueden cambiar en el formulario: el servidor los
+vuelve a poner al recibirlo. Se da por hecho que esos datos de la cuenta son
+correctos. El código de centro sale en el perfil como «Código de centro»: lo
+cambia administración y los demás lo ven de solo lectura (ADR-0048).
+
 Los documentos que aporta quien se inscribe **no son adjuntos de WordPress**:
 se guardan aparte, con nombre opaco, y solo se descargan desde el aplicativo
 (ADR-0036).

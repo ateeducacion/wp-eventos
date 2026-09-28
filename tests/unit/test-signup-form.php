@@ -271,6 +271,107 @@ class Test_Signup_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Una persona con cuenta.
+	 *
+	 * @param string $codigo Centre code in her profile.
+	 * @return int User ID.
+	 */
+	private function con_ficha( string $codigo = '38000002' ): int {
+		$quien = (int) self::factory()->user->create(
+			array(
+				'role'       => 'subscriber',
+				'first_name' => 'Luisa',
+				'last_name'  => 'Rodríguez Díaz',
+				'user_email' => 'Luisa@Example.org',
+			)
+		);
+		update_user_meta( $quien, RegistrationMetaKeys::USER_CENTRE_CODE, $codigo );
+		return $quien;
+	}
+
+	/**
+	 * Con sesión, nombre, apellidos, correo y centro salen de la cuenta, de
+	 * solo lectura.
+	 */
+	public function test_with_a_session_the_account_fills_the_core_read_only() {
+		list( $evento ) = $this->evento_abierto();
+		$this->acting_as( $this->con_ficha() );
+
+		$html = $this->pintar( $evento );
+
+		$this->assertStringContainsString( 'name="name" autocomplete="given-name" required value="Luisa" readonly', $html );
+		$this->assertStringContainsString( 'value="Rodríguez Díaz" readonly', $html );
+		$this->assertStringContainsString( 'value="luisa@example.org" readonly', $html );
+		$this->assertStringContainsString( 'value="IES El Mirador (38000002)" readonly', $html, 'el centro, por su código, con el nombre del catálogo' );
+		$this->assertStringContainsString( '<input type="hidden" name="centre" value="38000002">', $html );
+		$this->assertStringNotContainsString( '<select class="form-select" id="evt-ins-centre"', $html );
+		$this->assertMatchesRegularExpression( '/name="tax_id"[^>]*required>/', $html, 'lo que la cuenta no sabe se teclea' );
+	}
+
+	/**
+	 * Un código que no está en el catálogo no rellena nada: se elige el centro.
+	 */
+	public function test_an_unknown_centre_code_leaves_the_centre_to_choose() {
+		list( $evento ) = $this->evento_abierto();
+		$this->acting_as( $this->con_ficha( '99999999' ) );
+
+		$this->assertStringContainsString( '<select class="form-select" id="evt-ins-centre"', $this->pintar( $evento ) );
+		$this->assertArrayNotHasKey( 'centre', Registrations::from_profile() );
+	}
+
+	/**
+	 * Lo que dice la cuenta manda sobre lo que llegue en el envío.
+	 */
+	public function test_the_account_wins_over_what_is_posted() {
+		list( $evento ) = $this->evento_abierto();
+		$this->acting_as( $this->con_ficha() );
+
+		$this->enviar(
+			$evento,
+			$this->datos(
+				array(
+					'name'   => 'Otra',
+					'email'  => 'otra@example.org',
+					'centre' => '38000001',
+				)
+			)
+		);
+
+		$inscripciones = Registrations::all( $evento );
+		$this->assertCount( 1, $inscripciones );
+		$meta = Registrations::meta( (int) $inscripciones[0]->ID );
+		$this->assertSame( 'Luisa', $meta[ RegistrationMetaKeys::REG_NAME ] );
+		$this->assertSame( 'Rodríguez Díaz', $meta[ RegistrationMetaKeys::REG_SURNAME ] );
+		$this->assertSame( 'luisa@example.org', $meta[ RegistrationMetaKeys::REG_EMAIL ] );
+		$this->assertSame( '38000002', $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ] );
+		$this->assertSame( 'IES El Mirador', $meta[ RegistrationMetaKeys::REG_CENTRE ] );
+	}
+
+	/**
+	 * Sin sesión, la página de una inscripción que la pide manda a iniciarla.
+	 */
+	public function test_a_signup_that_needs_a_session_sends_to_log_in() {
+		list( $evento, $seccion ) = $this->evento_abierto();
+		$this->go_to( get_permalink( $seccion ) );
+
+		$this->assertNull( $this->exit_url( array( SignupForm::class, 'require_login' ) ), 'pública: se queda' );
+
+		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_PUBLIC, false );
+		$url = (string) $this->exit_url( array( SignupForm::class, 'require_login' ) );
+		$this->assertStringContainsString( 'wp-login.php', $url );
+		$this->assertSame( get_permalink( $seccion ), $this->query_arg( $url, 'redirect_to' ) );
+
+		// Cerrada, no: lo que hay que leer es por qué.
+		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_OPEN, false );
+		$this->assertNull( $this->exit_url( array( SignupForm::class, 'require_login' ) ) );
+
+		// Y con sesión, tampoco.
+		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_OPEN, true );
+		$this->acting_as( $this->con_ficha() );
+		$this->assertNull( $this->exit_url( array( SignupForm::class, 'require_login' ) ) );
+	}
+
+	/**
 	 * Con un dato mal, no se guarda nada y se dice cuál.
 	 */
 	public function test_a_bad_field_saves_nothing_and_says_which() {
