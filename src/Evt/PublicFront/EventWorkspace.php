@@ -2390,6 +2390,8 @@ final class EventWorkspace {
 		return array(
 			// Ya acotada al ámbito de quien mira: es la misma lista del escritorio.
 			'area'   => EventTaxonomies::area_options( $user_id ),
+			// El mismo acotado, en árbol y con lo de encima como contexto.
+			'tree'   => EventTaxonomies::area_tree_for( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);

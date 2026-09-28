@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.7
+ * @version 0.1.8
  */
 
 // phpcs:disable
@@ -5344,6 +5344,47 @@ final class EventTaxonomies {
 		};
 		$baja( 0, 0, '' );
 		return $lista;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function area_tree_for( int $user_id = 0 ): array {
+		$elegibles = array_map( 'intval', array_keys( self::area_options( $user_id ) ) );
+		$arbol     = self::area_tree();
+
+
+		$sale  = array();
+		$pila  = array();
+		$total = count( $arbol );
+		for ( $i = $total - 1; $i >= 0; $i-- ) {
+			$nodo       = $arbol[ $i ];
+			$debajo     = ! empty( $pila[ $nodo['depth'] + 1 ] );
+			$elegible   = in_array( $nodo['id'], $elegibles, true );
+			$sale[ $i ] = $elegible || $debajo;
+
+			$pila[ $nodo['depth'] + 1 ] = false;
+			$pila[ $nodo['depth'] ]     = ! empty( $pila[ $nodo['depth'] ] ) || $sale[ $i ];
+
+			$arbol[ $i ]['selectable'] = $elegible;
+		}
+
+		return array_values(
+			array_filter(
+				$arbol,
+				static function ( $i ) use ( $sale ): bool {
+					return $sale[ $i ];
+				},
+				ARRAY_FILTER_USE_KEY
+			)
+		);
 	}
 
 
@@ -14516,6 +14557,8 @@ final class EventWorkspace {
 		return array(
 
 			'area'   => EventTaxonomies::area_options( $user_id ),
+
+			'tree'   => EventTaxonomies::area_tree_for( $user_id ),
 			'type'   => self::term_options( EventTaxonomies::TYPE ),
 			'course' => self::term_options( EventTaxonomies::COURSE ),
 		);
@@ -16849,7 +16892,7 @@ final class EventDataPanel {
 			'evt-area',
 			EventWorkspace::FIELD_AREA,
 			'Ámbitos organizativos',
-			(array) ( $listas['area'] ?? array() ),
+			(array) ( $listas['tree'] ?? array() ),
 			(string) $v[ EventWorkspace::FIELD_AREA ],
 			(array) ( $m['foreign_areas'] ?? array() ),
 			(bool) $m['can_set_area']
@@ -16972,15 +17015,20 @@ final class EventDataPanel {
 
 
 
+
+
+
+
+
+
+
 	private static function area_checks( string $id, string $nombre, string $rotulo, array $terminos, string $elegidos, array $foreign, string $ayuda, bool $todos = false ): string {
 		$ids = array_map( 'absint', explode( ',', $elegidos ) );
 		ob_start();
 		?>
 		<fieldset class="evt-ambitos"><legend><?php echo esc_html( $rotulo ); ?></legend>
 			<input type="hidden" name="evt_area_present" value="1" />
-			<?php foreach ( $terminos as $term_id => $texto ) : ?>
-				<label><input type="checkbox" name="<?php echo esc_attr( $nombre ); ?>[]" value="<?php echo esc_attr( (string) $term_id ); ?>" <?php checked( in_array( (int) $term_id, $ids, true ) ); ?> /> <?php echo esc_html( $texto ); ?></label><br />
-			<?php endforeach; ?>
+			<?php echo self::area_tree( $nombre, $terminos, $ids ); ?>
 			<?php if ( $todos ) : ?>
 				<?php echo Shell::admin_note( 'Puede asignar cualquier ámbito, no solo los de su subárbol.' ); ?>
 			<?php endif; ?>
@@ -16997,6 +17045,64 @@ final class EventDataPanel {
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function area_tree( string $nombre, array $filas, array $ids ): string {
+		if ( array() === $filas ) {
+			return '<p class="evt-ayuda">No hay ningún ámbito que pueda elegir. Pídalo a quien administre el aplicativo.</p>';
+		}
+
+		$html  = '<ul class="evt-arbol" data-evt-arbol>';
+		$nivel = (int) $filas[0]['depth'];
+		$total = count( $filas );
+		foreach ( $filas as $i => $fila ) {
+			$profundidad = (int) $fila['depth'];
+			$tiene_hijos = $i + 1 < $total && (int) $filas[ $i + 1 ]['depth'] > $profundidad;
+
+			$html .= '<li' . ( $tiene_hijos ? ' class="evt-arbol__rama"' : '' ) . '><div class="evt-arbol__fila">';
+			if ( $tiene_hijos ) {
+				$html .= '<button type="button" class="evt-arbol__plegar" aria-expanded="true" hidden data-evt-arbol-plegar>'
+					. '<span class="screen-reader-text">' . esc_html( sprintf( 'Mostrar u ocultar lo que cuelga de %s', (string) $fila['name'] ) ) . '</span></button>';
+			}
+			if ( ! empty( $fila['selectable'] ) ) {
+				$html .= sprintf(
+					'<label title="%4$s"><input type="checkbox" name="%1$s[]" value="%2$d"%3$s /> %5$s</label>',
+					esc_attr( $nombre ),
+					(int) $fila['id'],
+					checked( in_array( (int) $fila['id'], $ids, true ), true, false ),
+					esc_attr( (string) $fila['path'] ),
+					esc_html( (string) $fila['name'] )
+				);
+			} else {
+				$html .= '<span class="evt-arbol__contexto" title="' . esc_attr( (string) $fila['path'] ) . '">'
+					. esc_html( (string) $fila['name'] ) . '</span>';
+			}
+			$html .= '</div>';
+
+			if ( $tiene_hijos ) {
+				$html .= '<ul>';
+				continue;
+			}
+			$html .= '</li>';
+
+
+			$siguiente = $i + 1 < $total ? (int) $filas[ $i + 1 ]['depth'] : $nivel;
+			for ( $d = $profundidad; $d > $siguiente; $d-- ) {
+				$html .= '</ul></li>';
+			}
+		}
+		return $html . '</ul>';
 	}
 
 
@@ -24633,6 +24739,36 @@ body.evt-app .evt-hoja {
 .evt-icono-opcion:has(input:focus-visible) { outline: 2px solid var(--evt-pri); outline-offset: 2px; }
 .evt-icono-nombre { font-size: 13px; }
 
+/* El árbol de ámbitos: cada uno sangrado bajo el suyo, con una raya que
+   dice de quién cuelga. Lo que no se puede elegir sale en gris, sin casilla. */
+/* `clear`: Bootstrap flota el `<legend>` a todo lo ancho, y una fila flex
+   junto a un flotante se queda con cero de ancho. */
+.evt-arbol { clear: both; }
+.evt-arbol, .evt-arbol ul { list-style: none; margin: 0; padding: 0; }
+.evt-arbol ul { margin-left: 11px; padding-left: 14px; border-left: 1px solid var(--evt-linea); }
+.evt-arbol ul[hidden] { display: none; }
+.evt-arbol__fila { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+.evt-arbol__fila label { display: flex; align-items: baseline; gap: 8px; margin: 0; font-weight: 400; }
+.evt-arbol li:not(.evt-arbol__rama) > .evt-arbol__fila { padding-left: 28px; }
+.evt-arbol__contexto { color: var(--evt-texto-2); font-weight: 600; }
+.evt-arbol__plegar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--evt-texto-2);
+  cursor: pointer;
+}
+.evt-arbol__plegar::before { content: "▾"; display: inline-block; font-size: 18px; line-height: 22px; }
+.evt-arbol__plegar[aria-expanded="false"]::before { content: "▸"; }
+.evt-arbol__plegar:hover { background: var(--evt-sup-2); }
+/* Sin guion no hay flecha: la rama no lleva hueco de más. */
+.evt-arbol__rama > .evt-arbol__fila { padding-left: 28px; }
+.evt-app-js .evt-arbol__rama > .evt-arbol__fila { padding-left: 0; }
+
 /* Las opciones de una pregunta: el guion las esconde en los tipos sin lista. */
 [data-evt-q-opciones][hidden] { display: none; }
 .evt-pregunta__quitar { margin-top: 10px; color: var(--evt-mal); }
@@ -28214,6 +28350,37 @@ body .swal2-container { z-index: 100010; }
 		} );
 	}
 	document.addEventListener( \'DOMContentLoaded\', arrancarPreguntas );
+
+	/* --- 11. El árbol de ámbitos: plegar y desplegar ramas ---------------- */
+
+	/*
+	 * Sin guion, el árbol entero abierto y sangrado, que se lee igual. Con
+	 * guion, cada rama tiene su flecha y arrancan abiertas solo las que llevan
+	 * algo marcado dentro: lo que ya es del evento se ve sin buscarlo.
+	 */
+	function plegar( boton, abierta ) {
+		var rama = boton.closest( \'.evt-arbol__rama\' );
+		var hijos = rama ? rama.querySelector( \':scope > ul\' ) : null;
+		boton.setAttribute( \'aria-expanded\', abierta ? \'true\' : \'false\' );
+		if ( hijos ) {
+			hijos.hidden = ! abierta;
+		}
+	}
+
+	document.addEventListener( \'click\', function ( e ) {
+		var boton = e.target.closest ? e.target.closest( \'[data-evt-arbol-plegar]\' ) : null;
+		if ( boton ) {
+			plegar( boton, \'true\' !== boton.getAttribute( \'aria-expanded\' ) );
+		}
+	} );
+
+	document.addEventListener( \'DOMContentLoaded\', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-arbol-plegar]\' ), function ( boton ) {
+			var rama = boton.closest( \'.evt-arbol__rama\' );
+			boton.hidden = false;
+			plegar( boton, !! ( rama && rama.querySelector( \':scope > ul input:checked\' ) ) );
+		} );
+	} );
 
 	window.addEventListener( \'beforeunload\', function ( e ) {
 		var formularios = document.querySelectorAll( \'form[data-evt-cambios]\' );

@@ -8,6 +8,18 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.8] — 2026-09-28
+
+### Cambiado
+
+- **Los ámbitos de «Datos del evento» se eligen en un árbol.** Antes eran una lista de rutas largas («A › B › C»); ahora:
+  - cada ámbito va sangrado bajo el suyo, con una raya que dice de quién cuelga;
+  - los que están por encima de lo que uno puede elegir salen en gris y sin casilla, para saber de dónde cuelga cada cosa;
+  - las ramas se pliegan y se despliegan con una flecha, y arrancan abiertas solo las que tienen algo marcado;
+  - la ruta entera sale al pasar el ratón.
+
+  Sin JavaScript, el árbol sale entero y abierto
+
 ## [0.1.7] — 2026-09-28
 
 ### Cambiado

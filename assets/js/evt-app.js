@@ -1095,6 +1095,37 @@
 	}
 	document.addEventListener( 'DOMContentLoaded', arrancarPreguntas );
 
+	/* --- 11. El árbol de ámbitos: plegar y desplegar ramas ---------------- */
+
+	/*
+	 * Sin guion, el árbol entero abierto y sangrado, que se lee igual. Con
+	 * guion, cada rama tiene su flecha y arrancan abiertas solo las que llevan
+	 * algo marcado dentro: lo que ya es del evento se ve sin buscarlo.
+	 */
+	function plegar( boton, abierta ) {
+		var rama = boton.closest( '.evt-arbol__rama' );
+		var hijos = rama ? rama.querySelector( ':scope > ul' ) : null;
+		boton.setAttribute( 'aria-expanded', abierta ? 'true' : 'false' );
+		if ( hijos ) {
+			hijos.hidden = ! abierta;
+		}
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var boton = e.target.closest ? e.target.closest( '[data-evt-arbol-plegar]' ) : null;
+		if ( boton ) {
+			plegar( boton, 'true' !== boton.getAttribute( 'aria-expanded' ) );
+		}
+	} );
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-arbol-plegar]' ), function ( boton ) {
+			var rama = boton.closest( '.evt-arbol__rama' );
+			boton.hidden = false;
+			plegar( boton, !! ( rama && rama.querySelector( ':scope > ul input:checked' ) ) );
+		} );
+	} );
+
 	window.addEventListener( 'beforeunload', function ( e ) {
 		var formularios = document.querySelectorAll( 'form[data-evt-cambios]' );
 		for ( var i = 0; i < formularios.length; i++ ) {
