@@ -183,3 +183,28 @@ sedes, separadas por una línea en blanco), `evt_contact_phone` (uno por línea)
 formulario solo cuando la página es de contacto y que la página pinta en las
 tres columnas con icono. El correo y el enlace se limpian al guardar: lo que no
 es un correo o una dirección web no se guarda.
+
+## Adenda — 2026-09-29: un solo botón y el menú sin iconos
+
+- **Fuera «Editar esta página».** Bajo el título queda solo «Gestionar este
+  evento»: dos botones que llevan casi al mismo sitio hacían dudar de cuál
+  pulsar, y la página se edita igual desde la pestaña de secciones del taller.
+- **Dentro de la vista previa del taller no sale ninguno.** Quien la mira ya
+  está gestionando el evento; se sabe por la cabecera `Sec-Fetch-Dest: iframe`
+  (`Shell::in_frame()`), la misma que ya quita la barra de administración.
+- **El menú de arriba va sin iconos por defecto.** Cada sección conserva el
+  suyo —en su tarjeta de la portada y en el taller—, y el evento que los quiera
+  también en el menú marca la casilla de «Apariencia» (`evt_menu_icons`).
+
+## Adenda — 2026-09-29: la imagen de la tarjeta se elige en la sección
+
+La tarjeta de una sección en la portada pinta su **imagen destacada**
+(`EventView::card_image()`), pero el formulario de la sección no tenía dónde
+ponerla: solo la traían las secciones importadas, y quien quería cambiarla no
+podía. El bloque «En la portada y en el menú del evento» lleva ahora el campo
+«Imagen de la tarjeta», el mismo del panel «Apariencia»
+(`EventAppearancePanel::image_field()`), con la biblioteca de medios, arrastrar
+y soltar y la subida sin guion. Lo guarda `EventWorkspace::save_image()` con las
+mismas comprobaciones: lo que no es una imagen de la biblioteca no se pone, lo
+que había se queda y se avisa. Sigue siendo la destacada y no una meta nueva,
+así que las importadas se ven y se editan sin migrar nada.

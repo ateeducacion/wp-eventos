@@ -359,6 +359,51 @@ class Test_Page_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La imagen de la tarjeta se elige en el formulario de la sección.
+	 *
+	 * Es su imagen destacada: la que pinta la tarjeta de la portada. Lo que no
+	 * es una imagen de la biblioteca no se pone, y se avisa.
+	 */
+	public function test_a_section_picks_the_image_of_its_card() {
+		$area    = $this->area( 'Innovación' );
+		$yo      = $this->organiser( array( $area ) );
+		$evento  = $this->event( $yo, array( $area ) );
+		$seccion = $this->event_page( $evento, 'programa', array( 'post_title' => 'Programa' ) );
+		$imagen  = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg', $seccion );
+		$campos  = array(
+			'evt_page_id'   => (string) $seccion,
+			'evt_title'     => 'Programa',
+			'evt_showcase'  => '1',
+			'evt_home_card' => '1',
+			'evt_in_menu'   => '1',
+		);
+
+		$salida = $this->submit( $yo, $campos + array( 'evt_card_image_id' => (string) $imagen ) );
+		$this->assertSame( $imagen, (int) get_post_thumbnail_id( $seccion ) );
+		$this->assertStringContainsString( 'evt_hecho=guardada', (string) $salida );
+
+		// Una página no es una imagen: se queda la que había y se avisa.
+		$salida = $this->submit( $yo, $campos + array( 'evt_card_image_id' => (string) $evento ) );
+		$this->assertSame( $imagen, (int) get_post_thumbnail_id( $seccion ) );
+		$this->assertStringContainsString( 'evt_hecho=sin-imagen', (string) $salida );
+
+		// El formulario la enseña puesta, al volver de la redirección.
+		$_POST                     = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$this->acting_as( $yo );
+		$_GET['seccion'] = (string) $seccion;
+		$m               = PageForm::model();
+		$this->assertSame( $imagen, $m['values']['card_image'] );
+		$html = \Evt\PublicFront\View\PageFormView::html( $m );
+		$this->assertMatchesRegularExpression( '/name="evt_card_image_id"\s+value="' . $imagen . '"/', $html );
+		$this->assertStringContainsString( 'enctype="multipart/form-data"', $html );
+
+		// Y quitarla la quita.
+		$this->submit( $yo, $campos + array( 'evt_card_image_id' => '0' ) );
+		$this->assertSame( 0, (int) get_post_thumbnail_id( $seccion ) );
+	}
+
+	/**
 	 * Los puntos del mapa se escriben con las coordenadas que copia un mapa.
 	 *
 	 * Uno que no se entiende no se tira en silencio: se dice cuál, y no se

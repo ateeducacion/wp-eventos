@@ -506,7 +506,6 @@ final class EventView {
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
 			'manage_url'   => self::manage_url( $event_id ),
-			'edit_url'     => $is_root ? '' : self::edit_url( $event_id, $post_id ),
 		);
 
 		/**
@@ -556,7 +555,6 @@ final class EventView {
 			'description'  => '',
 			'image'        => '',
 			'manage_url'   => '',
-			'edit_url'     => '',
 		);
 	}
 
@@ -619,37 +617,17 @@ final class EventView {
 	 * botón a quien lo organizó es dejarlo sin la puerta. El taller ya se abre
 	 * en solo lectura él solo.
 	 *
+	 * Dentro de la vista previa del taller no sale: quien la mira ya está
+	 * gestionando el evento, y un taller dentro del taller solo confunde.
+	 *
 	 * @param int $event_id Event.
-	 * @return string Empty when this person cannot open it, or the page is not created yet.
+	 * @return string Empty when this person cannot open it, inside a frame, or the page is not created yet.
 	 */
 	private static function manage_url( int $event_id ): string {
-		if ( $event_id <= 0 || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
+		if ( $event_id <= 0 || Shell::in_frame() || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
 			return '';
 		}
 		return Shell::url( 'event', array( self::MANAGE_ARG => $event_id ) );
-	}
-
-	/**
-	 * Link to the form of this section, for whoever may edit it.
-	 *
-	 * Lo que hoy es «Editar página» bajo el título: va directo al formulario de
-	 * la página, sin pasar por el taller.
-	 *
-	 * @param int $event_id Event.
-	 * @param int $page_id  Section.
-	 * @return string Empty when this person cannot edit it.
-	 */
-	private static function edit_url( int $event_id, int $page_id ): string {
-		if ( ! EventAccess::can_edit( get_current_user_id(), $page_id ) ) {
-			return '';
-		}
-		return Shell::url(
-			'section',
-			array(
-				EventWorkspace::ARG_EVENT   => $event_id,
-				EventWorkspace::ARG_SECTION => $page_id,
-			)
-		);
 	}
 
 	/**
@@ -769,12 +747,14 @@ final class EventView {
 	 * @return array<int, array{label:string, url:string, current:bool, icon:string}>
 	 */
 	private static function nav( int $event_id, int $current_id ): array {
-		$menu = array(
+		// Los iconos del menú, solo si el evento los pide en «Apariencia».
+		$iconos = (bool) get_post_meta( $event_id, EventMetaKeys::MENU_ICONS, true );
+		$menu   = array(
 			array(
 				'label'   => 'Inicio',
 				'url'     => (string) get_permalink( $event_id ),
 				'current' => $event_id === $current_id,
-				'icon'    => 'home',
+				'icon'    => $iconos ? 'home' : '',
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
@@ -786,7 +766,7 @@ final class EventView {
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
 				'current' => (int) $seccion->ID === $current_id,
-				'icon'    => SectionIcons::of( (int) $seccion->ID ),
+				'icon'    => $iconos ? SectionIcons::of( (int) $seccion->ID ) : '',
 			);
 		}
 		return $menu;
