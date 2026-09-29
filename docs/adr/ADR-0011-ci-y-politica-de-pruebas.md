@@ -332,3 +332,46 @@ solo añade tests: enseña los que estaban midiendo mal.
 `src/Evt/App.php` sigue fuera de la medición, por lo que ya decía el propio
 `codecov.yml`: su cuerpo corre en el arranque, antes de que PHPUnit empiece a
 medir, y lo que hace está probado en `test-load-order.php`.
+
+## Adenda — 2026-09-29: los guiones de `assets/js` tienen tests unitarios
+
+La decisión dejaba el navegador fuera («no hay nada que ejecutar todavía»).
+Desde entonces `assets/js` ha crecido a unas 1 400 líneas —`evt-app.js` sola
+pasa de 1 100— y lo único que las miraba era `npm run test:browser`
+(`tests/browser/confirmacion.js`), que comprueba en un Chromium de verdad la
+confirmación antes de borrar y nada más.
+
+**Qué se añade.** `tests/js/*.test.js`, con Vitest 5 y jsdom, configurado en
+`vitest.config.mjs`. Corre con `npm run test:js` o `make test-js`, entra en
+`make check` y el job `test` de `ci.yml` lo ejecuta justo después de
+`npm install`, antes de arrancar wp-env: un fallo se ve en segundos.
+
+- **Cada test carga el guion de verdad** con `vi.resetModules()` + `await
+  import()` sobre el HTML que pinta el servidor, y lo maneja con eventos del
+  DOM. Nada de `new Function( fuente )`: así el informe de cobertura sí lo ve.
+- **Los manejadores se limpian entre tests.** Los guiones delegan en `window`
+  y `document`, que jsdom conserva durante todo el fichero. Sin limpiar, cada
+  carga apilaría otra copia de cada manejador, con el estado de la anterior
+  (`tests/js/setup.mjs`).
+- **La confirmación sigue siendo de `test:browser`.** El foco atrapado, Escape
+  y el envío sin guion solo se comprueban en un navegador de verdad; los tests
+  unitarios no la repiten.
+- **Las librerías de fuera se sustituyen por dobles** que apuntan lo que se les
+  pide: `wp.media`, `wp.Uploader`, `wp.codeEditor`, el Heartbeat, Bootstrap y
+  Leaflet. jQuery no está entre las dependencias y el guion solo usa su `on()`
+  para el Heartbeat, así que se sustituye igual.
+
+**La cobertura no entra en Codecov.** Queda en `artifacts/coverage-js/` y el
+CI la guarda como artefacto. El suelo del 90 % de esta ADR es el de `src/Evt`;
+mezclar los dos informes cambiaría lo que ese número dice. Tampoco hay suelo
+por fichero todavía: se añadirá si la cobertura de los guiones empieza a bajar.
+
+**Por qué Vitest y no `@wordpress/scripts`.** El repositorio no usa
+`@wordpress/scripts` para nada más, y traerlo solo para lanzar los tests
+arrastraría webpack y ESLint. Su guía de migración a Vitest admite `vitest run`
+tal cual para quien no lo usa, con Vitest y Vite como dependencias directas.
+
+**Lo que queda sin cubrir, y por qué:** la recarga al cerrar la edición de una
+página y al volver del historial (`window.location.assign` y `reload`, que
+jsdom no implementa) y la confirmación antes de borrar, que es de
+`test:browser`.

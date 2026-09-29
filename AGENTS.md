@@ -75,7 +75,7 @@ de demostración, que son las que se corrigen y se borran.
 | `scripts/` | Aprovisionamiento (`wp eval-file` / Playground) |
 | `scripts/lib/snippet-sync.php` | Librería de sincronización con Code Snippets |
 | `scripts/mu-plugins/` | mu-plugin solo de desarrollo |
-| `tests/` | PHPUnit sobre un WordPress vivo |
+| `tests/` | PHPUnit sobre un WordPress vivo; `tests/js/`, Vitest para los guiones de `assets/js` |
 | `docs/arquitectura.md` | Cómo está hecho: qué sustituye, modelo de datos, roles, comandos y cobertura. El README remite ahí |
 | `docs/adr/`, `docs/sdd/` | ADR y SDD |
 | `.agents/skills/` | Skills de agentes (`.claude/skills/` enlaza las propias) |
@@ -126,6 +126,7 @@ Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.
 | Cambio en un snippet suelto | `make sync-snippets` |
 | Tras `make bundle`, con wp-env arrancado | `make snippet-check` (los snippets sobreviven al guardado de Code Snippets) |
 | Un test concreto | `make test FILE=tests/unit/test-event-access.php` o `make test FILTER=nombre_del_metodo` |
+| Cambio en un guion de `assets/js/` | `make test-js` (Vitest y jsdom; la cobertura queda en `artifacts/coverage-js/`) |
 | Cambio en una confirmación o en `assets/js/evt-app.js` | `make test-browser` (los tres escalones: SweetAlert2, `confirm()` y sin JavaScript) |
 | Ver la cobertura | `make coverage` (reinicia wp-env con Xdebug) |
 | Entorno raro | `make clean` |

@@ -59,7 +59,7 @@ pegar código en Code Snippets, así que el artefacto es un único fichero PHP:
 | `assets/` | Hojas y guiones; viajan dentro del bundle |
 | `scripts/` | Provisión idempotente (`wp eval-file` y Playground) |
 | `scripts/mu-plugins/` | mu-plugin **solo de desarrollo** |
-| `tests/` | PHPUnit sobre un WordPress vivo |
+| `tests/` | PHPUnit sobre un WordPress vivo; `tests/js/`, Vitest para los guiones de `assets/js` |
 | `docs/` | Requisitos, ADR, SDD y planes |
 | `blueprint.json` / `blueprint-local.json` | Playground remoto / local |
 | `.env.dist` | Plantilla del destino de despliegue; el `.env` no se sube (ADR-0030) |
@@ -140,6 +140,7 @@ de los habituales para que convivan con otros entornos.
 | `make install` / `make up` | Dependencias / arranca wp-env y lo provisiona |
 | `make bundle && make sync-snippets` | Regenera el bundle y lo lleva a Code Snippets |
 | `make test` | PHPUnit (admite `FILE=…` y `FILTER=…`) |
+| `make test-js` | Tests unitarios de `assets/js` con Vitest; cobertura en `artifacts/coverage-js/` |
 | `make lint` / `make fix` | PHPCS / PHPCBF |
 | `make check` | Todo lo que mira el CI; **antes de cada PR** |
 | `make check-plugin` | WordPress Plugin Check sobre el código de los snippets |
@@ -156,6 +157,10 @@ El suelo es el **90 %** y bloquea en los dos ejes: el del parche —lo que se
 toca en un PR va con sus tests— y el del proyecto —no se compensa tocando
 poco—. Está en [`codecov.yml`](../codecov.yml), y la decisión, en la
 [ADR-0011](adr/ADR-0011-ci-y-politica-de-pruebas.md).
+
+Los guiones de `assets/js` se miden aparte, con Vitest (`make test-js`): su
+informe es un artefacto del CI y no entra en ese suelo (ADR-0011, adenda del
+2026-09-29).
 
 `src/Evt/App.php` no sale en el mapa del README porque está excluido de la
 medición: su cuerpo corre en el arranque, antes de que PHPUnit empiece a medir,

@@ -29,3 +29,4 @@ scripts/                  export-ignore
 src/                      export-ignore
 tests/                    export-ignore
 vendor/                   export-ignore
+vitest.config.mjs         export-ignore
