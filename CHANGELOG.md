@@ -8,6 +8,21 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.7] — 2026-09-29
+
+### Añadido
+
+- **«Cabecera y pie de las páginas» en Ajustes** ([ADR-0049](docs/adr/ADR-0049-la-organizacion-y-el-pie-se-escriben-en-ajustes.md)).
+  - El nombre de la organización, que sale arriba a la izquierda del aplicativo, junto a «Eventos».
+  - Los enlaces del pie de las páginas públicas, con su texto y su dirección; una fila a medias no se guarda.
+  - Si un snippet pone el mismo dato con el filtro `evt_chrome`, manda el snippet
+
+### Cambiado
+
+- **Los textos de protección de datos se escriben con el editor visual de WordPress**, en Ajustes y en la «Inscripción» de cada evento.
+  - En el formulario de inscripción salen con sus párrafos, los de antes y los nuevos.
+  - Cambiar solo el formato también sube la versión del texto
+
 ## [0.1.6] — 2026-09-29
 
 ### Añadido
