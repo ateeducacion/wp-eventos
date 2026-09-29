@@ -195,3 +195,16 @@ es un correo o una dirección web no se guarda.
 - **El menú de arriba va sin iconos por defecto.** Cada sección conserva el
   suyo —en su tarjeta de la portada y en el taller—, y el evento que los quiera
   también en el menú marca la casilla de «Apariencia» (`evt_menu_icons`).
+
+## Adenda — 2026-09-29: la imagen de la tarjeta se elige en la sección
+
+La tarjeta de una sección en la portada pinta su **imagen destacada**
+(`EventView::card_image()`), pero el formulario de la sección no tenía dónde
+ponerla: solo la traían las secciones importadas, y quien quería cambiarla no
+podía. El bloque «En la portada y en el menú del evento» lleva ahora el campo
+«Imagen de la tarjeta», el mismo del panel «Apariencia»
+(`EventAppearancePanel::image_field()`), con la biblioteca de medios, arrastrar
+y soltar y la subida sin guion. Lo guarda `EventWorkspace::save_image()` con las
+mismas comprobaciones: lo que no es una imagen de la biblioteca no se pone, lo
+que había se queda y se avisa. Sigue siendo la destacada y no una meta nueva,
+así que las importadas se ven y se editan sin migrar nada.

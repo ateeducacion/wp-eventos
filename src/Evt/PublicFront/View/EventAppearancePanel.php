@@ -408,7 +408,7 @@ final class EventAppearancePanel {
 	 * @param int $attachment_id Attachment ID.
 	 * @return array{id:int, url:string, name:string, width:int, height:int}
 	 */
-	private static function image_of( int $attachment_id ): array {
+	public static function image_of( int $attachment_id ): array {
 		$nada = array(
 			'id'     => 0,
 			'url'    => '',
@@ -519,7 +519,7 @@ final class EventAppearancePanel {
 	 * @param string               $type      Media type the library offers: `image` or `application/pdf`.
 	 * @return string
 	 */
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
+	public static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
 		$pdf    = 'application/pdf' === $type;
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );

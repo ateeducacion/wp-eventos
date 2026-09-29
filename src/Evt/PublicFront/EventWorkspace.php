@@ -1462,7 +1462,7 @@ final class EventWorkspace {
 	 * @param bool   $pdf       Whether it takes a PDF instead of an image.
 	 * @return bool False when what was sent could not be stored.
 	 */
-	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
+	public static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- del fichero se encarga media_handle_upload(); del identificador, absint().
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {

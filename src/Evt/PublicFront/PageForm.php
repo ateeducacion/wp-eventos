@@ -223,23 +223,29 @@ final class PageForm {
 			return;
 		}
 
-		self::leave_saved( $page_id, (int) $saved );
+		// La imagen de la tarjeta es la destacada de la sección, con el mismo
+		// campo y las mismas comprobaciones que las imágenes del evento. Va
+		// después de guardar porque una sección nueva no tiene ID hasta ahora.
+		$imagen = null === $fields['home_card'] || EventWorkspace::save_image( (int) $saved, 'evt_card_image', '' );
+
+		self::leave_saved( $page_id, (int) $saved, $imagen );
 	}
 
 	/**
 	 * Back to the same screen, with the notice of what just happened.
 	 *
-	 * @param int $page_id Page that was being edited, 0 when it was created now.
-	 * @param int $saved   Page ID after saving.
+	 * @param int  $page_id Page that was being edited, 0 when it was created now.
+	 * @param int  $saved   Page ID after saving.
+	 * @param bool $image   Whether the card image could be stored.
 	 * @return void
 	 */
-	private static function leave_saved( int $page_id, int $saved ): void {
+	private static function leave_saved( int $page_id, int $saved, bool $image = true ): void {
 		$destino = Shell::url(
 			'section',
 			array_filter(
 				array(
 					'seccion'        => $saved,
-					'evt_hecho'      => 0 === $page_id ? 'creada' : 'guardada',
+					'evt_hecho'      => ! $image ? 'sin-imagen' : ( 0 === $page_id ? 'creada' : 'guardada' ),
 					// Guardar dentro del panel lateral se queda en el panel.
 					Shell::ARG_FRAME => Shell::framed() ? '1' : '',
 				)
@@ -455,19 +461,21 @@ final class PageForm {
 	 */
 	public static function model(): array {
 		$m = array(
-			'aviso'     => '',
-			'hecho'     => '',
-			'error'     => self::$rejected['message'],
-			'errors'    => self::$rejected['errors'],
-			'event_id'  => 0,
-			'event'     => '',
-			'event_url' => '',
-			'page_id'   => 0,
-			'status'    => 'draft',
-			'types'     => EventMetaKeys::section_types(),
-			'code'      => array_fill_keys( EventMetaKeys::code_keys(), false ),
-			'lock'      => EditLock::none(),
-			'values'    => self::defaults(),
+			'aviso'      => '',
+			'hecho'      => '',
+			'hecho_tono' => 'ok',
+			'can_upload' => false,
+			'error'      => self::$rejected['message'],
+			'errors'     => self::$rejected['errors'],
+			'event_id'   => 0,
+			'event'      => '',
+			'event_url'  => '',
+			'page_id'    => 0,
+			'status'     => 'draft',
+			'types'      => EventMetaKeys::section_types(),
+			'code'       => array_fill_keys( EventMetaKeys::code_keys(), false ),
+			'lock'       => EditLock::none(),
+			'values'     => self::defaults(),
 		);
 
 		if ( ! is_user_logged_in() ) {
@@ -504,7 +512,10 @@ final class PageForm {
 		);
 		$m['page_id']   = $page_id;
 		$m['hecho']     = self::done_notice();
-		$m['code']      = self::code_allowed( $user_id, $event_id );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige el color del aviso.
+		$m['hecho_tono'] = isset( $_GET['evt_hecho'] ) && 'sin-imagen' === $_GET['evt_hecho'] ? 'aviso' : 'ok';
+		$m['can_upload'] = current_user_can( 'upload_files' );
+		$m['code']       = self::code_allowed( $user_id, $event_id );
 		// Abrir la sección toma el bloqueo DEL EVENTO: dos personas en dos
 		// secciones distintas del mismo evento se pisan igual, porque comparten
 		// la navegación, el orden y la apariencia.
@@ -569,7 +580,12 @@ final class PageForm {
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
-		$m    = self::model();
+		$m = self::model();
+		// El selector de la imagen de la tarjeta; quien no puede subir tampoco
+		// puede consultar la biblioteca, y a esa persona solo le sale «Quitar».
+		if ( ! empty( $m['can_upload'] ) && (int) $m['event_id'] > 0 ) {
+			wp_enqueue_media( (int) $m['page_id'] > 0 ? array( 'post' => (int) $m['page_id'] ) : array() );
+		}
 		$lock = (array) $m['lock'];
 		$html = PageFormView::html( $m );
 
@@ -603,6 +619,7 @@ final class PageForm {
 			'home_card'    => true,
 			'in_menu'      => true,
 			'icon'         => '',
+			'card_image'   => 0,
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
@@ -638,6 +655,7 @@ final class PageForm {
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
 			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
+			'card_image'   => (int) get_post_thumbnail_id( $page_id ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
@@ -698,6 +716,9 @@ final class PageForm {
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',
+			// Solo para repintar lo elegido si el envío se rechaza; lo guarda y
+			// lo comprueba {@see EventWorkspace::save_image()}.
+			'card_image'   => isset( $raw['evt_card_image_id'] ) ? absint( $raw['evt_card_image_id'] ) : 0,
 			// Nadie escribe HTML sin filtrar, tampoco quien organiza.
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
@@ -821,8 +842,9 @@ final class PageForm {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo elige un rótulo de una lista cerrada.
 		$que    = isset( $_GET['evt_hecho'] ) ? sanitize_key( wp_unslash( (string) $_GET['evt_hecho'] ) ) : '';
 		$textos = array(
-			'creada'   => 'Sección creada, en borrador: todavía no la ve nadie. Escriba el contenido y publíquela desde el evento cuando esté lista.',
-			'guardada' => 'Cambios guardados.',
+			'creada'     => 'Sección creada, en borrador: todavía no la ve nadie. Escriba el contenido y publíquela desde el evento cuando esté lista.',
+			'guardada'   => 'Cambios guardados.',
+			'sin-imagen' => 'Se guardó la sección, pero la imagen de la tarjeta no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF— y que no pese demasiado.',
 		);
 		return (string) ( $textos[ $que ] ?? '' );
 	}

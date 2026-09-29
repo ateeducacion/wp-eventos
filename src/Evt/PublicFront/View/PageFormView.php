@@ -70,10 +70,10 @@ final class PageFormView {
 		$errores = (array) $m['errors'];
 
 		ob_start();
-		echo Shell::notice( 'ok', (string) $m['hecho'] );    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- llega escapado.
+		echo Shell::notice( (string) ( $m['hecho_tono'] ?? 'ok' ), (string) $m['hecho'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- llega escapado.
 		echo Shell::notice( 'error', (string) $m['error'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- llega escapado.
 		?>
-		<form class="evt-form" method="post" action="">
+		<form class="evt-form" method="post" action="" enctype="multipart/form-data">
 			<input type="hidden" name="evt_page_form" value="1" />
 			<input type="hidden" name="evt_page_event" value="<?php echo esc_attr( (string) $m['event_id'] ); ?>" />
 			<?php if ( ! $nueva ) : ?>
@@ -143,7 +143,7 @@ final class PageFormView {
 				</div>
 			</fieldset>
 
-			<?php echo self::showcase( $valores ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			<?php echo self::showcase( $valores, ! empty( $m['can_upload'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
@@ -192,13 +192,21 @@ final class PageFormView {
 	 * se decide es cómo se ve. La primera opción es «el de su tipo», que es lo
 	 * que lleva la sección mientras nadie elija otro.
 	 *
-	 * @param array<string, mixed> $valores Form values.
+	 * @param array<string, mixed> $valores  Form values.
+	 * @param bool                 $can_load Whether this person can upload.
 	 * @return string
 	 */
-	private static function showcase( array $valores ): string {
+	private static function showcase( array $valores, bool $can_load = false ): string {
 		$elegido  = (string) ( $valores['icon'] ?? '' );
 		$tipo     = (string) $valores['section_type'];
 		$opciones = array( '' => 'El de su tipo' ) + EventMetaKeys::section_icons();
+		$imagen   = EventAppearancePanel::image_field(
+			'evt_card_image',
+			'Imagen de la tarjeta',
+			EventAppearancePanel::image_of( (int) ( $valores['card_image'] ?? 0 ) ),
+			'La de su tarjeta en la portada del evento y la que sale junto al título de la sección. Sin imagen, la tarjeta lleva el icono.',
+			$can_load
+		);
 
 		ob_start();
 		?>
@@ -233,9 +241,10 @@ final class PageFormView {
 						</label>
 					<?php endforeach; ?>
 				</div>
-				<small>Sale junto al nombre de la sección en el menú, y en su tarjeta cuando la sección no
-					tiene imagen destacada.</small>
+				<small>Sale en su tarjeta cuando la sección no tiene imagen de tarjeta y, si el evento lo
+					pide en «Apariencia», junto al nombre de la sección en el menú.</small>
 			</div>
+			<?php echo $imagen; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();

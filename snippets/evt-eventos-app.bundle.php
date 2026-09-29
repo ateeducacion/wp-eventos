@@ -13784,7 +13784,7 @@ final class EventWorkspace {
 
 
 
-	private static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
+	public static function save_image( int $event_id, string $campo, string $meta_key, int $min_width = 0, bool $pdf = false ): bool {
 
 
 		if ( ! empty( $_FILES[ $campo . '_file' ]['name'] ) ) {
@@ -17716,7 +17716,7 @@ final class EventAppearancePanel {
 
 
 
-	private static function image_of( int $attachment_id ): array {
+	public static function image_of( int $attachment_id ): array {
 		$nada = array(
 			'id'     => 0,
 			'url'    => '',
@@ -17827,7 +17827,7 @@ final class EventAppearancePanel {
 
 
 
-	private static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
+	public static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
 		$pdf    = 'application/pdf' === $type;
 		$url    = (string) ( $imagen['url'] ?? '' );
 		$id     = sanitize_html_class( $campo );
@@ -18687,7 +18687,12 @@ final class PageForm {
 			return;
 		}
 
-		self::leave_saved( $page_id, (int) $saved );
+
+
+
+		$imagen = null === $fields['home_card'] || EventWorkspace::save_image( (int) $saved, 'evt_card_image', '' );
+
+		self::leave_saved( $page_id, (int) $saved, $imagen );
 	}
 
 
@@ -18697,13 +18702,14 @@ final class PageForm {
 
 
 
-	private static function leave_saved( int $page_id, int $saved ): void {
+
+	private static function leave_saved( int $page_id, int $saved, bool $image = true ): void {
 		$destino = Shell::url(
 			'section',
 			array_filter(
 				array(
 					'seccion'        => $saved,
-					'evt_hecho'      => 0 === $page_id ? 'creada' : 'guardada',
+					'evt_hecho'      => ! $image ? 'sin-imagen' : ( 0 === $page_id ? 'creada' : 'guardada' ),
 
 					Shell::ARG_FRAME => Shell::framed() ? '1' : '',
 				)
@@ -18919,19 +18925,21 @@ final class PageForm {
 
 	public static function model(): array {
 		$m = array(
-			'aviso'     => '',
-			'hecho'     => '',
-			'error'     => self::$rejected['message'],
-			'errors'    => self::$rejected['errors'],
-			'event_id'  => 0,
-			'event'     => '',
-			'event_url' => '',
-			'page_id'   => 0,
-			'status'    => 'draft',
-			'types'     => EventMetaKeys::section_types(),
-			'code'      => array_fill_keys( EventMetaKeys::code_keys(), false ),
-			'lock'      => EditLock::none(),
-			'values'    => self::defaults(),
+			'aviso'      => '',
+			'hecho'      => '',
+			'hecho_tono' => 'ok',
+			'can_upload' => false,
+			'error'      => self::$rejected['message'],
+			'errors'     => self::$rejected['errors'],
+			'event_id'   => 0,
+			'event'      => '',
+			'event_url'  => '',
+			'page_id'    => 0,
+			'status'     => 'draft',
+			'types'      => EventMetaKeys::section_types(),
+			'code'       => array_fill_keys( EventMetaKeys::code_keys(), false ),
+			'lock'       => EditLock::none(),
+			'values'     => self::defaults(),
 		);
 
 		if ( ! is_user_logged_in() ) {
@@ -18968,7 +18976,10 @@ final class PageForm {
 		);
 		$m['page_id']   = $page_id;
 		$m['hecho']     = self::done_notice();
-		$m['code']      = self::code_allowed( $user_id, $event_id );
+
+		$m['hecho_tono'] = isset( $_GET['evt_hecho'] ) && 'sin-imagen' === $_GET['evt_hecho'] ? 'aviso' : 'ok';
+		$m['can_upload'] = current_user_can( 'upload_files' );
+		$m['code']       = self::code_allowed( $user_id, $event_id );
 
 
 
@@ -19033,7 +19044,12 @@ final class PageForm {
 	public static function render( $atts = array() ): string {
 		unset( $atts );
 		Assets::enqueue();
-		$m    = self::model();
+		$m = self::model();
+
+
+		if ( ! empty( $m['can_upload'] ) && (int) $m['event_id'] > 0 ) {
+			wp_enqueue_media( (int) $m['page_id'] > 0 ? array( 'post' => (int) $m['page_id'] ) : array() );
+		}
 		$lock = (array) $m['lock'];
 		$html = PageFormView::html( $m );
 
@@ -19067,6 +19083,7 @@ final class PageForm {
 			'home_card'    => true,
 			'in_menu'      => true,
 			'icon'         => '',
+			'card_image'   => 0,
 			'content'      => '',
 			'look'         => $look,
 			'contact'      => array_fill_keys( array_keys( self::CONTACT_KEYS ), '' ),
@@ -19102,6 +19119,7 @@ final class PageForm {
 			'home_card'    => ! (bool) get_post_meta( $page_id, EventMetaKeys::HOME_HIDDEN, true ),
 			'in_menu'      => ! (bool) get_post_meta( $page_id, EventMetaKeys::MENU_HIDDEN, true ),
 			'icon'         => (string) get_post_meta( $page_id, EventMetaKeys::SECTION_ICON, true ),
+			'card_image'   => (int) get_post_thumbnail_id( $page_id ),
 			'content'      => (string) get_post_field( 'post_content', $page_id ),
 			'look'         => $look,
 			'contact'      => $contacto,
@@ -19162,6 +19180,9 @@ final class PageForm {
 			'icon'         => isset( $raw[ EventMetaKeys::SECTION_ICON ] )
 				? EventMetaKeys::in_list( sanitize_key( (string) $raw[ EventMetaKeys::SECTION_ICON ] ), EventMetaKeys::section_icons() )
 				: '',
+
+
+			'card_image'   => isset( $raw['evt_card_image_id'] ) ? absint( $raw['evt_card_image_id'] ) : 0,
 
 			'content'      => isset( $raw['evt_content'] ) ? wp_kses_post( (string) $raw['evt_content'] ) : '',
 			'look'         => $look,
@@ -19285,8 +19306,9 @@ final class PageForm {
 
 		$que    = isset( $_GET['evt_hecho'] ) ? sanitize_key( wp_unslash( (string) $_GET['evt_hecho'] ) ) : '';
 		$textos = array(
-			'creada'   => 'Sección creada, en borrador: todavía no la ve nadie. Escriba el contenido y publíquela desde el evento cuando esté lista.',
-			'guardada' => 'Cambios guardados.',
+			'creada'     => 'Sección creada, en borrador: todavía no la ve nadie. Escriba el contenido y publíquela desde el evento cuando esté lista.',
+			'guardada'   => 'Cambios guardados.',
+			'sin-imagen' => 'Se guardó la sección, pero la imagen de la tarjeta no se pudo cambiar y se quedó como estaba. Revise que sea una imagen de la biblioteca —JPG, PNG, WEBP o GIF— y que no pese demasiado.',
 		);
 		return (string) ( $textos[ $que ] ?? '' );
 	}
@@ -19397,10 +19419,10 @@ final class PageFormView {
 		$errores = (array) $m['errors'];
 
 		ob_start();
-		echo Shell::notice( 'ok', (string) $m['hecho'] );    
+		echo Shell::notice( (string) ( $m['hecho_tono'] ?? 'ok' ), (string) $m['hecho'] ); 
 		echo Shell::notice( 'error', (string) $m['error'] ); 
 		?>
-		<form class="evt-form" method="post" action="">
+		<form class="evt-form" method="post" action="" enctype="multipart/form-data">
 			<input type="hidden" name="evt_page_form" value="1" />
 			<input type="hidden" name="evt_page_event" value="<?php echo esc_attr( (string) $m['event_id'] ); ?>" />
 			<?php if ( ! $nueva ) : ?>
@@ -19470,7 +19492,7 @@ final class PageFormView {
 				</div>
 			</fieldset>
 
-			<?php echo self::showcase( $valores ); ?>
+			<?php echo self::showcase( $valores, ! empty( $m['can_upload'] ) ); ?>
 
 			<fieldset class="evt-tarjeta">
 				<legend>Contenido</legend>
@@ -19522,10 +19544,18 @@ final class PageFormView {
 
 
 
-	private static function showcase( array $valores ): string {
+
+	private static function showcase( array $valores, bool $can_load = false ): string {
 		$elegido  = (string) ( $valores['icon'] ?? '' );
 		$tipo     = (string) $valores['section_type'];
 		$opciones = array( '' => 'El de su tipo' ) + EventMetaKeys::section_icons();
+		$imagen   = EventAppearancePanel::image_field(
+			'evt_card_image',
+			'Imagen de la tarjeta',
+			EventAppearancePanel::image_of( (int) ( $valores['card_image'] ?? 0 ) ),
+			'La de su tarjeta en la portada del evento y la que sale junto al título de la sección. Sin imagen, la tarjeta lleva el icono.',
+			$can_load
+		);
 
 		ob_start();
 		?>
@@ -19560,9 +19590,10 @@ final class PageFormView {
 						</label>
 					<?php endforeach; ?>
 				</div>
-				<small>Sale junto al nombre de la sección en el menú, y en su tarjeta cuando la sección no
-					tiene imagen destacada.</small>
+				<small>Sale en su tarjeta cuando la sección no tiene imagen de tarjeta y, si el evento lo
+					pide en «Apariencia», junto al nombre de la sección en el menú.</small>
 			</div>
+			<?php echo $imagen; ?>
 		</fieldset>
 		<?php
 		return (string) ob_get_clean();
