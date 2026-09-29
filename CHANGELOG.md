@@ -8,6 +8,26 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.6] — 2026-09-29
+
+### Añadido
+
+- **La imagen de la tarjeta de cada sección se elige en su formulario** ([ADR-0044](docs/adr/ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md), adenda).
+  - Es el campo «Imagen de la tarjeta» del bloque «En la portada y en el menú del evento», con la biblioteca de medios, arrastrar y soltar, y subida sin JavaScript.
+  - Es la misma imagen que sale junto al título de la sección; sin imagen, la tarjeta lleva el icono.
+  - Las secciones importadas enseñan ya la suya en el campo y se pueden cambiar.
+  - Lo que no es una imagen de la biblioteca no se pone: el resto se guarda y sale un aviso
+- **Casilla «Mostrar el icono de cada sección en el menú de arriba»** en la «Apariencia» del evento
+
+### Cambiado
+
+- **Página pública: el menú de arriba va sin iconos salvo que el evento marque la casilla.** Las secciones conservan su icono en la tarjeta de la portada y en el taller
+- **Página pública: bajo el título solo sale «Gestionar este evento».** Dentro de la vista previa del taller no sale ninguno
+
+### Eliminado
+
+- **El botón «Editar esta página» de la página pública**: la sección se edita desde la pestaña de secciones del taller
+
 ## [0.1.5] — 2026-09-28
 
 ### Añadido
