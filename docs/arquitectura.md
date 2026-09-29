@@ -158,9 +158,9 @@ toca en un PR va con sus tests— y el del proyecto —no se compensa tocando
 poco—. Está en [`codecov.yml`](../codecov.yml), y la decisión, en la
 [ADR-0011](adr/ADR-0011-ci-y-politica-de-pruebas.md).
 
-Los guiones de `assets/js` se miden aparte, con Vitest (`make test-js`): su
-informe es un artefacto del CI y no entra en ese suelo (ADR-0011, adenda del
-2026-09-29).
+Los guiones de `assets/js` se miden con Vitest (`make test-js`) y su informe
+sube a Codecov con el flag `js`, sumado al de PHP: el suelo cuenta los dos
+(ADR-0011, adendas del 2026-09-29).
 
 `src/Evt/App.php` no sale en el mapa del README porque está excluido de la
 medición: su cuerpo corre en el arranque, antes de que PHPUnit empiece a medir,

@@ -11,6 +11,10 @@
 # Lo que eso significa en un PR: lo que se toca va con sus tests (el parche), y
 # no se puede compensar tocando poco (el proyecto). Un PR que baje el total
 # tumba, no avisa.
+#
+# Llegan dos informes por commit, cada uno con su flag: `php` (PHPUnit, sobre
+# src/Evt) y `js` (Vitest, sobre los guiones de assets/js). Codecov los suma,
+# así que los dos suelos cuentan PHP y JavaScript juntos.
 # Recetas de docs.codecov.com/docs/common-recipe-list.
 comment:
   layout: "diff, flags, files"
