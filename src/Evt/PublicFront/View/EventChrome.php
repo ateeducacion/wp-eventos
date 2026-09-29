@@ -7,6 +7,7 @@
 
 namespace Evt\PublicFront\View;
 
+use Evt\Admin\Settings;
 use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
@@ -69,9 +70,10 @@ final class EventChrome {
 			// Pie y cabecera: de quién es el sitio y quién lo hizo.
 			'owner'          => '',
 			'owner_url'      => '',
-			'org'            => '',
+			// Los dos que se escriben en «Ajustes» (ADR-0049); vacíos si nadie los puso.
+			'org'            => (string) get_option( Settings::OPTION_ORG, '' ),
 			'credit'         => '',
-			'footer_links'   => array(),
+			'footer_links'   => Settings::footer_links(),
 			// El logo de quien publica, arriba a la izquierda, y el color del pie.
 			'brand_logo'     => '',
 			'brand_alt'      => '',
@@ -381,7 +383,7 @@ final class EventChrome {
 				<span class="evt-ev__pie-enlaces">
 					<?php foreach ( $enlaces as $enlace ) : ?>
 						<a href="<?php echo esc_url( (string) $enlace['url'] ); ?>"
-							title="<?php echo esc_attr( (string) $enlace['title'] ); ?>"
+							title="<?php echo esc_attr( (string) ( $enlace['title'] ?? '' ) ); ?>"
 							target="_blank" rel="noopener"><?php echo esc_html( (string) $enlace['label'] ); ?></a>
 					<?php endforeach; ?>
 				</span>

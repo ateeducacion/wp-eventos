@@ -171,7 +171,9 @@ class Test_Event_Urls extends WP_UnitTestCase {
 		\Evt\Admin\Settings::render();
 		$html = (string) ob_get_clean();
 		$this->assertStringContainsString( 'Protección de datos de los eventos nuevos', $html );
-		$this->assertStringContainsString( '&lt;p&gt;Tratamiento&lt;/p&gt;x', $html );
+		// En el editor de WordPress: escapado con el editor visual, tal cual en
+		// el de código, que es el que sale sin navegador. Los dos, en su campo.
+		$this->assertMatchesRegularExpression( '#name="evt_consent_privacy"[^>]*>(&lt;p&gt;|<p>)Tratamiento#', $html );
 	}
 
 	/**

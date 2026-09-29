@@ -165,6 +165,29 @@ class Test_Admin_Screens extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'editor-pendiente', $html );
 		$this->assertStringContainsString( '<td>invalid</td>', $html );
 		$this->assertStringContainsString( '99999999', $html );
+		// Los textos de protección de datos, en el editor visual de WordPress.
+		$this->assertStringContainsString( 'id="wp-evt_consent_privacy-wrap"', $html );
+		$this->assertStringContainsString( 'id="wp-evt_consent_image-wrap"', $html );
+		$this->assertStringContainsString( 'name="evt_org"', $html );
+		$this->assertStringContainsString( 'name="evt_footer_label[1]"', $html, 'con huecos para añadir enlaces' );
+	}
+
+	/**
+	 * Del pie solo se guardan las filas con texto y una dirección web.
+	 */
+	public function test_the_footer_links_keep_only_complete_rows() {
+		$this->assertSame(
+			array(
+				array(
+					'label' => 'Aviso legal',
+					'url'   => 'https://www.example.org/aviso/',
+				),
+			),
+			Settings::clean_links(
+				array( 'Aviso legal', '', 'Sin dirección', 'Otro', '<b>Accesibilidad</b>' ),
+				array( ' https://www.example.org/aviso/ ', 'https://www.example.org/x/', '', 'javascript:alert(1)' )
+			)
+		);
 	}
 
 	/**

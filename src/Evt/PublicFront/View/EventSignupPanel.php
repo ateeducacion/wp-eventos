@@ -287,12 +287,8 @@ final class EventSignupPanel {
 	private static function consent( array $a ): string {
 		$html  = '<details class="evt-tarjeta evt-plegable"><summary>Protección de datos <span class="evt-state">versión '
 			. (int) $a['consent_version'] . '</span></summary>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-privacidad">Información sobre el tratamiento de sus datos</label>'
-			. '<textarea id="evt-consent-privacidad" name="evt_consent_privacy" rows="6">'
-			. esc_textarea( (string) $a['consent_privacy'] ) . '</textarea></p>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-imagen">Consentimiento informado</label>'
-			. '<textarea id="evt-consent-imagen" name="evt_consent_image" rows="6">'
-			. esc_textarea( (string) $a['consent_image'] ) . '</textarea></p>';
+		$html .= self::consent_editor( 'evt_consent_privacy', 'Información sobre el tratamiento de sus datos', (string) $a['consent_privacy'] );
+		$html .= self::consent_editor( 'evt_consent_image', 'Consentimiento informado', (string) $a['consent_image'] );
 
 		// Cambiar un texto sube la versión y **no reescribe** la que ya aceptó
 		// nadie: por eso el número está a la vista (ADR-0020).
@@ -300,6 +296,33 @@ final class EventSignupPanel {
 			. 'no se reescribe, y en la lista de participantes se ve qué versión aceptó cada persona.</p>';
 
 		return $html . '</details>';
+	}
+
+	/**
+	 * One consent text, in the visual editor of WordPress.
+	 *
+	 * Son textos legales con negritas, listas y enlaces: se escriben como
+	 * cualquier contenido de WordPress, sin botón de medios. El HTML se filtra
+	 * al guardar con `wp_kses_post()`.
+	 *
+	 * @param string $name  Field name; also the editor ID.
+	 * @param string $label Label.
+	 * @param string $value Current text.
+	 * @return string
+	 */
+	private static function consent_editor( string $name, string $label, string $value ): string {
+		ob_start();
+		wp_editor(
+			$value,
+			$name,
+			array(
+				'textarea_name' => $name,
+				'textarea_rows' => 8,
+				'media_buttons' => false,
+			)
+		);
+		return '<div class="evt-campo"><label for="' . esc_attr( $name ) . '">' . esc_html( $label ) . '</label>'
+			. (string) ob_get_clean() . '</div>';
 	}
 
 	/**

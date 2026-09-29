@@ -450,7 +450,8 @@ final class SignupBlock {
 				continue;
 			}
 			$html .= '<details class="evt-consent__doc mb-2"><summary>' . esc_html( $titulo ) . '</summary>'
-				. wp_kses_post( $texto ) . '</details>';
+				// Del editor visual salen los párrafos como en una entrada: sin `<p>`.
+				. wp_kses_post( wpautop( $texto ) ) . '</details>';
 		}
 
 		$html .= '<div class="evt-campo evt-campo--casilla form-check mb-3">'

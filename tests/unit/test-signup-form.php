@@ -579,6 +579,19 @@ class Test_Signup_Form extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Lo que guarda el editor visual —párrafos sin `<p>`, como una entrada— sale en párrafos.
+	 */
+	public function test_a_consent_text_from_the_visual_editor_keeps_its_paragraphs() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::CONSENT_PRIVACY, "Primer párrafo.\n\n<strong>Segundo</strong> párrafo." );
+
+		$html = $this->pintar( $evento );
+
+		$this->assertStringContainsString( '<p>Primer párrafo.</p>', $html );
+		$this->assertStringContainsString( '<p><strong>Segundo</strong> párrafo.</p>', $html );
+	}
+
+	/**
 	 * Y sin plazas libres en ningún taller, se dice en vez de dejar la lista sola.
 	 */
 	public function test_when_no_workshop_has_room_it_says_so() {
