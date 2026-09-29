@@ -375,3 +375,16 @@ tal cual para quien no lo usa, con Vitest y Vite como dependencias directas.
 página y al volver del historial (`window.location.assign` y `reload`, que
 jsdom no implementa) y la confirmación antes de borrar, que es de
 `test:browser`.
+
+## Adenda — 2026-09-29 (2): la cobertura de los guiones sí entra en Codecov
+
+Corrige la adenda anterior, que dejaba el informe de Vitest fuera de Codecov.
+El job `test` sube ahora **dos informes por commit**, cada uno con su flag:
+`php` (PHPUnit, `coverage.xml`) y `js` (Vitest,
+`artifacts/coverage-js/lcov.info`). Codecov los suma: los suelos del 90 % del
+proyecto y del parche cuentan PHP y JavaScript juntos, y el comentario del PR
+los separa por flag. El de JavaScript **se añade** al de PHP, no lo sustituye.
+
+Las dos subidas llevan `disable_search: true`, para que cada una mande solo su
+fichero y ninguna línea se cuente dos veces. El informe sigue guardándose
+también como artefacto.

@@ -206,8 +206,8 @@ jobs:
       - name: Run JavaScript unit tests
         run: npm run test:js
 
-      # El informe de cobertura de los guiones se guarda como artefacto. No va a
-      # Codecov, cuyo suelo es el de src/Evt (ADR-0011).
+      # El informe de los guiones también se guarda como artefacto, para leerlo
+      # sin volver a correr la suite; a Codecov sube al final, junto al de PHP.
       - name: Upload JavaScript coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
@@ -248,8 +248,26 @@ jobs:
           token: ${{ env.CODECOV_TOKEN }}
           slug: ateeducacion/wp-eventos
           files: ./coverage.xml
+          flags: php
+          # Solo este fichero: sin esto la acción rebusca por el repositorio y
+          # se llevaría también el informe de los guiones, que va aparte.
+          disable_search: true
           # Si la subida falla, que se vea: sin esto el primer intento pasa en
           # verde con el token vacío y sin informe.
+          fail_ci_if_error: true
+
+      # La cobertura de los guiones de assets/js, con su propio flag: Codecov
+      # suma las dos subidas del commit, así que el total del proyecto y el del
+      # parche cuentan PHP y JavaScript juntos, y el comentario los separa.
+      - name: Upload JavaScript coverage to Codecov
+        if: ${{ !github.event.pull_request.head.repo.fork && env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          slug: ateeducacion/wp-eventos
+          files: ./artifacts/coverage-js/lcov.info
+          flags: js
+          disable_search: true
           fail_ci_if_error: true
 
       # En un runner de GitHub la máquina se tira al acabar y da igual; en uno
