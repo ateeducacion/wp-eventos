@@ -17,7 +17,9 @@
 # así que los dos suelos cuentan PHP y JavaScript juntos.
 # Recetas de docs.codecov.com/docs/common-recipe-list.
 comment:
-  layout: "diff, flags, files"
+  # `header` pinta el total del proyecto y su variación frente a la base; sin él
+  # el comentario solo trae el parche. `flags` separa PHP y JavaScript.
+  layout: "header, diff, flags, files, footer"
   behavior: default
   require_changes: false
   require_base: false
