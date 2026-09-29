@@ -201,6 +201,21 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      # Los guiones de assets/js, antes de arrancar wp-env: un fallo aquí se ve
+      # en segundos, no después del arranque de los contenedores y de PHPUnit.
+      - name: Run JavaScript unit tests
+        run: npm run test:js
+
+      # El informe de cobertura de los guiones se guarda como artefacto. No va a
+      # Codecov, cuyo suelo es el de src/Evt (ADR-0011).
+      - name: Upload JavaScript coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-js
+          path: artifacts/coverage-js/
+          retention-days: 30
+
       - name: Start wp-env
         run: npx wp-env start --update
 

@@ -157,6 +157,11 @@ test: start-if-not-running ## Ejecuta los tests de PHPUnit (admite FILE=... y FI
 test-browser: ## Comprueba en un navegador real los tres escalones de la confirmación
 	npm run test:browser
 
+# Los guiones de assets/js con Vitest y jsdom: sin wp-env ni navegador, así que
+# entra en `check`. La cobertura queda en artifacts/coverage-js/.
+test-js: ## Ejecuta los tests unitarios de los guiones de assets/js (Vitest)
+	npm run test:js
+
 # Xdebug solo está en los contenedores si se arrancaron con --xdebug, así que
 # medir la cobertura pasa por reiniciar el entorno con él y dejarlo luego como
 # estaba: con Xdebug puesto todo va más lento. En CI no se restaura, que la
@@ -197,7 +202,7 @@ phpmd: ## Ejecuta PHP Mess Detector con las reglas de phpmd.xml
 check-provision: ## Comprueba que la provisión propaga los fallos obligatorios
 	node scripts/check-provision.mjs
 
-check: lint phpmd check-public check-provision check-skills test ## Ejecuta lint, phpmd, check-public, check-provision, check-skills y tests
+check: lint phpmd check-public check-provision check-skills test-js test ## Ejecuta lint, phpmd, check-public, check-provision, check-skills, test-js y tests
 
 # ─── Plugin Check ─────────────────────────────────────────────────────────────
 #

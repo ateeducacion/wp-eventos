@@ -22,18 +22,23 @@
     "@fontsource/patua-one": "5.3.0",
     "@fontsource/roboto": "5.3.0",
     "@fontsource/source-serif-4": "5.3.0",
+    "@vitest/coverage-v8": "^5.0.2",
     "@wordpress/env": "^11.16.0",
     "altcha": "3.2.3",
     "bootstrap": "5.3.8",
     "bootstrap-icons": "1.13.1",
+    "jsdom": "^26.1.0",
     "leaflet": "1.9.4",
     "playwright": "^1.49.0",
     "sweetalert2": "11.26.25",
-    "tom-select": "2.6.2"
+    "tom-select": "2.6.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
   },
   "scripts": {
     "wp-env": "wp-env",
     "test:browser": "node tests/browser/confirmacion.js",
+    "test:js": "vitest run",
     "snippets": "wp-code-snippets --env-file .env"
   },
   "engines": {
