@@ -182,6 +182,37 @@ class Test_Event_Layout extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'https://www.example.org/aviso-legal/', $pie );
 	}
 
+	/**
+	 * La organización y los enlaces del pie se escriben en «Ajustes»; el filtro sigue mandando.
+	 */
+	public function test_the_org_and_the_footer_links_come_from_the_settings() {
+		remove_all_filters( EventChrome::HOOK );
+		update_option( \Evt\Admin\Settings::OPTION_ORG, 'Dirección General de Ejemplo' );
+		update_option(
+			\Evt\Admin\Settings::OPTION_FOOTER_LINKS,
+			array(
+				array(
+					'label' => 'Privacidad',
+					'url'   => 'https://www.example.org/privacidad/',
+				),
+			)
+		);
+
+		$this->assertSame( 'Dirección General de Ejemplo', EventChrome::chrome()['org'] );
+		$pie = EventChrome::footer();
+		$this->assertStringContainsString( '>Privacidad</a>', $pie );
+		$this->assertStringContainsString( 'https://www.example.org/privacidad/', $pie );
+
+		add_filter(
+			EventChrome::HOOK,
+			static function ( array $chrome ): array {
+				$chrome['org'] = 'La del snippet';
+				return $chrome;
+			}
+		);
+		$this->assertSame( 'La del snippet', EventChrome::chrome()['org'] );
+	}
+
 	// ─── bloques con nombre ────────────────────────────────────────────────
 
 	/**

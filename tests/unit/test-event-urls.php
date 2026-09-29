@@ -171,7 +171,54 @@ class Test_Event_Urls extends WP_UnitTestCase {
 		\Evt\Admin\Settings::render();
 		$html = (string) ob_get_clean();
 		$this->assertStringContainsString( 'Protección de datos de los eventos nuevos', $html );
-		$this->assertStringContainsString( '&lt;p&gt;Tratamiento&lt;/p&gt;x', $html );
+		// En el editor de WordPress: escapado con el editor visual, tal cual en
+		// el de código, que es el que sale sin navegador. Los dos, en su campo.
+		$this->assertMatchesRegularExpression( '#name="evt_consent_privacy"[^>]*>(&lt;p&gt;|<p>)Tratamiento#', $html );
+	}
+
+	/**
+	 * La organización y los enlaces del pie se guardan desde Ajustes, y se repintan.
+	 */
+	public function test_the_org_and_the_footer_links_are_saved_from_the_settings_screen() {
+		set_current_screen( 'dashboard' );
+		$this->acting_as( $this->administrator() );
+
+		$this->post(
+			array(
+				'evt_action'       => 'chrome',
+				'evt_org'          => ' Dirección General de Ejemplo <b>',
+				'evt_footer_label' => array( 'Aviso legal', 'A medias', '' ),
+				'evt_footer_url'   => array( 'https://www.example.org/aviso/', '', '' ),
+			),
+			\Evt\Admin\Settings::NONCE_CHROME,
+			'_evt_chrome_nonce'
+		);
+		$url = $this->exit_url( array( \Evt\Admin\Settings::class, 'handle_actions' ) );
+		$this->assertSame( 'synced', $this->query_arg( (string) $url, 'updated' ) );
+
+		$this->assertSame( 'Dirección General de Ejemplo', get_option( \Evt\Admin\Settings::OPTION_ORG ) );
+		$this->assertSame(
+			array(
+				array(
+					'label' => 'Aviso legal',
+					'url'   => 'https://www.example.org/aviso/',
+				),
+			),
+			\Evt\Admin\Settings::footer_links(),
+			'la fila a medias no se guarda'
+		);
+
+		ob_start();
+		\Evt\Admin\Settings::render();
+		$html = (string) ob_get_clean();
+		$this->assertStringContainsString( 'value="Dirección General de Ejemplo"', $html );
+		$this->assertStringContainsString( 'value="https://www.example.org/aviso/"', $html );
+		$this->assertStringContainsString( 'name="evt_footer_label[2]"', $html, 'el guardado y dos huecos más' );
+		$this->assertStringNotContainsString( 'name="evt_footer_label[3]"', $html );
+
+		// Una opción corrompida no rompe la pantalla ni el pie.
+		update_option( \Evt\Admin\Settings::OPTION_FOOTER_LINKS, 'no es una lista' );
+		$this->assertSame( array(), \Evt\Admin\Settings::footer_links() );
 	}
 
 	/**

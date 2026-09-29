@@ -16577,12 +16577,8 @@ final class EventSignupPanel {
 	private static function consent( array $a ): string {
 		$html  = '<details class="evt-tarjeta evt-plegable"><summary>Protección de datos <span class="evt-state">versión '
 			. (int) $a['consent_version'] . '</span></summary>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-privacidad">Información sobre el tratamiento de sus datos</label>'
-			. '<textarea id="evt-consent-privacidad" name="evt_consent_privacy" rows="6">'
-			. esc_textarea( (string) $a['consent_privacy'] ) . '</textarea></p>';
-		$html .= '<p class="evt-campo"><label for="evt-consent-imagen">Consentimiento informado</label>'
-			. '<textarea id="evt-consent-imagen" name="evt_consent_image" rows="6">'
-			. esc_textarea( (string) $a['consent_image'] ) . '</textarea></p>';
+		$html .= self::consent_editor( 'evt_consent_privacy', 'Información sobre el tratamiento de sus datos', (string) $a['consent_privacy'] );
+		$html .= self::consent_editor( 'evt_consent_image', 'Consentimiento informado', (string) $a['consent_image'] );
 
 
 
@@ -16590,6 +16586,33 @@ final class EventSignupPanel {
 			. 'no se reescribe, y en la lista de participantes se ve qué versión aceptó cada persona.</p>';
 
 		return $html . '</details>';
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function consent_editor( string $name, string $label, string $value ): string {
+		ob_start();
+		wp_editor(
+			$value,
+			$name,
+			array(
+				'textarea_name' => $name,
+				'textarea_rows' => 8,
+				'media_buttons' => false,
+			)
+		);
+		return '<div class="evt-campo"><label for="' . esc_attr( $name ) . '">' . esc_html( $label ) . '</label>'
+			. (string) ob_get_clean() . '</div>';
 	}
 
 
@@ -21316,7 +21339,8 @@ final class SignupBlock {
 				continue;
 			}
 			$html .= '<details class="evt-consent__doc mb-2"><summary>' . esc_html( $titulo ) . '</summary>'
-				. wp_kses_post( $texto ) . '</details>';
+
+				. wp_kses_post( wpautop( $texto ) ) . '</details>';
 		}
 
 		$html .= '<div class="evt-campo evt-campo--casilla form-check mb-3">'
@@ -22877,6 +22901,7 @@ final class ContactMap {
 
 namespace Evt\PublicFront\View;
 
+use Evt\Admin\Settings;
 use Evt\PublicFront\SectionIcons;
 use Evt\PublicFront\Shell;
 
@@ -22939,9 +22964,10 @@ final class EventChrome {
 
 			'owner'          => '',
 			'owner_url'      => '',
-			'org'            => '',
+
+			'org'            => (string) get_option( Settings::OPTION_ORG, '' ),
 			'credit'         => '',
-			'footer_links'   => array(),
+			'footer_links'   => Settings::footer_links(),
 
 			'brand_logo'     => '',
 			'brand_alt'      => '',
@@ -23251,7 +23277,7 @@ final class EventChrome {
 				<span class="evt-ev__pie-enlaces">
 					<?php foreach ( $enlaces as $enlace ) : ?>
 						<a href="<?php echo esc_url( (string) $enlace['url'] ); ?>"
-							title="<?php echo esc_attr( (string) $enlace['title'] ); ?>"
+							title="<?php echo esc_attr( (string) ( $enlace['title'] ?? '' ) ); ?>"
 							target="_blank" rel="noopener"><?php echo esc_html( (string) $enlace['label'] ); ?></a>
 					<?php endforeach; ?>
 				</span>
@@ -24531,6 +24557,29 @@ final class Settings {
 
 
 
+	public const NONCE_CHROME = 'evt_chrome_settings';
+
+
+
+
+
+
+
+	public const OPTION_ORG = 'evt_chrome_org';
+
+
+
+
+	public const OPTION_FOOTER_LINKS = 'evt_chrome_footer_links';
+
+
+
+
+	public const FOOTER_BLANKS = 2;
+
+
+
+
 
 
 	public static function register(): void {
@@ -24605,6 +24654,28 @@ final class Settings {
 
 		if (
 			isset( $_POST['evt_action'] ) &&
+			'chrome' === $_POST['evt_action'] &&
+			check_admin_referer( self::NONCE_CHROME, '_evt_chrome_nonce' )
+		) {
+			update_option( self::OPTION_ORG, sanitize_text_field( wp_unslash( (string) ( $_POST['evt_org'] ?? '' ) ) ) );
+			$rotulos = isset( $_POST['evt_footer_label'] ) && is_array( $_POST['evt_footer_label'] ) ? wp_unslash( $_POST['evt_footer_label'] ) : array(); 
+			$urls    = isset( $_POST['evt_footer_url'] ) && is_array( $_POST['evt_footer_url'] ) ? wp_unslash( $_POST['evt_footer_url'] ) : array(); 
+			update_option( self::OPTION_FOOTER_LINKS, self::clean_links( $rotulos, $urls ) );
+			self::leave(
+				add_query_arg(
+					array(
+						'post_type' => EventPostType::POST_TYPE,
+						'page'      => self::PAGE,
+						'updated'   => 'synced',
+						'msg'       => rawurlencode( 'Guardados la organización y los enlaces del pie.' ),
+					),
+					admin_url( 'edit.php' )
+				)
+			);
+		}
+
+		if (
+			isset( $_POST['evt_action'] ) &&
 			'sync_centres' === $_POST['evt_action'] &&
 			check_admin_referer( self::NONCE_SYNC_CENTRES, '_evt_centres_nonce' )
 		) {
@@ -24630,6 +24701,41 @@ final class Settings {
 
 			self::leave( add_query_arg( $redirect_args, admin_url( 'edit.php' ) ) );
 		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function clean_links( array $labels, array $urls ): array {
+		$enlaces = array();
+		foreach ( $labels as $fila => $rotulo ) {
+			$rotulo = sanitize_text_field( is_string( $rotulo ) ? $rotulo : '' );
+			$url    = esc_url_raw( trim( is_string( $urls[ $fila ] ?? null ) ? $urls[ $fila ] : '' ), array( 'http', 'https' ) );
+			if ( '' !== $rotulo && '' !== $url ) {
+				$enlaces[] = array(
+					'label' => $rotulo,
+					'url'   => $url,
+				);
+			}
+		}
+		return $enlaces;
+	}
+
+
+
+
+
+
+	public static function footer_links(): array {
+		$guardados = get_option( self::OPTION_FOOTER_LINKS, array() );
+		return is_array( $guardados ) ? array_values( array_filter( $guardados, 'is_array' ) ) : array();
 	}
 
 
@@ -24747,6 +24853,36 @@ final class Settings {
 				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
 			</form>
 
+			<?php
+			$enlaces = self::footer_links();
+			$filas   = count( $enlaces ) + self::FOOTER_BLANKS;
+			?>
+			<h2>Cabecera y pie de las páginas</h2>
+			<form method="post" action="" style="max-width:46rem">
+				<?php wp_nonce_field( self::NONCE_CHROME, '_evt_chrome_nonce' ); ?>
+				<input type="hidden" name="evt_action" value="chrome" />
+				<p>
+					<label for="evt-org"><strong>Nombre de la organización</strong></label><br />
+					<input class="regular-text" type="text" id="evt-org" name="evt_org" value="<?php echo esc_attr( (string) get_option( self::OPTION_ORG, '' ) ); ?>" />
+				</p>
+				<p class="description">Sale arriba a la izquierda del aplicativo, junto a «Eventos». Por ejemplo, el nombre de la dirección general que publica.</p>
+				<p><strong>Enlaces del pie</strong></p>
+				<p class="description">Salen a la derecha del pie de cada página pública, en este orden: aviso legal, privacidad, accesibilidad… Una fila sin texto o sin dirección no se guarda; para añadir más, guarde y aparecerán huecos nuevos.</p>
+				<table class="widefat striped">
+					<thead><tr><th scope="col">Texto</th><th scope="col">Dirección</th></tr></thead>
+					<tbody>
+					<?php for ( $i = 0; $i < $filas; $i++ ) : ?>
+						<tr>
+							<td><input class="widefat" type="text" name="evt_footer_label[<?php echo (int) $i; ?>]" aria-label="<?php echo esc_attr( 'Texto del enlace ' . ( $i + 1 ) ); ?>" value="<?php echo esc_attr( (string) ( $enlaces[ $i ]['label'] ?? '' ) ); ?>" /></td>
+							<td><input class="widefat" type="url" name="evt_footer_url[<?php echo (int) $i; ?>]" aria-label="<?php echo esc_attr( 'Dirección del enlace ' . ( $i + 1 ) ); ?>" placeholder="https://" value="<?php echo esc_attr( (string) ( $enlaces[ $i ]['url'] ?? '' ) ); ?>" /></td>
+						</tr>
+					<?php endfor; ?>
+					</tbody>
+				</table>
+				<p class="description">Si un snippet contesta al filtro <code>evt_chrome</code> con estos mismos datos, manda el snippet.</p>
+				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
+			</form>
+
 			<?php $consent = self::default_consent(); ?>
 			<h2>Protección de datos de los eventos nuevos</h2>
 			<form method="post" action="" style="max-width:46rem">
@@ -24761,14 +24897,27 @@ final class Settings {
 						<?php echo esc_html( sprintf( 'Todavía no se han guardado: se proponen los de «%s», el evento más reciente que los tiene. Guárdelos para fijarlos.', get_the_title( $consent['from'] ) ) ); ?>
 					</p></div>
 				<?php endif; ?>
-				<p>
-					<label for="evt-default-consent-privacy"><strong>Información sobre el tratamiento de sus datos</strong></label><br />
-					<textarea class="large-text" id="evt-default-consent-privacy" name="evt_consent_privacy" rows="8"><?php echo esc_textarea( $consent['privacy'] ); ?></textarea>
-				</p>
-				<p>
-					<label for="evt-default-consent-image"><strong>Consentimiento informado</strong></label><br />
-					<textarea class="large-text" id="evt-default-consent-image" name="evt_consent_image" rows="8"><?php echo esc_textarea( $consent['image'] ); ?></textarea>
-				</p>
+				<?php
+
+				$textos = array(
+					'evt_consent_privacy' => array( 'Información sobre el tratamiento de sus datos', $consent['privacy'] ),
+					'evt_consent_image'   => array( 'Consentimiento informado', $consent['image'] ),
+				);
+				?>
+				<?php foreach ( $textos as $campo => $texto ) : ?>
+					<p><label for="<?php echo esc_attr( $campo ); ?>"><strong><?php echo esc_html( $texto[0] ); ?></strong></label></p>
+					<?php
+					wp_editor(
+						(string) $texto[1],
+						$campo,
+						array(
+							'textarea_name' => $campo,
+							'textarea_rows' => 8,
+							'media_buttons' => false,
+						)
+					);
+					?>
+				<?php endforeach; ?>
 				<?php submit_button( 'Guardar', 'secondary', 'submit', false ); ?>
 			</form>
 
