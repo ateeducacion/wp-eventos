@@ -245,6 +245,10 @@ final class EventAppearancePanel {
 				<div class="evt-form-fila">
 					<div><?php echo $sel_programa; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 				</div>
+				<label class="evt-check">
+					<input type="checkbox" name="<?php echo esc_attr( EventMetaKeys::MENU_ICONS ); ?>" value="1" <?php checked( '' !== (string) ( $v[ EventMetaKeys::MENU_ICONS ] ?? '' ) ); ?> />
+					Mostrar el icono de cada sección en el menú de arriba
+				</label>
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">

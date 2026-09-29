@@ -188,6 +188,27 @@ function evt_demo_events(): array {
 					'order'   => 5,
 					'status'  => 'publish',
 					'content' => 'A quién escribir para cualquier duda sobre las jornadas.',
+					// Un mapa con varios puntos, para que las capturas lo enseñen.
+					'meta'    => array(
+						'evt_contact_address' => "Centro de Convenciones\nJalan Pinang, 50088 Kuala Lumpur",
+						'evt_contact_points'  => array(
+							array(
+								'lat'  => 3.1532,
+								'lng'  => 101.7136,
+								'text' => 'Centro de Convenciones: sede de las jornadas',
+							),
+							array(
+								'lat'  => 3.1579,
+								'lng'  => 101.7116,
+								'text' => 'Torres Petronas: visita del viernes',
+							),
+							array(
+								'lat'  => 3.1340,
+								'lng'  => 101.6865,
+								'text' => 'KL Sentral: tren desde el aeropuerto',
+							),
+						),
+					),
 				),
 				array(
 					'slug'    => 'actividades-paralelas',

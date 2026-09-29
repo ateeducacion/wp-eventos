@@ -224,6 +224,14 @@ final class EventMetaKeys {
 	public const MENU_HIDDEN = 'evt_menu_hidden';
 
 	/**
+	 * Evento que pinta el icono de cada sección en el menú de arriba.
+	 *
+	 * Sin la marca, el menú va solo con texto: los iconos siguen en las
+	 * tarjetas de la portada y en el taller, que es donde ayudan.
+	 */
+	public const MENU_ICONS = 'evt_menu_icons';
+
+	/**
 	 * Icono de la sección, de la lista cerrada. Vacío: el de su tipo.
 	 */
 	public const SECTION_ICON = 'evt_section_icon';
@@ -336,6 +344,7 @@ final class EventMetaKeys {
 			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
 			self::MENU_HIDDEN,
+			self::MENU_ICONS,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,

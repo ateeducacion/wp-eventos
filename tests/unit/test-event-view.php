@@ -309,6 +309,14 @@ class Test_Event_View extends WP_UnitTestCase {
 
 		$this->acting_as( 0 );
 		$m = EventView::model( $evento );
+		$this->assertSame( array( '', '', '' ), array_column( (array) $m['nav'], 'icon' ), 'sin la casilla, el menú va sin iconos' );
+		$this->assertStringNotContainsString( 'evt-ev__nav-icono', EventChrome::nav( (array) $m['nav'] ) );
+
+		update_post_meta( $evento, EventMetaKeys::MENU_ICONS, true );
+		$prop = new ReflectionProperty( EventView::class, 'models' );
+		$prop->setAccessible( true );
+		$prop->setValue( null, array() );
+		$m = EventView::model( $evento );
 		remove_filter( 'evt_section_default_image', $generica );
 
 		$this->assertSame( array( 'home', 'calendar', 'pin' ), array_column( (array) $m['nav'], 'icon' ) );
@@ -661,10 +669,10 @@ class Test_Event_View extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Quien puede editar ve «Editar esta página» en la sección, y con banner
-	 * también ve «Gestionar este evento» en la portada.
+	 * Bajo el título sale solo «Gestionar este evento», también con banner, y
+	 * dentro de la vista previa del taller, ninguno.
 	 */
-	public function test_whoever_can_edit_sees_the_edit_links_also_under_a_banner() {
+	public function test_only_the_manage_link_shows_and_never_inside_the_workshop_preview() {
 		$area    = $this->area( 'Innovación' );
 		$autor   = $this->administrator();
 		$evento  = $this->evento_con_aspecto( $autor, $area );
@@ -673,16 +681,24 @@ class Test_Event_View extends WP_UnitTestCase {
 		update_post_meta( $evento, EventMetaKeys::HEADER_BANNER_ID, $banner );
 
 		$this->acting_as( 0 );
-		$this->assertStringNotContainsString( 'Editar esta página', EventChrome::cover( EventView::model( $seccion ) ) );
+		$this->assertStringNotContainsString( 'Gestionar este evento', EventChrome::cover( EventView::model( $seccion ) ) );
 
 		$prop = new ReflectionProperty( EventView::class, 'models' );
 		$prop->setAccessible( true );
 		$prop->setValue( null, array() );
 		$this->acting_as( $autor );
-		$this->assertStringContainsString( 'Editar esta página', EventChrome::cover( EventView::model( $seccion ) ) );
+		$en_seccion = EventChrome::cover( EventView::model( $seccion ) );
+		$this->assertStringContainsString( 'Gestionar este evento', $en_seccion );
+		$this->assertStringNotContainsString( 'Editar esta página', $en_seccion );
 		$portada = EventChrome::cover( EventView::model( $evento ) );
 		$this->assertStringContainsString( 'evt-ev__portada--banner', $portada );
 		$this->assertStringContainsString( 'Gestionar este evento', $portada, 'el banner no se come el enlace' );
+
+		$prop->setValue( null, array() );
+		$_SERVER['HTTP_SEC_FETCH_DEST'] = 'iframe';
+		$en_marco                       = EventChrome::cover( EventView::model( $seccion ) ) . EventChrome::cover( EventView::model( $evento ) );
+		unset( $_SERVER['HTTP_SEC_FETCH_DEST'] );
+		$this->assertStringNotContainsString( 'Gestionar este evento', $en_marco, 'la vista previa del taller no lleva al taller' );
 	}
 
 	/**

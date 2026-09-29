@@ -167,6 +167,10 @@ final class EventMetaRegistration {
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
+			EventMetaKeys::MENU_ICONS         => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
 			EventMetaKeys::SECTION_ICON       => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_section_icon' ),

@@ -1420,6 +1420,8 @@ final class EventWorkspace {
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
+		$iconos = self::field( EventMetaKeys::MENU_ICONS );
+		update_post_meta( $event_id, EventMetaKeys::MENU_ICONS, '' === $iconos ? '' : '1' );
 
 		// La imagen destacada no es una meta nuestra sino el `thumbnail` de
 		// WordPress: eso dice la clave vacía.
@@ -2371,6 +2373,7 @@ final class EventWorkspace {
 			EventMetaKeys::IMAGE_SHAPE      => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
 			EventMetaKeys::SEPARATOR        => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
 			EventMetaKeys::PROGRAMME_LAYOUT => self::meta( $event_id, EventMetaKeys::PROGRAMME_LAYOUT ),
+			EventMetaKeys::MENU_ICONS       => '' === self::meta( $event_id, EventMetaKeys::MENU_ICONS ) ? '' : '1',
 		);
 
 		// Lo tecleado manda sobre lo guardado, pero solo en los campos que

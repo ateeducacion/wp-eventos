@@ -397,6 +397,20 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La casilla de los iconos del menú se guarda marcada y se borra al desmarcarla.
+	 */
+	public function test_the_menu_icons_box_is_saved_and_cleared() {
+		$admin  = $this->administrator();
+		$evento = $this->event( $admin, array( $this->area( 'Innovación' ) ) );
+
+		$this->submit( $admin, EventWorkspace::PANEL_LOOK, $evento, 0, array( EventMetaKeys::MENU_ICONS => '1' ) );
+		$this->assertTrue( (bool) get_post_meta( $evento, EventMetaKeys::MENU_ICONS, true ) );
+
+		$this->submit( $admin, EventWorkspace::PANEL_LOOK, $evento );
+		$this->assertFalse( (bool) get_post_meta( $evento, EventMetaKeys::MENU_ICONS, true ) );
+	}
+
+	/**
 	 * Con el nonce mal, la operación ni siquiera se intenta.
 	 */
 	public function test_a_bad_nonce_mutates_nothing() {

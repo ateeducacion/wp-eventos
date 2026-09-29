@@ -253,6 +253,14 @@ final class EventMetaKeys {
 
 
 
+
+
+
+	public const MENU_ICONS = 'evt_menu_icons';
+
+
+
+
 	public const SECTION_ICON = 'evt_section_icon';
 
 
@@ -363,6 +371,7 @@ final class EventMetaKeys {
 			self::CONTACT_POINTS,
 			self::HOME_HIDDEN,
 			self::MENU_HIDDEN,
+			self::MENU_ICONS,
 			self::SECTION_ICON,
 			self::CUSTOM_CSS,
 			self::CUSTOM_JS,
@@ -740,6 +749,10 @@ final class EventMetaRegistration {
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
 			EventMetaKeys::HOME_HIDDEN        => array(
+				'type'     => 'boolean',
+				'sanitize' => array( self::class, 'sanitize_bool' ),
+			),
+			EventMetaKeys::MENU_ICONS         => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
@@ -13729,6 +13742,8 @@ final class EventWorkspace {
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
+		$iconos = self::field( EventMetaKeys::MENU_ICONS );
+		update_post_meta( $event_id, EventMetaKeys::MENU_ICONS, '' === $iconos ? '' : '1' );
 
 
 
@@ -14680,6 +14695,7 @@ final class EventWorkspace {
 			EventMetaKeys::IMAGE_SHAPE      => self::meta( $event_id, EventMetaKeys::IMAGE_SHAPE ),
 			EventMetaKeys::SEPARATOR        => self::meta( $event_id, EventMetaKeys::SEPARATOR ),
 			EventMetaKeys::PROGRAMME_LAYOUT => self::meta( $event_id, EventMetaKeys::PROGRAMME_LAYOUT ),
+			EventMetaKeys::MENU_ICONS       => '' === self::meta( $event_id, EventMetaKeys::MENU_ICONS ) ? '' : '1',
 		);
 
 
@@ -17537,6 +17553,10 @@ final class EventAppearancePanel {
 				<div class="evt-form-fila">
 					<div><?php echo $sel_programa; ?></div>
 				</div>
+				<label class="evt-check">
+					<input type="checkbox" name="<?php echo esc_attr( EventMetaKeys::MENU_ICONS ); ?>" value="1" <?php checked( '' !== (string) ( $v[ EventMetaKeys::MENU_ICONS ] ?? '' ) ); ?> />
+					Mostrar el icono de cada sección en el menú de arriba
+				</label>
 			</fieldset>
 
 			<fieldset class="evt-tarjeta">
@@ -22183,7 +22203,6 @@ final class EventView {
 			'description'  => self::description( $post_id, $event_id ),
 			'image'        => '' !== (string) $look['poster_full'] ? (string) $look['poster_full'] : (string) get_the_post_thumbnail_url( $post_id, 'large' ),
 			'manage_url'   => self::manage_url( $event_id ),
-			'edit_url'     => $is_root ? '' : self::edit_url( $event_id, $post_id ),
 		);
 
 
@@ -22233,7 +22252,6 @@ final class EventView {
 			'description'  => '',
 			'image'        => '',
 			'manage_url'   => '',
-			'edit_url'     => '',
 		);
 	}
 
@@ -22299,34 +22317,14 @@ final class EventView {
 
 
 
+
+
+
 	private static function manage_url( int $event_id ): string {
-		if ( $event_id <= 0 || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
+		if ( $event_id <= 0 || Shell::in_frame() || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
 			return '';
 		}
 		return Shell::url( 'event', array( self::MANAGE_ARG => $event_id ) );
-	}
-
-
-
-
-
-
-
-
-
-
-
-	private static function edit_url( int $event_id, int $page_id ): string {
-		if ( ! EventAccess::can_edit( get_current_user_id(), $page_id ) ) {
-			return '';
-		}
-		return Shell::url(
-			'section',
-			array(
-				EventWorkspace::ARG_EVENT   => $event_id,
-				EventWorkspace::ARG_SECTION => $page_id,
-			)
-		);
 	}
 
 
@@ -22446,12 +22444,14 @@ final class EventView {
 
 
 	private static function nav( int $event_id, int $current_id ): array {
-		$menu = array(
+
+		$iconos = (bool) get_post_meta( $event_id, EventMetaKeys::MENU_ICONS, true );
+		$menu   = array(
 			array(
 				'label'   => 'Inicio',
 				'url'     => (string) get_permalink( $event_id ),
 				'current' => $event_id === $current_id,
-				'icon'    => 'home',
+				'icon'    => $iconos ? 'home' : '',
 			),
 		);
 		foreach ( self::sections( $event_id ) as $seccion ) {
@@ -22463,7 +22463,7 @@ final class EventView {
 				'label'   => (string) get_the_title( $seccion ),
 				'url'     => (string) get_permalink( $seccion ),
 				'current' => (int) $seccion->ID === $current_id,
-				'icon'    => SectionIcons::of( (int) $seccion->ID ),
+				'icon'    => $iconos ? SectionIcons::of( (int) $seccion->ID ) : '',
 			);
 		}
 		return $menu;
@@ -23156,9 +23156,6 @@ final class EventChrome {
 							<?php endif; ?>
 							<?php if ( $raiz && '' !== (string) $signup['url'] ) : ?>
 								<a class="evt-ev__boton" href="<?php echo esc_url( (string) $signup['url'] ); ?>"><?php echo esc_html( (string) $signup['label'] ); ?></a>
-							<?php endif; ?>
-							<?php if ( '' !== (string) ( $m['edit_url'] ?? '' ) ) : ?>
-								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['edit_url'] ); ?>">Editar esta página</a>
 							<?php endif; ?>
 							<?php if ( '' !== (string) $m['manage_url'] ) : ?>
 								<a class="evt-ev__gestion" href="<?php echo esc_url( (string) $m['manage_url'] ); ?>">Gestionar este evento</a>
