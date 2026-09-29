@@ -662,7 +662,7 @@ final class Shell {
 				<?php endif; ?>
 				<?php if ( '' !== $rotulo ) : ?>
 					<span class="evt-marca">
-						<small><?php echo esc_html( $rotulo ); ?></small>
+						<small><?php echo implode( '<br />', array_map( 'esc_html', self::lines( $rotulo ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- cada línea escapada. ?></small>
 					</span>
 				<?php endif; ?>
 				<a class="evt-marca-app" href="<?php echo esc_url( $inicio ); ?>">Eventos</a>
@@ -671,6 +671,19 @@ final class Shell {
 		</div>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The lines of the organisation label: a `|` marks where one ends.
+	 *
+	 * Un nombre largo de dirección general parte mejor donde lo decide quien lo
+	 * escribe que donde lo corta el ancho de la cabecera.
+	 *
+	 * @param string $label Label as written in the settings.
+	 * @return string[]
+	 */
+	public static function lines( string $label ): array {
+		return array_values( array_filter( array_map( 'trim', explode( '|', $label ) ), 'strlen' ) );
 	}
 
 	/**

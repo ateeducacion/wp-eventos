@@ -8,6 +8,17 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.8] — 2026-09-29
+
+### Cambiado
+
+- **«Mis eventos» abre con «Todos» marcado**, en vez de «Activos»: se ven de golpe los borradores y los históricos, cada estado sigue a un clic con su número
+- **El nombre de la organización salta de línea donde lleve una barra `|`**: «Dirección General de Ordenación | de las Enseñanzas, Inclusión | e Innovación» sale en tres líneas en la cabecera del aplicativo
+
+### Corregido
+
+- **Los enlaces del pie del aplicativo salen sin subrayar**, en blanco, y se subrayan al pasar el ratón o con el foco del teclado, igual que en el pie de las páginas públicas
+
 ## [0.1.7] — 2026-09-29
 
 ### Añadido

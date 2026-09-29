@@ -59,12 +59,17 @@ final class EventList {
 	public const FILTER_DRAFT = 'draft';
 
 	/**
-	 * Filtro por defecto: lo publicado que todavía se trabaja.
-	 *
-	 * Ni borradores ni históricos: es lo que quien organiza abre a diario. Los
-	 * demás siguen a un clic, con su número al lado.
+	 * Filtro de lo publicado que todavía se trabaja: ni borradores ni históricos.
 	 */
 	public const FILTER_ACTIVE = 'active';
+
+	/**
+	 * Filtro por defecto: todos los eventos.
+	 *
+	 * Quien entra ve de golpe todo lo que tiene, con el número de cada estado
+	 * en su botón; acotar a «Activos», «Borradores» o «Históricos» es un clic.
+	 */
+	public const FILTER_DEFAULT = 'all';
 
 	/**
 	 * The four states offered as buttons, in order.
@@ -374,14 +379,14 @@ final class EventList {
 	 * @return array{area:int, type:int, course:int, state:string, search:string, page:int, view:string}
 	 */
 	public static function selection(): array {
-		$estado = self::input( self::VAR_STATE, self::FILTER_ACTIVE );
+		$estado = self::input( self::VAR_STATE, self::FILTER_DEFAULT );
 		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
 			'type'   => max( 0, (int) self::input( self::VAR_TYPE ) ),
 			'course' => max( 0, (int) self::input( self::VAR_COURSE ) ),
-			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_ACTIVE,
+			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_DEFAULT,
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
 			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
@@ -404,7 +409,7 @@ final class EventList {
 			self::VAR_AREA   => $s['area'] > 0 ? (string) $s['area'] : '',
 			self::VAR_TYPE   => $s['type'] > 0 ? (string) $s['type'] : '',
 			self::VAR_COURSE => $s['course'] > 0 ? (string) $s['course'] : '',
-			self::VAR_STATE  => self::FILTER_ACTIVE !== $s['state'] ? (string) $s['state'] : '',
+			self::VAR_STATE  => self::FILTER_DEFAULT !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
 			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
@@ -1045,7 +1050,7 @@ final class EventList {
 	 */
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
-			|| self::FILTER_ACTIVE !== $s['state'] || '' !== $s['search'];
+			|| self::FILTER_DEFAULT !== $s['state'] || '' !== $s['search'];
 	}
 
 	/**
@@ -1058,7 +1063,7 @@ final class EventList {
 			'area'   => 0,
 			'type'   => 0,
 			'course' => 0,
-			'state'  => self::FILTER_ACTIVE,
+			'state'  => self::FILTER_DEFAULT,
 			'search' => '',
 			'page'   => 1,
 		);

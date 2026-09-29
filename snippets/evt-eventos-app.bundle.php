@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.1.7
+ * @version 0.1.8
  */
 
 // phpcs:disable
@@ -6665,7 +6665,7 @@ final class Shell {
 				<?php endif; ?>
 				<?php if ( '' !== $rotulo ) : ?>
 					<span class="evt-marca">
-						<small><?php echo esc_html( $rotulo ); ?></small>
+						<small><?php echo implode( '<br />', array_map( 'esc_html', self::lines( $rotulo ) ) ); ?></small>
 					</span>
 				<?php endif; ?>
 				<a class="evt-marca-app" href="<?php echo esc_url( $inicio ); ?>">Eventos</a>
@@ -6674,6 +6674,19 @@ final class Shell {
 		</div>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function lines( string $label ): array {
+		return array_values( array_filter( array_map( 'trim', explode( '|', $label ) ), 'strlen' ) );
 	}
 
 
@@ -7802,10 +7815,15 @@ final class EventList {
 
 
 
-
-
-
 	public const FILTER_ACTIVE = 'active';
+
+
+
+
+
+
+
+	public const FILTER_DEFAULT = 'all';
 
 
 
@@ -8115,14 +8133,14 @@ final class EventList {
 
 
 	public static function selection(): array {
-		$estado = self::input( self::VAR_STATE, self::FILTER_ACTIVE );
+		$estado = self::input( self::VAR_STATE, self::FILTER_DEFAULT );
 		$vista  = self::input( self::VAR_VIEW, self::VIEW_GRID );
 
 		return array(
 			'area'   => max( 0, (int) self::input( self::VAR_AREA ) ),
 			'type'   => max( 0, (int) self::input( self::VAR_TYPE ) ),
 			'course' => max( 0, (int) self::input( self::VAR_COURSE ) ),
-			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_ACTIVE,
+			'state'  => isset( self::state_filters()[ $estado ] ) ? $estado : self::FILTER_DEFAULT,
 			'search' => mb_substr( self::input( self::VAR_SEARCH ), 0, 120 ),
 			'page'   => max( 1, (int) self::input( self::VAR_PAGE, '1' ) ),
 			'view'   => self::VIEW_LIST === $vista ? self::VIEW_LIST : self::VIEW_GRID,
@@ -8145,7 +8163,7 @@ final class EventList {
 			self::VAR_AREA   => $s['area'] > 0 ? (string) $s['area'] : '',
 			self::VAR_TYPE   => $s['type'] > 0 ? (string) $s['type'] : '',
 			self::VAR_COURSE => $s['course'] > 0 ? (string) $s['course'] : '',
-			self::VAR_STATE  => self::FILTER_ACTIVE !== $s['state'] ? (string) $s['state'] : '',
+			self::VAR_STATE  => self::FILTER_DEFAULT !== $s['state'] ? (string) $s['state'] : '',
 			self::VAR_SEARCH => (string) $s['search'],
 			self::VAR_PAGE   => $s['page'] > 1 ? (string) $s['page'] : '',
 			self::VAR_VIEW   => self::VIEW_LIST === ( $s['view'] ?? '' ) ? self::VIEW_LIST : '',
@@ -8786,7 +8804,7 @@ final class EventList {
 
 	private static function is_filtered( array $s ): bool {
 		return $s['area'] > 0 || $s['type'] > 0 || $s['course'] > 0
-			|| self::FILTER_ACTIVE !== $s['state'] || '' !== $s['search'];
+			|| self::FILTER_DEFAULT !== $s['state'] || '' !== $s['search'];
 	}
 
 
@@ -8799,7 +8817,7 @@ final class EventList {
 			'area'   => 0,
 			'type'   => 0,
 			'course' => 0,
-			'state'  => self::FILTER_ACTIVE,
+			'state'  => self::FILTER_DEFAULT,
 			'search' => '',
 			'page'   => 1,
 		);
@@ -24865,7 +24883,7 @@ final class Settings {
 					<label for="evt-org"><strong>Nombre de la organización</strong></label><br />
 					<input class="regular-text" type="text" id="evt-org" name="evt_org" value="<?php echo esc_attr( (string) get_option( self::OPTION_ORG, '' ) ); ?>" />
 				</p>
-				<p class="description">Sale arriba a la izquierda del aplicativo, junto a «Eventos». Por ejemplo, el nombre de la dirección general que publica.</p>
+				<p class="description">Sale arriba a la izquierda del aplicativo, junto a «Eventos». Por ejemplo, el nombre de la dirección general que publica. Una barra <code>|</code> marca dónde salta de línea: <code>Dirección General de Ordenación | de las Enseñanzas</code>.</p>
 				<p><strong>Enlaces del pie</strong></p>
 				<p class="description">Salen a la derecha del pie de cada página pública, en este orden: aviso legal, privacidad, accesibilidad… Una fila sin texto o sin dirección no se guarda; para añadir más, guarde y aparecerán huecos nuevos.</p>
 				<table class="widefat striped">
@@ -25447,7 +25465,7 @@ html:has(> body.evt-app) { overflow-x: clip; }
   display: block;
   font-size: 11.5px;
   color: var(--evt-texto-2);
-  max-width: 30ch;
+  max-width: 36ch;
   border-left: 1px solid var(--evt-linea);
   padding-left: 14px;
 }
@@ -25604,8 +25622,9 @@ body.evt-app .evt-hoja {
 .evt-pie-quien { display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: baseline; }
 .evt-pie-ate { color: rgba(255, 255, 255, .72); }
 .evt-pie-enlaces { display: flex; gap: 18px; flex-wrap: wrap; }
-.evt-pie a { color: #fff; text-decoration: underline; }
-.evt-pie a:hover { color: #fff; text-decoration: none; }
+.evt-pie a { color: #fff; text-decoration: none; }
+.evt-pie a:hover,
+.evt-pie a:focus-visible { color: #fff; text-decoration: underline; }
 
 /* --- la portada ---------------------------------------------------------- */
 

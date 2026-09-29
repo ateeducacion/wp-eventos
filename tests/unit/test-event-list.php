@@ -282,7 +282,11 @@ class Test_Event_List extends WP_UnitTestCase {
 
 		$this->acting_as( $coord );
 		$m = EventList::model();
-		$this->assertSame( 3, $m['total'], 'por defecto, «Activos»: sin el borrador' );
+		$this->assertSame( 4, $m['total'], 'por defecto, «Todos»: también el borrador' );
+		$this->assertSame( EventList::FILTER_DEFAULT, $m['selection']['state'] );
+
+		$_GET[ EventList::VAR_STATE ] = EventList::FILTER_ACTIVE;
+		$this->assertSame( 3, EventList::model()['total'], '«Activos»: sin el borrador' );
 		$this->assertSame( 3, $m['counts'][ EventList::FILTER_ACTIVE ] );
 
 		$_GET[ EventList::VAR_STATE ] = 'all';
@@ -304,10 +308,10 @@ class Test_Event_List extends WP_UnitTestCase {
 		$this->assertSame( array( 'En borrador' ), $this->titulos( $m ) );
 		$this->assertSame( 'draft', $m['rows'][0]['status'] );
 
-		// Un estado inventado se cae al de por defecto: «Activos».
+		// Un estado inventado se cae al de por defecto: «Todos».
 		$_GET[ EventList::VAR_STATE ] = 'lo-que-sea';
-		$this->assertSame( EventList::FILTER_ACTIVE, EventList::model()['selection']['state'] );
-		$this->assertSame( 3, EventList::model()['total'] );
+		$this->assertSame( EventList::FILTER_DEFAULT, EventList::model()['selection']['state'] );
+		$this->assertSame( 4, EventList::model()['total'] );
 	}
 
 	/**

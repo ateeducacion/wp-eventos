@@ -208,3 +208,10 @@ y soltar y la subida sin guion. Lo guarda `EventWorkspace::save_image()` con las
 mismas comprobaciones: lo que no es una imagen de la biblioteca no se pone, lo
 que había se queda y se avisa. Sigue siendo la destacada y no una meta nueva,
 así que las importadas se ven y se editan sin migrar nada.
+
+## Adenda — 2026-09-29: «Mis eventos» abre con «Todos»
+
+Lo que decía arriba —«por defecto salen los activos»— cambia: **por defecto
+sale «Todos»**. Quien entra ve de golpe lo que tiene, borradores e históricos
+incluidos, con el número de cada estado en su botón, y acotar a «Activos» es un
+clic. La papelera sigue aparte. En código es `EventList::FILTER_DEFAULT`.
