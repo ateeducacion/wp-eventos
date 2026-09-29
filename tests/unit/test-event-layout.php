@@ -213,6 +213,18 @@ class Test_Event_Layout extends WP_UnitTestCase {
 		$this->assertSame( 'La del snippet', EventChrome::chrome()['org'] );
 	}
 
+	/**
+	 * Una barra en el nombre de la organización marca dónde salta de línea.
+	 */
+	public function test_a_bar_in_the_org_label_breaks_the_line() {
+		$this->assertSame(
+			array( 'Dirección General de Ordenación', 'de las Enseñanzas, Inclusión', 'e Innovación' ),
+			\Evt\PublicFront\Shell::lines( 'Dirección General de Ordenación | de las Enseñanzas, Inclusión |e Innovación|' )
+		);
+		$this->assertSame( array( 'Sin barras' ), \Evt\PublicFront\Shell::lines( ' Sin barras ' ) );
+		$this->assertSame( array(), \Evt\PublicFront\Shell::lines( '' ) );
+	}
+
 	// ─── bloques con nombre ────────────────────────────────────────────────
 
 	/**

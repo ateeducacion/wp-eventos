@@ -458,9 +458,10 @@ class Test_Archived extends WP_UnitTestCase {
 		$this->archivar( $viejo );
 		$this->acting_as( $uid );
 
-		$m   = EventList::model();
-		$ids = array_map( 'intval', array_column( (array) $m['rows'], 'id' ) );
-		$this->assertSame( array( $nuevo ), $ids, 'por defecto, «Activos»: el histórico no' );
+		$_GET[ EventList::VAR_STATE ] = EventList::FILTER_ACTIVE;
+		$m                            = EventList::model();
+		$ids                          = array_map( 'intval', array_column( (array) $m['rows'], 'id' ) );
+		$this->assertSame( array( $nuevo ), $ids, 'en «Activos», el histórico no' );
 
 		$_GET[ EventList::VAR_STATE ] = 'all';
 		$m                            = EventList::model();

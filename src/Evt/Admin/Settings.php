@@ -366,7 +366,7 @@ final class Settings {
 					<label for="evt-org"><strong>Nombre de la organización</strong></label><br />
 					<input class="regular-text" type="text" id="evt-org" name="evt_org" value="<?php echo esc_attr( (string) get_option( self::OPTION_ORG, '' ) ); ?>" />
 				</p>
-				<p class="description">Sale arriba a la izquierda del aplicativo, junto a «Eventos». Por ejemplo, el nombre de la dirección general que publica.</p>
+				<p class="description">Sale arriba a la izquierda del aplicativo, junto a «Eventos». Por ejemplo, el nombre de la dirección general que publica. Una barra <code>|</code> marca dónde salta de línea: <code>Dirección General de Ordenación | de las Enseñanzas</code>.</p>
 				<p><strong>Enlaces del pie</strong></p>
 				<p class="description">Salen a la derecha del pie de cada página pública, en este orden: aviso legal, privacidad, accesibilidad… Una fila sin texto o sin dirección no se guarda; para añadir más, guarde y aparecerán huecos nuevos.</p>
 				<table class="widefat striped">
