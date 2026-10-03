@@ -1,0 +1,233 @@
+[
+  {
+    "chapter": "El aplicativo",
+    "title": "Mis eventos",
+    "note": "El listado con el que se abre: cada evento con sus ámbitos, su estado derivado de las fechas y el interruptor de publicación.",
+    "who": "editor",
+    "go": "/mis-eventos/",
+    "screen": "desktop",
+    "img": "img/01-desktop-mis-eventos.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Páginas",
+    "note": "Las páginas satélite del evento, con su orden y sus acciones de fila.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=secciones",
+    "screen": "desktop",
+    "img": "img/02-desktop-paginas.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Ponentes",
+    "note": "Las fichas de quien habla, con los botones de icono y el orden que decide el ámbito.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=ponentes",
+    "screen": "desktop",
+    "img": "img/03-desktop-ponentes.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Programa",
+    "note": "La parrilla agrupada por día y, dentro del día, por sede: un mismo día puede tener dos.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=programa",
+    "screen": "desktop",
+    "img": "img/04-desktop-programa.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Talleres",
+    "note": "Solo las actividades de tipo taller, con su aforo y cuántas plazas van ocupadas.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=talleres",
+    "screen": "desktop",
+    "img": "img/05-desktop-talleres.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Inscripción",
+    "note": "Los dos plazos, los textos del consentimiento con su versión, y las preguntas propias del evento.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=inscripcion",
+    "screen": "desktop",
+    "img": "img/06-desktop-inscripcion.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Participantes",
+    "note": "Quién se ha inscrito, el buscador que no distingue tildes y la exportación a CSV por POST.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=participantes",
+    "screen": "desktop",
+    "img": "img/07-desktop-participantes.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Ajustes",
+    "note": "Título, fechas, ámbitos, tipología y curso: lo que define el evento.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=ajustes",
+    "screen": "desktop",
+    "img": "img/08-desktop-ajustes.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El taller del evento",
+    "title": "Apariencia",
+    "note": "Los colores de la cabecera, las tipografías y las imágenes del evento.",
+    "who": "editor",
+    "go": "/evento/?evento={ID}&panel=apariencia",
+    "screen": "desktop",
+    "img": "img/09-desktop-apariencia.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El escritorio",
+    "title": "Listado de eventos",
+    "note": "Las columnas propias, Ámbito y Estado, justo detrás del título.",
+    "who": "admin",
+    "go": "/wp-admin/edit.php?post_type=evt_event",
+    "screen": "desktop",
+    "img": "img/10-desktop-listado-de-eventos.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El escritorio",
+    "title": "Ajustes y diagnóstico",
+    "note": "Qué hay montado en este sitio: tipos, taxonomías y roles. No guarda nada.",
+    "who": "admin",
+    "go": "/wp-admin/edit.php?post_type=evt_event&page=evt-settings",
+    "screen": "desktop",
+    "img": "img/11-desktop-ajustes-y-diagnostico.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Portada del evento",
+    "note": "Cabecera, fechas, sede y las tarjetas de las demás páginas. Se proyecta en una sala y se abre en el móvil de quien recibe el enlace.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/",
+    "screen": "desktop",
+    "img": "img/12-desktop-portada-del-evento.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Portada del evento",
+    "note": "Cabecera, fechas, sede y las tarjetas de las demás páginas. Se proyecta en una sala y se abre en el móvil de quien recibe el enlace.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/",
+    "screen": "mobile",
+    "img": "img/13-mobile-portada-del-evento.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Programa",
+    "note": "La parrilla pública, agrupada por día y por sede.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/programa/",
+    "screen": "desktop",
+    "img": "img/14-desktop-programa.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Programa",
+    "note": "La parrilla pública, agrupada por día y por sede.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/programa/",
+    "screen": "mobile",
+    "img": "img/15-mobile-programa.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Ponentes",
+    "note": "Quién habla, con su cargo y su entidad.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/ponentes/",
+    "screen": "desktop",
+    "img": "img/16-desktop-ponentes.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Ponentes",
+    "note": "Quién habla, con su cargo y su entidad.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/ponentes/",
+    "screen": "mobile",
+    "img": "img/17-mobile-ponentes.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Inscripción",
+    "note": "El formulario: el núcleo fijo, las preguntas del evento y el consentimiento.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/inscripcion/",
+    "screen": "desktop",
+    "img": "img/18-desktop-inscripcion.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Inscripción",
+    "note": "El formulario: el núcleo fijo, las preguntas del evento y el consentimiento.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/inscripcion/",
+    "screen": "mobile",
+    "img": "img/19-mobile-inscripcion.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Contacto",
+    "note": "La última de las satélite: una página sin nada especial también tiene que quedar bien.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/contacto/",
+    "screen": "desktop",
+    "img": "img/20-desktop-contacto.png",
+    "ok": true,
+    "error": ""
+  },
+  {
+    "chapter": "El evento, público",
+    "title": "Contacto",
+    "note": "La última de las satélite: una página sin nada especial también tiene que quedar bien.",
+    "who": "",
+    "go": "/evento/jornadas-tecnologia-educativa/contacto/",
+    "screen": "mobile",
+    "img": "img/21-mobile-contacto.png",
+    "ok": true,
+    "error": ""
+  }
+]
