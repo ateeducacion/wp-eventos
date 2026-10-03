@@ -180,7 +180,6 @@ function summarise( profiles ) {
 		evt: rows
 			.filter( ( r ) => r.fn.startsWith( 'Evt\\' ) )
 			.sort( ( a, b ) => b.inc_ms - a.inc_ms )
-			.slice( 0, TOP ),
 	};
 }
 
