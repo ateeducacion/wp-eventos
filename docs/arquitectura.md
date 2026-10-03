@@ -147,6 +147,7 @@ de los habituales para que convivan con otros entornos.
 | `make snippet-check` | Los snippets sobreviven al guardado de Code Snippets |
 | `make capturas` | Recorre las pantallas y deja `capturas/informe.html` |
 | `make coverage` | Cobertura de `src/Evt` (reinicia wp-env con Xdebug) |
+| `make profile` / `make profile-compare` | Perfil de rendimiento con SPX y comparación entre dos ramas |
 | `make clean` / `make destroy` | Resetea el entorno / lo destruye |
 | `make playground` | WordPress Playground local, sin Docker |
 | `make release` | Etiqueta la versión del CHANGELOG y publica la release |
