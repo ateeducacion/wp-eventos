@@ -9,11 +9,38 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      # Un solo PR para el parche semanal de las acciones.
+      actions:
+        patterns:
+          - "*"
   - package-ecosystem: "composer" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      # PHPCS, PHPUnit y compañía juntos. Un salto mayor sigue en su propio PR.
+      php-dev:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "npm" # @wordpress/env y su lockfile (utillaje de desarrollo)
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      # vite, vitest y @vitest/* comparten lockfile: un PR, no tres que se pisan.
+      vite:
+        patterns:
+          - "vite"
+          - "vitest"
+          - "@vitest/*"
+      fontsource:
+        patterns:
+          - "@fontsource/*"
+      bootstrap:
+        patterns:
+          - "bootstrap"
+          - "bootstrap-icons"
