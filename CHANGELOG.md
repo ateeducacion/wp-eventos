@@ -8,6 +8,21 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.1.9] — 2026-10-07
+
+### Añadido
+
+- **`make profile` y `make profile-compare A=main B=mi-rama`** miden el rendimiento del aplicativo con SPX y comparan dos ramas: tiempo, memoria y llamadas de las pantallas principales, y qué funciones pesan más (skill `profiler`)
+
+### Cambiado
+
+- **Members sale del entorno y del despliegue.** No lo usa nada del aplicativo: los roles y sus capacidades los crea y los repone el código en cada carga, y WPFront User Role Editor ya enseña los mismos roles y sirve para cambiar de usuario al probar. Se quita de wp-env, de los blueprints y de la documentación
+- Dependabot agrupa en un solo PR lo que comparte lockfile (`vite`, `vitest` y `@vitest/coverage-v8`); utillaje de desarrollo y skills de agentes al día
+
+### Pendiente antes de desplegar
+
+- Desactivar Members en el sitio de destino. El bundle solo cambia de versión
+
 ## [0.1.8] — 2026-09-29
 
 ### Cambiado

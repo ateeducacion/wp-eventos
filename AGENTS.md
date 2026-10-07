@@ -11,8 +11,9 @@ apuntan aquí.
 
 **Eventos** es el repositorio de trabajo de un aplicativo que gestiona
 encuentros, jornadas y congresos. En producción se activa con **Code
-Snippets**, **Members** y **WPFront User Role Editor**; dónde, lo dice el
-`.env` y **no el repositorio**
+Snippets** y **WPFront User Role Editor** —este, para ver los roles y suplantar
+a alguien al probar; los roles y sus capacidades salen del código—; dónde, lo
+dice el `.env` y **no el repositorio**
 ([ADR-0030](docs/adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
 El dominio son tres CPT —`evt_event`,
 `evt_speaker`, `evt_activity`— y tres taxonomías —`evt_area`, `evt_type`,
@@ -387,7 +388,7 @@ también a `scripts/check-public.mjs`: esa lista es donde vive lo aprendido.
 ## Referencia de herramientas
 
 - `make help` y el `Makefile` son la referencia de targets.
-- wp-env: **Code Snippets + Members + WPFront User Role Editor + SQL Buddy**
+- wp-env: **Code Snippets + WPFront User Role Editor + SQL Buddy**
   (ningún gestor de formularios). Puertos `8798` / `8799`.
 - El destino en producción **puede ser un subsitio de un multisitio**, a
   diferencia del entorno local, que es un sitio único. Cualquier cosa que
