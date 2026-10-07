@@ -49,9 +49,9 @@ entender las migraciones; donde difieran, rige el modelo vigente de ADR-0038.
 
 Qué rol necesita cada persona, qué capacidades lleva cada rol y qué campo del
 perfil hace falta para que vea y edite lo que le toca. Es la lista que hay que
-reproducir en **WPFront User Role Editor 4.2.4** en el sitio donde se despliega
-(Members 3.2.22, que también está instalado, enseña los mismos roles y las
-mismas capacidades). La fuente de verdad en código está repartida en dos
+reproducir en **WPFront User Role Editor 4.2.4** en el sitio donde se despliega.
+Members ya no forma parte del despliegue: no aportaba nada que no enseñe
+WPFront. La fuente de verdad en código está repartida en dos
 sitios, y conviene saberlo antes de buscar:
 
 | Qué | Dónde |
@@ -74,7 +74,7 @@ mismo con las del CPT. Ninguno de los dos llama nunca a `remove_cap()`. Las
 consecuencias, en las dos direcciones:
 
 - **Quitar** una capacidad de esta lista a un rol hay que hacerlo **en el
-  código**. Si se quita solo en WPFront o en Members, vuelve en la siguiente
+  código**. Si se quita solo en WPFront, vuelve en la siguiente
   carga de la página y nadie se entera de por qué.
 - **Añadir** capacidades extra desde WPFront **sí se respeta**: no hay
   revocación genérica que las borre. Es la vía para una concesión puntual a
@@ -347,7 +347,7 @@ Cuatro precisiones, todas comprobables:
   `apply_filters( 'evt_allow_custom_js', $suelto, $user_id, $post_id )` es la
   única vía de relajar la regla del multisitio, y solo esa regla: la capacidad y
   el área se comprueban antes. Es un `add_filter` que se ve en el repositorio y
-  se audita. **Marcar `unfiltered_html` a un rol en WPFront o en Members no es
+  se audita. **Marcar `unfiltered_html` a un rol en WPFront no es
   la vía**: concede mucho más que este campo y reabre la concesión global que el
   aplicativo no hace en ningún sitio.
 - **Se comprueba en tres sitios.** La pestaña «Código» del taller no existe para

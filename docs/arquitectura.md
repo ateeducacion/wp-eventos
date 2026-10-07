@@ -122,8 +122,7 @@ El detalle, capacidad a capacidad: [roles-y-permisos.md](roles-y-permisos.md).
 | Plugin | Uso |
 |--------|-----|
 | Code Snippets | Ejecuta el bundle y los snippets auxiliares |
-| Members | Ver y ajustar los roles y las capacidades `evt_*` |
-| WPFront User Role Editor | Los mismos roles y el cambio de usuario para probar |
+| WPFront User Role Editor | Ver los roles y las capacidades `evt_*`, y cambiar de usuario para probar |
 | SQL Buddy | Inspección de datos en local |
 
 El gestor de formularios **no se instala**: nada de `src/Evt/` depende de él.
