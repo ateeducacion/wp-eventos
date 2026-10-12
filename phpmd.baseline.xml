@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<phpmd-baseline>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="scripts/lib/snippet-sync.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="scripts/lib/snippet-sync.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="scripts/seed-demo.php"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="scripts/setup-pages.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="scripts/setup-pages.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="snippets/evt-eventos-app.bundle.php" method="schema"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="activity"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="activity"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="answers"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="validate"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="validate"/>
+  <violation rule="PHPMD\Rule\Design\TooManyPublicMethods" file="snippets/evt-eventos-app.bundle.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="snippets/evt-eventos-app.bundle.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="scope_assignment_state"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="resolve_area_assignment"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="resolve_request"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="resolve_request"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="sync"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="sync"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="snippets/evt-eventos-app.bundle.php" method="sync"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="sanitize_files"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="show_admin_bar"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="handle"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="signup"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="signup"/>
+  <violation rule="PHPMD\Rule\Design\TooManyMethods" file="snippets/evt-eventos-app.bundle.php"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="handle"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="save_registration"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="html"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="row"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="snippets/evt-eventos-app.bundle.php" method="html"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="image_field"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="image_field"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="html"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="maybe_handle_submit"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="model"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="submitted_fields"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="submitted_points"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="grid"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="appearance"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="appearance"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="clean"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="cover"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="cover"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="handle_actions"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="handle_actions"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/evt-eventos-app.bundle.php" method="render"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/evt-eventos-app.bundle.php" method="render"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="snippets/evt-eventos-app.bundle.php" method="render"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="snippets/roles-and-profiles.php"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="snippets/roles-and-profiles.php"/>
+  <violation rule="PHPMD\Rule\Design\TooManyPublicMethods" file="src/Evt/Access/EventAccess.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/Access/EventAccess.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Access/EventAccess.php" method="scope_assignment_state"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Access/EventAccess.php" method="resolve_area_assignment"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Admin/Settings.php" method="handle_actions"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Admin/Settings.php" method="handle_actions"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Admin/Settings.php" method="render"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Admin/Settings.php" method="render"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="src/Evt/Admin/Settings.php" method="render"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Centre/CentreCatalogueSync.php" method="sync"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Centre/CentreCatalogueSync.php" method="sync"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="src/Evt/Centre/CentreCatalogueSync.php" method="sync"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Domain/ActivityInput.php" method="activity"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Domain/ActivityInput.php" method="activity"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Domain/EventInput.php" method="validate"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Domain/EventInput.php" method="validate"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/Domain/SignupQuestions.php" method="answers"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="src/Evt/Meta/EventMetaRegistration.php" method="schema"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/Meta/RegistrationMetaRegistration.php" method="sanitize_files"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PostType/EventPostType.php" method="resolve_request"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PostType/EventPostType.php" method="resolve_request"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/Block/ProgrammeBlock.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/Block/ProgrammeBlock.php" method="grid"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/ContactMap.php" method="clean"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/EventList.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/EventView.php"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/EventView.php" method="appearance"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/EventView.php" method="appearance"/>
+  <violation rule="PHPMD\Rule\Design\TooManyMethods" file="src/Evt/PublicFront/EventWorkspace.php"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/EventWorkspace.php"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/EventWorkspace.php" method="handle"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/EventWorkspace.php" method="handle"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/EventWorkspace.php" method="save_registration"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/PageForm.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/PageForm.php" method="maybe_handle_submit"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/PageForm.php" method="model"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/PageForm.php" method="submitted_fields"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/PageForm.php" method="submitted_points"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/RegistrationFiles.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/RegistrationFiles.php" method="handle"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveClassComplexity" file="src/Evt/PublicFront/Shell.php"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/Shell.php" method="show_admin_bar"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/SignupForm.php" method="signup"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/SignupForm.php" method="signup"/>
+  <violation rule="PHPMD\Rule\Design\ExcessiveMethodLength" file="src/Evt/PublicFront/View/EventAppearancePanel.php" method="html"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/View/EventAppearancePanel.php" method="image_field"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/View/EventAppearancePanel.php" method="image_field"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/View/EventChrome.php" method="cover"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/View/EventChrome.php" method="cover"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/View/EventProgrammePanel.php" method="html"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/View/EventSectionsPanel.php" method="row"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Evt/PublicFront/View/EventWorkspaceView.php" method="html"/>
+  <violation rule="PHPMD\Rule\Design\NPathComplexity" file="src/Evt/PublicFront/View/EventWorkspaceView.php" method="html"/>
+</phpmd-baseline>
