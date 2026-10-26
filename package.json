@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@erseco/code-snippets-client": "0.1.7",
+    "@erseco/code-snippets-client": "0.2.0",
     "@fontsource/aboreto": "5.3.0",
     "@fontsource/alata": "5.3.0",
     "@fontsource/aldrich": "5.3.0",
