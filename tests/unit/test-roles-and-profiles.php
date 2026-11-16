@@ -324,7 +324,7 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$esperada = $datos['devDependencies']['tom-select'];
 		$vendor   = evt_scope_select_vendor();
 
-		$this->assertSame( '2.6.2', $esperada, 'versión exacta, sin ^ ni ~' );
+		$this->assertSame( '2.7.0', $esperada, 'versión exacta, sin ^ ni ~' );
 		$this->assertSame( $esperada, $vendor['ver'] );
 		$this->assertStringStartsWith( 'https://cdn.jsdelivr.net/npm/tom-select@' . $esperada . '/', $vendor['js'] );
 		$this->assertStringStartsWith( 'https://cdn.jsdelivr.net/npm/tom-select@' . $esperada . '/', $vendor['css'] );
