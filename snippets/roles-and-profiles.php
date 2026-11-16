@@ -451,21 +451,21 @@ if ( ! function_exists( 'evt_scope_select_vendor' ) ) {
 	 *
 	 * Los hashes se calculan pidiendo cada fichero al mismo CDN que lo sirve:
 	 *
-	 *   curl -s https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/js/tom-select.complete.min.js \
+	 *   curl -s https://cdn.jsdelivr.net/npm/tom-select@2.7.0/dist/js/tom-select.complete.min.js \
 	 *     | openssl dgst -sha384 -binary | openssl base64 -A
 	 *
-	 * Calculados el 2026-09-28, dos veces y con el mismo resultado. La versión
+	 * Calculados el 2026-11-16, dos veces y con el mismo resultado. La versión
 	 * está clavada aquí, en las URL y en `package.json` (ADR-0015).
 	 *
 	 * @return array{ver:string, js:string, js_sri:string, css:string, css_sri:string}
 	 */
 	function evt_scope_select_vendor(): array {
 		return array(
-			'ver'     => '2.6.2',
-			'js'      => 'https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/js/tom-select.complete.min.js',
-			'js_sri'  => 'sha384-1mYKSrq1Nu5YJmWrIU9cvwWQlUyyukJJM9XMkAxY03nb/T69CK+Sn7rjFxVU3SSM',
-			'css'     => 'https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/css/tom-select.min.css',
-			'css_sri' => 'sha384-TmpK/k9hjDn5j0CYqLHMnHXcBwdFN8NvMbPDxOC5sxl76DGqYfHOjiSobNSHB4NS',
+			'ver'     => '2.7.0',
+			'js'      => 'https://cdn.jsdelivr.net/npm/tom-select@2.7.0/dist/js/tom-select.complete.min.js',
+			'js_sri'  => 'sha384-6MTvOa3EHHoM7xZpNAMYb7CudHNfwio+DW1LFx1HBz6Udh5eW8hJjh4HKUsg7MoO',
+			'css'     => 'https://cdn.jsdelivr.net/npm/tom-select@2.7.0/dist/css/tom-select.min.css',
+			'css_sri' => 'sha384-v1e1Wtck6optfc9q8Rb+djTD/ei6A4q554D+ShwJ5QNExxiCuRTgJQdzh4rNjX7H',
 		);
 	}
 }
