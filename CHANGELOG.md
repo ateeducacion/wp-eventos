@@ -8,6 +8,31 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.2.0] — 2026-11-17
+
+### Añadido
+
+- **Varios talleres por persona.** En «Formulario y plazos», «Talleres por persona» dice cuántos elige cada una (uno, si no se toca) y un campo nuevo deja escribir instrucciones encima de la lista
+- Un taller que se repite en dos horarios se crea dos veces con el mismo título: nadie puede apuntarse a las dos sesiones ni elegir dos talleres que coincidan en hora, y el formulario lo explica siempre
+- En «Participantes» y en el CSV cada persona lleva todos sus talleres, y las sesiones de un taller repetido salen con su hora
+- **Correo de confirmación** al inscribirse, con el enlace personal para volver a la inscripción y elegir o cambiar taller
+- En la página de inscripción, «¿Ya se inscribió? Le reenviamos el enlace» manda de nuevo el enlace al correo inscrito, sin decir si existe la inscripción
+- Con la sesión iniciada no hace falta el enlace: la cuenta encuentra su propia inscripción
+- **«Inscribir a una persona»** en «Participantes»: la organización da de alta a quien no sabe inscribirse, declara su consentimiento y le llega el mismo correo
+- **Pestaña «Asistencia»** en el taller del evento: puntos de control con su código QR que se marcan desde el móvil con la propia cuenta y solo mientras están abiertos, marcas a mano, exportación a CSV y hoja de firmas para imprimir, de todo el evento o de un taller
+
+### Cambiado
+
+- Un mismo documento de identidad ya no puede inscribirse dos veces en el mismo evento, ni al inscribirse ni al corregir una inscripción
+- Al corregir una inscripción, los talleres se eligen con casillas y pasan por las mismas reglas que en el formulario público
+- Bootstrap 5.3.9, Bootstrap Icons 1.13.2 y Tom Select 2.7.0 en las pantallas que los cargan
+
+### Pendiente antes de desplegar
+
+- Actualizar también los snippets sueltos «Bootstrap 5» y «Roles y perfiles», que cambian de versión de librería
+- Comprobar en el sitio que llega el correo de confirmación: sale con el remitente que tenga configurado WordPress, y se puede cambiar con el filtro `evt_mail`
+- Para controlar la asistencia, la página de inscripción del evento tiene que estar publicada: es la que abren los códigos QR
+
 ## [0.1.9] — 2026-10-07
 
 ### Añadido
