@@ -1,7 +1,7 @@
 ---
 id: ADR-0036
 title: "Los ficheros aportados en una inscripción no son adjuntos de WordPress"
-status: Propuesta
+status: Aceptada
 date: 2026-09-19
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Propuesta el 2026-09-19 y en el código desde entonces:
+`src/Evt/PublicFront/RegistrationFiles.php`, con sus pruebas en
+`tests/unit/test-registration-files.php`.
 
 ## Contexto
 

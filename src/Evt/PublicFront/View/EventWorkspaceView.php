@@ -22,6 +22,31 @@ use Evt\Taxonomy\EventTaxonomies;
 final class EventWorkspaceView {
 
 	/**
+	 * How the read-only block opens: everything inside is switched off.
+	 */
+	public const READ_ONLY_OPEN = '<fieldset class="evt-solo-lectura" disabled><legend class="screen-reader-text">Evento en solo lectura</legend>';
+
+	/**
+	 * Take a piece that only reads —a filter, an export— out of the read-only block.
+	 *
+	 * En un evento cerrado el panel va dentro de un `fieldset` desactivado,
+	 * que apaga también buscar y exportar. Esto cierra el bloque, pinta la
+	 * pieza y lo vuelve a abrir, así que la pieza funciona y lo demás sigue
+	 * apagado.
+	 *
+	 * @param array<string, mixed> $m    Model.
+	 * @param string               $html Piece that only reads.
+	 * @return string
+	 */
+	public static function outside_read_only( array $m, string $html ): string {
+		if ( true === ( $m['can_edit'] ?? false ) ) {
+			return $html;
+		}
+		return '</fieldset>' . $html . self::READ_ONLY_OPEN;
+	}
+
+
+	/**
 	 * Paint the workshop.
 	 *
 	 * @param array<string, mixed> $m What EventWorkspace::model() returned.
@@ -66,7 +91,7 @@ final class EventWorkspaceView {
 		// consultar y exportar sigue funcionando.
 		$cerrado = true !== $m['can_edit'];
 		if ( $cerrado ) {
-			echo '<fieldset class="evt-solo-lectura" disabled><legend class="screen-reader-text">Evento en solo lectura</legend>';
+			echo self::READ_ONLY_OPEN; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- constante.
 		}
 
 		if ( EventWorkspace::PANEL_SPEAKERS === $panel ) {

@@ -1,7 +1,7 @@
 ---
 id: ADR-0052
 title: "La organización inscribe a una persona, y declara su consentimiento"
-status: Propuesta
+status: Aceptada
 date: 2026-11-17
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada con la meta `evt_reg_by` (`RegistrationMetaKeys::REG_BY`) y el
+alta desde «Participantes»; pruebas en
+`tests/unit/test-registration-admin.php`. Salió en la v0.2.0.
 
 ## Contexto
 

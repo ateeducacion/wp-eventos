@@ -96,6 +96,121 @@ final class EventPostType {
 		add_filter( 'post_type_link', array( self::class, 'draft_link' ), 20, 2 );
 		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
 		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
+		add_filter( 'the_posts', array( self::class, 'hide_unpublished_sections' ) );
+		add_action( 'before_delete_post', array( self::class, 'delete_what_hangs' ), 10, 2 );
+	}
+
+	/**
+	 * Delete for good everything that hangs from an event deleted for good.
+	 *
+	 * WordPress, al borrar definitivamente un contenido jerárquico, sube sus
+	 * hijas al padre del borrado: las secciones de un evento raíz pasarían a
+	 * ser eventos sueltos y publicados, sin ámbito que los abra. Y lo que
+	 * cuelga por `post_parent` de otro tipo —ponentes, actividades,
+	 * inscripciones— se quedaría apuntando a un evento que ya no existe: las
+	 * inscripciones, con sus datos y sus documentos, sin pantalla que las
+	 * enseñe ni las borre. Se borra todo antes que el evento; las inscripciones
+	 * una a una, para que cada una se lleve sus documentos privados
+	 * ({@see \Evt\PublicFront\RegistrationFiles::on_delete()}).
+	 *
+	 * Solo pasa con el borrado **definitivo**: mandar a la papelera no toca nada.
+	 *
+	 * @param int   $post_id Post being deleted.
+	 * @param mixed $post    The post.
+	 * @return void
+	 */
+	public static function delete_what_hangs( $post_id, $post = null ): void {
+		$post = $post instanceof \WP_Post ? $post : get_post( (int) $post_id );
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type ) {
+			return;
+		}
+		$hijos = get_posts(
+			array(
+				'post_type'        => array( self::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE, RegistrationPostType::POST_TYPE ),
+				'post_parent'      => (int) $post->ID,
+				'post_status'      => 'any',
+				'numberposts'      => -1,
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+			)
+		);
+		// `any` no incluye la papelera: lo que ya estaba en ella también se va.
+		$en_papelera = get_posts(
+			array(
+				'post_type'        => array( self::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE, RegistrationPostType::POST_TYPE ),
+				'post_parent'      => (int) $post->ID,
+				'post_status'      => 'trash',
+				'numberposts'      => -1,
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+			)
+		);
+		foreach ( array_merge( $hijos, $en_papelera ) as $hijo ) {
+			// Una sección se lleva a su vez lo suyo: esta misma función.
+			wp_delete_post( (int) $hijo, true );
+		}
+	}
+
+	/**
+	 * The event a public piece belongs to, or 0 when it is an event itself or not ours.
+	 *
+	 * Una sección cuelga del evento por la jerarquía; un ponente o una
+	 * actividad, por `post_parent` (ADR-0026). Los tres se esconden igual.
+	 *
+	 * @param \WP_Post $post Post.
+	 * @return int
+	 */
+	private static function event_of( \WP_Post $post ): int {
+		$padre = (int) $post->post_parent;
+		if ( $padre <= 0 ) {
+			return 0;
+		}
+		if ( self::POST_TYPE === $post->post_type ) {
+			return EventAccess::root_id( (int) $post->ID );
+		}
+		if ( in_array( $post->post_type, array( SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE ), true ) ) {
+			return EventAccess::root_id( $padre );
+		}
+		return 0;
+	}
+
+	/**
+	 * Drop the sections, speakers and activities of an unpublished event from what the public gets.
+	 *
+	 * Despublicar un evento o mandarlo a la papelera cambia la raíz y deja las
+	 * secciones con el estado que tuvieran: sin esto, `/<evento>/programa/`, la
+	 * REST, el mapa del sitio y el buscador seguirían enseñando un evento que
+	 * ya no está en la web. Se quitan en el único sitio por el que pasan todas
+	 * esas consultas; quien puede abrir el evento las sigue viendo para
+	 * preparar el borrador. Con la página sola quitada, WordPress da un 404.
+	 *
+	 * Las consultas internas (`get_posts()`, que suprime filtros) no pasan por
+	 * aquí: el taller y los guiones ven todo.
+	 *
+	 * @param mixed $posts Posts found.
+	 * @return mixed
+	 */
+	public static function hide_unpublished_sections( $posts ) {
+		if ( ! is_array( $posts ) || array() === $posts || is_admin() ) {
+			return $posts;
+		}
+		$estado = array();
+		$out    = array();
+		foreach ( $posts as $post ) {
+			$raiz = $post instanceof \WP_Post ? self::event_of( $post ) : 0;
+			if ( $raiz <= 0 ) {
+				$out[] = $post;
+				continue;
+			}
+			if ( ! isset( $estado[ $raiz ] ) ) {
+				$estado[ $raiz ] = 'publish' === get_post_status( $raiz )
+					|| EventAccess::can_open( get_current_user_id(), $raiz );
+			}
+			if ( $estado[ $raiz ] ) {
+				$out[] = $post;
+			}
+		}
+		return $out;
 	}
 
 	/**

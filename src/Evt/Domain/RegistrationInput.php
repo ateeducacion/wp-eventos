@@ -128,13 +128,36 @@ final class RegistrationInput {
 	 * A tax ID as it gets stored: upper case, no spaces, no dashes.
 	 *
 	 * Normalizar es lo que evita que la misma persona entre dos veces escrita
-	 * de dos maneras.
+	 * de dos maneras. Un DNI o un NIE al que le faltan los ceros de delante
+	 * —«1234567L» por «01234567L»— se completa, pero **solo si la letra de
+	 * control cuadra** con el número completo: así no se toca un pasaporte
+	 * que por casualidad tenga la misma forma.
 	 *
 	 * @param string $value Raw value.
 	 * @return string
 	 */
 	public static function tax_id( string $value ): string {
-		return strtoupper( (string) preg_replace( '/[\s.\-]/', '', $value ) );
+		$valor = strtoupper( (string) preg_replace( '/[\s.\-]/', '', $value ) );
+		if ( preg_match( '/^(\d{1,7})([A-Z])$/', $valor, $m ) ) {
+			$completo = str_pad( $m[1], 8, '0', STR_PAD_LEFT );
+			return self::dni_letter( $completo ) === $m[2] ? $completo . $m[2] : $valor;
+		}
+		if ( preg_match( '/^([XYZ])(\d{1,6})([A-Z])$/', $valor, $m ) ) {
+			$completo = str_pad( $m[2], 7, '0', STR_PAD_LEFT );
+			$numero   = (string) strpos( 'XYZ', $m[1] ) . $completo;
+			return self::dni_letter( $numero ) === $m[3] ? $m[1] . $completo . $m[3] : $valor;
+		}
+		return $valor;
+	}
+
+	/**
+	 * The control letter of a Spanish DNI number (a NIE maps X/Y/Z to 0/1/2 first).
+	 *
+	 * @param string $digits Digits.
+	 * @return string
+	 */
+	private static function dni_letter( string $digits ): string {
+		return substr( 'TRWAGMYFPDXBNJZSQVHLCKE', (int) $digits % 23, 1 );
 	}
 
 	/**
@@ -171,11 +194,15 @@ final class RegistrationInput {
 	 * Sin `filter_var()` para que la clase siga siendo pura y el resultado sea
 	 * el mismo en cualquier PHP: algo, una arroba, algo, un punto y algo.
 	 *
+	 * **Solo ASCII.** Al guardarla, `sanitize_email()` quita lo que no lo es:
+	 * «josé@ejemplo.es» quedaría en «jos@ejemplo.es», y el enlace personal de
+	 * la inscripción iría a otra persona. Mejor pedir que se revise.
+	 *
 	 * @param string $value Raw value.
 	 * @return bool
 	 */
 	public static function is_email( string $value ): bool {
-		return (bool) preg_match( '/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/', $value );
+		return (bool) preg_match( '/^[^@\s\x80-\xFF]+@[^@\s.\x80-\xFF]+(\.[^@\s.\x80-\xFF]+)+$/', $value );
 	}
 
 	/**

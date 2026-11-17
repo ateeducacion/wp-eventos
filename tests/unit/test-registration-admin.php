@@ -217,6 +217,43 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Si el máximo bajó después de elegir, corregir un dato no le quita un taller.
+	 */
+	public function test_lowering_the_maximum_does_not_drop_a_workshop_on_correction() {
+		update_post_meta( $this->evento, RegistrationMetaKeys::WORKSHOP_MAX, 2 );
+		$id = $this->inscripcion();
+		$a  = $this->taller( 5 );
+		$b  = $this->taller( 5 );
+		wp_update_post(
+			array(
+				'ID'         => $b,
+				'post_title' => 'Otro taller',
+			)
+		);
+		update_post_meta( $b, ProgrammeMetaKeys::ACTIVITY_START, '19:00' );
+		update_post_meta( $b, ProgrammeMetaKeys::ACTIVITY_END, '20:00' );
+		$this->assertTrue( Registrations::seat( $this->evento, $id, array( $a, $b ) )['ok'] );
+		update_post_meta( $this->evento, RegistrationMetaKeys::WORKSHOP_MAX, 1 );
+
+		$this->enviar(
+			EventWorkspace::OP_REG_SAVE,
+			$id,
+			array(
+				'evt_rg_tax_id'   => '12345678Z',
+				'evt_rg_name'     => 'Ana',
+				'evt_rg_surname'  => 'Martín',
+				'evt_rg_email'    => 'ana@example.org',
+				'evt_rg_phone'    => '600000000',
+				'evt_rg_centre'   => '38000001',
+				'evt_rg_workshop' => array( (string) $a, (string) $b ),
+			)
+		);
+
+		$this->assertSame( 'ok', $this->aviso()['tipo'] );
+		$this->assertEqualsCanonicalizing( array( $a, $b ), Registrations::workshops_of( $id ) );
+	}
+
+	/**
 	 * Un centro que llegó sin código se conserva si no se escribe uno.
 	 */
 	public function test_a_centre_without_code_is_kept() {

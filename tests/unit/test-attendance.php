@@ -278,6 +278,7 @@ class Test_Attendance extends WP_UnitTestCase {
 				EventWorkspace::FIELD_EVENT => (string) $this->evento,
 				'evt_at_rows'               => array( (string) $id, '999999' ),
 				'evt_at'                    => array( $id => array( $puntos[1]['id'] => '1' ) ),
+				'evt_at_was'                => array( $id => array( $puntos[0]['id'] => '1' ) ),
 			),
 			EventWorkspace::nonce_action( $op ),
 			EventWorkspace::nonce_name( $op )
@@ -287,6 +288,32 @@ class Test_Attendance extends WP_UnitTestCase {
 		$marcas = Attendance::marks( $id );
 		$this->assertArrayNotHasKey( $puntos[0]['id'], $marcas, 'desmarcada a mano' );
 		$this->assertSame( Attendance::BY_MANUAL, $marcas[ $puntos[1]['id'] ]['by'] );
+	}
+
+	/**
+	 * Una marca por QR que llegó con la pestaña abierta no se borra al guardar.
+	 */
+	public function test_saving_the_tab_keeps_marks_it_did_not_show() {
+		$id     = $this->inscripcion( 'Ana', '12345678Z', 'ana@example.org' );
+		$puntos = $this->guardar_puntos( array( array( 'label' => 'Entrada' ) ) );
+
+		// La pestaña se pintó sin marca; entretanto, Ana escanea.
+		Attendance::mark( $id, $puntos[0]['id'], Attendance::BY_QR );
+
+		$this->acting_as( $this->admin );
+		$op = EventWorkspace::OP_ATT_MARKS;
+		$this->post(
+			array(
+				EventWorkspace::FIELD_DO    => $op,
+				EventWorkspace::FIELD_EVENT => (string) $this->evento,
+				'evt_at_rows'               => array( (string) $id ),
+			),
+			EventWorkspace::nonce_action( $op ),
+			EventWorkspace::nonce_name( $op )
+		);
+		$this->exit_url( array( EventWorkspace::class, 'handle' ) );
+
+		$this->assertSame( Attendance::BY_QR, Attendance::marks( $id )[ $puntos[0]['id'] ]['by'] );
 	}
 
 	/**

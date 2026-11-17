@@ -28,6 +28,12 @@ anotadas y XML de formularios que se consultan al implementar.
 El directorio está vacío a 2026-09-12 y se deja creado a propósito, para que
 el primer esbozo tenga sitio y esta guía se lea antes de dejarlo caer.
 
+A 2026-11-17 sigue vacío. Las fuentes del lienzo de la sesión de diseño del
+2026-09-13 no están aquí sino en `.design/` (`*.dc.html` y `canvas.json`),
+que es donde las citan las ADR que salieron de ella
+([ADR-0018](../adr/ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) a
+[ADR-0021](../adr/ADR-0021-el-ponente-pertenece-a-su-evento.md)).
+
 ## Uso
 
 - Consultar maquetación, campos y flujos al implementar `src/Evt/` y las

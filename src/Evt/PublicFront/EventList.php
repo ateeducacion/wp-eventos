@@ -758,10 +758,12 @@ final class EventList {
 			// la cifra de «Papelera (N)» no cuesta una consulta más, y el
 			// listado normal la deja fuera igual que antes.
 			'post_status'         => array_merge( self::STATUSES, array( self::FILTER_TRASH ) ),
-			// ponytail: el ámbito entero en memoria —hoy son unas decenas de
-			// eventos, y el estado derivado no se puede pedir a la base de
-			// datos—; si crece, guardar el estado en meta y paginar la consulta.
-			'posts_per_page'      => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- el listado filtra y pagina sobre el ámbito completo.
+			// El ámbito entero en memoria: el estado derivado no se puede pedir
+			// a la base de datos, así que se filtra y pagina en PHP. Sin tope:
+			// con uno, los eventos más antiguos —los históricos importados—
+			// desaparecían del listado sin aviso y las cifras salían mal. Si
+			// algún día pesa, guardar el estado en meta y paginar la consulta.
+			'posts_per_page'      => -1,
 			'orderby'             => 'date',
 			'order'               => 'DESC',
 			'no_found_rows'       => true,
@@ -815,7 +817,7 @@ final class EventList {
 			'courses'  => self::terms( $id, EventTaxonomies::COURSE ),
 			'start'    => $inicio,
 			'end'      => $fin,
-			'state'    => EventState::of( $inicio, $fin ),
+			'state'    => EventState::of( $inicio, $fin, current_time( 'Y-m-d' ) ),
 			'archived' => EventAccess::is_archived( $id ),
 			'status'   => (string) $post->post_status,
 			'sections' => 0,

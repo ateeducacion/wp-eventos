@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0003, ADR-0006, ADR-0008, ADR-0016, ADR-0017, ADR-0018, ADR-0023]
+  adrs: [ADR-0003, ADR-0006, ADR-0008, ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0028]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -285,3 +285,13 @@ en el caso, las ediciones anuales, que parecía justificar el compartir—.
   vive la pestaña «Ponentes».
 - [ADR-0023](ADR-0023-bloqueo-de-edicion-con-el-de-wordpress.md) — el bloqueo
   que ahora alcanza a los ponentes.
+
+## Adenda — 2026-11-17: la copia la retiró la ADR-0028
+
+Lo que el título promete en su segunda mitad —«se copia»— no se hizo: la
+[ADR-0028](ADR-0028-no-se-copian-ponentes.md) retiró el botón de copiar fichas
+de otro evento antes de escribirlo. Sigue en vigor la primera mitad: el
+ponente pertenece a su evento y no se comparte entre eventos
+([ADR-0026](ADR-0026-ponentes-y-actividades-cuelgan-del-evento.md)).
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

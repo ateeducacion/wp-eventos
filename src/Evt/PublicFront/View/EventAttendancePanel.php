@@ -204,30 +204,32 @@ final class EventAttendancePanel {
 		$accion  = (string) strtok( $base, '?' );
 		$ocultos = array();
 		parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $ocultos );
-		$html .= '<form class="evt-form evt-filtro" method="get" action="' . esc_url( $accion ) . '">';
+		$lee = '<form class="evt-form evt-filtro" method="get" action="' . esc_url( $accion ) . '">';
 		foreach ( $ocultos as $clave => $valor ) {
-			$html .= '<input type="hidden" name="' . esc_attr( (string) $clave ) . '" value="' . esc_attr( (string) $valor ) . '">';
+			$lee .= '<input type="hidden" name="' . esc_attr( (string) $clave ) . '" value="' . esc_attr( (string) $valor ) . '">';
 		}
 		if ( array() !== $talleres ) {
-			$html .= '<div class="evt-form-campo"><label for="evt-at-taller">Taller</label><select id="evt-at-taller" name="' . esc_attr( EventWorkspace::ARG_WORKSHOP ) . '"><option value="">Todas las personas</option>';
+			$lee .= '<div class="evt-form-campo"><label for="evt-at-taller">Taller</label><select id="evt-at-taller" name="' . esc_attr( EventWorkspace::ARG_WORKSHOP ) . '"><option value="">Todas las personas</option>';
 			foreach ( $talleres as $id => $rotulo ) {
-				$html .= sprintf( '<option value="%1$d"%2$s>%3$s</option>', (int) $id, selected( $taller, (int) $id, false ), esc_html( (string) $rotulo ) );
+				$lee .= sprintf( '<option value="%1$d"%2$s>%3$s</option>', (int) $id, selected( $taller, (int) $id, false ), esc_html( (string) $rotulo ) );
 			}
-			$html .= '</select></div><div class="evt-acciones"><button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Filtrar</button></div>';
+			$lee .= '</select></div><div class="evt-acciones"><button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Filtrar</button></div>';
 		}
-		$html .= '</form>';
+		$lee .= '</form>';
 
-		$hoja  = add_query_arg(
+		$hoja = add_query_arg(
 			array(
 				Attendance::ARG_SHEET        => '1',
 				EventWorkspace::ARG_WORKSHOP => $taller > 0 ? (string) $taller : '',
 			),
 			$base
 		);
-		$html .= '<div class="evt-acciones">';
-		$html .= '<a class="' . esc_attr( Assets::button_class() ) . '" href="' . esc_url( $hoja ) . '" target="_blank" rel="noopener">Hoja de firmas para imprimir</a>';
-		$html .= self::export_form( $event_id );
-		$html .= '</div>';
+		$lee .= '<div class="evt-acciones">';
+		$lee .= '<a class="' . esc_attr( Assets::button_class() ) . '" href="' . esc_url( $hoja ) . '" target="_blank" rel="noopener">Hoja de firmas para imprimir</a>';
+		$lee .= self::export_form( $event_id );
+		$lee .= '</div>';
+		// Filtrar, la hoja y el CSV solo leen: funcionan también en un evento cerrado.
+		$html .= EventWorkspaceView::outside_read_only( $m, $lee );
 
 		if ( array() === $filas ) {
 			return $html . '<p class="evt-vacio">Todavía no hay nadie inscrito' . ( $taller > 0 ? ' en este taller' : '' ) . '.</p></section>';
@@ -263,12 +265,14 @@ final class EventAttendancePanel {
 				$marca = $fila['marks'][ $punto['id'] ] ?? null;
 				$texto = null === $marca ? '' : Attendance::time( (string) $marca['at'] ) . ( Attendance::BY_MANUAL === $marca['by'] ? ' (a mano)' : '' );
 				$html .= sprintf(
-					'<td data-rotulo="%1$s"><label class="evt-check"><input type="checkbox" name="evt_at[%2$d][%3$s]" value="1"%4$s> %5$s</label></td>',
+					'<td data-rotulo="%1$s"><label class="evt-check"><input type="checkbox" name="evt_at[%2$d][%3$s]" value="1"%4$s> %5$s</label>%6$s</td>',
 					esc_attr( (string) $punto['label'] ),
 					$id,
 					esc_attr( (string) $punto['id'] ),
 					checked( null !== $marca, true, false ),
-					esc_html( $texto )
+					esc_html( $texto ),
+					// Lo que se veía marcado al pintar: solo eso se puede quitar.
+					null !== $marca ? sprintf( '<input type="hidden" name="evt_at_was[%1$d][%2$s]" value="1">', $id, esc_attr( (string) $punto['id'] ) ) : ''
 				);
 			}
 			$html .= '</tr>';

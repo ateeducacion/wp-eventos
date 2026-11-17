@@ -489,11 +489,21 @@ final class RegistrationFiles {
 			return null;
 		}
 
-		try {
-			$fs->chmod( $camino, self::MODE_OPEN );
-			$bytes = $fs->get_contents( $camino );
-		} finally {
-			$fs->chmod( $camino, self::MODE_CLOSED );
+		// Dos descargas a la vez del mismo documento —un doble clic, dos
+		// personas de la organización— se cierran el permiso la una a la otra:
+		// la que llega tarde lo encuentra cerrado. Se reintenta un par de veces
+		// antes de decir que no está.
+		$bytes = false;
+		for ( $intento = 0; $intento < 3; $intento++ ) {
+			try {
+				$fs->chmod( $camino, self::MODE_OPEN );
+				$bytes = $fs->get_contents( $camino );
+			} finally {
+				$fs->chmod( $camino, self::MODE_CLOSED );
+			}
+			if ( is_string( $bytes ) ) {
+				break;
+			}
 		}
 		return is_string( $bytes ) ? $bytes : null;
 	}

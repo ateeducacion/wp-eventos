@@ -71,13 +71,13 @@ re-litigar. En este repositorio, típicamente decisiones que afecten a:
 - el papel del repositorio (entorno de desarrollo, no plugin) y qué es fuente
   de verdad (`src/Evt/`, `snippets/`);
 - el mecanismo de sincronización de snippets con Code Snippets;
-- el modelo de datos: los tipos de contenido `evt_event`, `evt_speaker` y
-  `evt_activity` y las taxonomías `evt_area`, `evt_type` y `evt_course`;
+- el modelo de datos: los tipos de contenido `evt_event`, `evt_speaker`,
+  `evt_activity` y `evt_registration` y las taxonomías `evt_area`, `evt_type`
+  y `evt_course`;
 - el reparto de permisos: el área como ámbito, los roles del aplicativo y el
   acotado de la lista del escritorio;
-- la frontera con el gestor de formularios que se conserva — qué se lleva al
-  CPT, qué se queda y cómo se versiona el formulario de inscripción mientras
-  siga vivo;
+- las inscripciones y los datos personales que guardan: qué se pide, quién lo
+  ve, cómo se vuelve a ellas, qué correo se manda y cuánto se conservan;
 - el flujo de aprovisionamiento (wp-env, el despliegue sobre el subsitio de un
   multisitio) o la CI;
 - cualquier política o flujo de generación asistida por IA.
@@ -119,6 +119,10 @@ empieza por un [SDD](../sdd/README.md).
 | `Aceptada` | Acordada y en vigor. |
 | `Rechazada` | Considerada y descartada. Se conserva como registro. |
 | `Sustituida` | Reemplazada por una ADR posterior (ver `superseded_by`). |
+
+Una ADR que otra posterior cambia **solo en parte** sigue `Aceptada`: lleva una
+adenda que apunta a la nueva, la nueva la cita en `related`, y la fila de
+[`registro.md`](registro.md) lo anota —«modificada por», «ampliada por»—.
 
 ## Asistencia de IA
 

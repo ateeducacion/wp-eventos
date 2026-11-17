@@ -198,6 +198,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 				'evt_content'               => '<p>Lo que pasa cada día.</p><script>alert(1)</script>',
 				EventMetaKeys::HEADER_BG    => '#0a3d62',
 				EventMetaKeys::TITLE_FONT   => 'lato',
+				EventMetaKeys::LOGO_ID      => (string) self::factory()->post->create( array( 'post_type' => 'post' ) ),
 			)
 		);
 
@@ -224,6 +225,7 @@ class Test_Page_Form extends WP_UnitTestCase {
 		// La apariencia propia de la sección, solo la que se eligió.
 		$this->assertSame( '#0a3d62', get_post_meta( $nueva, EventMetaKeys::HEADER_BG, true ) );
 		$this->assertSame( 'lato', get_post_meta( $nueva, EventMetaKeys::TITLE_FONT, true ) );
+		$this->assertFalse( metadata_exists( 'post', $nueva, EventMetaKeys::LOGO_ID ), 'un logo que no es una imagen de la biblioteca no se guarda' );
 		$this->assertFalse(
 			metadata_exists( 'post', $nueva, EventMetaKeys::SEPARATOR ),
 			'lo que se deja en blanco se hereda del evento, y eso se guarda no guardando'

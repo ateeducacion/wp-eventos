@@ -40,10 +40,13 @@ El aplicativo se lleva a `src/Evt/` **la estructura**:
 | `post_parent` leído de `$_POST` | `Domain/EventInput` valida y `Access/EventAccess` autoriza |
 | Las inscripciones en el gestor de formularios | `evt_registration`, colgada del evento: un núcleo fijo más unas pocas preguntas por evento (ADR-0031, ADR-0032), y elegir taller con aforo duro (ADR-0033) |
 
-Las inscripciones de los eventos ya celebrados se quedan donde están: el
-aplicativo no lee el gestor de formularios. La pestaña «Participantes»
-**pregunta** con el filtro `evt_participants` y quien lo tenga delante contesta
-desde un snippet suelto (ADR-0027).
+El aplicativo no lee el gestor de formularios. Las inscripciones de los
+eventos ya celebrados se importaron una sola vez como `evt_registration` al
+sitio nuevo, con un importador que no se versiona (ADR-0045, adenda). La
+pestaña «Participantes» **pregunta** con el filtro `evt_participants`
+(ADR-0027) y quien contesta de serie es el propio aplicativo, con sus
+inscripciones (`Registrations::participants()`); el filtro se queda como
+costura para sumar filas de otra fuente desde un snippet, de solo lectura.
 
 ## Dónde está el código
 
@@ -74,7 +77,7 @@ El bundle no se edita a mano: se regenera.
 |---|---|
 | `evt_event` | **Jerárquico**: la raíz es el evento y las hijas, sus secciones (programa, ponentes, inscripción, contacto…), con el tipo en `evt_section_type` |
 | `evt_speaker` | Ponente o persona comunicadora, colgada del evento |
-| `evt_activity` | Actividad del programa: ponencia, mesa redonda, taller… Un taller es una actividad con plazas |
+| `evt_activity` | Actividad del programa: ponencia, mesa redonda, taller… Un taller es una actividad de tipo `taller` con plazas (`evt_activity_seats`) |
 | `evt_registration` | Una inscripción, colgada del evento. Elegir taller es guardar en ella los ID de las actividades, no otro tipo de contenido. Lleva también la cuenta que la hizo, quién de la organización la creó si no fue la persona, y sus marcas de asistencia |
 
 | Taxonomía | Eje | Ejemplos |
@@ -82,6 +85,42 @@ El bundle no se edita a mano: se regenera.
 | `evt_area` | Ámbito organizativo jerárquico. **Es el eje de los permisos** | `ambito-1`, `subambito-1` |
 | `evt_type` | Tipología | `jornadas`, `encuentro`, `congreso` |
 | `evt_course` | Curso escolar | `2025-2026` |
+
+### La inscripción, clave a clave
+
+Todas las claves están en `src/Evt/Meta/RegistrationMetaKeys.php`, y se
+registran en `Meta/RegistrationMetaRegistration.php`. Son dos grupos que no hay
+que confundir: lo que cuelga de **cada inscripción** y lo que el **evento**
+dice de su inscripción.
+
+| En cada `evt_registration` | Qué guarda |
+|---|---|
+| `evt_reg_tax_id`, `evt_reg_name`, `evt_reg_surname`, `evt_reg_email`, `evt_reg_phone` | El núcleo fijo (ADR-0031) |
+| `evt_reg_centre_code`, `evt_reg_centre` | El código oficial del centro y su nombre como foto de ese momento (ADR-0037) |
+| `evt_reg_consent_version`, `evt_reg_consent_at` | Qué versión de los textos de consentimiento se aceptó y cuándo (ADR-0020) |
+| `evt_reg_workshop` | Los ID de los talleres elegidos, separados por comas (ADR-0033, ADR-0050) |
+| `evt_reg_answers` | Las respuestas a las preguntas del evento, en JSON por ID de pregunta |
+| `evt_reg_files` | Los documentos aportados, en JSON por ID de pregunta, sin rutas ni URL (ADR-0036) |
+| `evt_reg_token` | El testigo del enlace personal para volver a la inscripción (ADR-0033, ADR-0051) |
+| `evt_reg_user` | La cuenta que se inscribió; 0 si no había sesión (ADR-0051) |
+| `evt_reg_by` | Quién de la organización hizo la inscripción; 0 si la hizo la persona (ADR-0052) |
+| `evt_reg_attendance` | Las marcas de asistencia, en JSON por punto de control: cuándo y si fue por QR o a mano (ADR-0053) |
+
+| En el evento raíz | Qué guarda |
+|---|---|
+| `evt_signup_open`, `evt_signup_start`, `evt_signup_end` | Si la inscripción está abierta y su plazo, opcional |
+| `evt_signup_public` | Si se puede inscribir quien no ha iniciado sesión; apagado por defecto (ADR-0039) |
+| `evt_signup_questions` | Las preguntas del evento, en JSON; cinco tipos: `check`, `one`, `many`, `text`, `file` |
+| `evt_workshop_open`, `evt_workshop_start`, `evt_workshop_end` | El plazo propio para elegir taller |
+| `evt_workshop_max`, `evt_workshop_help` | Cuántos talleres elige cada persona (uno si está vacío) y las instrucciones de encima de la lista (ADR-0050) |
+| `evt_attendance_points` | Los puntos de control de asistencia, en JSON (ADR-0053) |
+| `evt_consent_privacy`, `evt_consent_image`, `evt_consent_version` | Los dos textos de consentimiento del evento y su versión |
+
+El `post_title` de una inscripción es una referencia, no el nombre de la
+persona, y el tipo se registra cerrado: sin escritorio, sin REST, sin búsqueda
+y sin archivo (`PostType/RegistrationPostType.php`, ADR-0032).
+
+### Centros, correo, talleres y asistencia
 
 El catálogo de centros educativos no es un tipo de contenido: es un dato
 maestro externo con una copia local cacheada. La inscripción guarda el código
@@ -157,10 +196,13 @@ de los habituales para que convivan con otros entornos.
 |---------|----------|
 | `make install` / `make up` | Dependencias / arranca wp-env y lo provisiona |
 | `make bundle && make sync-snippets` | Regenera el bundle y lo lleva a Code Snippets |
+| `make seed-demo` | Rehace los datos de demostración: usuarios, eventos e inscripciones |
 | `make test` | PHPUnit (admite `FILE=…` y `FILTER=…`) |
 | `make test-js` | Tests unitarios de `assets/js` con Vitest; cobertura en `artifacts/coverage-js/` |
+| `make test-browser` | Los tres escalones de una confirmación en un navegador real |
 | `make lint` / `make fix` | PHPCS / PHPCBF |
-| `make check` | Todo lo que mira el CI; **antes de cada PR** |
+| `make check` | `lint`, `phpmd`, `check-public`, `check-provision`, `check-skills`, `test-js` y `test`; **antes de cada PR** |
+| `make check-public` | Que no se versiona nada de nadie (ADR-0030); solo necesita node |
 | `make check-plugin` | WordPress Plugin Check sobre el código de los snippets |
 | `make snippet-check` | Los snippets sobreviven al guardado de Code Snippets |
 | `make capturas` | Recorre las pantallas y deja `capturas/informe.html` |
@@ -169,6 +211,7 @@ de los habituales para que convivan con otros entornos.
 | `make clean` / `make destroy` | Resetea el entorno / lo destruye |
 | `make playground` | WordPress Playground local, sin Docker |
 | `make release` | Etiqueta la versión del CHANGELOG y publica la release |
+| `npm run snippets -- …` | Lleva un snippet al sitio de destino con las credenciales del `.env`; sin `--yes` no escribe |
 
 ## Cobertura
 

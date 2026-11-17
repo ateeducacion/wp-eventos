@@ -67,11 +67,37 @@ final class Participants {
 	 * The columns of the table, in order, with their heading.
 	 *
 	 * Es el contrato con quien conteste al filtro: una fila es este array.
-	 * Lo que traiga de más se ignora; lo que falte sale vacío.
+	 * Lo que falte sale vacío. Lo que traiga de más —una columna por cada
+	 * pregunta del evento, con su rótulo por clave (ADR-0031)— va **detrás**,
+	 * en el orden en que aparece; las claves que empiezan por `_` no son
+	 * columnas.
+	 *
+	 * @param array<int, array<string, mixed>> $filas Rows, to add the question columns they carry.
+	 * @return array<string, string> clave => rótulo.
+	 */
+	public static function columns( array $filas = array() ): array {
+		$fijas = self::fixed_columns();
+		foreach ( $filas as $fila ) {
+			if ( ! is_array( $fila ) ) {
+				continue;
+			}
+			foreach ( $fila as $clave => $valor ) {
+				$clave = (string) $clave;
+				if ( '' === $clave || '_' === $clave[0] || isset( $fijas[ $clave ] ) || ! is_scalar( $valor ) ) {
+					continue;
+				}
+				$fijas[ $clave ] = $clave;
+			}
+		}
+		return $fijas;
+	}
+
+	/**
+	 * The columns every row has, whatever the event asks.
 	 *
 	 * @return array<string, string> clave => rótulo.
 	 */
-	public static function columns(): array {
+	private static function fixed_columns(): array {
 		return array(
 			'name'        => 'Nombre',
 			'email'       => 'Correo',
@@ -116,7 +142,7 @@ final class Participants {
 	 * @return array<int, array<string, string>>
 	 */
 	public static function clean( array $filas ): array {
-		$columnas = array_keys( self::columns() );
+		$columnas = array_keys( self::columns( $filas ) );
 		$out      = array();
 		foreach ( $filas as $fila ) {
 			if ( ! is_array( $fila ) ) {
@@ -169,7 +195,7 @@ final class Participants {
 			// Se busca en las columnas declaradas y en ninguna otra clave: lo
 			// que se pinta es lo que se filtra.
 			$texto_fila = '';
-			foreach ( array_keys( self::columns() ) as $clave ) {
+			foreach ( array_keys( self::columns( array( $fila ) ) ) as $clave ) {
 				$texto_fila .= ( $fila[ $clave ] ?? '' ) . ' ';
 			}
 			if ( '' !== $buscado && false === strpos( self::fold( $texto_fila ), $buscado ) ) {
@@ -226,7 +252,7 @@ final class Participants {
 	 * @return string
 	 */
 	public static function csv( array $filas ): string {
-		$columnas = self::columns();
+		$columnas = self::columns( $filas );
 		$lineas   = array( self::csv_line( array_values( $columnas ) ) );
 
 		foreach ( $filas as $fila ) {

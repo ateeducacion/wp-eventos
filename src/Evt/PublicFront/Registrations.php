@@ -28,6 +28,14 @@ use Evt\PostType\RegistrationPostType;
 final class Registrations {
 
 	/**
+	 * The value of each lock this request holds, by event.
+	 *
+	 * @var array<int, string>
+	 */
+	private static $locks = array();
+
+
+	/**
 	 * How long a held lock stays valid, in seconds.
 	 *
 	 * Corta a propósito: una petición que muera a mitad no puede dejar el
@@ -821,32 +829,39 @@ final class Registrations {
 	 * dos candados tomados en distinto orden por dos peticiones son un abrazo
 	 * mortal que no falla hasta el día que falla (ADR-0033).
 	 *
-	 * Se toma con `add_option()`, que **falla si el nombre ya existe** porque
-	 * la columna es única en la base de datos: eso es lo que lo convierte en un
-	 * candado de verdad sin escribir SQL propio. `autoload` a `no` para no
-	 * meterlo en la carga de opciones de cada petición.
+	 * Se toma con un `INSERT IGNORE` en la tabla de opciones, que **no
+	 * inserta si el nombre ya existe** porque la columna es única: una sola
+	 * fila afectada es haber ganado. No con `add_option()`: por dentro mira
+	 * primero y luego hace `INSERT … ON DUPLICATE KEY UPDATE`, así que dos
+	 * peticiones a la vez podían creer las dos que lo tenían y quedarse con la
+	 * misma última plaza. El valor lleva la hora y algo aleatorio: soltarlo, o
+	 * retirar uno caducado, solo borra **ese** candado, nunca el de otra
+	 * petición que lo tomó después.
 	 *
 	 * @param int $event_id Event post ID.
 	 * @return bool
 	 */
 	public static function lock( int $event_id ): bool {
+		global $wpdb;
 		$nombre  = self::LOCK_PREFIX . $event_id;
+		$valor   = time() . ':' . bin2hex( random_bytes( 8 ) );
 		$esperar = 0;
 
 		do {
-			wp_cache_delete( $nombre, 'options' );
-			wp_cache_delete( 'notoptions', 'options' );
-
-			if ( add_option( $nombre, (string) time(), '', 'no' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- un candado no se cachea: es la base de datos quien decide.
+			$hecho = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $nombre, $valor ) );
+			if ( 1 === (int) $hecho ) {
+				self::$locks[ $event_id ] = $valor;
 				return true;
 			}
 
 			// Un candado caducado es de una petición que murió a mitad: se
-			// retira y se vuelve a intentar. Se borra antes de reclamarlo para
-			// que quien lo consiga sea quien gane el `add_option()`.
-			$puesto = (int) get_option( $nombre, 0 );
-			if ( $puesto > 0 && ( time() - $puesto ) > self::LOCK_TTL ) {
-				delete_option( $nombre );
+			// retira **ese**, comparando el valor leído, y se vuelve a intentar.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ídem.
+			$puesto = (string) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $nombre ) );
+			if ( '' !== $puesto && ( time() - (int) $puesto ) > self::LOCK_TTL ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ídem.
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", $nombre, $puesto ) );
 				continue;
 			}
 
@@ -858,13 +873,19 @@ final class Registrations {
 	}
 
 	/**
-	 * Release the lock of one event.
+	 * Release the lock of one event, only if it is the one this request took.
 	 *
 	 * @param int $event_id Event post ID.
 	 * @return void
 	 */
 	public static function unlock( int $event_id ): void {
-		delete_option( self::LOCK_PREFIX . $event_id );
+		global $wpdb;
+		if ( ! isset( self::$locks[ $event_id ] ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- un candado no se cachea.
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", self::LOCK_PREFIX . $event_id, self::$locks[ $event_id ] ) );
+		unset( self::$locks[ $event_id ] );
 	}
 
 	/**

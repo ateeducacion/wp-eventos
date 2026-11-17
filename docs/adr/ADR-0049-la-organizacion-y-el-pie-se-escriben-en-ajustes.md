@@ -1,7 +1,7 @@
 ---
 id: ADR-0049
 title: "La organización y los enlaces del pie se escriben en «Ajustes»"
-status: Propuesta
+status: Aceptada
 date: 2026-09-29
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/Admin/Settings.php` (opciones `evt_chrome_org` y
+`evt_chrome_footer_links`); pruebas en `tests/unit/test-admin-screens.php` y
+`tests/unit/test-event-layout.php`.
 
 ## Contexto
 

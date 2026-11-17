@@ -64,6 +64,16 @@ describe( 'slug proposal', () => {
 		expect( $( '[data-evt-slug-target]' ).value ).toHaveLength( 80 );
 	} );
 
+	it( 'never rewrites the slug a section already had', async () => {
+		document.body.innerHTML = `<form>
+			<input name="title" data-evt-slug-source value="Programa">
+			<input name="slug" data-evt-slug-target value="programa">
+		</form>`;
+		await load();
+		type( $( '[data-evt-slug-source]' ), 'Programa completo' );
+		expect( $( '[data-evt-slug-target]' ).value ).toBe( 'programa' );
+	} );
+
 	it( 'stops proposing once the slug has been typed by hand', async () => {
 		await mount();
 		type( $( '[data-evt-slug-target]' ), 'mi-slug' );
@@ -342,6 +352,27 @@ describe( 'code editor', () => {
 		await load();
 		expect( window.wp.codeEditor.initialize ).not.toHaveBeenCalled();
 	} );
+
+	it( 'tells the form when the code editor changes, so unsaved work is not lost', async () => {
+		let alCambiar = null;
+		const cm = {
+			on: ( evento, fn ) => {
+				alCambiar = fn;
+			},
+			save: vi.fn(),
+			setValue: vi.fn(),
+		};
+		window.wp = { codeEditor: { initialize: vi.fn( () => ( { codemirror: cm } ) ) } };
+		document.body.innerHTML = '<form><textarea id="css" data-evt-code data-evt-code-settings="{}"></textarea></form>';
+		const visto = vi.fn();
+		document.addEventListener( 'input', visto );
+		await load();
+
+		alCambiar();
+		expect( cm.save ).toHaveBeenCalled();
+		expect( visto ).toHaveBeenCalled();
+		document.removeEventListener( 'input', visto );
+	} );
 } );
 
 describe( 'edit lock', () => {
@@ -579,6 +610,34 @@ describe( 'side panel', () => {
 		document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape' } ) );
 		vi.advanceTimersByTime( 200 );
 		expect( $( '[data-evt-cajon]' ).hidden ).toBe( true );
+	} );
+
+	it( 'ignores the Escape that closes something else on top', async () => {
+		document.body.innerHTML = PANEL;
+		await load();
+		click( $( '[data-evt-abrir-cajon]' ) );
+
+		// Una confirmación de SweetAlert2 encima: su Escape es suyo.
+		const swal = document.createElement( 'div' );
+		swal.className = 'swal2-container';
+		document.body.appendChild( swal );
+		document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape' } ) );
+		expect( $( '[data-evt-cajon]' ).classList.contains( 'evt-cajon--saliendo' ) ).toBe( false );
+		swal.remove();
+
+		// Las sugerencias de un campo con lista: tampoco.
+		const sede = document.createElement( 'input' );
+		sede.setAttribute( 'list', 'sedes' );
+		$( '[data-evt-cajon]' ).appendChild( sede );
+		sede.focus();
+		sede.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } ) );
+		expect( $( '[data-evt-cajon]' ).classList.contains( 'evt-cajon--saliendo' ) ).toBe( false );
+	} );
+
+	it( 'keeps a read-only panel switched off once moved out of its fieldset', async () => {
+		document.body.innerHTML = '<fieldset disabled>' + PANEL + '</fieldset>';
+		await load();
+		expect( $( '[name="nombre"]' ).disabled ).toBe( true );
 	} );
 } );
 

@@ -231,7 +231,8 @@ final class EventAdmin {
 			$root  = EventAccess::root_id( $post_id );
 			$state = EventState::of(
 				(string) get_post_meta( $root, EventMetaKeys::START_DATE, true ),
-				(string) get_post_meta( $root, EventMetaKeys::END_DATE, true )
+				(string) get_post_meta( $root, EventMetaKeys::END_DATE, true ),
+				current_time( 'Y-m-d' )
 			);
 			// El cierre se dice también aquí: si no, en el escritorio una fila
 			// que no se deja editar no explica por qué.

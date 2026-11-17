@@ -305,4 +305,23 @@ class Test_Appearance_Meta extends WP_UnitTestCase {
 
 		$this->assertSame( 12, has_action( 'init', array( EventMetaRegistration::class, 'register_meta' ) ) );
 	}
+
+	/**
+	 * Todas las tipografías van en la misma versión en package.json y en el CDN (ADR-0015).
+	 */
+	public function test_every_font_package_is_pinned_to_the_cdn_version() {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions -- se lee el package.json del propio repositorio.
+		$paquete = json_decode( (string) file_get_contents( dirname( __DIR__, 2 ) . '/package.json' ), true );
+		$fuentes = array_filter(
+			(array) $paquete['devDependencies'],
+			static function ( $nombre ): bool {
+				return 0 === strpos( (string) $nombre, '@fontsource/' );
+			},
+			ARRAY_FILTER_USE_KEY
+		);
+		$this->assertNotEmpty( $fuentes );
+		foreach ( $fuentes as $nombre => $version ) {
+			$this->assertSame( \Evt\PublicFront\Fonts::VERSION, $version, $nombre . ' en desarrollo no es lo que sale en producción' );
+		}
+	}
 }

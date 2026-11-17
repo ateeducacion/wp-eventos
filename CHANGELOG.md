@@ -8,6 +8,38 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.2.2] — 2026-11-17
+
+### Corregido
+
+- Las secciones, los ponentes y las actividades de un evento en borrador o en la papelera ya no se ven fuera: ni su página, ni la REST, ni el mapa del sitio, ni el buscador. Quien prepara el evento los sigue viendo
+- Borrar definitivamente un evento se lleva sus secciones, ponentes, actividades e inscripciones con sus documentos; antes las secciones quedaban sueltas como eventos y las inscripciones sin pantalla que las borrase
+- Asistencia: guardar las marcas a mano ya no borra las marcas por QR que llegaron con la pestaña abierta
+- Participantes: las respuestas a las preguntas del evento salen en la lista, en el filtro y en el CSV
+- Un evento histórico, o abierto por otra persona, se puede seguir exportando: participantes y asistencia
+- El enlace personal del correo abre la inscripción sin pedir sesión, también en los eventos que la piden
+- No se puede cambiar de taller en un evento despublicado o histórico
+- Un correo con tildes o eñes se pide revisar en vez de guardarse mutilado, y un DNI o NIE sin los ceros de delante cuenta como el mismo documento
+- Dos personas a la vez ya no pueden quedarse con la misma última plaza: el candado del evento es atómico
+- Corregir una inscripción no le quita un taller a quien tenía más de los que hoy se permiten
+- La pestaña «Código» guarda las barras invertidas del CSS y del JavaScript
+- Corregir el título de una sección ya publicada no le cambia la dirección
+- Biografías, descripciones y «Otros participantes» conservan sus saltos de línea
+- Restaurar un ponente o una actividad de la papelera la deja publicada, como estaba
+- «Formulario y plazos» no guarda nada si rechaza un cambio de preguntas, como dice el aviso
+- Guardar la apariencia sin tocar el acento no lo fija: sigue al fondo de la cabecera
+- El logo de una sección tiene que ser una imagen de la biblioteca
+- Los vídeos incrustados y los formularios pegados en el contenido de una página ya no desaparecen, y una página con contraseña la pide
+- Los ponentes en borrador o en la papelera no salen por su nombre en el programa
+- Línea del tiempo: busca también por sede, y el filtro funciona con enlaces simples
+- El estado de un evento (próximo, abierto, finalizado) se calcula con el día del sitio en todas las pantallas
+- «Mis eventos» lista todos los eventos, sin el tope de 200
+- Un área no puede sacar una sección de su evento y dejarla como evento suelto
+- En el taller, Escape solo cierra el panel lateral cuando es para él, y en un evento de solo lectura el panel no se puede editar
+- Lo escrito en el editor de código avisa de «cambios sin guardar», y «Descartar» lo deshace
+- Una descarga de un documento no falla si otra persona lo está descargando a la vez
+- Source Serif 4 en la misma versión en desarrollo y en producción
+
 ## [0.2.1] — 2026-11-17
 
 ### Añadido

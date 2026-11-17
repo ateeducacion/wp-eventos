@@ -301,22 +301,27 @@ final class Attendance {
 	 * Lo marcado que no estaba se marca ahora, a mano; lo desmarcado se quita,
 	 * venga del QR o de otra mano. Lo que ya estaba se queda con su hora.
 	 *
-	 * @param int      $registration_id Registration post ID.
-	 * @param string[] $checked         Checkpoint IDs ticked.
-	 * @param string[] $all             Every checkpoint ID of the event.
+	 * @param int           $registration_id Registration post ID.
+	 * @param string[]      $checked         Checkpoint IDs ticked.
+	 * @param string[]      $all             Every checkpoint ID of the event.
+	 * @param string[]|null $shown      Checkpoint IDs that were ticked when the form was painted; null to trust $checked fully.
 	 * @return void
 	 */
-	public static function set_manual( int $registration_id, array $checked, array $all ): void {
+	public static function set_manual( int $registration_id, array $checked, array $all, ?array $shown = null ): void {
 		$marcas = self::marks( $registration_id );
 		$antes  = $marcas;
 		foreach ( $all as $id ) {
 			$puesto = in_array( $id, $checked, true );
+			// Solo se quita lo que la pantalla enseñaba marcado y ya no lo
+			// está: una marca por QR que llegó con la pestaña abierta no se
+			// veía, su casilla venía vacía, y no por eso se borra.
+			$se_veia = null === $shown || in_array( $id, $shown, true );
 			if ( $puesto && ! isset( $marcas[ $id ] ) ) {
 				$marcas[ $id ] = array(
 					'at' => current_time( 'mysql' ),
 					'by' => self::BY_MANUAL,
 				);
-			} elseif ( ! $puesto ) {
+			} elseif ( ! $puesto && $se_veia ) {
 				unset( $marcas[ $id ] );
 			}
 		}

@@ -83,6 +83,16 @@ final class TimelineView {
 		ob_start();
 		?>
 		<form class="evt-linea__filtro" method="get" action="<?php echo esc_url( $aqui ); ?>" role="search">
+			<?php
+			// Un formulario GET tira la consulta de su `action`: con enlaces
+			// simples, `?page_id=N` se perdería y el filtro iría a la portada.
+			$ocultos = array();
+			parse_str( (string) wp_parse_url( $aqui, PHP_URL_QUERY ), $ocultos );
+			unset( $ocultos[ Timeline::ARG_SEARCH ], $ocultos[ Timeline::ARG_AREA ] );
+			foreach ( $ocultos as $clave => $valor ) :
+				?>
+				<input type="hidden" name="<?php echo esc_attr( (string) $clave ); ?>" value="<?php echo esc_attr( (string) $valor ); ?>" />
+			<?php endforeach; ?>
 			<label class="evt-linea__campo">
 				<span>Buscar</span>
 				<input type="search" name="<?php echo esc_attr( Timeline::ARG_SEARCH ); ?>" value="<?php echo esc_attr( $buscar ); ?>" placeholder="Título, sede…" />

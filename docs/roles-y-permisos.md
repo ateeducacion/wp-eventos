@@ -6,7 +6,7 @@ date: 2026-09-13
 related:
   issues: []
   prs: []
-  adrs: [ADR-0006, ADR-0003, ADR-0004, ADR-0008, ADR-0009, ADR-0012, ADR-0013, ADR-0014, ADR-0017]
+  adrs: [ADR-0006, ADR-0003, ADR-0004, ADR-0008, ADR-0009, ADR-0012, ADR-0013, ADR-0014, ADR-0017, ADR-0038, ADR-0043, ADR-0051, ADR-0052, ADR-0053]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -35,6 +35,21 @@ por objeto es `EventAccess::map_meta_cap`; los listados solo mejoran la interfaz
 | Leer y gestionar inscripciones del evento | ✓ acotado | ✓ acotado | ✓ |
 | `evt_edit_custom_css` | ✓ acotado | ✓ acotado | ✓ |
 | `evt_edit_custom_js`, `evt_manage_app`, `evt_edit_all_areas` | — | — | ✓ |
+
+### Inscripciones y asistencia
+
+Ninguna de estas acciones tiene capacidad propia: las decide el mismo guardián
+sobre el evento raíz. Lo que **cambia** algo pasa por
+`EventAccess::can_edit()` en `EventWorkspace::handle()`, así que un evento
+marcado como histórico deja de admitirlo salvo para administración; lo que
+solo **lee** pasa por `EventAccess::can_open()`.
+
+| Acción | Quién |
+|---|---|
+| Ver y filtrar «Participantes» y «Asistencia»; exportar a CSV inscritos o asistencia; descargar un documento aportado; imprimir la hoja de firmas | Quien puede **abrir** el evento (`can_open()`: el taller en `EventWorkspace`, `RegistrationFiles::may_read()`, `Attendance::maybe_print_sheet()`). Exportar va antes del bloqueo de edición y de `can_edit()`: un evento histórico, o abierto por otra persona, se sigue exportando |
+| Corregir o borrar una inscripción; inscribir a una persona (ADR-0043, ADR-0052); crear puntos de asistencia y marcar a mano (ADR-0053) | Quien puede **editar** el evento: son envíos del taller y pasan por `can_edit()` |
+| Volver a la propia inscripción | La persona inscrita, con su enlace personal (`evt_reg_token`) o con la sesión de la cuenta con la que se inscribió (`evt_reg_user`, ADR-0051) |
+| Marcar la propia asistencia con el QR | Cualquiera con sesión iniciada que tenga inscripción en el evento, y solo con el punto abierto (`Attendance::maybe_handle_submit()`) |
 
 El diagnóstico audita también al `editor`, aunque el aplicativo no crea ese
 rol, y avisa de concesiones indebidas sin retirarlas en cada petición.
@@ -662,6 +677,18 @@ resueltos en este documento. El perfil de gestión de inscripciones es el caso
 que peor encaja: sus capacidades no son del aplicativo sino del gestor de
 formularios, y sobreviven a la migración de los eventos, porque las
 inscripciones se quedan allí.
+
+**Revisión del 2026-11-17: esto ya no es lo que pasa.** La migración en el
+mismo sitio la sustituyó la
+[ADR-0045](adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md): los
+eventos se importaron a un sitio limpio, el anterior se conserva al lado y las
+cuentas del sitio nuevo se crean de cero con los roles del aplicativo
+(`editor` con su ámbito, [ADR-0038](adr/ADR-0038-ambitos-organizativos-jerarquicos.md)).
+Los roles de área no se convierten: se quedan en el sitio anterior. Y las
+inscripciones ya no se quedan en el gestor de formularios: son
+`evt_registration` del aplicativo
+([ADR-0032](adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)), y las
+gestiona quien puede editar el evento (ver «Inscripciones y asistencia», arriba).
 
 ### Y qué pasa con `evt_coordinator`, el rol que se retiró
 

@@ -249,6 +249,42 @@ final class Timeline {
 	}
 
 	/**
+	 * The events whose title, text or venue has what was typed.
+	 *
+	 * La búsqueda de WordPress mira título, extracto y contenido, y la sede es
+	 * una meta: «Roque» no encontraba el evento del «CEIP El Roque». Dos
+	 * consultas de identificadores, unidas; sin ninguna, un `0` para que la
+	 * lista salga vacía y no entera.
+	 *
+	 * @param string $search What was typed.
+	 * @return int[]
+	 */
+	private static function matching( string $search ): array {
+		$base  = array(
+			'post_type'        => EventPostType::POST_TYPE,
+			'post_parent'      => 0,
+			'post_status'      => 'publish',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		);
+		$texto = get_posts( $base + array( 's' => $search ) );
+		$sede  = get_posts(
+			$base + array(
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- buscar por sede es lo que se pide.
+					array(
+						'key'     => EventMetaKeys::VENUE,
+						'value'   => $search,
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		$ids   = array_values( array_unique( array_map( 'intval', array_merge( (array) $texto, (array) $sede ) ) ) );
+		return array() !== $ids ? $ids : array( 0 );
+	}
+
+	/**
 	 * Every published event with a date, grouped by the month it starts in.
 	 *
 	 * Todos, sin tope: un área tiene pocos eventos y la línea entera pesa
@@ -264,7 +300,7 @@ final class Timeline {
 	private static function events( string $today, array $filters ): array {
 		$extra = array();
 		if ( '' !== $filters['search'] ) {
-			$extra['s'] = $filters['search'];
+			$extra['post__in'] = self::matching( $filters['search'] );
 		}
 		if ( $filters['area'] > 0 ) {
 			$extra['tax_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtrar por ámbito es lo que se pide.

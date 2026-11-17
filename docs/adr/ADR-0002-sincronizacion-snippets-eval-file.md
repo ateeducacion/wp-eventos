@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0001]
+  adrs: [ADR-0001, ADR-0035]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -185,3 +185,14 @@ canal de producción.
   (`evt_strip_php_tags()`).
 - El aviso de activación forzada se imprime en la salida de la provisión: el
   entorno queda usable y el motivo queda escrito, en lugar de callarse.
+
+## Adenda — 2026-11-17: la sincronización compara por contenido
+
+El mecanismo de esta ADR sigue en pie —`scripts/sync-snippets.php` bajo
+`wp eval-file`, con la API pública de Code Snippets—, pero ya no guarda un
+snippet que no ha cambiado: lo decide la huella de contenido de la
+[ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md)
+(`scripts/lib/snippet-sync.php`). Donde las dos digan cosas distintas, manda
+la ADR-0035.
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

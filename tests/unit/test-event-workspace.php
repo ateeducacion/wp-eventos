@@ -398,6 +398,40 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Guardar la apariencia sin tocar el acento no lo fija: sigue al fondo de la cabecera.
+	 */
+	public function test_an_untouched_accent_keeps_following_the_header() {
+		$admin  = $this->administrator();
+		$evento = $this->event( $admin, array( $this->area( 'Innovación' ) ) );
+
+		$this->submit(
+			$admin,
+			EventWorkspace::PANEL_LOOK,
+			$evento,
+			0,
+			array(
+				EventMetaKeys::HEADER_BG => '#1b4f8a',
+				EventMetaKeys::ACCENT    => '#1b4f8a',
+				'evt_accent_follows'     => '#1b4f8a',
+			)
+		);
+		$this->assertSame( '', (string) get_post_meta( $evento, EventMetaKeys::ACCENT, true ) );
+
+		$this->submit(
+			$admin,
+			EventWorkspace::PANEL_LOOK,
+			$evento,
+			0,
+			array(
+				EventMetaKeys::HEADER_BG => '#1b4f8a',
+				EventMetaKeys::ACCENT    => '#c0392b',
+				'evt_accent_follows'     => '#1b4f8a',
+			)
+		);
+		$this->assertSame( '#c0392b', (string) get_post_meta( $evento, EventMetaKeys::ACCENT, true ), 'elegido, se guarda' );
+	}
+
+	/**
 	 * La casilla de los iconos del menú se guarda marcada y se borra al desmarcarla.
 	 */
 	public function test_the_menu_icons_box_is_saved_and_cleared() {
@@ -1186,6 +1220,55 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 			)
 		);
 		$this->assertSame( array( 'Talla de camiseta' ), array_column( \Evt\PublicFront\Registrations::questions( $evento ), 'label' ) );
+	}
+
+	/**
+	 * Si se rechaza el cambio de una pregunta, no se guarda nada más: ni plazos ni textos legales.
+	 */
+	public function test_a_refused_question_change_writes_nothing_else() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_q_id'      => array( '' ),
+				'evt_q_label'   => array( 'Talla' ),
+				'evt_q_type'    => array( 'one' ),
+				'evt_q_options' => array( "S\nM" ),
+			)
+		);
+		$preguntas = \Evt\PublicFront\Registrations::questions( $evento );
+		self::factory()->post->create(
+			array(
+				'post_type'   => \Evt\PostType\RegistrationPostType::POST_TYPE,
+				'post_parent' => $evento,
+				'post_status' => 'publish',
+			)
+		);
+		$version = (int) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::CONSENT_VERSION, true );
+
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_signup_end'      => '2030-01-01',
+				'evt_consent_privacy' => 'Un texto nuevo',
+				'evt_q_id'            => array_column( $preguntas, 'id' ),
+				'evt_q_label'         => array( 'Talla' ),
+				'evt_q_type'          => array( 'text' ),
+				'evt_q_options'       => array( '' ),
+			)
+		);
+
+		$this->assertSame( 'one', \Evt\PublicFront\Registrations::questions( $evento )[0]['type'], 'el tipo no cambia' );
+		$this->assertNotSame( '2030-01-01', (string) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::SIGNUP_END, true ), 'el plazo tampoco' );
+		$this->assertSame( $version, (int) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::CONSENT_VERSION, true ), 'ni sube la versión del consentimiento' );
 	}
 
 	/**

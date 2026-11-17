@@ -159,6 +159,16 @@ class Test_Registrations extends WP_UnitTestCase {
 		$this->assertSame( '12345678Z', RegistrationInput::tax_id( ' 12.345.678-z ' ) );
 		$this->assertSame( '12345678Z', RegistrationInput::tax_id( '12345678z' ) );
 
+		// Sin el cero de delante es el mismo DNI, y el mismo NIE, si la letra cuadra.
+		$this->assertSame( '01234567L', RegistrationInput::tax_id( '1234567L' ) );
+		$this->assertSame( 'X0012345V', RegistrationInput::tax_id( 'x-12345-v' ) );
+		$this->assertSame( '1234567A', RegistrationInput::tax_id( '1234567A' ), 'si la letra no cuadra, no es un DNI y no se toca' );
+
+		// Un correo que no es ASCII se perdería al guardarlo: se pide revisar.
+		$this->assertTrue( RegistrationInput::is_email( 'ana.lopez@example.org' ) );
+		$this->assertFalse( RegistrationInput::is_email( 'josé@example.org' ) );
+		$this->assertFalse( RegistrationInput::is_email( 'ana@españa.es' ) );
+
 		// La forma, no el dígito de control: aquí se inscribe gente con
 		// documento de otro país y un validador nacional la dejaría fuera.
 		$this->assertTrue( RegistrationInput::is_tax_id( 'X1234567L' ) );
@@ -524,8 +534,8 @@ class Test_Registrations extends WP_UnitTestCase {
 	/**
 	 * El candado lo tiene uno solo, y el segundo no pasa.
 	 *
-	 * Es la pieza que impide la carrera: `add_option()` falla si el nombre ya
-	 * existe, porque la columna es única en la base de datos (ADR-0033).
+	 * Es la pieza que impide la carrera: un `INSERT IGNORE` no inserta si el
+	 * nombre ya existe, porque la columna es única en la base de datos (ADR-0033).
 	 */
 	public function test_only_one_holds_the_lock() {
 		$evento = $this->un_evento();
@@ -536,6 +546,23 @@ class Test_Registrations extends WP_UnitTestCase {
 		Registrations::unlock( $evento );
 		$this->assertTrue( Registrations::lock( $evento ), 'soltado, vuelve a estar libre' );
 		Registrations::unlock( $evento );
+	}
+
+	/**
+	 * Soltar solo suelta el candado propio: el que tomó otra petición después se queda.
+	 */
+	public function test_unlock_only_releases_its_own_lock() {
+		$evento = $this->un_evento();
+		$nombre = 'evt_seat_lock_' . $evento;
+
+		// Otra petición tiene el candado; esta nunca lo tomó.
+		$valor = time() . ':otra';
+		add_option( $nombre, $valor, '', 'no' );
+		Registrations::unlock( $evento );
+
+		wp_cache_delete( $nombre, 'options' );
+		$this->assertSame( $valor, get_option( $nombre ), 'no se borra el candado de otro' );
+		delete_option( $nombre );
 	}
 
 	/**

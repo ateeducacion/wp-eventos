@@ -253,7 +253,13 @@ final class Programme {
 		if ( ! self::belongs( $event_id, $post_id, true ) ) {
 			return false;
 		}
-		return (bool) wp_untrash_post( $post_id );
+		// Desde WordPress 5.6 lo restaurado vuelve en borrador, y un ponente o
+		// una actividad en borrador no sale en la web ni el taller deja
+		// publicarlo. Vuelve como estaba, que es lo que promete el aviso.
+		add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
+		$hecho = (bool) wp_untrash_post( $post_id );
+		remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
+		return $hecho;
 	}
 
 	/**

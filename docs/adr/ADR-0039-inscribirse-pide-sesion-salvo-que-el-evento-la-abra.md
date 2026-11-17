@@ -1,7 +1,7 @@
 ---
 id: ADR-0039
 title: "Inscribirse pide sesión salvo que el evento la abra, y adjuntar la pide siempre"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1. El
+interruptor es `RegistrationMetaKeys::SIGNUP_PUBLIC` y lo aplica
+`src/Evt/PublicFront/SignupForm.php`; pruebas en
+`tests/unit/test-signup-gates.php`.
 
 ## Contexto
 

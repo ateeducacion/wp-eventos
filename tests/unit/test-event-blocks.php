@@ -108,6 +108,24 @@ class Test_Event_Blocks extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( '<script', $html );
 	}
 
+	/**
+	 * Un vídeo incrustado y un formulario pegado salen; un `onload` no.
+	 */
+	public function test_the_content_block_keeps_embeds_and_forms() {
+		$html = ContentBlock::html(
+			EventView::model(
+				0,
+				'<iframe src="https://www.youtube.com/embed/abc" title="Vídeo" allowfullscreen onload="alert(1)"></iframe>'
+					. '<form method="post"><label for="n">Nombre</label><input type="text" id="n" name="n"><select name="s"><option value="1">Uno</option></select></form>'
+			)
+		);
+
+		$this->assertStringContainsString( '<iframe src="https://www.youtube.com/embed/abc"', $html );
+		$this->assertStringNotContainsString( 'onload', $html );
+		$this->assertStringContainsString( '<input type="text"', $html );
+		$this->assertStringContainsString( '<select name="s">', $html );
+	}
+
 	// ─── el cartel ─────────────────────────────────────────────────────────
 
 	/**

@@ -15,9 +15,9 @@ Snippets** y **WPFront User Role Editor** —este, para ver los roles y suplanta
 a alguien al probar; los roles y sus capacidades salen del código—; dónde, lo
 dice el `.env` y **no el repositorio**
 ([ADR-0030](docs/adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
-El dominio son tres CPT —`evt_event`,
-`evt_speaker`, `evt_activity`— y tres taxonomías —`evt_area`, `evt_type`,
-`evt_course`—.
+El dominio son cuatro CPT —`evt_event`,
+`evt_speaker`, `evt_activity` y `evt_registration`— y tres taxonomías
+—`evt_area`, `evt_type`, `evt_course`—.
 
 - **NO es un plugin de WordPress** instalable en producción. No crees fichero
   principal de plugin, ni `readme.txt`, ni `register_activation_hook()`, ni
@@ -38,7 +38,7 @@ El dominio son tres CPT —`evt_event`,
 
 Hace falta saberlo para no reinventar los errores de la casa:
 
-| Hoy en producción | Aquí |
+| En el sistema anterior | Aquí |
 |---|---|
 | `page` jerárquica creada por la acción «Crear Página» de un formulario de 146 campos | CPT `evt_event` **jerárquico**: la raíz es el evento, las hijas son las secciones. Conserva las URL |
 | El contenido de la página lo interpola una vista del gestor de formularios: 42 KB y 193 condicionales anidados dentro de un campo de texto | Código en `src/Evt/`, con tests y con diff |
@@ -50,17 +50,23 @@ Hace falta saberlo para no reinventar los errores de la casa:
 **Las inscripciones también se sustituyen**, y es lo último que quedaba fuera:
 el formulario es un núcleo fijo más unas pocas preguntas por evento (ADR-0031),
 una inscripción es un `evt_registration` colgado del evento (ADR-0032) y elegir
-taller tiene aforo duro y cambio hasta el cierre (ADR-0033). **No se lee nada
-del gestor de formularios anterior** ni se añade dependencia de él: las
-inscripciones de los eventos ya celebrados se quedan donde están.
+taller tiene aforo duro y cambio hasta el cierre (ADR-0033); cada persona
+puede elegir varios talleres, sin repetir taller ni solaparse (ADR-0050). Al
+inscribirse llega un correo con el enlace personal (ADR-0051), la organización
+puede inscribir a alguien (ADR-0052) y la asistencia se marca con un QR por
+punto de control (ADR-0053). **No se lee nada del gestor de formularios
+anterior** ni se añade dependencia de él: las inscripciones de los eventos ya
+celebrados se importaron una sola vez como `evt_registration` al sitio nuevo,
+con un importador que no se versiona (ADR-0045, adenda).
 
-La pestaña «Participantes» **no rompe esa regla**: el aplicativo no lee el
-gestor de formularios, **pregunta** con el filtro `evt_participants` y quien lo
-tenga delante contesta desde un snippet suelto (ADR-0027). Lo que sí es del
-aplicativo —el filtro y la exportación a CSV— es puro y se prueba sin ningún
-gestor de formularios delante. En el wp-env y en Playground nadie contesta
-al filtro: `scripts/seed-demo.php` crea inscripciones de verdad en el evento
-de demostración, que son las que se corrigen y se borran.
+La pestaña «Participantes» **pregunta** con el filtro `evt_participants`
+(ADR-0027), y quien contesta de serie es el propio aplicativo con sus
+`evt_registration` (`Registrations::participants()`, ADR-0032). El filtro se
+queda como costura: un despliegue puede sumar filas de otra fuente desde un
+snippet, y esas filas son de solo lectura. Lo que sí es del aplicativo —el
+filtro de búsqueda y la exportación a CSV— es puro y se prueba sin WordPress.
+En el wp-env y en Playground, `scripts/seed-demo.php` crea inscripciones de
+verdad en el evento de demostración, que son las que se corrigen y se borran.
 
 ---
 
@@ -79,7 +85,8 @@ de demostración, que son las que se corrigen y se borran.
 | `tests/` | PHPUnit sobre un WordPress vivo; `tests/js/`, Vitest para los guiones de `assets/js` |
 | `docs/arquitectura.md` | Cómo está hecho: qué sustituye, modelo de datos, roles, comandos y cobertura. El README remite ahí |
 | `docs/adr/`, `docs/sdd/` | ADR y SDD |
-| `.agents/skills/` | Skills de agentes (`.claude/skills/` enlaza las propias) |
+| `assets/css/`, `assets/js/` | Hojas y guiones propios; viajan en línea dentro del bundle |
+| `.agents/skills/` | Skills de agentes (`.claude/skills/` lleva una copia; `make skills-sync`) |
 | `CHANGELOG.md` | Versión y cambios; `make bundle` lee de ahí el `@version` |
 | `.env.dist` | Plantilla de configuración de despliegue (copiar a `.env`); la lee `npm run snippets` |
 | `blueprint.json` / `blueprint-local.json` | Playground remoto / local |
@@ -88,30 +95,101 @@ de demostración, que son las que se corrigen y se borran.
 
 ### Anatomía de `src/Evt/`
 
-Todo son `final class` con métodos `static`. Sin contenedor de inyección, sin
+Todo son `final class` con métodos `static` —la única que extiende algo es
+`PublicFront/ExitSignal`, una excepción—. Sin contenedor de inyección, sin
 interfaces, sin factorías, sin capa de servicios: es lo que permite
-concatenarlo en un fichero.
+concatenarlo en un fichero. El orden de carga es el de `load-order.php`; aquí
+van agrupados por carpeta.
 
 ```
 src/Evt/
 ├── load-order.php                 Lista única y ordenada
 ├── bootstrap.php                  EVT_SRC_DIR + require de la lista + App::boot()
 ├── App.php                        Idempotente. Registra CPT, taxonomías y el register() de cada módulo
-├── Meta/EventMetaKeys.php         Claves de meta y listas cerradas (tipos de sección, estados)
-├── Meta/EventMetaRegistration.php register_post_meta con tipo, sanitize y auth_callback
-├── Domain/EventInput.php          Valida y normaliza el alta/edición. Puro, sin WordPress
-├── Domain/EventState.php          Estado derivado de las fechas: próximo | abierto | finalizado
-├── Access/EventAccess.php         Único guardián: quién edita qué, acotado por área
-├── Meta/ProgrammeMetaKeys.php     Claves de meta de ponentes y actividades, y los tipos de actividad
-├── Domain/ActivityInput.php       Valida el alta/edición de ponentes y actividades. Puro
-├── PublicFront/Programme.php      Ponentes y actividades de un evento: leer, escribir, la parrilla
-├── PublicFront/Participants.php   Inscripciones: el enganche, el filtro y el CSV
-├── PostType/EventPostType.php     CPT evt_event jerárquico + capacidades
-├── PostType/SpeakerPostType.php   CPT evt_speaker
-├── PostType/ActivityPostType.php  CPT evt_activity
+│
+├── Meta/                          Claves de meta y su registro (tipo, sanitize, auth_callback)
+│   ├── EventMetaKeys.php          Del evento y sus secciones; listas cerradas (tipos de sección, estados)
+│   ├── EventMetaRegistration.php  register_post_meta de evt_event
+│   ├── ProgrammeMetaKeys.php      De ponentes y actividades, y los tipos de actividad
+│   ├── ProgrammeMetaRegistration.php  register_post_meta de evt_speaker y evt_activity
+│   ├── RegistrationMetaKeys.php   De la inscripción (evt_reg_*) y de la inscripción del evento (evt_signup_*, evt_workshop_*, evt_attendance_points, evt_consent_*); los cinco tipos de pregunta
+│   └── RegistrationMetaRegistration.php  register_post_meta de evt_registration y de esos ajustes
+│
+├── Domain/                        Reglas puras, sin WordPress
+│   ├── DateRange.php              Un intervalo de días escrito en castellano
+│   ├── EventInput.php             Valida y normaliza el alta/edición de un evento
+│   ├── EventState.php             Estado derivado de las fechas: próximo | abierto | finalizado
+│   ├── ActivityInput.php          Valida el alta/edición de ponentes y actividades
+│   ├── RegistrationInput.php      Valida el núcleo fijo de la inscripción (ADR-0031)
+│   ├── SignupQuestions.php        Las preguntas de cada evento y sus respuestas
+│   └── WorkshopChoice.php         Cuántos talleres, sin repetir taller ni solaparse (ADR-0050)
+│
+├── Access/EventAccess.php         Único guardián: quién abre y edita qué, acotado por ámbito (map_meta_cap)
+│
+├── PostType/                      Los cuatro tipos de contenido
+│   ├── EventPostType.php          evt_event jerárquico + reparto de capacidades
+│   ├── SpeakerPostType.php        evt_speaker
+│   ├── ActivityPostType.php       evt_activity
+│   └── RegistrationPostType.php   evt_registration, cerrado: sin escritorio, REST ni archivo (ADR-0032)
 ├── Taxonomy/EventTaxonomies.php   evt_area, evt_type, evt_course
-├── Admin/EventAdmin.php           Columnas, filtro por área y acotado del listado
-└── Admin/Settings.php             Ajustes y diagnóstico (capacidad evt_manage_app)
+│
+├── Centre/                        Catálogo externo de centros, cacheado (ADR-0037)
+│   ├── CentreCatalogue.php        La copia local
+│   ├── CentreCatalogueSync.php    La sincronización con manifiesto y SHA-256
+│   └── CentreCatalog.php          Contesta al filtro evt_centres desde la copia local
+│
+├── PublicFront/                   Todo lo que se pinta fuera del escritorio
+│   ├── ExitSignal.php             Sustituye a exit() en los tests
+│   ├── Assets.php                 La hoja y el guion propios, en línea dentro del bundle; detecta Bootstrap
+│   ├── Fonts.php                  Las tipografías que pide una página de evento
+│   ├── Shell.php                  El armazón común de las pantallas del aplicativo
+│   ├── SectionIcons.php           Los dibujos de los iconos de sección
+│   ├── EditLock.php               El bloqueo de edición nativo de WordPress (ADR-0023)
+│   ├── CodeEditor.php             El editor de código de WordPress, para el CSS y el JS a medida
+│   ├── CustomCode.php             Imprime el CSS y el JS a medida en la página pública
+│   ├── EventList.php              «Mis eventos»: lo que cada cual gestiona, con filtros y recuentos
+│   ├── Programme.php              Ponentes y actividades de un evento: leer y escribir
+│   ├── Participants.php           Inscritos: el filtro evt_participants, la búsqueda y el CSV
+│   ├── Registrations.php          Inscripciones: guardar, leer, corregir, borrar y tomar plaza de taller
+│   ├── RegistrationFiles.php      Documentos de una inscripción: fuera de la biblioteca de medios (ADR-0036)
+│   ├── Captcha.php                ALTCHA para la inscripción sin sesión (ADR-0040)
+│   ├── SignupForm.php             El formulario público de inscripción y su envío
+│   ├── SignupMail.php             El único sitio que manda correo: la confirmación con el enlace (ADR-0051)
+│   ├── Attendance.php             Asistencia: puntos con QR, marcas a mano, CSV y hoja de firmas (ADR-0053)
+│   ├── EventWorkspace.php         El taller de un evento: decide qué se ve y procesa cada envío
+│   ├── PageForm.php               El formulario de una sección del evento
+│   ├── EventLayout.php            El documento HTML entero de la página pública (ADR-0022)
+│   ├── EventView.php              La vista pública del evento y de cada sección
+│   ├── ContactMap.php             El mapa de la página de contacto, con Leaflet (ADR-0046)
+│   ├── Home.php                   La entrada del aplicativo
+│   ├── Timeline.php               La línea del tiempo pública de eventos (ADR-0041)
+│   ├── Block/                     Los bloques de la página pública
+│   │   ├── ContentBlock.php       contenido
+│   │   ├── PosterBlock.php        cartel
+│   │   ├── ProgrammeBlock.php     ponentes y programa, en sus secciones
+│   │   ├── SectionsBlock.php      secciones (las tarjetas de la portada)
+│   │   ├── SignupBlock.php        inscripcion
+│   │   └── SponsorsBlock.php      logos
+│   └── View/                      Solo pintan lo que ya decidió su modelo
+│       ├── EventListView.php      «Eventos»
+│       ├── EventWorkspaceView.php El taller del evento
+│       ├── PanelParts.php         Piezas comunes de los paneles: acciones de fila, papelera de fichas
+│       ├── EventSectionsPanel.php     «Secciones»
+│       ├── EventDataPanel.php         «Datos»
+│       ├── EventAppearancePanel.php   «Apariencia»
+│       ├── EventCodePanel.php         «Código»
+│       ├── EventSpeakersPanel.php     «Ponentes»
+│       ├── EventProgrammePanel.php    «Programa» (la parrilla y los talleres)
+│       ├── EventSignupPanel.php       «Formulario y plazos»
+│       ├── EventParticipantsPanel.php «Participantes»
+│       ├── EventAttendancePanel.php   «Asistencia»
+│       ├── PageFormView.php       El formulario de una sección
+│       ├── EventChrome.php        Cabecera, navegación, separador y pie de la página pública (filtro evt_chrome)
+│       └── TimelineView.php       La línea del tiempo
+│
+└── Admin/                         Escritorio de WordPress
+    ├── EventAdmin.php             Columnas, filtro por ámbito y acotado del listado
+    └── Settings.php               Ajustes y diagnóstico (capacidad evt_manage_app)
 ```
 
 Ni una capa más. Si crees que hace falta otra, escribe la ADR primero.

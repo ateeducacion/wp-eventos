@@ -44,6 +44,72 @@ final class ContentBlock {
 	 * @return string HTML already escaped; empty when there is nothing to say.
 	 */
 	public static function html( array $m ): string {
-		return wp_kses_post( (string) $m['content'] );
+		return wp_kses( (string) $m['content'], self::allowed() );
+	}
+
+	/**
+	 * What may come out of the content: the post tags, plus embeds and forms.
+	 *
+	 * `the_content` convierte una URL de YouTube o Vimeo en un `<iframe>`, y
+	 * una página puede llevar un formulario pegado con su shortcode. Con
+	 * `wp_kses_post()` a secas los dos desaparecían en silencio. Los
+	 * `<script>` siguen fuera.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	public static function allowed(): array {
+		$tags             = wp_kses_allowed_html( 'post' );
+		$comunes          = array(
+			'id'    => true,
+			'class' => true,
+			'name'  => true,
+			'style' => true,
+		);
+		$campo            = $comunes + array(
+			'type'         => true,
+			'value'        => true,
+			'checked'      => true,
+			'selected'     => true,
+			'disabled'     => true,
+			'required'     => true,
+			'placeholder'  => true,
+			'multiple'     => true,
+			'min'          => true,
+			'max'          => true,
+			'step'         => true,
+			'maxlength'    => true,
+			'rows'         => true,
+			'cols'         => true,
+			'aria-label'   => true,
+			'autocomplete' => true,
+		);
+		$tags['iframe']   = array(
+			'src'             => true,
+			'width'           => true,
+			'height'          => true,
+			'title'           => true,
+			'allow'           => true,
+			'allowfullscreen' => true,
+			'frameborder'     => true,
+			'loading'         => true,
+			'referrerpolicy'  => true,
+			'class'           => true,
+			'style'           => true,
+		);
+		$tags['form']     = $comunes + array(
+			'action'     => true,
+			'method'     => true,
+			'enctype'    => true,
+			'novalidate' => true,
+		);
+		$tags['input']    = $campo;
+		$tags['select']   = $campo;
+		$tags['option']   = $campo;
+		$tags['textarea'] = $campo;
+		$tags['button']   = $campo;
+		$tags['label']    = ( $tags['label'] ?? array() ) + array( 'for' => true );
+		$tags['fieldset'] = $comunes;
+		$tags['legend']   = $comunes;
+		return $tags;
 	}
 }
