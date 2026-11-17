@@ -605,10 +605,9 @@ final class EventAccess {
 	 * secciones—, y sí administración, porque alguien tiene que
 	 * poder corregir una errata o desmarcarlo.
 	 *
-	 * Las dos reglas conviven sin contradecirse porque responden a preguntas
-	 * distintas: la de ADR-0012 mira el calendario y cierra sola cuando el
-	 * evento termina; esta la pone una persona y no se abre con el tiempo.
-	 * Basta una para decir «no», y esta es la de arriba.
+	 * El calendario no cierra nada: la ADR-0012 decidió que el área manda en
+	 * su evento sin límite de fechas, y que lo que lo cierra es un botón, el
+	 * de histórico (ADR-0017), que pone una persona y no se abre con el tiempo.
 	 *
 	 * Este es el único sitio donde se junta todo: `map_meta_cap()` manda aquí
 	 * `edit_post`, `delete_post` y `publish_post`, así que el cierre alcanza

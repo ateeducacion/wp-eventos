@@ -46,8 +46,8 @@ solo **lee** pasa por `EventAccess::can_open()`.
 
 | Acción | Quién |
 |---|---|
-| Ver y filtrar «Participantes» y «Asistencia»; descargar un documento aportado; imprimir la hoja de firmas | Quien puede **abrir** el evento (`can_open()`: el taller en `EventWorkspace`, `RegistrationFiles::may_read()`, `Attendance::maybe_print_sheet()`) |
-| Exportar a CSV inscritos o asistencia; corregir o borrar una inscripción; inscribir a una persona (ADR-0043, ADR-0052); crear puntos de asistencia y marcar a mano (ADR-0053) | Quien puede **editar** el evento: son envíos del taller y pasan por `can_edit()` |
+| Ver y filtrar «Participantes» y «Asistencia»; exportar a CSV inscritos o asistencia; descargar un documento aportado; imprimir la hoja de firmas | Quien puede **abrir** el evento (`can_open()`: el taller en `EventWorkspace`, `RegistrationFiles::may_read()`, `Attendance::maybe_print_sheet()`). Exportar va antes del bloqueo de edición y de `can_edit()`: un evento histórico, o abierto por otra persona, se sigue exportando |
+| Corregir o borrar una inscripción; inscribir a una persona (ADR-0043, ADR-0052); crear puntos de asistencia y marcar a mano (ADR-0053) | Quien puede **editar** el evento: son envíos del taller y pasan por `can_edit()` |
 | Volver a la propia inscripción | La persona inscrita, con su enlace personal (`evt_reg_token`) o con la sesión de la cuenta con la que se inscribió (`evt_reg_user`, ADR-0051) |
 | Marcar la propia asistencia con el QR | Cualquiera con sesión iniciada que tenga inscripción en el evento, y solo con el punto abierto (`Attendance::maybe_handle_submit()`) |
 

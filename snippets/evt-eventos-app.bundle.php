@@ -3600,7 +3600,6 @@ final class EventAccess {
 
 
 
-
 	public static function can_edit( int $user_id, int $post_id ): bool {
 		if ( ! self::can_open( $user_id, $post_id ) ) {
 			return false;
