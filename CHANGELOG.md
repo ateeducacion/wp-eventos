@@ -8,7 +8,7 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
-## [0.3.0] — 2026-11-17
+## [0.2.3] — 2026-11-17
 
 ### Añadido
 
