@@ -136,6 +136,7 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 				EventWorkspace::PANEL_PROGRAMME,
 				EventWorkspace::PANEL_SIGNUP,
 				EventWorkspace::PANEL_PEOPLE,
+				EventWorkspace::PANEL_ATTENDANCE,
 				EventWorkspace::PANEL_SETTINGS,
 				EventWorkspace::PANEL_LOOK,
 				EventWorkspace::PANEL_CODE,

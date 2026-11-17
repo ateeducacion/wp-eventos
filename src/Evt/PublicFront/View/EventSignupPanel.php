@@ -124,6 +124,20 @@ final class EventSignupPanel {
 		$html .= self::dates( 'evt_workshop_start', 'evt_workshop_end', 'evt-ws', (string) $a['workshop_start'], (string) $a['workshop_end'] );
 		$html .= '<p class="evt-ayuda">Sin fechas manda el interruptor. Quien ya se inscribió puede cambiar de taller '
 			. 'mientras siga abierto, y un taller lleno deja de poder elegirse.</p>';
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-ws-max">Talleres por persona</label>'
+				. '<input type="number" id="evt-ws-max" name="evt_workshop_max" min="1" max="10" step="1" value="%1$d">'
+				. '<small>Nadie puede elegir dos sesiones del mismo taller ni dos talleres que coincidan en hora.</small></p>',
+			max( 1, (int) ( $a['workshop_max'] ?? 1 ) )
+		);
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-ws-help">Instrucciones para elegir taller <span class="evt-opcional">(opcional)</span></label>'
+				. '<textarea id="evt-ws-help" name="evt_workshop_help" rows="3">%1$s</textarea>'
+				. '<small>Salen encima de la lista de talleres, antes de las reglas, que se añaden solas.</small></p>',
+			esc_textarea( (string) ( $a['workshop_help'] ?? '' ) )
+		);
+		$html .= '<p class="evt-ayuda">Un taller que se repite en dos horarios se crea dos veces en «Programa y talleres», '
+			. '<strong>con el mismo título</strong> y distinta hora: así nadie puede apuntarse a las dos sesiones.</p>';
 		return $html . '</fieldset>';
 	}
 

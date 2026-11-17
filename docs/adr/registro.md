@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0053]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -284,6 +284,10 @@ después; lo que ya no vale es su decisión.
 | [ADR-0047](ADR-0047-un-evento-en-dos-idiomas-son-dos-eventos-enlazados.md) | Un evento en dos idiomas son dos eventos enlazados | Propuesta | 2026-09-28 | [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
 | [ADR-0048](ADR-0048-con-sesion-la-inscripcion-toma-los-datos-de-la-cuenta.md) | Con sesión, la inscripción toma de la cuenta el nombre, el correo y el centro | Propuesta | 2026-09-28 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) |
 | [ADR-0049](ADR-0049-la-organizacion-y-el-pie-se-escriben-en-ajustes.md) | La organización y los enlaces del pie se escriben en «Ajustes» | Propuesta | 2026-09-29 | [ADR-0020](ADR-0020-el-consentimiento-es-una-casilla.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
+| [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) | Varios talleres por persona, sin repetir taller ni solaparse | Propuesta | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md) | Correo de confirmación con el enlace, volver con la cuenta y un documento por evento | Propuesta | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md) | La organización inscribe a una persona, y declara su consentimiento | Propuesta | 2026-11-17 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) | Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas | Propuesta | 2026-11-17 | [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -610,3 +614,19 @@ un sitio vacío en la ruta de siempre y se importa a él desde el anterior, que
 se conserva al lado y no se borra. Los ficheros se copian en la misma ruta
 relativa, porque la red los sirve por la ruta del sitio y el cambio de nombre
 rompió sus enlaces externos. El importador lee el sitio anterior por dentro y por eso no se versiona.
+
+**Talleres en dos franjas, el correo y la asistencia, 2026-11-17: ADR-0050 a
+ADR-0053.** Una jornada con talleres repetidos en dos franjas trae lo que la
+[ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) dejó
+escrito como pendiente. La
+[ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md)
+deja elegir varios talleres —el evento dice cuántos— y prohíbe dos sesiones del
+mismo taller, reconocidas por el título, y dos talleres que se solapan. La
+[ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md) manda
+por fin el correo de confirmación con el enlace personal, deja pedirlo de
+nuevo, encuentra la inscripción por la cuenta con sesión e impide el mismo
+documento dos veces en un evento. La
+[ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md) deja a la
+organización inscribir a alguien declarando su consentimiento, y la
+[ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) añade el
+control de asistencia con un QR por punto, marcas a mano y hoja de firmas.

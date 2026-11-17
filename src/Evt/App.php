@@ -31,6 +31,7 @@ use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\SignupForm;
+use Evt\PublicFront\Attendance;
 use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
@@ -97,6 +98,7 @@ final class App {
 		RegistrationFiles::register();
 		Captcha::register();
 		SignupForm::register();
+		Attendance::register();
 		EventList::register();
 		EventWorkspace::register();
 		PageForm::register();

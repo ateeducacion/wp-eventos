@@ -69,10 +69,13 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 	 * @return int
 	 */
 	private function inscripcion( string $correo = 'ana@example.org' ): int {
-		$v = Registrations::validate(
+		// Un documento por persona: el mismo en dos inscripciones del evento
+		// ya no se admite (ADR-0051).
+		$numero = 'ana@example.org' === $correo ? 12345678 : abs( crc32( $correo ) ) % 100000000;
+		$v      = Registrations::validate(
 			$this->evento,
 			array(
-				'tax_id'  => '12345678Z',
+				'tax_id'  => sprintf( '%08d', $numero ) . substr( 'TRWAGMYFPDXBNJZSQVHLCKE', $numero % 23, 1 ),
 				'name'    => 'Ana',
 				'surname' => 'Martín',
 				'email'   => $correo,
@@ -362,7 +365,7 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '/value="Gluten"\s+checked/', $html, 'las varias opciones' );
 		$this->assertStringContainsString( 'value="Llega tarde"', $html );
 		$this->assertStringNotContainsString( 'evt_rg_answers[qdocum01]', $html, 'la de archivo no se corrige' );
-		$this->assertMatchesRegularExpression( '/value="' . $taller . '"\s+selected/', $html, 'su taller, elegido' );
+		$this->assertMatchesRegularExpression( '/value="' . $taller . '"\s+checked/', $html, 'su taller, elegido' );
 		$this->assertStringContainsString( 'Taller de radio (1 de 20)', $html );
 	}
 
@@ -385,5 +388,117 @@ class Test_Registration_Admin extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="' . EventWorkspace::FIELD_CONFIRM_EMAIL . '"', $html, 'sin guion, el campo va en el formulario' );
 		$this->assertStringContainsString( 'value="' . EventWorkspace::OP_REG_SAVE . '"', $html, 'el panel lateral, abierto' );
 		$this->assertStringContainsString( 'value="Ana"', $html );
+	}
+
+	// ─── inscribir a alguien desde la organización (ADR-0052) ──────────────
+
+	/**
+	 * Los campos de una persona nueva.
+	 *
+	 * @param array<string, mixed> $cambios Overrides.
+	 * @return array<string, mixed>
+	 */
+	private function nueva( array $cambios = array() ): array {
+		return array_merge(
+			array(
+				'evt_rg_tax_id'  => '00000001R',
+				'evt_rg_name'    => 'Paula',
+				'evt_rg_surname' => 'Hernández',
+				'evt_rg_email'   => 'paula@example.org',
+				'evt_rg_phone'   => '',
+				'evt_rg_centre'  => '38000002',
+				'evt_rg_consent' => '1',
+				'evt_rg_mail'    => '1',
+			),
+			$cambios
+		);
+	}
+
+	/**
+	 * La organización inscribe a alguien: queda quién lo hizo, el consentimiento declarado y sale el correo.
+	 */
+	public function test_the_organisation_signs_somebody_up() {
+		$taller  = $this->taller( 5 );
+		$correos = array();
+		add_filter(
+			'pre_wp_mail',
+			static function ( $nulo, array $atts ) use ( &$correos ): bool {
+				unset( $nulo );
+				$correos[] = $atts;
+				return true;
+			},
+			10,
+			2
+		);
+
+		$this->enviar( EventWorkspace::OP_REG_SAVE, 0, $this->nueva( array( 'evt_rg_workshop' => (string) $taller ) ) );
+		remove_all_filters( 'pre_wp_mail' );
+
+		$todas = Registrations::all( $this->evento );
+		$this->assertCount( 1, $todas );
+		$id = (int) $todas[0]->ID;
+		$this->assertSame( 'ok', $this->aviso()['tipo'], (string) ( $this->aviso()['texto'] ?? '' ) );
+		$this->assertSame( $this->admin, (int) get_post_meta( $id, RegistrationMetaKeys::REG_BY, true ) );
+		$this->assertNotSame( '', get_post_meta( $id, RegistrationMetaKeys::REG_CONSENT_AT, true ) );
+		$this->assertSame( array( $taller ), Registrations::workshops_of( $id ) );
+		$this->assertStringContainsString( 'declarado por la organización', Participants::rows( $this->evento )[0]['consent'] );
+
+		$this->assertCount( 1, $correos );
+		$this->assertSame( 'paula@example.org', $correos[0]['to'] );
+		$this->assertStringContainsString( 'le ha inscrito', $correos[0]['message'] );
+	}
+
+	/**
+	 * Sin declarar el consentimiento no se inscribe, y lo escrito vuelve al formulario.
+	 */
+	public function test_signing_somebody_up_needs_the_consent() {
+		$vuelta = $this->enviar( EventWorkspace::OP_REG_SAVE, 0, $this->nueva( array( 'evt_rg_consent' => '' ) ) );
+
+		$this->assertSame( array(), Registrations::all( $this->evento ) );
+		$this->assertSame( 'error', $this->aviso()['tipo'] );
+		$this->assertStringContainsString( 'protección de datos', $this->aviso()['texto'] );
+		$this->assertSame( '1', $this->query_arg( (string) $vuelta, EventWorkspace::ARG_NEW ), 'vuelve al panel de alta' );
+		$this->assertSame( 'Paula', $this->aviso()['values']['name'], 'con lo que se escribió' );
+	}
+
+	/**
+	 * El documento de otra inscripción no se repite, ni al inscribir ni al corregir.
+	 */
+	public function test_a_tax_id_already_signed_up_is_refused() {
+		$ana = $this->inscripcion();
+
+		$this->enviar( EventWorkspace::OP_REG_SAVE, 0, $this->nueva( array( 'evt_rg_tax_id' => '12345678Z' ) ) );
+		$this->assertCount( 1, Registrations::all( $this->evento ), 'no se inscribe dos veces' );
+		$this->assertStringContainsString( 'documento de identidad', $this->aviso()['texto'] );
+
+		$this->enviar( EventWorkspace::OP_REG_SAVE, 0, $this->nueva() );
+		$paula = (int) Registrations::by_tax_id( $this->evento, '00000001R' );
+		$this->assertGreaterThan( 0, $paula );
+
+		$campos                  = $this->nueva( array( 'evt_rg_tax_id' => '12345678Z' ) );
+		$campos['evt_rg_centre'] = '38000001';
+		$this->enviar( EventWorkspace::OP_REG_SAVE, $paula, $campos );
+		$this->assertSame( '00000001R', get_post_meta( $paula, RegistrationMetaKeys::REG_TAX_ID, true ), 'corregir a un documento ajeno, no' );
+		$this->assertSame( 'error', $this->aviso()['tipo'] );
+		unset( $ana );
+	}
+
+	/**
+	 * El botón y el formulario de alta salen en el panel, también sin nadie inscrito.
+	 */
+	public function test_the_add_form_is_painted_even_with_nobody_signed_up() {
+		$this->taller( 5 );
+		$this->acting_as( $this->admin );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $this->evento;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_PEOPLE;
+		$html                              = EventWorkspaceView::html( EventWorkspace::model() );
+		$this->assertStringContainsString( 'Inscribir a una persona', $html );
+
+		$_GET[ EventWorkspace::ARG_NEW ] = '1';
+		$html                            = EventWorkspaceView::html( EventWorkspace::model() );
+		$this->assertStringContainsString( 'name="evt_rg_consent"', $html );
+		$this->assertStringContainsString( 'list="evt-rg-centros"', $html, 'el centro, con el catálogo a mano' );
+		$this->assertStringContainsString( 'IES El Mirador', $html );
+		$this->assertStringNotContainsString( 'Borrar la inscripción', $html, 'no hay nada que borrar todavía' );
 	}
 }

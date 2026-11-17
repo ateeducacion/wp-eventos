@@ -1541,3 +1541,9 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 /* SweetAlert2 abre por encima del panel lateral, que ya está a 100 001: un
    diálogo que se pide desde el panel no puede quedarse debajo. */
 body .swal2-container { z-index: 100010; }
+
+/* Asistencia: el QR de cada punto, grande para proyectarlo o imprimirlo (ADR-0053). */
+.evt-puntos { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.evt-qr svg { display: block; width: 100%; max-width: 15rem; height: auto; background: #fff; }
+.evt-qr:empty { display: none; }
+.evt-punto a { overflow-wrap: anywhere; }

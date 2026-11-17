@@ -173,7 +173,8 @@ class Test_Signup_Form extends WP_UnitTestCase {
 
 		$html = $this->pintar( $evento );
 		$this->assertStringContainsString( 'no está abierta', $html );
-		$this->assertStringNotContainsString( '<form', $html );
+		$this->assertStringNotContainsString( 'value="' . SignupForm::OP_SIGNUP . '"', $html, 'sin formulario de inscripción' );
+		$this->assertStringContainsString( 'value="' . SignupForm::OP_RESEND . '"', $html, 'pero sí el de recuperar el enlace, que es cuando más se busca' );
 	}
 
 	/**
@@ -535,7 +536,7 @@ class Test_Signup_Form extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'Su inscripción está registrada', $html );
 		$this->assertStringContainsString( 'Ana Martín Cabrera', $html );
-		$this->assertStringContainsString( 'Guardar el taller', $html );
+		$this->assertStringContainsString( 'Guardar mi elección', $html );
 		$this->assertStringContainsString( 'Taller de radio escolar', $html );
 		$this->assertStringContainsString( SignupForm::OP_WORKSHOP, $html );
 		// Y no se le vuelve a pedir el documento: ya está inscrita.
