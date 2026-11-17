@@ -159,6 +159,16 @@ class Test_Registrations extends WP_UnitTestCase {
 		$this->assertSame( '12345678Z', RegistrationInput::tax_id( ' 12.345.678-z ' ) );
 		$this->assertSame( '12345678Z', RegistrationInput::tax_id( '12345678z' ) );
 
+		// Sin el cero de delante es el mismo DNI, y el mismo NIE, si la letra cuadra.
+		$this->assertSame( '01234567L', RegistrationInput::tax_id( '1234567L' ) );
+		$this->assertSame( 'X0012345V', RegistrationInput::tax_id( 'x-12345-v' ) );
+		$this->assertSame( '1234567A', RegistrationInput::tax_id( '1234567A' ), 'si la letra no cuadra, no es un DNI y no se toca' );
+
+		// Un correo que no es ASCII se perdería al guardarlo: se pide revisar.
+		$this->assertTrue( RegistrationInput::is_email( 'ana.lopez@example.org' ) );
+		$this->assertFalse( RegistrationInput::is_email( 'josé@example.org' ) );
+		$this->assertFalse( RegistrationInput::is_email( 'ana@españa.es' ) );
+
 		// La forma, no el dígito de control: aquí se inscribe gente con
 		// documento de otro país y un validador nacional la dejaría fuera.
 		$this->assertTrue( RegistrationInput::is_tax_id( 'X1234567L' ) );

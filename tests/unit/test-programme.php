@@ -322,7 +322,7 @@ class Test_Programme extends WP_UnitTestCase {
 		$this->assertCount( 1, Programme::speakers( $evento, true ) );
 
 		$this->assertTrue( Programme::restore( $evento, $quien ) );
-		$this->assertNotSame( 'trash', get_post_status( $quien ) );
+		$this->assertSame( 'publish', get_post_status( $quien ), 'vuelve publicado, como estaba: en borrador no saldría en la web' );
 		$this->assertCount( 1, Programme::speakers( $evento ) );
 	}
 
@@ -487,7 +487,7 @@ class Test_Programme extends WP_UnitTestCase {
 				return array(
 					array(
 						'name'      => '  Ana Martín ',
-						'inventado' => 'se ignora',
+						'inventado' => array( 'no es texto' ),
 					),
 				);
 			},
@@ -500,7 +500,7 @@ class Test_Programme extends WP_UnitTestCase {
 		$this->assertSame( $evento, $visto, 'el enganche recibe el evento y nada del sistema viejo' );
 		$this->assertCount( 1, $filas );
 		$this->assertSame( 'Ana Martín', $filas[0]['name'], 'se recorta' );
-		$this->assertArrayNotHasKey( 'inventado', $filas[0], 'lo que sobra se queda fuera' );
+		$this->assertArrayNotHasKey( 'inventado', $filas[0], 'lo que sobra y no es texto se queda fuera' );
 		$this->assertSame( '', $filas[0]['email'], 'lo que falta sale vacío, no ausente' );
 	}
 
@@ -538,6 +538,32 @@ class Test_Programme extends WP_UnitTestCase {
 		$this->assertStringContainsString( '"Ana ""Anita"" Martín"', $csv, 'las comillas se duplican' );
 		$this->assertStringContainsString( '"\'=SUM(1+1)"', $csv, 'una fórmula se desactiva con una comilla delante' );
 		$this->assertStringContainsString( "\r\n", $csv );
+	}
+
+	/**
+	 * Las respuestas a las preguntas del evento llegan al CSV y al filtro, en una columna cada una.
+	 */
+	public function test_the_answers_to_the_questions_reach_the_csv() {
+		$filas = Participants::clean(
+			array(
+				array(
+					'name'                => 'Ana Martín',
+					'Se queda a comer'    => 'Sí',
+					Participants::KEY_REG => 7,
+				),
+				array(
+					'name'             => 'Luis Gómez',
+					'Se queda a comer' => 'No',
+				),
+			)
+		);
+
+		$this->assertArrayHasKey( 'Se queda a comer', Participants::columns( $filas ) );
+		$csv = Participants::csv( $filas );
+		$this->assertStringContainsString( '"Documentos";"Se queda a comer"', $csv, 'la pregunta, detrás de las columnas fijas' );
+		$this->assertStringContainsString( '"Sí"', $csv );
+		$this->assertStringNotContainsString( '_reg', $csv, 'lo que empieza por _ no es columna' );
+		$this->assertCount( 1, Participants::filter( $filas, 'si' ), 'y se busca en ella' );
 	}
 
 	/**
@@ -626,7 +652,7 @@ class Test_Programme extends WP_UnitTestCase {
 				'evt_sp_name'               => 'Ana Pérez',
 				'evt_sp_role'               => 'Asesora',
 				'evt_sp_org'                => 'Centro de formación Norte',
-				'evt_sp_bio'                => 'Dos líneas.',
+				'evt_sp_bio'                => "Una línea.\nY otra.",
 			),
 			EventWorkspace::nonce_action( $op ),
 			EventWorkspace::nonce_name( $op )
@@ -639,6 +665,7 @@ class Test_Programme extends WP_UnitTestCase {
 		$this->assertCount( 1, $ponentes );
 		$this->assertSame( 'Ana Pérez', $ponentes[0]->post_title );
 		$this->assertSame( 'Centro de formación Norte', get_post_meta( $ponentes[0]->ID, ProgrammeMetaKeys::SPEAKER_ORG, true ) );
+		$this->assertStringContainsString( "\n", $ponentes[0]->post_content, 'la biografía conserva sus líneas' );
 	}
 
 	/**
@@ -697,5 +724,37 @@ class Test_Programme extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Ana Martín', $cuerpo );
 		$this->assertStringContainsString( 'Marta Ruiz', $cuerpo );
 		$this->assertStringNotContainsString( 'Luis Gómez', $cuerpo, 'el filtro puesto también manda en la exportación' );
+	}
+
+	/**
+	 * Un evento histórico se sigue exportando: es cuando se piden los certificados.
+	 */
+	public function test_an_archived_event_can_still_be_exported() {
+		$area   = $this->area( 'Una' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+		update_post_meta( $evento, \Evt\Meta\EventMetaKeys::ARCHIVED, '1' );
+		$this->acting_as( $uid );
+		$this->assertFalse( \Evt\Access\EventAccess::can_edit( $uid, $evento ), 'cerrado para editar' );
+
+		$gente = $this->people();
+		add_filter(
+			Participants::HOOK,
+			static function () use ( $gente ) {
+				return $gente;
+			}
+		);
+
+		$op = EventWorkspace::OP_EXPORT;
+		$this->post(
+			array(
+				EventWorkspace::FIELD_DO    => $op,
+				EventWorkspace::FIELD_EVENT => (string) $evento,
+			),
+			EventWorkspace::nonce_action( $op ),
+			EventWorkspace::nonce_name( $op )
+		);
+
+		$this->assertStringContainsString( 'Ana Martín', $this->served( array( EventWorkspace::class, 'handle' ) ) );
 	}
 }

@@ -150,6 +150,22 @@ class Test_Timeline extends WP_UnitTestCase {
 	}
 
 	/**
+	 * La búsqueda encuentra también por sede, como dice el campo, y sin nada no lo lista todo.
+	 */
+	public function test_the_search_also_finds_the_venue() {
+		$sale = $this->en( '2026-10-09', array( \Evt\Meta\EventMetaKeys::VENUE => 'CEIP El Roque' ), array( 'post_title' => 'Encuentro de escuelas rurales' ) );
+		$this->en( '2026-10-10', array(), array( 'post_title' => 'Otra cosa' ) );
+
+		$ids = array();
+		foreach ( Timeline::model( '2026-09-27', array( 'search' => 'Roque' ) )['months'] as $mes ) {
+			$ids = array_merge( $ids, wp_list_pluck( $mes['events'], 'id' ) );
+		}
+		$this->assertSame( array( $sale ), $ids );
+
+		$this->assertSame( 0, Timeline::model( '2026-09-27', array( 'search' => 'nada que coincida' ) )['count'] );
+	}
+
+	/**
 	 * Un ámbito trae también los eventos de los ámbitos que cuelgan de él.
 	 */
 	public function test_the_scope_includes_the_scopes_below_it() {

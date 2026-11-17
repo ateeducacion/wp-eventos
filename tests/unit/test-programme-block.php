@@ -368,6 +368,20 @@ class Test_Programme_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Un ponente en la papelera tampoco sale por su nombre en el programa.
+	 */
+	public function test_a_trashed_speaker_is_not_named_in_the_programme() {
+		$ponente = $this->ponente();
+		$this->actividad( array( 'speakers' => array( $ponente ) ) );
+		wp_trash_post( $ponente );
+		$pagina = $this->event_page( $this->evento, 'programa' );
+
+		$html = ProgrammeBlock::html( $this->modelo( $pagina ) );
+		$this->assertStringContainsString( 'Aulas del futuro', $html );
+		$this->assertStringNotContainsString( 'Ana Pérez', $html );
+	}
+
+	/**
 	 * El vídeo tiene que ser una dirección.
 	 */
 	public function test_the_video_has_to_be_a_url() {

@@ -114,6 +114,13 @@ final class SignupForm {
 		if ( '' !== self::closed_because( $evento ) || '' === self::login_needed( $evento ) ) {
 			return;
 		}
+		// Quien llega con su enlace personal no necesita sesión: el enlace es
+		// la llave (ADR-0051). Sin esto, quien inscribió la organización y no
+		// tiene cuenta no podría elegir taller con el enlace de su correo.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- un testigo de lectura.
+		if ( isset( $_GET[ self::ARG_TOKEN ] ) && Registrations::is_token( sanitize_key( wp_unslash( (string) $_GET[ self::ARG_TOKEN ] ) ) ) ) {
+			return;
+		}
 		Shell::leave( wp_login_url( (string) get_permalink( $seccion ) ) );
 	}
 
@@ -510,7 +517,11 @@ final class SignupForm {
 	 * @return bool
 	 */
 	public static function workshops_open( int $event_id ): bool {
-		if ( ! get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ) ) {
+		// Un evento que ya no está en la web, o que se cerró como histórico, no
+		// deja cambiar plazas aunque «Elegir taller» siga encendido.
+		if ( ! get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true )
+			|| 'publish' !== get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id ) ) {
 			return false;
 		}
 

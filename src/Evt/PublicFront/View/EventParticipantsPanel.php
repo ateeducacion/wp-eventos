@@ -62,7 +62,7 @@ final class EventParticipantsPanel {
 
 		<?php echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+		<?php echo EventWorkspaceView::outside_read_only( $m, self::filter( $m ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">

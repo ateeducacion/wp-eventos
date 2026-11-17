@@ -64,6 +64,16 @@ describe( 'slug proposal', () => {
 		expect( $( '[data-evt-slug-target]' ).value ).toHaveLength( 80 );
 	} );
 
+	it( 'never rewrites the slug a section already had', async () => {
+		document.body.innerHTML = `<form>
+			<input name="title" data-evt-slug-source value="Programa">
+			<input name="slug" data-evt-slug-target value="programa">
+		</form>`;
+		await load();
+		type( $( '[data-evt-slug-source]' ), 'Programa completo' );
+		expect( $( '[data-evt-slug-target]' ).value ).toBe( 'programa' );
+	} );
+
 	it( 'stops proposing once the slug has been typed by hand', async () => {
 		await mount();
 		type( $( '[data-evt-slug-target]' ), 'mi-slug' );

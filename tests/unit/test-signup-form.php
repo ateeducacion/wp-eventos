@@ -362,6 +362,11 @@ class Test_Signup_Form extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'wp-login.php', $url );
 		$this->assertSame( get_permalink( $seccion ), $this->query_arg( $url, 'redirect_to' ) );
 
+		// Con el enlace personal del correo no hace falta sesión: el enlace es la llave.
+		$_GET[ SignupForm::ARG_TOKEN ] = str_repeat( 'a', 40 );
+		$this->assertNull( $this->exit_url( array( SignupForm::class, 'require_login' ) ), 'con su enlace, se queda' );
+		unset( $_GET[ SignupForm::ARG_TOKEN ] );
+
 		// Cerrada, no: lo que hay que leer es por qué.
 		update_post_meta( $evento, RegistrationMetaKeys::SIGNUP_OPEN, false );
 		$this->assertNull( $this->exit_url( array( SignupForm::class, 'require_login' ) ) );

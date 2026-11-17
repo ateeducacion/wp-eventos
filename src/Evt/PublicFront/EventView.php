@@ -445,6 +445,11 @@ final class EventView {
 			$contenido = $post_id > 0
 				? (string) apply_filters( 'the_content', (string) get_post_field( 'post_content', $post_id ) )
 				: '';
+			// Una página con contraseña no enseña su texto hasta que se escribe:
+			// `get_the_content()` lo haría solo, pero aquí se lee el contenido crudo.
+			if ( $post_id > 0 && post_password_required( $post_id ) ) {
+				$contenido = get_the_password_form( $post_id );
+			}
 
 			self::$models[ $post_id ] = self::model( $post_id, $contenido );
 		}
@@ -468,7 +473,7 @@ final class EventView {
 		$start    = (string) get_post_meta( $event_id, EventMetaKeys::START_DATE, true );
 		$end      = (string) get_post_meta( $event_id, EventMetaKeys::END_DATE, true );
 		$is_root  = $event_id === $post_id;
-		$estado   = EventState::of( $start, $end );
+		$estado   = EventState::of( $start, $end, current_time( 'Y-m-d' ) );
 		$look     = self::appearance( $event_id, $post_id );
 
 		$m = array(

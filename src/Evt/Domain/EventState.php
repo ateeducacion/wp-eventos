@@ -27,7 +27,8 @@ final class EventState {
 	 *
 	 * @param string $start First day, Y-m-d ('' when unknown).
 	 * @param string $end   Last day, Y-m-d ('' = same as the first).
-	 * @param string $today Reference day, Y-m-d ('' = today, UTC).
+	 * @param string $today Reference day, Y-m-d ('' = today, UTC). Callers in WordPress
+	 *                      pass `current_time( 'Y-m-d' )`, the site's day, like the signup windows.
 	 * @return string One of EventMetaKeys::states().
 	 */
 	public static function of( string $start, string $end, string $today = '' ): string {

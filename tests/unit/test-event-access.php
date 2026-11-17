@@ -315,4 +315,31 @@ class Test_Event_Access extends WP_UnitTestCase {
 		$this->assertTrue( $rows[ $user ]['legacy'] );
 		$this->assertSame( $raw, get_user_meta( $user, EventAccess::USER_AREA_META, true ) );
 	}
+
+	/** An area cannot detach a section into a root event nobody in the area could open. */
+	public function test_an_area_cannot_detach_a_section_from_its_event() {
+		$area   = $this->area( 'Ámbito 1' );
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		update_user_meta( $editor, EventAccess::USER_AREA_META, array( $area ) );
+		$event   = $this->event( $this->administrator(), array( $area ) );
+		$section = $this->event_page( $event, 'programa' );
+
+		wp_set_current_user( $editor );
+		wp_update_post(
+			array(
+				'ID'          => $section,
+				'post_parent' => 0,
+			)
+		);
+		$this->assertSame( $event, (int) get_post_field( 'post_parent', $section ), 'the section stays in its event' );
+
+		wp_set_current_user( $this->administrator() );
+		wp_update_post(
+			array(
+				'ID'          => $section,
+				'post_parent' => 0,
+			)
+		);
+		$this->assertSame( 0, (int) get_post_field( 'post_parent', $section ), 'administration still can' );
+	}
 }

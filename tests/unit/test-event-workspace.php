@@ -1189,6 +1189,55 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Si se rechaza el cambio de una pregunta, no se guarda nada más: ni plazos ni textos legales.
+	 */
+	public function test_a_refused_question_change_writes_nothing_else() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_q_id'      => array( '' ),
+				'evt_q_label'   => array( 'Talla' ),
+				'evt_q_type'    => array( 'one' ),
+				'evt_q_options' => array( "S\nM" ),
+			)
+		);
+		$preguntas = \Evt\PublicFront\Registrations::questions( $evento );
+		self::factory()->post->create(
+			array(
+				'post_type'   => \Evt\PostType\RegistrationPostType::POST_TYPE,
+				'post_parent' => $evento,
+				'post_status' => 'publish',
+			)
+		);
+		$version = (int) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::CONSENT_VERSION, true );
+
+		$this->submit(
+			$uid,
+			EventWorkspace::PANEL_SIGNUP,
+			$evento,
+			0,
+			array(
+				'evt_signup_end'      => '2030-01-01',
+				'evt_consent_privacy' => 'Un texto nuevo',
+				'evt_q_id'            => array_column( $preguntas, 'id' ),
+				'evt_q_label'         => array( 'Talla' ),
+				'evt_q_type'          => array( 'text' ),
+				'evt_q_options'       => array( '' ),
+			)
+		);
+
+		$this->assertSame( 'one', \Evt\PublicFront\Registrations::questions( $evento )[0]['type'], 'el tipo no cambia' );
+		$this->assertNotSame( '2030-01-01', (string) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::SIGNUP_END, true ), 'el plazo tampoco' );
+		$this->assertSame( $version, (int) get_post_meta( $evento, \Evt\Meta\RegistrationMetaKeys::CONSENT_VERSION, true ), 'ni sube la versión del consentimiento' );
+	}
+
+	/**
 	 * Un alta de ponente que no pasa vuelve con el panel lateral abierto.
 	 */
 	public function test_a_failed_speaker_reopens_the_side_panel() {

@@ -625,7 +625,13 @@ final class ProgrammeBlock {
 	private static function people( int $evento, array $fila, bool $con_cargo ): string {
 		$fichas = self::section( $evento, 'ponentes' );
 		$gente  = array();
+		_prime_post_caches( array_map( 'intval', array_keys( (array) $fila['speakers'] ) ), false, false );
 		foreach ( (array) $fila['speakers'] as $id => $nombre ) {
+			// Un ponente en borrador o en la papelera no está en la web, y
+			// tampoco su nombre en el programa.
+			if ( 'publish' !== get_post_status( (int) $id ) ) {
+				continue;
+			}
 			$cargo   = $con_cargo ? trim( (string) get_post_meta( (int) $id, ProgrammeMetaKeys::SPEAKER_ROLE, true ) ) : '';
 			$gente[] = self::link( (string) $nombre, $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $id ) : '' )
 				. ( '' !== $cargo ? ' <span class="evt-ev__cargo">(' . esc_html( $cargo ) . ')</span>' : '' );

@@ -406,6 +406,12 @@ final class EventAccess {
 		if ( $pedido > 0 && ! self::can_edit( $user_id, $pedido ) ) {
 			$data['post_parent'] = $antes;
 		}
+		// Soltar una sección de su evento la convierte en un evento raíz sin
+		// ámbito —el ámbito es del evento, no de la sección—, que nadie del
+		// área puede abrir después. Solo quien administra todas las áreas.
+		if ( 0 === $pedido && $antes > 0 && ! self::can_edit_all_areas( $user_id ) ) {
+			$data['post_parent'] = $antes;
+		}
 		return $data;
 	}
 

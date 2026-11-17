@@ -188,7 +188,10 @@
 		}
 		var form = origen.form;
 		var destino = form && form.querySelector( '[data-evt-slug-target]' );
-		if ( ! destino || destino.dataset.evtTocado === '1' ) {
+		// `defaultValue` es el que trajo la página: si ya había slug, la
+		// sección está publicada con esa dirección y corregir el título no la
+		// cambia. Los enlaces compartidos seguirían llevando a un 404.
+		if ( ! destino || destino.dataset.evtTocado === '1' || destino.defaultValue !== '' ) {
 			return;
 		}
 		destino.value = slugify( origen.value );

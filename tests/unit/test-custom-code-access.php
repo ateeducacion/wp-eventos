@@ -154,6 +154,20 @@ class Test_Custom_Code_Access extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Las barras invertidas del CSS llegan enteras, como las manda el navegador.
+	 */
+	public function test_the_css_keeps_its_backslashes() {
+		$e   = $this->escenario();
+		$uid = $this->organiser( array( $e['area'] ) );
+		$css = '.evt-titulo::before{content:"\\2014"}';
+
+		// WordPress añade barras a todo `$_POST`; el formulario de verdad llega así.
+		$this->submit( $uid, $e['event'], array( EventMetaKeys::CUSTOM_CSS => wp_slash( $css ) ) );
+
+		$this->assertSame( $css, (string) get_post_meta( $e['event'], EventMetaKeys::CUSTOM_CSS, true ) );
+	}
+
+	/**
 	 * Y no el de otra área: la capacidad no se salta el acotado.
 	 *
 	 * Es la mitad que hace que abrir el CSS no sea abrirlo todo. Tener

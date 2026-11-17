@@ -2481,8 +2481,31 @@ final class RegistrationInput {
 
 
 
+
+
+
 	public static function tax_id( string $value ): string {
-		return strtoupper( (string) preg_replace( '/[\s.\-]/', '', $value ) );
+		$valor = strtoupper( (string) preg_replace( '/[\s.\-]/', '', $value ) );
+		if ( preg_match( '/^(\d{1,7})([A-Z])$/', $valor, $m ) ) {
+			$completo = str_pad( $m[1], 8, '0', STR_PAD_LEFT );
+			return self::dni_letter( $completo ) === $m[2] ? $completo . $m[2] : $valor;
+		}
+		if ( preg_match( '/^([XYZ])(\d{1,6})([A-Z])$/', $valor, $m ) ) {
+			$completo = str_pad( $m[2], 7, '0', STR_PAD_LEFT );
+			$numero   = (string) strpos( 'XYZ', $m[1] ) . $completo;
+			return self::dni_letter( $numero ) === $m[3] ? $m[1] . $completo . $m[3] : $valor;
+		}
+		return $valor;
+	}
+
+
+
+
+
+
+
+	private static function dni_letter( string $digits ): string {
+		return substr( 'TRWAGMYFPDXBNJZSQVHLCKE', (int) $digits % 23, 1 );
 	}
 
 
@@ -2522,8 +2545,12 @@ final class RegistrationInput {
 
 
 
+
+
+
+
 	public static function is_email( string $value ): bool {
-		return (bool) preg_match( '/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/', $value );
+		return (bool) preg_match( '/^[^@\s\x80-\xFF]+@[^@\s.\x80-\xFF]+(\.[^@\s.\x80-\xFF]+)+$/', $value );
 	}
 
 
@@ -2912,6 +2939,7 @@ use Evt\Meta\EventMetaKeys;
 
 
 final class EventState {
+
 
 
 
@@ -3359,6 +3387,12 @@ final class EventAccess {
 			return $data;
 		}
 		if ( $pedido > 0 && ! self::can_edit( $user_id, $pedido ) ) {
+			$data['post_parent'] = $antes;
+		}
+
+
+
+		if ( 0 === $pedido && $antes > 0 && ! self::can_edit_all_areas( $user_id ) ) {
 			$data['post_parent'] = $antes;
 		}
 		return $data;
@@ -3908,6 +3942,122 @@ final class EventPostType {
 		add_filter( 'post_type_link', array( self::class, 'draft_link' ), 20, 2 );
 		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
 		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
+		add_filter( 'the_posts', array( self::class, 'hide_unpublished_sections' ), 10, 2 );
+		add_action( 'before_delete_post', array( self::class, 'delete_what_hangs' ), 10, 2 );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function delete_what_hangs( $post_id, $post = null ): void {
+		$post = $post instanceof \WP_Post ? $post : get_post( (int) $post_id );
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type ) {
+			return;
+		}
+		$hijos = get_posts(
+			array(
+				'post_type'        => array( self::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE, RegistrationPostType::POST_TYPE ),
+				'post_parent'      => (int) $post->ID,
+				'post_status'      => 'any',
+				'numberposts'      => -1,
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+			)
+		);
+
+		$en_papelera = get_posts(
+			array(
+				'post_type'        => array( self::POST_TYPE, SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE, RegistrationPostType::POST_TYPE ),
+				'post_parent'      => (int) $post->ID,
+				'post_status'      => 'trash',
+				'numberposts'      => -1,
+				'fields'           => 'ids',
+				'suppress_filters' => true,
+			)
+		);
+		foreach ( array_merge( $hijos, $en_papelera ) as $hijo ) {
+
+			wp_delete_post( (int) $hijo, true );
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function event_of( \WP_Post $post ): int {
+		$padre = (int) $post->post_parent;
+		if ( $padre <= 0 ) {
+			return 0;
+		}
+		if ( self::POST_TYPE === $post->post_type ) {
+			return EventAccess::root_id( (int) $post->ID );
+		}
+		if ( in_array( $post->post_type, array( SpeakerPostType::POST_TYPE, ActivityPostType::POST_TYPE ), true ) ) {
+			return EventAccess::root_id( $padre );
+		}
+		return 0;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function hide_unpublished_sections( $posts, $query = null ) {
+		if ( ! is_array( $posts ) || array() === $posts || is_admin() ) {
+			return $posts;
+		}
+		$estado = array();
+		$out    = array();
+		foreach ( $posts as $post ) {
+			$raiz = $post instanceof \WP_Post ? self::event_of( $post ) : 0;
+			if ( $raiz <= 0 ) {
+				$out[] = $post;
+				continue;
+			}
+			if ( ! isset( $estado[ $raiz ] ) ) {
+				$estado[ $raiz ] = 'publish' === get_post_status( $raiz )
+					|| EventAccess::can_open( get_current_user_id(), $raiz );
+			}
+			if ( $estado[ $raiz ] ) {
+				$out[] = $post;
+			}
+		}
+		return $out;
 	}
 
 
@@ -8906,7 +9056,9 @@ final class EventList {
 
 
 
-			'posts_per_page'      => 200, 
+
+
+			'posts_per_page'      => -1,
 			'orderby'             => 'date',
 			'order'               => 'DESC',
 			'no_found_rows'       => true,
@@ -8960,7 +9112,7 @@ final class EventList {
 			'courses'  => self::terms( $id, EventTaxonomies::COURSE ),
 			'start'    => $inicio,
 			'end'      => $fin,
-			'state'    => EventState::of( $inicio, $fin ),
+			'state'    => EventState::of( $inicio, $fin, current_time( 'Y-m-d' ) ),
 			'archived' => EventAccess::is_archived( $id ),
 			'status'   => (string) $post->post_status,
 			'sections' => 0,
@@ -10024,7 +10176,13 @@ final class Programme {
 		if ( ! self::belongs( $event_id, $post_id, true ) ) {
 			return false;
 		}
-		return (bool) wp_untrash_post( $post_id );
+
+
+
+		add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
+		$hecho = (bool) wp_untrash_post( $post_id );
+		remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
+		return $hecho;
 	}
 
 
@@ -10338,7 +10496,33 @@ final class Participants {
 
 
 
-	public static function columns(): array {
+
+
+
+
+	public static function columns( array $filas = array() ): array {
+		$fijas = self::fixed_columns();
+		foreach ( $filas as $fila ) {
+			if ( ! is_array( $fila ) ) {
+				continue;
+			}
+			foreach ( $fila as $clave => $valor ) {
+				$clave = (string) $clave;
+				if ( '' === $clave || '_' === $clave[0] || isset( $fijas[ $clave ] ) || ! is_scalar( $valor ) ) {
+					continue;
+				}
+				$fijas[ $clave ] = $clave;
+			}
+		}
+		return $fijas;
+	}
+
+
+
+
+
+
+	private static function fixed_columns(): array {
 		return array(
 			'name'        => 'Nombre',
 			'email'       => 'Correo',
@@ -10383,7 +10567,7 @@ final class Participants {
 
 
 	public static function clean( array $filas ): array {
-		$columnas = array_keys( self::columns() );
+		$columnas = array_keys( self::columns( $filas ) );
 		$out      = array();
 		foreach ( $filas as $fila ) {
 			if ( ! is_array( $fila ) ) {
@@ -10436,7 +10620,7 @@ final class Participants {
 
 
 			$texto_fila = '';
-			foreach ( array_keys( self::columns() ) as $clave ) {
+			foreach ( array_keys( self::columns( array( $fila ) ) ) as $clave ) {
 				$texto_fila .= ( $fila[ $clave ] ?? '' ) . ' ';
 			}
 			if ( '' !== $buscado && false === strpos( self::fold( $texto_fila ), $buscado ) ) {
@@ -10493,7 +10677,7 @@ final class Participants {
 
 
 	public static function csv( array $filas ): string {
-		$columnas = self::columns();
+		$columnas = self::columns( $filas );
 		$lineas   = array( self::csv_line( array_values( $columnas ) ) );
 
 		foreach ( $filas as $fila ) {
@@ -12684,6 +12868,13 @@ final class SignupForm {
 		if ( '' !== self::closed_because( $evento ) || '' === self::login_needed( $evento ) ) {
 			return;
 		}
+
+
+
+
+		if ( isset( $_GET[ self::ARG_TOKEN ] ) && Registrations::is_token( sanitize_key( wp_unslash( (string) $_GET[ self::ARG_TOKEN ] ) ) ) ) {
+			return;
+		}
 		Shell::leave( wp_login_url( (string) get_permalink( $seccion ) ) );
 	}
 
@@ -13080,7 +13271,11 @@ final class SignupForm {
 
 
 	public static function workshops_open( int $event_id ): bool {
-		if ( ! get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ) ) {
+
+
+		if ( ! get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true )
+			|| 'publish' !== get_post_status( $event_id )
+			|| EventAccess::is_archived( $event_id ) ) {
 			return false;
 		}
 
@@ -13601,17 +13796,22 @@ final class Attendance {
 
 
 
-	public static function set_manual( int $registration_id, array $checked, array $all ): void {
+
+	public static function set_manual( int $registration_id, array $checked, array $all, ?array $shown = null ): void {
 		$marcas = self::marks( $registration_id );
 		$antes  = $marcas;
 		foreach ( $all as $id ) {
 			$puesto = in_array( $id, $checked, true );
+
+
+
+			$se_veia = null === $shown || in_array( $id, $shown, true );
 			if ( $puesto && ! isset( $marcas[ $id ] ) ) {
 				$marcas[ $id ] = array(
 					'at' => current_time( 'mysql' ),
 					'by' => self::BY_MANUAL,
 				);
-			} elseif ( ! $puesto ) {
+			} elseif ( ! $puesto && $se_veia ) {
 				unset( $marcas[ $id ] );
 			}
 		}
@@ -14534,6 +14734,24 @@ final class EventWorkspace {
 
 
 
+		if ( self::OP_EXPORT === $op || self::OP_ATT_EXPORT === $op ) {
+			if ( ! EventAccess::can_open( $user_id, $event_id ) ) {
+				self::set_flash( 'error', EventAccess::why_not_editable( $user_id, $event_id ) );
+				Shell::leave( $destino );
+				return;
+			}
+			if ( self::OP_EXPORT === $op ) {
+				self::export_participants( $event_id );
+				return;
+			}
+
+			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
+			return;
+		}
+
+
+
+
 
 
 		EditLock::require_available( $event_id );
@@ -14568,15 +14786,6 @@ final class EventWorkspace {
 		}
 		if ( self::OP_ACTIVITY === $op ) {
 			self::save_activity( $event_id, $row_id, $destino );
-			return;
-		}
-		if ( self::OP_EXPORT === $op ) {
-			self::export_participants( $event_id );
-			return;
-		}
-		if ( self::OP_ATT_EXPORT === $op ) {
-
-			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
 			return;
 		}
 		if ( self::PANEL_ATTENDANCE === $op ) {
@@ -15008,7 +15217,7 @@ final class EventWorkspace {
 				'name'     => self::field( 'evt_sp_name' ),
 				'role'     => self::field( 'evt_sp_role' ),
 				'org'      => self::field( 'evt_sp_org' ),
-				'bio'      => self::field( 'evt_sp_bio' ),
+				'bio'      => self::textarea_field( 'evt_sp_bio' ),
 				'featured' => self::field( 'evt_sp_featured' ),
 			)
 		);
@@ -15065,10 +15274,10 @@ final class EventWorkspace {
 				'venue'    => self::field( 'evt_ac_venue' ),
 				'room'     => self::field( 'evt_ac_room' ),
 				'seats'    => self::field( 'evt_ac_seats' ),
-				'summary'  => self::field( 'evt_ac_summary' ),
+				'summary'  => self::textarea_field( 'evt_ac_summary' ),
 				'speakers' => $ponentes,
 				'video'    => self::field( 'evt_ac_video' ),
-				'guests'   => self::field( 'evt_ac_guests' ),
+				'guests'   => self::textarea_field( 'evt_ac_guests' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -15193,6 +15402,7 @@ final class EventWorkspace {
 
 		$filas   = array_map( 'absint', (array) wp_unslash( $_POST['evt_at_rows'] ?? array() ) );
 		$marcado = (array) wp_unslash( $_POST['evt_at'] ?? array() );
+		$visto   = (array) wp_unslash( $_POST['evt_at_was'] ?? array() );
 
 
 		$todos = wp_list_pluck( Attendance::points( $event_id ), 'id' );
@@ -15202,10 +15412,13 @@ final class EventWorkspace {
 			if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
 				continue;
 			}
-			$suyos = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
+			$suyos  = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
 				? array_map( 'sanitize_key', array_keys( $marcado[ $registration_id ] ) )
 				: array();
-			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos );
+			$vistos = isset( $visto[ $registration_id ] ) && is_array( $visto[ $registration_id ] )
+				? array_map( 'sanitize_key', array_keys( $visto[ $registration_id ] ) )
+				: array();
+			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos, $vistos );
 		}
 		self::set_flash( 'ok', 'Asistencia guardada.' );
 		Shell::leave( add_query_arg( self::ARG_WORKSHOP, self::field( self::ARG_WORKSHOP ), $destino ) );
@@ -15505,7 +15718,9 @@ final class EventWorkspace {
 				$ignorados[] = $nombres[ $clave ];
 				continue;
 			}
-			update_post_meta( $event_id, $clave, self::raw( $clave ) );
+
+
+			update_post_meta( $event_id, $clave, wp_slash( self::raw( $clave ) ) );
 		}
 
 		if ( array() !== $ignorados ) {
@@ -15862,6 +16077,30 @@ final class EventWorkspace {
 
 
 	private static function save_signup( int $event_id, string $destino ): void {
+
+
+
+
+		$antes = Registrations::questions( $event_id );
+		$ahora = SignupQuestions::with_ids(
+			SignupQuestions::read( self::submitted_questions() ),
+			static function (): string {
+				return bin2hex( random_bytes( 6 ) );
+			}
+		);
+
+		$rechazo = SignupQuestions::refuse( $antes, $ahora, Registrations::has_any( $event_id ) );
+		if ( array() !== $rechazo ) {
+			self::set_flash(
+				'error',
+				'Ya hay personas inscritas, así que a una pregunta se le puede cambiar el rótulo y añadir opciones, '
+					. 'pero no cambiarle el tipo ni quitarle una opción: lo ya contestado dejaría de significar lo mismo. '
+					. 'Lo demás no se ha guardado.'
+			);
+			Shell::leave( $destino );
+			return;
+		}
+
 		$abierta  = self::field( 'evt_signup_open' );
 		$talleres = self::field( 'evt_workshop_open' );
 		$publica  = self::field( 'evt_signup_public' );
@@ -15886,26 +16125,6 @@ final class EventWorkspace {
 		update_post_meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID, max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ) );
 
 		self::save_consent( $event_id );
-
-		$antes = Registrations::questions( $event_id );
-		$ahora = SignupQuestions::with_ids(
-			SignupQuestions::read( self::submitted_questions() ),
-			static function (): string {
-				return bin2hex( random_bytes( 6 ) );
-			}
-		);
-
-		$rechazo = SignupQuestions::refuse( $antes, $ahora, Registrations::has_any( $event_id ) );
-		if ( array() !== $rechazo ) {
-			self::set_flash(
-				'error',
-				'Ya hay personas inscritas, así que a una pregunta se le puede cambiar el rótulo y añadir opciones, '
-					. 'pero no cambiarle el tipo ni quitarle una opción: lo ya contestado dejaría de significar lo mismo. '
-					. 'Lo demás no se ha guardado.'
-			);
-			Shell::leave( $destino );
-			return;
-		}
 
 
 
@@ -15990,6 +16209,20 @@ final class EventWorkspace {
 	private static function field( string $nombre ): string {
 
 		return trim( sanitize_text_field( wp_unslash( (string) ( $_POST[ $nombre ] ?? '' ) ) ) );
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function textarea_field( string $nombre ): string {
+
+		return trim( sanitize_textarea_field( wp_unslash( (string) ( $_POST[ $nombre ] ?? '' ) ) ) );
 	}
 
 
@@ -16305,7 +16538,8 @@ final class EventWorkspace {
 		$m['status_label']  = self::status_label( (string) $evento->post_status );
 		$m['state']         = EventState::of(
 			self::meta( $event_id, EventMetaKeys::START_DATE ),
-			self::meta( $event_id, EventMetaKeys::END_DATE )
+			self::meta( $event_id, EventMetaKeys::END_DATE ),
+			current_time( 'Y-m-d' )
 		);
 		$m['state_label']   = EventState::label( (string) $m['state'] );
 		$m['dates_text']    = DateRange::of( self::meta( $event_id, EventMetaKeys::START_DATE ), self::meta( $event_id, EventMetaKeys::END_DATE ) );
@@ -16416,6 +16650,7 @@ final class EventWorkspace {
 		$m['people_total'] = count( $todos );
 		$m['people_tags']  = Participants::workshops( $todos );
 		$m['people']       = Participants::filter( $todos, (string) $m['people_q'], (string) $m['people_filter'] );
+		$m['people_cols']  = Participants::columns( $todos );
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
 
 		if ( self::PANEL_ATTENDANCE === $m['panel'] ) {
@@ -17753,7 +17988,7 @@ final class EventParticipantsPanel {
 
 		<?php echo $cajon; ?>
 		<?php echo self::counters( $m, $filas ); ?>
-		<?php echo self::filter( $m ); ?>
+		<?php echo EventWorkspaceView::outside_read_only( $m, self::filter( $m ) ); ?>
 
 		<?php if ( array() === $filas ) : ?>
 			<div class="evt-tabla-caja">
@@ -18810,30 +19045,32 @@ final class EventAttendancePanel {
 		$accion  = (string) strtok( $base, '?' );
 		$ocultos = array();
 		parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $ocultos );
-		$html .= '<form class="evt-form evt-filtro" method="get" action="' . esc_url( $accion ) . '">';
+		$lee = '<form class="evt-form evt-filtro" method="get" action="' . esc_url( $accion ) . '">';
 		foreach ( $ocultos as $clave => $valor ) {
-			$html .= '<input type="hidden" name="' . esc_attr( (string) $clave ) . '" value="' . esc_attr( (string) $valor ) . '">';
+			$lee .= '<input type="hidden" name="' . esc_attr( (string) $clave ) . '" value="' . esc_attr( (string) $valor ) . '">';
 		}
 		if ( array() !== $talleres ) {
-			$html .= '<div class="evt-form-campo"><label for="evt-at-taller">Taller</label><select id="evt-at-taller" name="' . esc_attr( EventWorkspace::ARG_WORKSHOP ) . '"><option value="">Todas las personas</option>';
+			$lee .= '<div class="evt-form-campo"><label for="evt-at-taller">Taller</label><select id="evt-at-taller" name="' . esc_attr( EventWorkspace::ARG_WORKSHOP ) . '"><option value="">Todas las personas</option>';
 			foreach ( $talleres as $id => $rotulo ) {
-				$html .= sprintf( '<option value="%1$d"%2$s>%3$s</option>', (int) $id, selected( $taller, (int) $id, false ), esc_html( (string) $rotulo ) );
+				$lee .= sprintf( '<option value="%1$d"%2$s>%3$s</option>', (int) $id, selected( $taller, (int) $id, false ), esc_html( (string) $rotulo ) );
 			}
-			$html .= '</select></div><div class="evt-acciones"><button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Filtrar</button></div>';
+			$lee .= '</select></div><div class="evt-acciones"><button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Filtrar</button></div>';
 		}
-		$html .= '</form>';
+		$lee .= '</form>';
 
-		$hoja  = add_query_arg(
+		$hoja = add_query_arg(
 			array(
 				Attendance::ARG_SHEET        => '1',
 				EventWorkspace::ARG_WORKSHOP => $taller > 0 ? (string) $taller : '',
 			),
 			$base
 		);
-		$html .= '<div class="evt-acciones">';
-		$html .= '<a class="' . esc_attr( Assets::button_class() ) . '" href="' . esc_url( $hoja ) . '" target="_blank" rel="noopener">Hoja de firmas para imprimir</a>';
-		$html .= self::export_form( $event_id );
-		$html .= '</div>';
+		$lee .= '<div class="evt-acciones">';
+		$lee .= '<a class="' . esc_attr( Assets::button_class() ) . '" href="' . esc_url( $hoja ) . '" target="_blank" rel="noopener">Hoja de firmas para imprimir</a>';
+		$lee .= self::export_form( $event_id );
+		$lee .= '</div>';
+
+		$html .= EventWorkspaceView::outside_read_only( $m, $lee );
 
 		if ( array() === $filas ) {
 			return $html . '<p class="evt-vacio">Todavía no hay nadie inscrito' . ( $taller > 0 ? ' en este taller' : '' ) . '.</p></section>';
@@ -18869,12 +19106,14 @@ final class EventAttendancePanel {
 				$marca = $fila['marks'][ $punto['id'] ] ?? null;
 				$texto = null === $marca ? '' : Attendance::time( (string) $marca['at'] ) . ( Attendance::BY_MANUAL === $marca['by'] ? ' (a mano)' : '' );
 				$html .= sprintf(
-					'<td data-rotulo="%1$s"><label class="evt-check"><input type="checkbox" name="evt_at[%2$d][%3$s]" value="1"%4$s> %5$s</label></td>',
+					'<td data-rotulo="%1$s"><label class="evt-check"><input type="checkbox" name="evt_at[%2$d][%3$s]" value="1"%4$s> %5$s</label>%6$s</td>',
 					esc_attr( (string) $punto['label'] ),
 					$id,
 					esc_attr( (string) $punto['id'] ),
 					checked( null !== $marca, true, false ),
-					esc_html( $texto )
+					esc_html( $texto ),
+
+					null !== $marca ? sprintf( '<input type="hidden" name="evt_at_was[%1$d][%2$s]" value="1">', $id, esc_attr( (string) $punto['id'] ) ) : ''
 				);
 			}
 			$html .= '</tr>';
@@ -20367,6 +20606,31 @@ final class EventWorkspaceView {
 
 
 
+	public const READ_ONLY_OPEN = '<fieldset class="evt-solo-lectura" disabled><legend class="screen-reader-text">Evento en solo lectura</legend>';
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function outside_read_only( array $m, string $html ): string {
+		if ( true === ( $m['can_edit'] ?? false ) ) {
+			return $html;
+		}
+		return '</fieldset>' . $html . self::READ_ONLY_OPEN;
+	}
+
+
+
+
+
 
 
 
@@ -20409,7 +20673,7 @@ final class EventWorkspaceView {
 
 		$cerrado = true !== $m['can_edit'];
 		if ( $cerrado ) {
-			echo '<fieldset class="evt-solo-lectura" disabled><legend class="screen-reader-text">Evento en solo lectura</legend>';
+			echo self::READ_ONLY_OPEN; 
 		}
 
 		if ( EventWorkspace::PANEL_SPEAKERS === $panel ) {
@@ -22273,7 +22537,73 @@ final class ContentBlock {
 
 
 	public static function html( array $m ): string {
-		return wp_kses_post( (string) $m['content'] );
+		return wp_kses( (string) $m['content'], self::allowed() );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function allowed(): array {
+		$tags             = wp_kses_allowed_html( 'post' );
+		$comunes          = array(
+			'id'    => true,
+			'class' => true,
+			'name'  => true,
+			'style' => true,
+		);
+		$campo            = $comunes + array(
+			'type'         => true,
+			'value'        => true,
+			'checked'      => true,
+			'selected'     => true,
+			'disabled'     => true,
+			'required'     => true,
+			'placeholder'  => true,
+			'multiple'     => true,
+			'min'          => true,
+			'max'          => true,
+			'step'         => true,
+			'maxlength'    => true,
+			'rows'         => true,
+			'cols'         => true,
+			'aria-label'   => true,
+			'autocomplete' => true,
+		);
+		$tags['iframe']   = array(
+			'src'             => true,
+			'width'           => true,
+			'height'          => true,
+			'title'           => true,
+			'allow'           => true,
+			'allowfullscreen' => true,
+			'frameborder'     => true,
+			'loading'         => true,
+			'referrerpolicy'  => true,
+			'class'           => true,
+			'style'           => true,
+		);
+		$tags['form']     = $comunes + array(
+			'action'     => true,
+			'method'     => true,
+			'enctype'    => true,
+			'novalidate' => true,
+		);
+		$tags['input']    = $campo;
+		$tags['select']   = $campo;
+		$tags['option']   = $campo;
+		$tags['textarea'] = $campo;
+		$tags['button']   = $campo;
+		$tags['label']    = ( $tags['label'] ?? array() ) + array( 'for' => true );
+		$tags['fieldset'] = $comunes;
+		$tags['legend']   = $comunes;
+		return $tags;
 	}
 }
 
@@ -22979,7 +23309,13 @@ final class ProgrammeBlock {
 	private static function people( int $evento, array $fila, bool $con_cargo ): string {
 		$fichas = self::section( $evento, 'ponentes' );
 		$gente  = array();
+		_prime_post_caches( array_map( 'intval', array_keys( (array) $fila['speakers'] ) ), false, false );
 		foreach ( (array) $fila['speakers'] as $id => $nombre ) {
+
+
+			if ( 'publish' !== get_post_status( (int) $id ) ) {
+				continue;
+			}
 			$cargo   = $con_cargo ? trim( (string) get_post_meta( (int) $id, ProgrammeMetaKeys::SPEAKER_ROLE, true ) ) : '';
 			$gente[] = self::link( (string) $nombre, $fichas > 0 ? EventPostType::entry_url( $fichas, (int) $id ) : '' )
 				. ( '' !== $cargo ? ' <span class="evt-ev__cargo">(' . esc_html( $cargo ) . ')</span>' : '' );
@@ -24512,6 +24848,11 @@ final class EventView {
 				? (string) apply_filters( 'the_content', (string) get_post_field( 'post_content', $post_id ) )
 				: '';
 
+
+			if ( $post_id > 0 && post_password_required( $post_id ) ) {
+				$contenido = get_the_password_form( $post_id );
+			}
+
 			self::$models[ $post_id ] = self::model( $post_id, $contenido );
 		}
 		return self::$models[ $post_id ];
@@ -24534,7 +24875,7 @@ final class EventView {
 		$start    = (string) get_post_meta( $event_id, EventMetaKeys::START_DATE, true );
 		$end      = (string) get_post_meta( $event_id, EventMetaKeys::END_DATE, true );
 		$is_root  = $event_id === $post_id;
-		$estado   = EventState::of( $start, $end );
+		$estado   = EventState::of( $start, $end, current_time( 'Y-m-d' ) );
 		$look     = self::appearance( $event_id, $post_id );
 
 		$m = array(
@@ -26007,6 +26348,16 @@ final class TimelineView {
 		ob_start();
 		?>
 		<form class="evt-linea__filtro" method="get" action="<?php echo esc_url( $aqui ); ?>" role="search">
+			<?php
+
+
+			$ocultos = array();
+			parse_str( (string) wp_parse_url( $aqui, PHP_URL_QUERY ), $ocultos );
+			unset( $ocultos[ Timeline::ARG_SEARCH ], $ocultos[ Timeline::ARG_AREA ] );
+			foreach ( $ocultos as $clave => $valor ) :
+				?>
+				<input type="hidden" name="<?php echo esc_attr( (string) $clave ); ?>" value="<?php echo esc_attr( (string) $valor ); ?>" />
+			<?php endforeach; ?>
 			<label class="evt-linea__campo">
 				<span>Buscar</span>
 				<input type="search" name="<?php echo esc_attr( Timeline::ARG_SEARCH ); ?>" value="<?php echo esc_attr( $buscar ); ?>" placeholder="Título, sede…" />
@@ -26418,12 +26769,48 @@ final class Timeline {
 
 
 
+	private static function matching( string $search ): array {
+		$base  = array(
+			'post_type'        => EventPostType::POST_TYPE,
+			'post_parent'      => 0,
+			'post_status'      => 'publish',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		);
+		$texto = get_posts( $base + array( 's' => $search ) );
+		$sede  = get_posts(
+			$base + array(
+				'meta_query' => array( 
+					array(
+						'key'     => EventMetaKeys::VENUE,
+						'value'   => $search,
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		$ids   = array_values( array_unique( array_map( 'intval', array_merge( (array) $texto, (array) $sede ) ) ) );
+		return array() !== $ids ? $ids : array( 0 );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	private static function events( string $today, array $filters ): array {
 		$extra = array();
 		if ( '' !== $filters['search'] ) {
-			$extra['s'] = $filters['search'];
+			$extra['post__in'] = self::matching( $filters['search'] );
 		}
 		if ( $filters['area'] > 0 ) {
 			$extra['tax_query'] = array( 
@@ -26798,7 +27185,8 @@ final class EventAdmin {
 			$root  = EventAccess::root_id( $post_id );
 			$state = EventState::of(
 				(string) get_post_meta( $root, EventMetaKeys::START_DATE, true ),
-				(string) get_post_meta( $root, EventMetaKeys::END_DATE, true )
+				(string) get_post_meta( $root, EventMetaKeys::END_DATE, true ),
+				current_time( 'Y-m-d' )
 			);
 
 
@@ -30992,7 +31380,10 @@ body .swal2-container { z-index: 100010; }
 		}
 		var form = origen.form;
 		var destino = form && form.querySelector( \'[data-evt-slug-target]\' );
-		if ( ! destino || destino.dataset.evtTocado === \'1\' ) {
+		// `defaultValue` es el que trajo la página: si ya había slug, la
+		// sección está publicada con esa dirección y corregir el título no la
+		// cambia. Los enlaces compartidos seguirían llevando a un 404.
+		if ( ! destino || destino.dataset.evtTocado === \'1\' || destino.defaultValue !== \'\' ) {
 			return;
 		}
 		destino.value = slugify( origen.value );

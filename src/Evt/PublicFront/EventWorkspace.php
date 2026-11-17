@@ -538,6 +538,24 @@ final class EventWorkspace {
 			$destino = Shell::back_url();
 		}
 
+		// Exportar solo lee: va antes del bloqueo y de `can_edit()`. Un evento
+		// histórico se sigue exportando —es cuando se piden los certificados—,
+		// y que otra persona lo tenga abierto no impide sacar una copia.
+		if ( self::OP_EXPORT === $op || self::OP_ATT_EXPORT === $op ) {
+			if ( ! EventAccess::can_open( $user_id, $event_id ) ) {
+				self::set_flash( 'error', EventAccess::why_not_editable( $user_id, $event_id ) );
+				Shell::leave( $destino );
+				return;
+			}
+			if ( self::OP_EXPORT === $op ) {
+				self::export_participants( $event_id );
+				return;
+			}
+			// El mismo nombre que la lista de participantes, con otro prefijo.
+			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
+			return;
+		}
+
 		// Lo primero de todo, antes de escribir una sola meta, un término o un
 		// estado: si otra persona tiene abierto el evento, este envío trae la
 		// pantalla de antes y pisaría lo que esté escribiendo. Responde 409 y
@@ -575,15 +593,6 @@ final class EventWorkspace {
 		}
 		if ( self::OP_ACTIVITY === $op ) {
 			self::save_activity( $event_id, $row_id, $destino );
-			return;
-		}
-		if ( self::OP_EXPORT === $op ) {
-			self::export_participants( $event_id );
-			return;
-		}
-		if ( self::OP_ATT_EXPORT === $op ) {
-			// El mismo nombre que la lista de participantes, con otro prefijo.
-			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
 			return;
 		}
 		if ( self::PANEL_ATTENDANCE === $op ) {
@@ -1015,7 +1024,7 @@ final class EventWorkspace {
 				'name'     => self::field( 'evt_sp_name' ),
 				'role'     => self::field( 'evt_sp_role' ),
 				'org'      => self::field( 'evt_sp_org' ),
-				'bio'      => self::field( 'evt_sp_bio' ),
+				'bio'      => self::textarea_field( 'evt_sp_bio' ),
 				'featured' => self::field( 'evt_sp_featured' ),
 			)
 		);
@@ -1072,10 +1081,10 @@ final class EventWorkspace {
 				'venue'    => self::field( 'evt_ac_venue' ),
 				'room'     => self::field( 'evt_ac_room' ),
 				'seats'    => self::field( 'evt_ac_seats' ),
-				'summary'  => self::field( 'evt_ac_summary' ),
+				'summary'  => self::textarea_field( 'evt_ac_summary' ),
 				'speakers' => $ponentes,
 				'video'    => self::field( 'evt_ac_video' ),
-				'guests'   => self::field( 'evt_ac_guests' ),
+				'guests'   => self::textarea_field( 'evt_ac_guests' ),
 			)
 		);
 		if ( true !== $check['ok'] ) {
@@ -1200,6 +1209,7 @@ final class EventWorkspace {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); se leen identificadores y se comparan con los del evento.
 		$filas   = array_map( 'absint', (array) wp_unslash( $_POST['evt_at_rows'] ?? array() ) );
 		$marcado = (array) wp_unslash( $_POST['evt_at'] ?? array() );
+		$visto   = (array) wp_unslash( $_POST['evt_at_was'] ?? array() );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$todos = wp_list_pluck( Attendance::points( $event_id ), 'id' );
@@ -1209,10 +1219,13 @@ final class EventWorkspace {
 			if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
 				continue;
 			}
-			$suyos = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
+			$suyos  = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
 				? array_map( 'sanitize_key', array_keys( $marcado[ $registration_id ] ) )
 				: array();
-			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos );
+			$vistos = isset( $visto[ $registration_id ] ) && is_array( $visto[ $registration_id ] )
+				? array_map( 'sanitize_key', array_keys( $visto[ $registration_id ] ) )
+				: array();
+			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos, $vistos );
 		}
 		self::set_flash( 'ok', 'Asistencia guardada.' );
 		Shell::leave( add_query_arg( self::ARG_WORKSHOP, self::field( self::ARG_WORKSHOP ), $destino ) );
@@ -1512,7 +1525,9 @@ final class EventWorkspace {
 				$ignorados[] = $nombres[ $clave ];
 				continue;
 			}
-			update_post_meta( $event_id, $clave, self::raw( $clave ) );
+			// `update_post_meta()` quita una capa de barras: sin `wp_slash()`, un
+			// `content:"\2014"` del CSS o un `/\d+/` del JS llegarían rotos.
+			update_post_meta( $event_id, $clave, wp_slash( self::raw( $clave ) ) );
 		}
 
 		if ( array() !== $ignorados ) {
@@ -1869,6 +1884,30 @@ final class EventWorkspace {
 	 * @return void
 	 */
 	private static function save_signup( int $event_id, string $destino ): void {
+		// Las preguntas se comprueban **antes** de escribir nada: el aviso dice
+		// que no se ha guardado lo demás, y tiene que ser verdad. Antes se
+		// guardaban los plazos y los textos legales —con versión nueva de
+		// consentimiento incluida— y después se rechazaba.
+		$antes = Registrations::questions( $event_id );
+		$ahora = SignupQuestions::with_ids(
+			SignupQuestions::read( self::submitted_questions() ),
+			static function (): string {
+				return bin2hex( random_bytes( 6 ) );
+			}
+		);
+
+		$rechazo = SignupQuestions::refuse( $antes, $ahora, Registrations::has_any( $event_id ) );
+		if ( array() !== $rechazo ) {
+			self::set_flash(
+				'error',
+				'Ya hay personas inscritas, así que a una pregunta se le puede cambiar el rótulo y añadir opciones, '
+					. 'pero no cambiarle el tipo ni quitarle una opción: lo ya contestado dejaría de significar lo mismo. '
+					. 'Lo demás no se ha guardado.'
+			);
+			Shell::leave( $destino );
+			return;
+		}
+
 		$abierta  = self::field( 'evt_signup_open' );
 		$talleres = self::field( 'evt_workshop_open' );
 		$publica  = self::field( 'evt_signup_public' );
@@ -1893,26 +1932,6 @@ final class EventWorkspace {
 		update_post_meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID, max( 0, (int) self::field( EventMetaKeys::SIGNUP_FORM_ID ) ) );
 
 		self::save_consent( $event_id );
-
-		$antes = Registrations::questions( $event_id );
-		$ahora = SignupQuestions::with_ids(
-			SignupQuestions::read( self::submitted_questions() ),
-			static function (): string {
-				return bin2hex( random_bytes( 6 ) );
-			}
-		);
-
-		$rechazo = SignupQuestions::refuse( $antes, $ahora, Registrations::has_any( $event_id ) );
-		if ( array() !== $rechazo ) {
-			self::set_flash(
-				'error',
-				'Ya hay personas inscritas, así que a una pregunta se le puede cambiar el rótulo y añadir opciones, '
-					. 'pero no cambiarle el tipo ni quitarle una opción: lo ya contestado dejaría de significar lo mismo. '
-					. 'Lo demás no se ha guardado.'
-			);
-			Shell::leave( $destino );
-			return;
-		}
 
 		// `wp_slash()`: `update_post_meta()` desescapa, y un rótulo con tilde o
 		// con comillas llegaría roto al JSON guardado.
@@ -1997,6 +2016,20 @@ final class EventWorkspace {
 	private static function field( string $nombre ): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle() antes de llamar aquí.
 		return trim( sanitize_text_field( wp_unslash( (string) ( $_POST[ $nombre ] ?? '' ) ) ) );
+	}
+
+	/**
+	 * A multi-line field of the POST: keeps its line breaks.
+	 *
+	 * `sanitize_text_field()` junta las líneas en una: una biografía en
+	 * párrafos o «Otros participantes», uno por línea, saldrían en un renglón.
+	 *
+	 * @param string $nombre Field name.
+	 * @return string
+	 */
+	private static function textarea_field( string $nombre ): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle() antes de llamar aquí.
+		return trim( sanitize_textarea_field( wp_unslash( (string) ( $_POST[ $nombre ] ?? '' ) ) ) );
 	}
 
 	/*
@@ -2312,7 +2345,8 @@ final class EventWorkspace {
 		$m['status_label']  = self::status_label( (string) $evento->post_status );
 		$m['state']         = EventState::of(
 			self::meta( $event_id, EventMetaKeys::START_DATE ),
-			self::meta( $event_id, EventMetaKeys::END_DATE )
+			self::meta( $event_id, EventMetaKeys::END_DATE ),
+			current_time( 'Y-m-d' )
 		);
 		$m['state_label']   = EventState::label( (string) $m['state'] );
 		$m['dates_text']    = DateRange::of( self::meta( $event_id, EventMetaKeys::START_DATE ), self::meta( $event_id, EventMetaKeys::END_DATE ) );
@@ -2423,6 +2457,7 @@ final class EventWorkspace {
 		$m['people_total'] = count( $todos );
 		$m['people_tags']  = Participants::workshops( $todos );
 		$m['people']       = Participants::filter( $todos, (string) $m['people_q'], (string) $m['people_filter'] );
+		$m['people_cols']  = Participants::columns( $todos );
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
 
 		if ( self::PANEL_ATTENDANCE === $m['panel'] ) {

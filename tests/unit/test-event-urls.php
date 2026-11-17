@@ -104,6 +104,122 @@ class Test_Event_Urls extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Las secciones de un evento que no está publicado no se ven fuera, y quien lo prepara sí las ve.
+	 */
+	public function test_sections_of_an_unpublished_event_are_not_public() {
+		$area   = $this->area();
+		$evento = $this->event( $this->administrator(), array( $area ), array(), array( 'post_status' => 'draft' ) );
+		$pagina = $this->event_page( $evento, 'programa', array( 'post_name' => 'programa' ) );
+		$buscar = static function (): array {
+			return wp_list_pluck(
+				( new WP_Query(
+					array(
+						'post_type'      => EventPostType::POST_TYPE,
+						'post_status'    => 'publish',
+						'posts_per_page' => -1,
+					)
+				) )->posts,
+				'ID'
+			);
+		};
+
+		wp_set_current_user( 0 );
+		$this->assertNotContains( $pagina, $buscar(), 'sin sesión, la sección de un borrador no sale' );
+
+		wp_set_current_user( $this->administrator() );
+		$this->assertContains( $pagina, $buscar(), 'quien puede abrir el evento la sigue viendo' );
+
+		wp_set_current_user( 0 );
+		wp_update_post(
+			array(
+				'ID'          => $evento,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertContains( $pagina, $buscar(), 'publicado, sí' );
+
+		wp_trash_post( $evento );
+		$this->assertNotContains( $pagina, $buscar(), 'en la papelera, otra vez no' );
+	}
+
+	/**
+	 * Borrar definitivamente un evento se lleva sus secciones, ponentes e inscripciones.
+	 */
+	public function test_deleting_an_event_for_good_takes_what_hangs_from_it() {
+		$evento      = $this->event( $this->administrator(), array( $this->area() ) );
+		$pagina      = $this->event_page( $evento, 'programa' );
+		$ponente     = \Evt\PublicFront\Programme::save_speaker(
+			$evento,
+			0,
+			array(
+				'name' => 'Ana Pérez',
+				'role' => '',
+				'org'  => '',
+				'bio'  => '',
+			)
+		);
+		$inscripcion = self::factory()->post->create(
+			array(
+				'post_type'   => \Evt\PostType\RegistrationPostType::POST_TYPE,
+				'post_parent' => $evento,
+				'post_status' => 'publish',
+			)
+		);
+
+		wp_delete_post( $evento, true );
+
+		$this->assertNull( get_post( $pagina ), 'la sección no se queda suelta como evento' );
+		$this->assertNull( get_post( $ponente ) );
+		$this->assertNull( get_post( $inscripcion ), 'ni una inscripción huérfana con datos personales' );
+	}
+
+	/**
+	 * Los ponentes de un evento en borrador tampoco salen fuera, ni por la REST.
+	 */
+	public function test_speakers_of_an_unpublished_event_are_not_public() {
+		$evento  = $this->event( $this->administrator(), array( $this->area() ), array(), array( 'post_status' => 'draft' ) );
+		$ponente = \Evt\PublicFront\Programme::save_speaker(
+			$evento,
+			0,
+			array(
+				'name' => 'Ana Pérez',
+				'role' => '',
+				'org'  => '',
+				'bio'  => '',
+			)
+		);
+
+		wp_set_current_user( 0 );
+		$ids = wp_list_pluck(
+			( new WP_Query(
+				array(
+					'post_type'      => \Evt\PostType\SpeakerPostType::POST_TYPE,
+					'posts_per_page' => -1,
+				)
+			) )->posts,
+			'ID'
+		);
+		$this->assertNotContains( $ponente, $ids );
+
+		wp_update_post(
+			array(
+				'ID'          => $evento,
+				'post_status' => 'publish',
+			)
+		);
+		$ids = wp_list_pluck(
+			( new WP_Query(
+				array(
+					'post_type'      => \Evt\PostType\SpeakerPostType::POST_TYPE,
+					'posts_per_page' => -1,
+				)
+			) )->posts,
+			'ID'
+		);
+		$this->assertContains( $ponente, $ids, 'publicado el evento, sí' );
+	}
+
+	/**
 	 * Una página de verdad con la misma ruta gana.
 	 */
 	public function test_a_real_page_wins() {
