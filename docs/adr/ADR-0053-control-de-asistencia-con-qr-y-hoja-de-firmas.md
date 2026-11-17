@@ -22,7 +22,7 @@ ai_assistance:
 Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
 Implementada en `src/Evt/PublicFront/Attendance.php` y
 `src/Evt/PublicFront/View/EventAttendancePanel.php`; pruebas en
-`tests/unit/test-attendance.php`. Salió en la v0.2.0 y su adenda, en la v0.2.1.
+`tests/unit/test-attendance.php`. Salió en la v0.2.0 y su adenda, en la v0.2.3 (la 0.2.1 y la 0.2.2 no llegaron a publicarse).
 
 ## Contexto
 

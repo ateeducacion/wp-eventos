@@ -78,6 +78,7 @@ return array(
 	'PublicFront/Block/SponsorsBlock.php',
 	'PublicFront/EventLayout.php',
 	'PublicFront/EventView.php',
+	'PublicFront/DraftNotice.php',
 	'PublicFront/ContactMap.php',
 	'PublicFront/View/EventChrome.php',
 	'PublicFront/Home.php',

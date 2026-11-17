@@ -8,7 +8,20 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
-## [0.2.2] — 2026-11-17
+## [0.2.3] — 2026-11-17
+
+### Añadido
+
+- Asistencia: cada punto de control tiene un botón «Descargar el QR» que baja un cartel listo para imprimir o proyectar —el evento, el punto, el código y los tres pasos—, y después dice qué hacer con él
+- Asistencia: una ayuda desplegable explica dónde colocar el QR, a qué tamaño, cuándo abrir el punto y qué hacer si algo falla
+
+### Cambiado
+
+- La página que abre el QR en el móvil dice de qué evento es, el botón pasa a llamarse «Confirmar asistencia» y deja cerrar la sesión a quien haya entrado con la cuenta de otra persona
+- El enlace del QR va por el identificador de la página y no por su dirección: un cartel impreso sigue valiendo aunque después cambie el nombre del evento o de la página
+- Sin la página de inscripción publicada no se ofrece descargar el cartel, porque no llevaría a ningún sitio
+- Un evento en borrador ya no dice «No se encontró la página»: avisa de que está en borrador y se publicará, con un acceso para responsables, y con la sesión iniciada dice con qué cuenta se ha entrado si esa cuenta no puede verlo
+- El ámbito de cada persona se guarda por sitio y no en toda la red: en un multisitio, cambiarlo en un subsitio ya no lo cambia en los demás, y el número de un ámbito no se confunde con el de otro sitio. Lo de antes se sigue leyendo hasta que se vuelve a guardar el perfil, y «Ajustes» enseña quién sigue así
 
 ### Corregido
 
@@ -40,26 +53,9 @@ en el subsitio `eventos` se hace después.
 - Una descarga de un documento no falla si otra persona lo está descargando a la vez
 - Source Serif 4 en la misma versión en desarrollo y en producción
 
-### Cambiado
-
-- El ámbito de cada persona se guarda por sitio y no en toda la red: en un multisitio, cambiarlo en un subsitio ya no lo cambia en los demás, y el número de un ámbito no se confunde con el de otro sitio. Lo de antes se sigue leyendo hasta que se vuelve a guardar el perfil, y «Ajustes» enseña quién sigue así
-
 ### Pendiente antes de desplegar
 
 - En un multisitio, abrir y guardar el perfil de cada persona con ámbito en el sitio del aplicativo, para pasarlo de la red al sitio: el diagnóstico de «Ajustes» dice quién falta
-
-## [0.2.1] — 2026-11-17
-
-### Añadido
-
-- Asistencia: cada punto de control tiene un botón «Descargar el QR» que baja un cartel listo para imprimir o proyectar —el evento, el punto, el código y los tres pasos—, y después dice qué hacer con él
-- Asistencia: una ayuda desplegable explica dónde colocar el QR, a qué tamaño, cuándo abrir el punto y qué hacer si algo falla
-
-### Cambiado
-
-- La página que abre el QR en el móvil dice de qué evento es, el botón pasa a llamarse «Confirmar asistencia» y deja cerrar la sesión a quien haya entrado con la cuenta de otra persona
-- El enlace del QR va por el identificador de la página y no por su dirección: un cartel impreso sigue valiendo aunque después cambie el nombre del evento o de la página
-- Sin la página de inscripción publicada no se ofrece descargar el cartel, porque no llevaría a ningún sitio
 
 ## [0.2.0] — 2026-11-17
 

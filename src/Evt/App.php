@@ -23,6 +23,7 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\CustomCode;
 use Evt\PublicFront\EventList;
 use Evt\PublicFront\EventView;
+use Evt\PublicFront\DraftNotice;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
@@ -112,6 +113,7 @@ final class App {
 		// documento entero en `template_redirect`, como las pantallas, y un
 		// evento migrado se queda en el tema (ADR-0022).
 		EventView::register();
+		DraftNotice::register();
 		// El mapa de la página de contacto: Leaflet solo donde hay puntos (ADR-0046).
 		ContactMap::register();
 
