@@ -3009,6 +3009,11 @@ final class EventAccess {
 
 
 
+
+
+
+
+
 	public const USER_AREA_META = 'evt_area';
 
 
@@ -3121,6 +3126,43 @@ final class EventAccess {
 
 
 
+
+
+
+	public static function user_area_key(): string {
+		global $wpdb;
+		return $wpdb->get_blog_prefix() . self::USER_AREA_META;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function set_user_areas( int $user_id, array $areas ): void {
+		if ( $user_id <= 0 ) {
+			return;
+		}
+		update_user_option( $user_id, self::USER_AREA_META, array_values( array_map( 'intval', $areas ) ) );
+		delete_user_meta( $user_id, self::USER_AREA_META );
+	}
+
+
+
+
+
+
+
+
+
+
 	public static function scope_assignment_state( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
@@ -3131,9 +3173,14 @@ final class EventAccess {
 				'ids'     => array(),
 				'invalid' => array(),
 				'legacy'  => false,
+				'network' => false,
 			);
 		}
-		$raw     = get_user_meta( $user_id, self::USER_AREA_META, true );
+		$local   = metadata_exists( 'user', $user_id, self::user_area_key() );
+		$raw     = $local
+			? get_user_meta( $user_id, self::user_area_key(), true )
+			: get_user_meta( $user_id, self::USER_AREA_META, true );
+		$network = ! $local && metadata_exists( 'user', $user_id, self::USER_AREA_META );
 		$scalar  = is_scalar( $raw ) ? trim( (string) $raw ) : '';
 		$legacy  = ! is_array( $raw ) && '' !== $scalar;
 		$values  = is_array( $raw ) ? $raw : ( '' === $scalar ? array() : explode( ',', $scalar ) );
@@ -3150,7 +3197,7 @@ final class EventAccess {
 		}
 		$ids   = array_values( array_unique( $ids ) );
 		$state = $invalid ? 'invalid' : ( count( $ids ) > 1 ? 'ambiguous' : ( $ids ? 'resolved' : 'empty' ) );
-		return compact( 'state', 'ids', 'invalid', 'legacy' );
+		return compact( 'state', 'ids', 'invalid', 'legacy', 'network' );
 	}
 
 
@@ -27744,9 +27791,9 @@ final class Settings {
 			<?php endif; ?>
 
 			<h2>Ámbitos de los perfiles editores</h2>
-			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil.</p>
+			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil. «Guardado en la red» es el ámbito de antes de guardarse por sitio: sigue valiendo, pero en un multisitio lo comparten todos los sitios; abrir el perfil y guardarlo lo pasa a este sitio.</p>
 			<table class="widefat striped" style="max-width:46rem">
-				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th></tr></thead>
+				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th><th>Guardado en la red</th></tr></thead>
 				<tbody>
 				<?php foreach ( EventAccess::scope_diagnostics() as $row ) : ?>
 					<tr>
@@ -27755,6 +27802,7 @@ final class Settings {
 						<td><?php echo esc_html( implode( ', ', $row['ids'] ) ); ?></td>
 						<td><?php echo esc_html( implode( ', ', $row['invalid'] ) ); ?></td>
 						<td><?php echo $row['legacy'] ? 'Sí' : 'No'; ?></td>
+						<td><?php echo ! empty( $row['network'] ) ? 'Sí' : 'No'; ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>

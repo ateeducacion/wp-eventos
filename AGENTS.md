@@ -44,7 +44,7 @@ Hace falta saberlo para no reinventar los errores de la casa:
 | El contenido de la página lo interpola una vista del gestor de formularios: 42 KB y 193 condicionales anidados dentro de un campo de texto | Código en `src/Evt/`, con tests y con diff |
 | Un campo del formulario, «Tipo de página» | Meta `evt_section_type` con lista cerrada en PHP |
 | Una taxonomía `convocatoria` con 50 términos que mezcla estado, tipología, curso y área, separados con listas de exclusión de IDs a mano | `evt_type` (tipología), `evt_course` (curso), `evt_area` (área). El estado **se deriva de las fechas**, no es un término |
-| El área es un rol, y ningún rol de área tiene capacidades de escritura | El área es un término de `evt_area` asignado al usuario en la meta `evt_area`; los permisos los decide un único guardián |
+| El área es un rol, y ningún rol de área tiene capacidades de escritura | El área es un término de `evt_area` asignado al usuario, por sitio, en la opción de usuario `evt_area` (ADR-0054); los permisos los decide un único guardián |
 | `post_parent` lo fija un snippet leyendo `$_POST` sin comprobar nada | `Domain/EventInput` valida y `Access/EventAccess` autoriza |
 
 **Las inscripciones también se sustituyen**, y es lo último que quedaba fuera:

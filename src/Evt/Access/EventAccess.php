@@ -24,7 +24,12 @@ use Evt\Taxonomy\EventTaxonomies;
 final class EventAccess {
 
 	/**
-	 * User meta containing one term ID; historical formats remain readable.
+	 * User option containing one term ID, per site; historical formats remain readable.
+	 *
+	 * **Por sitio** (`update_user_option()`, ADR-0054): los ámbitos son términos
+	 * de una taxonomía de cada sitio, y en un multisitio la meta de usuario es
+	 * de toda la red. Guardado en la red, el mismo número sería otro ámbito en
+	 * otro subsitio, y cambiarlo en uno lo cambiaría en todos.
 	 */
 	public const USER_AREA_META = 'evt_area';
 
@@ -133,10 +138,47 @@ final class EventAccess {
 	}
 
 	/**
+	 * The key the scope of a person is stored under on this site.
+	 *
+	 * La de `update_user_option()`: el prefijo de las tablas del sitio delante
+	 * (`wp_evt_area`, `wp_3_evt_area`). Para buscar personas por ámbito con
+	 * `get_users()`, que no sabe de opciones de usuario.
+	 *
+	 * @return string
+	 */
+	public static function user_area_key(): string {
+		global $wpdb;
+		return $wpdb->get_blog_prefix() . self::USER_AREA_META;
+	}
+
+	/**
+	 * Store the scope of a person on this site, and drop the old network-wide copy.
+	 *
+	 * La copia de la red es la de antes de guardarse por sitio: se quita la
+	 * primera vez que alguien guarda el perfil, y desde entonces manda la del
+	 * sitio. Hasta entonces se sigue leyendo, así que desplegar esto no deja a
+	 * nadie sin ámbito.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param int[] $areas   Term IDs of evt_area.
+	 * @return void
+	 */
+	public static function set_user_areas( int $user_id, array $areas ): void {
+		if ( $user_id <= 0 ) {
+			return;
+		}
+		update_user_option( $user_id, self::USER_AREA_META, array_values( array_map( 'intval', $areas ) ) );
+		delete_user_meta( $user_id, self::USER_AREA_META );
+	}
+
+	/**
 	 * Classify the stored profile without changing it or granting ambiguous access.
 	 *
+	 * `network` dice que el ámbito sale todavía de la copia de toda la red, la
+	 * de antes de guardarse por sitio: vale, pero conviene volver a guardarlo.
+	 *
 	 * @param int $user_id User ID (0 = current).
-	 * @return array{state:string,ids:int[],invalid:string[],legacy:bool}
+	 * @return array{state:string,ids:int[],invalid:string[],legacy:bool,network:bool}
 	 */
 	public static function scope_assignment_state( int $user_id = 0 ): array {
 		if ( $user_id <= 0 ) {
@@ -148,9 +190,14 @@ final class EventAccess {
 				'ids'     => array(),
 				'invalid' => array(),
 				'legacy'  => false,
+				'network' => false,
 			);
 		}
-		$raw     = get_user_meta( $user_id, self::USER_AREA_META, true );
+		$local   = metadata_exists( 'user', $user_id, self::user_area_key() );
+		$raw     = $local
+			? get_user_meta( $user_id, self::user_area_key(), true )
+			: get_user_meta( $user_id, self::USER_AREA_META, true );
+		$network = ! $local && metadata_exists( 'user', $user_id, self::USER_AREA_META );
 		$scalar  = is_scalar( $raw ) ? trim( (string) $raw ) : '';
 		$legacy  = ! is_array( $raw ) && '' !== $scalar;
 		$values  = is_array( $raw ) ? $raw : ( '' === $scalar ? array() : explode( ',', $scalar ) );
@@ -167,7 +214,7 @@ final class EventAccess {
 		}
 		$ids   = array_values( array_unique( $ids ) );
 		$state = $invalid ? 'invalid' : ( count( $ids ) > 1 ? 'ambiguous' : ( $ids ? 'resolved' : 'empty' ) );
-		return compact( 'state', 'ids', 'invalid', 'legacy' );
+		return compact( 'state', 'ids', 'invalid', 'legacy', 'network' );
 	}
 
 	/**
