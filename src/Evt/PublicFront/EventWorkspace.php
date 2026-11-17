@@ -877,7 +877,14 @@ final class EventWorkspace {
 			Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
 		}
 
-		$sitio = Registrations::seat( $event_id, $registration_id, $talleres );
+		// Corregir el teléfono no toca los talleres: si la elección llega igual
+		// que estaba, no se vuelve a sentar. Si no, una persona con dos
+		// talleres en un evento que luego bajó a uno perdería uno sin aviso.
+		$tenia = Registrations::workshops_of( $registration_id );
+		$pide  = WorkshopChoice::ids( $talleres );
+		sort( $tenia );
+		sort( $pide );
+		$sitio = $tenia === $pide ? array( 'ok' => true ) : Registrations::seat( $event_id, $registration_id, $talleres );
 		$aviso = '';
 		if ( true !== $sitio['ok'] ) {
 			$aviso = ' Pero los talleres no se han cambiado: ' . ( 'sin_plazas' === $sitio['error']
@@ -1574,7 +1581,13 @@ final class EventWorkspace {
 
 		update_post_meta( $event_id, EventMetaKeys::HEADER_BG, self::field( EventMetaKeys::HEADER_BG ) );
 		update_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, self::field( EventMetaKeys::HEADER_TEXT ) );
-		update_post_meta( $event_id, EventMetaKeys::ACCENT, self::field( EventMetaKeys::ACCENT ) );
+		// Si llega el mismo color que se pintó por defecto, no se eligió: se
+		// sigue sin acento propio, y el acento sigue al fondo de la cabecera.
+		$acento = self::field( EventMetaKeys::ACCENT );
+		if ( '' !== self::field( 'evt_accent_follows' ) && strtolower( $acento ) === strtolower( self::field( 'evt_accent_follows' ) ) ) {
+			$acento = '';
+		}
+		update_post_meta( $event_id, EventMetaKeys::ACCENT, $acento );
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
@@ -1710,7 +1723,7 @@ final class EventWorkspace {
 	 * @param int $attachment_id What the hidden field carried.
 	 * @return bool
 	 */
-	private static function is_image_attachment( int $attachment_id ): bool {
+	public static function is_image_attachment( int $attachment_id ): bool {
 		return 'attachment' === get_post_type( $attachment_id )
 			&& wp_attachment_is_image( $attachment_id )
 			&& current_user_can( 'read_post', $attachment_id );

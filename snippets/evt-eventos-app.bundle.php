@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.2.1
+ * @version 0.2.2
  */
 
 // phpcs:disable
@@ -3942,7 +3942,7 @@ final class EventPostType {
 		add_filter( 'post_type_link', array( self::class, 'draft_link' ), 20, 2 );
 		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
 		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
-		add_filter( 'the_posts', array( self::class, 'hide_unpublished_sections' ), 10, 2 );
+		add_filter( 'the_posts', array( self::class, 'hide_unpublished_sections' ) );
 		add_action( 'before_delete_post', array( self::class, 'delete_what_hangs' ), 10, 2 );
 	}
 
@@ -4036,8 +4036,7 @@ final class EventPostType {
 
 
 
-
-	public static function hide_unpublished_sections( $posts, $query = null ) {
+	public static function hide_unpublished_sections( $posts ) {
 		if ( ! is_array( $posts ) || array() === $posts || is_admin() ) {
 			return $posts;
 		}
@@ -10813,6 +10812,14 @@ final class Registrations {
 
 
 
+	private static $locks = array();
+
+
+
+
+
+
+
 
 
 	public const LOCK_TTL = 10;
@@ -11610,24 +11617,31 @@ final class Registrations {
 
 
 
+
+
+
+
 	public static function lock( int $event_id ): bool {
+		global $wpdb;
 		$nombre  = self::LOCK_PREFIX . $event_id;
+		$valor   = time() . ':' . bin2hex( random_bytes( 8 ) );
 		$esperar = 0;
 
 		do {
-			wp_cache_delete( $nombre, 'options' );
-			wp_cache_delete( 'notoptions', 'options' );
 
-			if ( add_option( $nombre, (string) time(), '', 'no' ) ) {
+			$hecho = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $nombre, $valor ) );
+			if ( 1 === (int) $hecho ) {
+				self::$locks[ $event_id ] = $valor;
 				return true;
 			}
 
 
 
 
-			$puesto = (int) get_option( $nombre, 0 );
-			if ( $puesto > 0 && ( time() - $puesto ) > self::LOCK_TTL ) {
-				delete_option( $nombre );
+			$puesto = (string) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $nombre ) );
+			if ( '' !== $puesto && ( time() - (int) $puesto ) > self::LOCK_TTL ) {
+
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", $nombre, $puesto ) );
 				continue;
 			}
 
@@ -11645,7 +11659,13 @@ final class Registrations {
 
 
 	public static function unlock( int $event_id ): void {
-		delete_option( self::LOCK_PREFIX . $event_id );
+		global $wpdb;
+		if ( ! isset( self::$locks[ $event_id ] ) ) {
+			return;
+		}
+
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", self::LOCK_PREFIX . $event_id, self::$locks[ $event_id ] ) );
+		unset( self::$locks[ $event_id ] );
 	}
 
 
@@ -12225,11 +12245,21 @@ final class RegistrationFiles {
 			return null;
 		}
 
-		try {
-			$fs->chmod( $camino, self::MODE_OPEN );
-			$bytes = $fs->get_contents( $camino );
-		} finally {
-			$fs->chmod( $camino, self::MODE_CLOSED );
+
+
+
+
+		$bytes = false;
+		for ( $intento = 0; $intento < 3; $intento++ ) {
+			try {
+				$fs->chmod( $camino, self::MODE_OPEN );
+				$bytes = $fs->get_contents( $camino );
+			} finally {
+				$fs->chmod( $camino, self::MODE_CLOSED );
+			}
+			if ( is_string( $bytes ) ) {
+				break;
+			}
 		}
 		return is_string( $bytes ) ? $bytes : null;
 	}
@@ -15070,7 +15100,14 @@ final class EventWorkspace {
 			Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
 		}
 
-		$sitio = Registrations::seat( $event_id, $registration_id, $talleres );
+
+
+
+		$tenia = Registrations::workshops_of( $registration_id );
+		$pide  = WorkshopChoice::ids( $talleres );
+		sort( $tenia );
+		sort( $pide );
+		$sitio = $tenia === $pide ? array( 'ok' => true ) : Registrations::seat( $event_id, $registration_id, $talleres );
 		$aviso = '';
 		if ( true !== $sitio['ok'] ) {
 			$aviso = ' Pero los talleres no se han cambiado: ' . ( 'sin_plazas' === $sitio['error']
@@ -15767,7 +15804,13 @@ final class EventWorkspace {
 
 		update_post_meta( $event_id, EventMetaKeys::HEADER_BG, self::field( EventMetaKeys::HEADER_BG ) );
 		update_post_meta( $event_id, EventMetaKeys::HEADER_TEXT, self::field( EventMetaKeys::HEADER_TEXT ) );
-		update_post_meta( $event_id, EventMetaKeys::ACCENT, self::field( EventMetaKeys::ACCENT ) );
+
+
+		$acento = self::field( EventMetaKeys::ACCENT );
+		if ( '' !== self::field( 'evt_accent_follows' ) && strtolower( $acento ) === strtolower( self::field( 'evt_accent_follows' ) ) ) {
+			$acento = '';
+		}
+		update_post_meta( $event_id, EventMetaKeys::ACCENT, $acento );
 		foreach ( $listas as $clave => $lista ) {
 			update_post_meta( $event_id, $clave, EventMetaKeys::in_list( self::field( $clave ), $lista[0], $lista[1] ) );
 		}
@@ -15903,7 +15946,7 @@ final class EventWorkspace {
 
 
 
-	private static function is_image_attachment( int $attachment_id ): bool {
+	public static function is_image_attachment( int $attachment_id ): bool {
 		return 'attachment' === get_post_type( $attachment_id )
 			&& wp_attachment_is_image( $attachment_id )
 			&& current_user_can( 'read_post', $attachment_id );
@@ -19901,6 +19944,9 @@ final class EventAppearancePanel {
 		$v[ EventMetaKeys::HEADER_BG ]   = self::color( (string) $v[ EventMetaKeys::HEADER_BG ], '#1b4f8a' );
 		$v[ EventMetaKeys::HEADER_TEXT ] = self::color( (string) $v[ EventMetaKeys::HEADER_TEXT ], '#ffffff' );
 
+
+
+		$sin_acento                 = '' === trim( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ) );
 		$v[ EventMetaKeys::ACCENT ] = self::color( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ), (string) $v[ EventMetaKeys::HEADER_BG ] );
 
 
@@ -20034,7 +20080,10 @@ final class EventAppearancePanel {
 					<div><?php echo $color_txt; ?></div>
 				</div>
 				<div class="evt-form-fila">
-					<div><?php echo $color_acento; ?></div>
+					<div><?php echo $color_acento; ?>
+					<?php if ( $sin_acento ) : ?>
+						<input type="hidden" name="evt_accent_follows" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::ACCENT ] ); ?>" />
+					<?php endif; ?></div>
 				</div>
 			</fieldset>
 
@@ -21332,6 +21381,12 @@ final class PageForm {
 			if ( '' === $valor || '0' === $valor ) {
 
 				delete_post_meta( $id, $clave );
+				continue;
+			}
+
+
+
+			if ( EventMetaKeys::LOGO_ID === $clave && ! EventWorkspace::is_image_attachment( (int) $valor ) ) {
 				continue;
 			}
 			update_post_meta( $id, $clave, $valor );
@@ -31729,7 +31784,32 @@ body .swal2-container { z-index: 100010; }
 			// `CodeMirror.fromTextArea` engancha el `submit` del formulario y
 			// devuelve lo escrito al textarea, así que lo que viaja en el POST
 			// es siempre lo que se ve.
-			window.wp.codeEditor.initialize( area, ajustes );
+			var editor = window.wp.codeEditor.initialize( area, ajustes );
+			var cm = editor && editor.codemirror;
+			if ( ! cm ) {
+				return;
+			}
+			// CodeMirror escribe en su propio DOM: sin esto, el aviso de
+			// «cambios sin guardar» no se entera y lo escrito se pierde al
+			// cambiar de pestaña. Se vuelca al textarea y se avisa como si se
+			// hubiera tecleado en él.
+			var deshaciendo = false;
+			cm.on( \'change\', function () {
+				cm.save();
+				if ( ! deshaciendo ) {
+					area.dispatchEvent( new Event( \'input\', { bubbles: true } ) );
+				}
+			} );
+			// Y «Descartar» deshace también lo que se ve, no solo el textarea.
+			if ( area.form ) {
+				area.form.addEventListener( \'reset\', function () {
+					window.setTimeout( function () {
+						deshaciendo = true;
+						cm.setValue( area.value );
+						deshaciendo = false;
+					}, 0 );
+				} );
+			}
 		} );
 	}
 
@@ -32036,10 +32116,19 @@ body .swal2-container { z-index: 100010; }
 		if ( ! p.cajon ) {
 			return;
 		}
+		// Si venía de un evento en solo lectura, al sacarlo de su `fieldset`
+		// desactivado sus controles volverían a estar vivos: se apagan aquí,
+		// para que la pantalla no prometa una edición que el servidor rechaza.
+		var soloLectura = p.cajon.closest && p.cajon.closest( \'fieldset[disabled]\' );
 		if ( p.fondo ) {
 			document.body.appendChild( p.fondo );
 		}
 		document.body.appendChild( p.cajon );
+		if ( soloLectura ) {
+			p.cajon.querySelectorAll( \'input, select, textarea, button[type="submit"]\' ).forEach( function ( campo ) {
+				campo.disabled = true;
+			} );
+		}
 		if ( ! p.cajon.hidden ) {
 			enfocarCajon( p.cajon );
 		}
@@ -32064,10 +32153,22 @@ body .swal2-container { z-index: 100010; }
 	} );
 
 	document.addEventListener( \'keydown\', function ( e ) {
-		if ( \'Escape\' !== e.key ) {
+		if ( \'Escape\' !== e.key || e.defaultPrevented ) {
 			return;
 		}
-		cerrarCajon( document.querySelector( \'[data-evt-cajon] .evt-cajon__cerrar\' ) );
+		// Solo el Escape que es para el cajón: con el foco dentro y sin otro
+		// diálogo encima. El que cierra una lista de sugerencias, un selector
+		// de fecha o una confirmación de SweetAlert2 no se lleva lo escrito.
+		var cajon = document.querySelector( \'[data-evt-cajon]\' );
+		if ( ! cajon || cajon.hidden || ! cajon.contains( document.activeElement )
+			|| document.querySelector( \'.swal2-container, dialog[open]\' ) ) {
+			return;
+		}
+		var campo = e.target;
+		if ( campo && campo.matches && campo.matches( \'input[list], select, input[type="date"], input[type="time"]\' ) ) {
+			return;
+		}
+		cerrarCajon( cajon.querySelector( \'.evt-cajon__cerrar\' ) );
 	} );
 
 	/*

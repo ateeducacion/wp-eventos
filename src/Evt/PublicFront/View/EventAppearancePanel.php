@@ -93,7 +93,10 @@ final class EventAppearancePanel {
 		// cabecera que nadie eligió: se arranca del azul del sitio.
 		$v[ EventMetaKeys::HEADER_BG ]   = self::color( (string) $v[ EventMetaKeys::HEADER_BG ], '#1b4f8a' );
 		$v[ EventMetaKeys::HEADER_TEXT ] = self::color( (string) $v[ EventMetaKeys::HEADER_TEXT ], '#ffffff' );
-		// Sin acento elegido, el de siempre: el color de la cabecera.
+		// Sin acento elegido, el de siempre: el color de la cabecera. Se dice en
+		// un campo oculto, para que guardar sin tocarlo no lo fije: si no, al
+		// cambiar luego el fondo, el acento ya no le seguiría.
+		$sin_acento                 = '' === trim( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ) );
 		$v[ EventMetaKeys::ACCENT ] = self::color( (string) ( $v[ EventMetaKeys::ACCENT ] ?? '' ), (string) $v[ EventMetaKeys::HEADER_BG ] );
 
 		// Los trozos se arman antes de la plantilla y se escapan dentro de cada
@@ -227,7 +230,10 @@ final class EventAppearancePanel {
 					<div><?php echo $color_txt; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 				</div>
 				<div class="evt-form-fila">
-					<div><?php echo $color_acento; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
+					<div><?php echo $color_acento; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+					<?php if ( $sin_acento ) : ?>
+						<input type="hidden" name="evt_accent_follows" value="<?php echo esc_attr( (string) $v[ EventMetaKeys::ACCENT ] ); ?>" />
+					<?php endif; ?></div>
 				</div>
 			</fieldset>
 

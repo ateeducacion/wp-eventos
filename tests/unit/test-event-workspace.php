@@ -398,6 +398,40 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Guardar la apariencia sin tocar el acento no lo fija: sigue al fondo de la cabecera.
+	 */
+	public function test_an_untouched_accent_keeps_following_the_header() {
+		$admin  = $this->administrator();
+		$evento = $this->event( $admin, array( $this->area( 'Innovación' ) ) );
+
+		$this->submit(
+			$admin,
+			EventWorkspace::PANEL_LOOK,
+			$evento,
+			0,
+			array(
+				EventMetaKeys::HEADER_BG => '#1b4f8a',
+				EventMetaKeys::ACCENT    => '#1b4f8a',
+				'evt_accent_follows'     => '#1b4f8a',
+			)
+		);
+		$this->assertSame( '', (string) get_post_meta( $evento, EventMetaKeys::ACCENT, true ) );
+
+		$this->submit(
+			$admin,
+			EventWorkspace::PANEL_LOOK,
+			$evento,
+			0,
+			array(
+				EventMetaKeys::HEADER_BG => '#1b4f8a',
+				EventMetaKeys::ACCENT    => '#c0392b',
+				'evt_accent_follows'     => '#1b4f8a',
+			)
+		);
+		$this->assertSame( '#c0392b', (string) get_post_meta( $evento, EventMetaKeys::ACCENT, true ), 'elegido, se guarda' );
+	}
+
+	/**
 	 * La casilla de los iconos del menú se guarda marcada y se borra al desmarcarla.
 	 */
 	public function test_the_menu_icons_box_is_saved_and_cleared() {

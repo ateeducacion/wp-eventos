@@ -344,6 +344,12 @@ final class PageForm {
 				delete_post_meta( $id, $clave );
 				continue;
 			}
+			// El logo es un número tecleado: solo vale si es una imagen de la
+			// biblioteca que quien guarda puede leer, como en el taller. Si no,
+			// un PDF o el adjunto de un borrador ajeno saldría en la cabecera.
+			if ( EventMetaKeys::LOGO_ID === $clave && ! EventWorkspace::is_image_attachment( (int) $valor ) ) {
+				continue;
+			}
 			update_post_meta( $id, $clave, $valor );
 		}
 

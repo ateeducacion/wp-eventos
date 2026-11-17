@@ -537,7 +537,32 @@
 			// `CodeMirror.fromTextArea` engancha el `submit` del formulario y
 			// devuelve lo escrito al textarea, así que lo que viaja en el POST
 			// es siempre lo que se ve.
-			window.wp.codeEditor.initialize( area, ajustes );
+			var editor = window.wp.codeEditor.initialize( area, ajustes );
+			var cm = editor && editor.codemirror;
+			if ( ! cm ) {
+				return;
+			}
+			// CodeMirror escribe en su propio DOM: sin esto, el aviso de
+			// «cambios sin guardar» no se entera y lo escrito se pierde al
+			// cambiar de pestaña. Se vuelca al textarea y se avisa como si se
+			// hubiera tecleado en él.
+			var deshaciendo = false;
+			cm.on( 'change', function () {
+				cm.save();
+				if ( ! deshaciendo ) {
+					area.dispatchEvent( new Event( 'input', { bubbles: true } ) );
+				}
+			} );
+			// Y «Descartar» deshace también lo que se ve, no solo el textarea.
+			if ( area.form ) {
+				area.form.addEventListener( 'reset', function () {
+					window.setTimeout( function () {
+						deshaciendo = true;
+						cm.setValue( area.value );
+						deshaciendo = false;
+					}, 0 );
+				} );
+			}
 		} );
 	}
 
@@ -844,10 +869,19 @@
 		if ( ! p.cajon ) {
 			return;
 		}
+		// Si venía de un evento en solo lectura, al sacarlo de su `fieldset`
+		// desactivado sus controles volverían a estar vivos: se apagan aquí,
+		// para que la pantalla no prometa una edición que el servidor rechaza.
+		var soloLectura = p.cajon.closest && p.cajon.closest( 'fieldset[disabled]' );
 		if ( p.fondo ) {
 			document.body.appendChild( p.fondo );
 		}
 		document.body.appendChild( p.cajon );
+		if ( soloLectura ) {
+			p.cajon.querySelectorAll( 'input, select, textarea, button[type="submit"]' ).forEach( function ( campo ) {
+				campo.disabled = true;
+			} );
+		}
 		if ( ! p.cajon.hidden ) {
 			enfocarCajon( p.cajon );
 		}
@@ -872,10 +906,22 @@
 	} );
 
 	document.addEventListener( 'keydown', function ( e ) {
-		if ( 'Escape' !== e.key ) {
+		if ( 'Escape' !== e.key || e.defaultPrevented ) {
 			return;
 		}
-		cerrarCajon( document.querySelector( '[data-evt-cajon] .evt-cajon__cerrar' ) );
+		// Solo el Escape que es para el cajón: con el foco dentro y sin otro
+		// diálogo encima. El que cierra una lista de sugerencias, un selector
+		// de fecha o una confirmación de SweetAlert2 no se lleva lo escrito.
+		var cajon = document.querySelector( '[data-evt-cajon]' );
+		if ( ! cajon || cajon.hidden || ! cajon.contains( document.activeElement )
+			|| document.querySelector( '.swal2-container, dialog[open]' ) ) {
+			return;
+		}
+		var campo = e.target;
+		if ( campo && campo.matches && campo.matches( 'input[list], select, input[type="date"], input[type="time"]' ) ) {
+			return;
+		}
+		cerrarCajon( cajon.querySelector( '.evt-cajon__cerrar' ) );
 	} );
 
 	/*

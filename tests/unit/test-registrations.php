@@ -534,8 +534,8 @@ class Test_Registrations extends WP_UnitTestCase {
 	/**
 	 * El candado lo tiene uno solo, y el segundo no pasa.
 	 *
-	 * Es la pieza que impide la carrera: `add_option()` falla si el nombre ya
-	 * existe, porque la columna es única en la base de datos (ADR-0033).
+	 * Es la pieza que impide la carrera: un `INSERT IGNORE` no inserta si el
+	 * nombre ya existe, porque la columna es única en la base de datos (ADR-0033).
 	 */
 	public function test_only_one_holds_the_lock() {
 		$evento = $this->un_evento();
@@ -546,6 +546,23 @@ class Test_Registrations extends WP_UnitTestCase {
 		Registrations::unlock( $evento );
 		$this->assertTrue( Registrations::lock( $evento ), 'soltado, vuelve a estar libre' );
 		Registrations::unlock( $evento );
+	}
+
+	/**
+	 * Soltar solo suelta el candado propio: el que tomó otra petición después se queda.
+	 */
+	public function test_unlock_only_releases_its_own_lock() {
+		$evento = $this->un_evento();
+		$nombre = 'evt_seat_lock_' . $evento;
+
+		// Otra petición tiene el candado; esta nunca lo tomó.
+		$valor = time() . ':otra';
+		add_option( $nombre, $valor, '', 'no' );
+		Registrations::unlock( $evento );
+
+		wp_cache_delete( $nombre, 'options' );
+		$this->assertSame( $valor, get_option( $nombre ), 'no se borra el candado de otro' );
+		delete_option( $nombre );
 	}
 
 	/**
