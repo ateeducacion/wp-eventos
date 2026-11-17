@@ -486,7 +486,9 @@ function evt_seed_account( string $login, array $account ): int {
 		}
 		$areas[] = (int) $term->term_id;
 	}
-	update_user_meta( $user->ID, 'evt_area', $areas );
+	// Por sitio, como lo guarda el perfil (ADR-0054).
+	update_user_option( $user->ID, 'evt_area', $areas );
+	delete_user_meta( $user->ID, 'evt_area' );
 
 	return (int) $user->ID;
 }

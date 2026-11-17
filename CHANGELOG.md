@@ -40,6 +40,14 @@ en el subsitio `eventos` se hace después.
 - Una descarga de un documento no falla si otra persona lo está descargando a la vez
 - Source Serif 4 en la misma versión en desarrollo y en producción
 
+### Cambiado
+
+- El ámbito de cada persona se guarda por sitio y no en toda la red: en un multisitio, cambiarlo en un subsitio ya no lo cambia en los demás, y el número de un ámbito no se confunde con el de otro sitio. Lo de antes se sigue leyendo hasta que se vuelve a guardar el perfil, y «Ajustes» enseña quién sigue así
+
+### Pendiente antes de desplegar
+
+- En un multisitio, abrir y guardar el perfil de cada persona con ámbito en el sitio del aplicativo, para pasarlo de la red al sitio: el diagnóstico de «Ajustes» dice quién falta
+
 ## [0.2.1] — 2026-11-17
 
 ### Añadido

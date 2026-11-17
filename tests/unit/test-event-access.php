@@ -342,4 +342,28 @@ class Test_Event_Access extends WP_UnitTestCase {
 		);
 		$this->assertSame( 0, (int) get_post_field( 'post_parent', $section ), 'administration still can' );
 	}
+
+	/** The scope is stored per site; a value from before, network-wide, is still read until saved again. */
+	public function test_the_scope_is_stored_per_site() {
+		$area  = $this->area( 'Ámbito 1' );
+		$other = $this->area( 'Ámbito 2' );
+		$user  = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		// Lo de antes: en la meta de toda la red. Se sigue leyendo.
+		update_user_meta( $user, EventAccess::USER_AREA_META, array( $area ) );
+		$this->assertSame( array( $area ), EventAccess::user_areas( $user ) );
+		$this->assertTrue( EventAccess::scope_assignment_state( $user )['network'], 'y se avisa de que está en la red' );
+
+		// Guardado ahora: por sitio, con el prefijo de este sitio, y la copia de la red se va.
+		EventAccess::set_user_areas( $user, array( $other ) );
+		$this->assertSame( array( $other ), EventAccess::user_areas( $user ) );
+		$this->assertSame( array( $other ), get_user_meta( $user, EventAccess::user_area_key(), true ) );
+		$this->assertStringEndsWith( '_' . EventAccess::USER_AREA_META, EventAccess::user_area_key() );
+		$this->assertFalse( metadata_exists( 'user', $user, EventAccess::USER_AREA_META ) );
+		$this->assertFalse( EventAccess::scope_assignment_state( $user )['network'] );
+
+		// Si conviven, manda la del sitio.
+		update_user_meta( $user, EventAccess::USER_AREA_META, array( $area ) );
+		$this->assertSame( array( $other ), EventAccess::user_areas( $user ), 'la del sitio gana a la de la red' );
+	}
 }

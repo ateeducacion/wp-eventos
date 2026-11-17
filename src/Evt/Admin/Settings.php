@@ -489,9 +489,9 @@ final class Settings {
 			<?php endif; ?>
 
 			<h2>Ámbitos de los perfiles editores</h2>
-			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil.</p>
+			<p>Diagnóstico de solo lectura. Los perfiles ambiguos o inválidos no reciben acceso hasta que administración elija un ámbito en su perfil. «Guardado en la red» es el ámbito de antes de guardarse por sitio: sigue valiendo, pero en un multisitio lo comparten todos los sitios; abrir el perfil y guardarlo lo pasa a este sitio.</p>
 			<table class="widefat striped" style="max-width:46rem">
-				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th></tr></thead>
+				<thead><tr><th>Usuario</th><th>Estado</th><th>IDs válidos</th><th>IDs inválidos</th><th>Formato anterior</th><th>Guardado en la red</th></tr></thead>
 				<tbody>
 				<?php foreach ( EventAccess::scope_diagnostics() as $row ) : ?>
 					<tr>
@@ -500,6 +500,7 @@ final class Settings {
 						<td><?php echo esc_html( implode( ', ', $row['ids'] ) ); ?></td>
 						<td><?php echo esc_html( implode( ', ', $row['invalid'] ) ); ?></td>
 						<td><?php echo $row['legacy'] ? 'Sí' : 'No'; ?></td>
+						<td><?php echo ! empty( $row['network'] ) ? 'Sí' : 'No'; ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>

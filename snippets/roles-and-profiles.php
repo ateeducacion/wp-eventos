@@ -368,7 +368,14 @@ if ( ! function_exists( 'evt_save_profile_fields' ) ) {
 		if ( $term_id > 0 && ! ( $term instanceof WP_Term ) ) {
 			return;
 		}
-		update_user_meta( $user_id, 'evt_area', $term_id > 0 ? array( $term_id ) : array() );
+		// Por sitio (ADR-0054): en un multisitio la meta de usuario es de toda
+		// la red, y el ámbito es un término de este sitio.
+		if ( class_exists( '\Evt\Access\EventAccess' ) ) {
+			\Evt\Access\EventAccess::set_user_areas( $user_id, $term_id > 0 ? array( $term_id ) : array() );
+		} else {
+			update_user_option( $user_id, 'evt_area', $term_id > 0 ? array( $term_id ) : array() );
+			delete_user_meta( $user_id, 'evt_area' );
+		}
 	}
 }
 
@@ -681,10 +688,15 @@ if ( ! function_exists( 'evt_users_scope_query' ) ) {
 			$validos    = array( 'empty' );
 			$buscados   = array();
 		} else {
+			// El de este sitio, o el de la red de antes de guardarse por sitio.
 			$candidatos = get_users(
 				array(
-					'meta_key' => 'evt_area', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- solo quien tiene ámbito.
-					'fields'   => 'ID',
+					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- solo quien tiene ámbito.
+						'relation' => 'OR',
+						array( 'key' => \Evt\Access\EventAccess::user_area_key() ),
+						array( 'key' => 'evt_area' ),
+					),
+					'fields'     => 'ID',
 				)
 			);
 			$validos    = array( 'resolved' );

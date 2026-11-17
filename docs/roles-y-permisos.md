@@ -463,15 +463,17 @@ nacido en el aplicativo puede recibir la segunda y nunca tendrá la primera.
 ### El ámbito por área
 
 El área organizadora es un **término de la taxonomía `evt_area`** puesto en el
-evento, y la pertenencia de la persona es un **user meta `evt_area`** con uno
-o varios `term_id`. No es un rol:
-[ADR-0006](adr/ADR-0006-el-area-es-un-ambito-no-un-rol.md).
+evento, y la pertenencia de la persona es una **opción de usuario `evt_area`
+por sitio** con su `term_id`. No es un rol:
+[ADR-0006](adr/ADR-0006-el-area-es-un-ambito-no-un-rol.md). Por sitio porque en
+un multisitio las cuentas son de la red y los términos de cada sitio:
+[ADR-0054](adr/ADR-0054-el-ambito-de-la-persona-se-guarda-por-sitio.md).
 
 | Pieza | Dónde |
 |---|---|
 | Área del evento | término de `evt_area` en el post raíz (`EventTaxonomies::AREA`) |
 | Área del ponente y de la actividad | término de `evt_area` en la propia ficha (`SpeakerPostType::register()`, `ActivityPostType::register()`) |
-| Área de la persona | user meta `evt_area`, array de `term_id` (`EventAccess.php`, `roles-and-profiles.php`) |
+| Área de la persona | opción de usuario `evt_area` por sitio (`update_user_option()`, clave `EventAccess::user_area_key()`), array de `term_id`; se lee aún la meta de la red de antes hasta que se guarda el perfil (`EventAccess.php`, `roles-and-profiles.php`) |
 | Quién escribe ese campo | solo `evt_manage_app` o `edit_users` (`evt_can_edit_admin_only_fields()`) |
 | Quién decide si se puede abrir | `EventAccess::can_open()` (`EventAccess.php`) |
 | Quién decide si se puede editar | `EventAccess::can_edit()` (`EventAccess.php`), que es `can_open()` menos el cierre |

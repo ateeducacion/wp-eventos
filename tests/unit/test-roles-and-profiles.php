@@ -123,7 +123,7 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 			'evt_area'                => array( $other ),
 		);
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array( $area ), get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array( $area ), get_user_option( 'evt_area', $editor ) );
 		$admin = (int) self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin );
 		ob_start();
@@ -137,10 +137,13 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 			'evt_area'                => array( $area, $other ),
 		);
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array( $area ), get_user_meta( $editor, 'evt_area', true ), 'un POST con varios ámbitos no cambia el perfil' );
+		$this->assertSame( array( $area ), get_user_option( 'evt_area', $editor ), 'un POST con varios ámbitos no cambia el perfil' );
 		$_POST['evt_area'] = (string) $other;
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array( $other ), get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array( $other ), get_user_option( 'evt_area', $editor ) );
+		// Se guarda por sitio y la copia de la red se va (ADR-0054).
+		$this->assertSame( array( $other ), get_user_meta( $editor, \Evt\Access\EventAccess::user_area_key(), true ) );
+		$this->assertFalse( metadata_exists( 'user', $editor, 'evt_area' ), 'la copia de toda la red se quita' );
 	}
 
 	/** Updating unrelated profile fields must preserve unresolved historical values. */
@@ -173,23 +176,23 @@ class Test_Roles_And_Profiles extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( '__keep_unresolved__', $html );
 		$_POST['evt_area'] = (string) $first;
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array( $first ), get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array( $first ), get_user_option( 'evt_area', $editor ) );
 		$_POST['evt_area'] = '__keep_unresolved__';
 		foreach ( array( array( $first, $second ), $first . ',' . $second, array( $first, 99999999 ) ) as $raw ) {
-			update_user_meta( $editor, 'evt_area', $raw );
+			update_user_option( $editor, 'evt_area', $raw );
 			ob_start();
 			evt_render_profile_fields( get_user_by( 'id', $editor ) );
 			$html = ob_get_clean();
 			$this->assertStringContainsString( '__keep_unresolved__', $html );
 			evt_save_profile_fields( $editor );
-			$this->assertSame( $raw, get_user_meta( $editor, 'evt_area', true ) );
+			$this->assertSame( $raw, get_user_option( 'evt_area', $editor ) );
 		}
 		$_POST['evt_area'] = (string) $first;
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array( $first ), get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array( $first ), get_user_option( 'evt_area', $editor ) );
 		$_POST['evt_area'] = '';
 		evt_save_profile_fields( $editor );
-		$this->assertSame( array(), get_user_meta( $editor, 'evt_area', true ) );
+		$this->assertSame( array(), get_user_option( 'evt_area', $editor ) );
 	}
 
 	/**
