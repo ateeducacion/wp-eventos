@@ -68,6 +68,42 @@ class Test_Event_Urls extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Un evento en borrador aún no tiene nombre en la dirección: sus páginas
+	 * van por `?p=`, que siempre llega, y no a `/programa/` a secas.
+	 */
+	public function test_the_pages_of_a_draft_event_link_to_themselves() {
+		$evento = $this->event( $this->administrator(), array( $this->area() ), array(), array( 'post_status' => 'draft' ) );
+		$this->assertSame( '', get_post_field( 'post_name', $evento ), 'un borrador nace sin nombre en la dirección' );
+		$pagina = $this->event_page( $evento, 'programa', array( 'post_name' => 'programa' ) );
+		$plana  = add_query_arg(
+			array(
+				'post_type' => EventPostType::POST_TYPE,
+				'p'         => $pagina,
+			),
+			home_url( '/' )
+		);
+
+		$this->assertSame( $plana, get_permalink( $pagina ), 'con el prefijo' );
+		update_option( EventPostType::OPTION_ROOT_URLS, '1' );
+		$this->assertSame( $plana, get_permalink( $pagina ), 'y en la raíz, donde «/programa/» es otra página del sitio' );
+
+		$ficha = EventPostType::entry_url( $pagina, 4408 );
+		$this->assertSame( '4408', $this->query_arg( $ficha, EventPostType::ENTRY_VAR ), 'la ficha de un ponente, también por parámetro' );
+		$this->assertSame( (string) $pagina, $this->query_arg( $ficha, 'p' ) );
+
+		// Publicado, recupera su dirección de siempre.
+		wp_update_post(
+			array(
+				'ID'          => $evento,
+				'post_status' => 'publish',
+				'post_name'   => 'jornadas-borrador',
+			)
+		);
+		clean_post_cache( $pagina );
+		$this->assertSame( home_url( '/jornadas-borrador/programa/' ), get_permalink( $pagina ) );
+	}
+
+	/**
 	 * Una página de verdad con la misma ruta gana.
 	 */
 	public function test_a_real_page_wins() {

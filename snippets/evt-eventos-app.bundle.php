@@ -3904,6 +3904,8 @@ final class EventPostType {
 
 		add_filter( 'request', array( self::class, 'resolve_request' ) );
 		add_filter( 'post_type_link', array( self::class, 'root_link' ), 10, 2 );
+
+		add_filter( 'post_type_link', array( self::class, 'draft_link' ), 20, 2 );
 		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
 		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
 	}
@@ -4016,7 +4018,10 @@ final class EventPostType {
 
 	public static function entry_url( int $section_id, int $entry_id ): string {
 		$url = (string) get_permalink( $section_id );
-		if ( ! get_option( 'permalink_structure' ) ) {
+
+
+
+		if ( ! get_option( 'permalink_structure' ) || false !== strpos( $url, '?' ) ) {
 			return add_query_arg( self::ENTRY_VAR, $entry_id, $url );
 		}
 		return user_trailingslashit( trailingslashit( $url ) . 'entry/' . $entry_id );
@@ -4050,6 +4055,39 @@ final class EventPostType {
 			return $url;
 		}
 		return user_trailingslashit( home_url( '/' . get_page_uri( $post ) ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function draft_link( $url, $post ) {
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type || ! get_option( 'permalink_structure' ) ) {
+			return $url;
+		}
+		foreach ( get_post_ancestors( $post ) as $ancestro ) {
+			if ( '' === (string) get_post_field( 'post_name', $ancestro ) ) {
+				return add_query_arg(
+					array(
+						'post_type' => self::POST_TYPE,
+						'p'         => (int) $post->ID,
+					),
+					home_url( '/' )
+				);
+			}
+		}
+		return $url;
 	}
 
 
