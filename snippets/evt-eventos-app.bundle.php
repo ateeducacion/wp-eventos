@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.2.2
+ * @version 0.3.0
  */
 
 // phpcs:disable
