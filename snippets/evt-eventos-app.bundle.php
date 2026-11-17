@@ -13327,6 +13327,16 @@ final class Attendance {
 
 
 
+	public const BUTTON = 'Confirmar asistencia';
+
+
+
+
+	public const HEADING = 'Control de asistencia: ';
+
+
+
+
 	public const ARG_TOKEN = 'asistencia';
 
 
@@ -13509,8 +13519,40 @@ final class Attendance {
 
 
 
+
+
+
+
+
 	public static function url( int $event_id, array $punto ): string {
-		return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		$pagina = SignupForm::page( $event_id );
+		if ( $pagina <= 0 ) {
+			return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		}
+		return add_query_arg(
+			array(
+				'p'             => $pagina,
+				self::ARG_TOKEN => (string) $punto['token'],
+			),
+			home_url( '/' )
+		);
+	}
+
+
+
+
+
+
+
+	public static function poster( string $label ): array {
+		return array(
+			'heading' => self::HEADING . $label,
+			'steps'   => array(
+				'1. Escanee el código con la cámara del móvil',
+				'2. Inicie sesión con su cuenta',
+				'3. Pulse «' . self::BUTTON . '»',
+			),
+		);
 	}
 
 
@@ -13678,12 +13720,16 @@ final class Attendance {
 			return self::say( 'warning', 'Este código de asistencia no es de este evento, o ya no existe. Avise a la organización.' );
 		}
 		$html = '<p class="evt-asistencia__evento">' . esc_html( (string) get_the_title( $event_id ) ) . '</p>'
-			. '<h2 class="evt-asistencia__titulo">Control de asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
+			. '<h2 class="evt-asistencia__titulo">' . esc_html( self::HEADING . $punto['label'] ) . '</h2>';
 
 		if ( ! is_user_logged_in() ) {
 			return $html . self::say( 'info', 'Para confirmar su asistencia, inicie sesión con su cuenta.' )
 				. sprintf( '<p><a class="%1$s evt-asistencia__boton" href="%2$s">Iniciar sesión</a></p>', esc_attr( Assets::button_class( true ) ), esc_url( wp_login_url( self::url( $event_id, $punto ) ) ) );
 		}
+
+
+
+		$salir = '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
 
 		$mia = Registrations::of_user( $event_id );
 		if ( $mia <= 0 ) {
@@ -13692,8 +13738,11 @@ final class Attendance {
 				'warning',
 				'No encontramos ninguna inscripción en este evento hecha con su cuenta (' . $user->user_email . '). '
 					. 'Avise a la organización: le registrarán la asistencia a mano.'
-			);
+			) . $salir;
 		}
+
+		$meta   = Registrations::meta( $mia );
+		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		$marcas = self::marks( $mia );
 		if ( isset( $marcas[ $punto['id'] ] ) ) {
@@ -13702,18 +13751,16 @@ final class Attendance {
 			return $html . sprintf(
 				'<div class="%1$s evt-asistencia__hecha" role="status"><span class="evt-asistencia__tic" aria-hidden="true">✓</span>'
 					. '<strong>Asistencia confirmada</strong><span class="evt-asistencia__hora">%2$s</span>'
-					. '<span>%3$s. Ya puede cerrar esta página.</span></div>',
+					. '<span>%4$s</span><span>%3$s. Ya puede cerrar esta página.</span></div>',
 				esc_attr( Assets::alert_class( 'success' ) ),
 				esc_html( self::time( $marcas[ $punto['id'] ]['at'] ) ),
-				esc_html( $punto['label'] )
-			);
+				esc_html( $punto['label'] ),
+				esc_html( $nombre )
+			) . $salir;
 		}
 		if ( true !== $punto['open'] ) {
 			return $html . self::say( 'info', 'Este control de asistencia no está abierto ahora. Vuelva a escanear el código cuando la organización lo indique.' );
 		}
-
-		$meta   = Registrations::meta( $mia );
-		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		return $html . '<p class="evt-asistencia__nombre">' . esc_html( $nombre ) . '</p>'
 			. '<p class="evt-asistencia__ayuda">Pulse el botón para dejar constancia de que está aquí. Se guardará la hora.</p>'
@@ -13728,9 +13775,9 @@ final class Attendance {
 				esc_attr( self::FIELD_TOKEN ),
 				esc_attr( $punto['token'] )
 			)
-			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Confirmar asistencia</button></p>'
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">' . esc_html( self::BUTTON ) . '</button></p>'
 			. '</form>'
-			. '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
+			. $salir;
 	}
 
 
@@ -18599,7 +18646,7 @@ final class EventAttendancePanel {
 				. 'y es la que abren los códigos QR. Publíquela en «Páginas» para que funcionen.</p>';
 		}
 
-		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ) );
+		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ), $datos );
 		$html .= self::marks( $m, $datos );
 		return $html;
 	}
@@ -18611,7 +18658,8 @@ final class EventAttendancePanel {
 
 
 
-	private static function points( array $m, array $puntos ): string {
+
+	private static function points( array $m, array $puntos, array $datos = array() ): string {
 		$op    = EventWorkspace::PANEL_ATTENDANCE;
 		$filas = $puntos;
 		if ( count( $filas ) < Attendance::MAX_POINTS ) {
@@ -18638,7 +18686,7 @@ final class EventAttendancePanel {
 		}
 		$html .= '<div class="evt-puntos">';
 		foreach ( $filas as $i => $punto ) {
-			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ) );
+			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ), true === ( $datos['has_page'] ?? false ) );
 		}
 		$html .= '</div>';
 		if ( array() !== $puntos ) {
@@ -18659,7 +18707,8 @@ final class EventAttendancePanel {
 
 
 
-	private static function point( int $i, array $punto, string $event = '' ): string {
+
+	private static function point( int $i, array $punto, string $event = '', bool $ready = true ): string {
 		$nuevo = '' === (string) $punto['id'];
 		$html  = '<div class="evt-punto evt-tarjeta">';
 		$html .= sprintf( '<input type="hidden" name="evt_pt_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $punto['id'] ) );
@@ -18674,20 +18723,28 @@ final class EventAttendancePanel {
 			return $html . '</div>';
 		}
 
-		$html .= sprintf(
+		$html  .= sprintf(
 			'<div class="form-check form-switch evt-interruptor"><input class="form-check-input" type="checkbox" role="switch" id="evt-pt-open-%1$d" name="evt_pt_open[%1$d]" value="1"%2$s> <label class="form-check-label" for="evt-pt-open-%1$d">Abierto: registra asistencia ahora</label></div>',
 			$i,
 			checked( true, (bool) $punto['open'], false )
 		);
-		$html .= sprintf(
-			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s"></div>'
+		$cartel = Attendance::poster( (string) $punto['label'] );
+		$html  .= sprintf(
+			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s" data-evt-qr-heading="%6$s" data-evt-qr-steps="%7$s"></div>'
 				. '<p class="evt-ayuda"><a href="%1$s" target="_blank" rel="noopener">%3$s</a></p>',
 			esc_url( (string) $punto['url'] ),
 			esc_attr( 'Código QR de asistencia: ' . (string) $punto['label'] ),
 			esc_html( (string) $punto['url'] ),
 			esc_attr( (string) $punto['label'] ),
-			esc_attr( $event )
+			esc_attr( $event ),
+			esc_attr( $cartel['heading'] ),
+			esc_attr( implode( '|', $cartel['steps'] ) )
 		);
+
+
+		if ( ! $ready ) {
+			return $html . self::remove_box( $i ) . '</div>';
+		}
 
 
 		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-qr-descargar hidden>Descargar el QR</button></p>';
@@ -18697,11 +18754,20 @@ final class EventAttendancePanel {
 			. '<li>Pruébelo con su móvil antes de que llegue la gente.</li>'
 			. '<li>Marque «Abierto» y guarde cuando empiece el control; desmárquelo al terminar.</li>'
 			. '</ol></div>';
-		$html .= sprintf(
+		return $html . self::remove_box( $i ) . '</div>';
+	}
+
+
+
+
+
+
+
+	private static function remove_box( int $i ): string {
+		return sprintf(
 			'<p class="evt-campo"><label class="evt-check"><input type="checkbox" name="evt_pt_remove[%1$d]" value="1"> Quitar este punto al guardar</label></p>',
 			$i
 		);
-		return $html . '</div>';
 	}
 
 
@@ -18717,7 +18783,7 @@ final class EventAttendancePanel {
 			. 'un A4 vale hasta unos dos metros; para una sala entera, proyéctelo.</li>'
 			. '<li><strong>Cuándo.</strong> Cada punto solo registra mientras está abierto. Ábralo al empezar y ciérrelo al terminar: '
 			. 'así una foto del código no sirve desde fuera.</li>'
-			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «Confirmar asistencia». Ve la hora registrada en pantalla.</li>'
+			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «' . esc_html( Attendance::BUTTON ) . '». Ve la hora registrada en pantalla.</li>'
 			. '<li><strong>Si algo falla.</strong> Tenga impresa la hoja de firmas y marque después a mano en la tabla de abajo a quien no pudo con el móvil.</li>'
 			. '</ul></details>';
 	}
@@ -29051,6 +29117,8 @@ body .swal2-container { z-index: 100010; }
 .evt-qr svg { display: block; width: 100%; max-width: 15rem; height: auto; background: #fff; }
 .evt-qr:empty { display: none; }
 .evt-punto a { overflow-wrap: anywhere; }
+/* Un botón que nace oculto se queda oculto aunque su clase le ponga `display`. */
+.evt-punto [hidden] { display: none !important; }
 .evt-qr-despues ol { margin: .25rem 0 0; padding-left: 1.2em; }
 .evt-qr-despues p { margin: 0; }
 .evt-ayuda-qr { margin-block: 1rem; }
@@ -32184,11 +32252,6 @@ body .swal2-container { z-index: 100010; }
 
 	var ANCHO = 1240; // Un A4 a 150 ppp: se imprime nítido y pesa poco.
 	var MARGEN = 90;
-	var PASOS = [
-		\'1. Escanee el código con la cámara del móvil\',
-		\'2. Inicie sesión con su cuenta\',
-		\'3. Pulse «Confirmar asistencia»\',
-	];
 
 	function codigo( url ) {
 		// Tipo 0: el más pequeño en el que quepa la dirección. Corrección
@@ -32219,7 +32282,7 @@ body .swal2-container { z-index: 100010; }
 	}
 
 	// El cartel: título del evento, nombre del punto, el código y los pasos.
-	function cartel( url, evento, punto ) {
+	function cartel( url, evento, titulo, pasos ) {
 		var lienzo = document.createElement( \'canvas\' );
 		var ctx = lienzo.getContext ? lienzo.getContext( \'2d\' ) : null;
 		if ( ! ctx ) {
@@ -32243,15 +32306,16 @@ body .swal2-container { z-index: 100010; }
 
 		texto( evento, 44, false, 1.3 );
 		y += 20;
-		texto( \'Control de asistencia: \' + punto, 68, true, 1.2 );
+		texto( titulo, 68, true, 1.2 );
 		y += 50;
 		var qr = codigo( url );
 		var n = qr.getModuleCount();
 		var celda = Math.floor( ( util - 160 ) / ( n + 8 ) ); // 4 módulos de margen por lado.
 		var lado = celda * ( n + 8 );
-		var qrY = y;
-		y += lado + 50;
-		PASOS.forEach( function ( paso ) {
+		// En píxeles enteros: con decimales cada módulo sale con el borde gris.
+		var qrY = Math.round( y );
+		y = qrY + lado + 50;
+		pasos.forEach( function ( paso ) {
 			texto( paso, 40, false, 1.5 );
 		} );
 
@@ -32263,7 +32327,8 @@ body .swal2-container { z-index: 100010; }
 		ctx.textAlign = \'center\';
 		bloques.forEach( function ( b ) {
 			ctx.font = b.font;
-			ctx.fillText( b.texto, ANCHO / 2, b.y );
+			// El ancho máximo encoge una palabra que sola no quepa, en vez de cortarla.
+			ctx.fillText( b.texto, ANCHO / 2, b.y, util );
 		} );
 		var qrX = Math.round( ( ANCHO - lado ) / 2 );
 		for ( var f = 0; f < n; f++ ) {
@@ -32294,7 +32359,13 @@ body .swal2-container { z-index: 100010; }
 			return;
 		}
 		var punto = qr.getAttribute( \'data-evt-qr-label\' ) || \'\';
-		var lienzo = cartel( qr.getAttribute( \'data-evt-qr\' ), qr.getAttribute( \'data-evt-qr-event\' ) || \'\', punto );
+		// Los textos vienen del servidor: el cartel dice lo mismo que la página.
+		var lienzo = cartel(
+			qr.getAttribute( \'data-evt-qr\' ),
+			qr.getAttribute( \'data-evt-qr-event\' ) || \'\',
+			qr.getAttribute( \'data-evt-qr-heading\' ) || punto,
+			( qr.getAttribute( \'data-evt-qr-steps\' ) || \'\' ).split( \'|\' ).filter( Boolean )
+		);
 		if ( ! lienzo ) {
 			return;
 		}

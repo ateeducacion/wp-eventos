@@ -30,6 +30,16 @@ use Evt\PostType\EventPostType;
 final class Attendance {
 
 	/**
+	 * What the button of the scanned page says; the poster and the help quote it.
+	 */
+	public const BUTTON = 'Confirmar asistencia';
+
+	/**
+	 * How the scanned page and the poster head a checkpoint.
+	 */
+	public const HEADING = 'Control de asistencia: ';
+
+	/**
 	 * Query argument that carries the checkpoint token in the QR link.
 	 */
 	public const ARG_TOKEN = 'asistencia';
@@ -210,12 +220,44 @@ final class Attendance {
 	/**
 	 * The link a checkpoint QR opens: the signup page of the event, with the token.
 	 *
+	 * Va **por ID** y no por la dirección bonita: el cartel se imprime días
+	 * antes, y si entretanto alguien cambia el slug del evento o de la página,
+	 * la dirección bonita daría un 404 el día del evento. El ID no cambia, y
+	 * WordPress redirige a la dirección vigente conservando el testigo.
+	 *
 	 * @param int                  $event_id Event post ID.
 	 * @param array<string, mixed> $punto    Checkpoint.
 	 * @return string
 	 */
 	public static function url( int $event_id, array $punto ): string {
-		return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		$pagina = SignupForm::page( $event_id );
+		if ( $pagina <= 0 ) {
+			return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		}
+		return add_query_arg(
+			array(
+				'p'             => $pagina,
+				self::ARG_TOKEN => (string) $punto['token'],
+			),
+			home_url( '/' )
+		);
+	}
+
+	/**
+	 * The texts of the poster, so the script and the page say the same thing.
+	 *
+	 * @param string $label Checkpoint name.
+	 * @return array{heading:string, steps:string[]}
+	 */
+	public static function poster( string $label ): array {
+		return array(
+			'heading' => self::HEADING . $label,
+			'steps'   => array(
+				'1. Escanee el código con la cámara del móvil',
+				'2. Inicie sesión con su cuenta',
+				'3. Pulse «' . self::BUTTON . '»',
+			),
+		);
 	}
 
 	/**
@@ -383,12 +425,16 @@ final class Attendance {
 			return self::say( 'warning', 'Este código de asistencia no es de este evento, o ya no existe. Avise a la organización.' );
 		}
 		$html = '<p class="evt-asistencia__evento">' . esc_html( (string) get_the_title( $event_id ) ) . '</p>'
-			. '<h2 class="evt-asistencia__titulo">Control de asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
+			. '<h2 class="evt-asistencia__titulo">' . esc_html( self::HEADING . $punto['label'] ) . '</h2>';
 
 		if ( ! is_user_logged_in() ) {
 			return $html . self::say( 'info', 'Para confirmar su asistencia, inicie sesión con su cuenta.' )
 				. sprintf( '<p><a class="%1$s evt-asistencia__boton" href="%2$s">Iniciar sesión</a></p>', esc_attr( Assets::button_class( true ) ), esc_url( wp_login_url( self::url( $event_id, $punto ) ) ) );
 		}
+
+		// En un móvil prestado o compartido la sesión puede ser de otra persona:
+		// la salida va en todos los estados, y vuelve aquí con el testigo.
+		$salir = '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
 
 		$mia = Registrations::of_user( $event_id );
 		if ( $mia <= 0 ) {
@@ -397,8 +443,11 @@ final class Attendance {
 				'warning',
 				'No encontramos ninguna inscripción en este evento hecha con su cuenta (' . $user->user_email . '). '
 					. 'Avise a la organización: le registrarán la asistencia a mano.'
-			);
+			) . $salir;
 		}
+
+		$meta   = Registrations::meta( $mia );
+		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		$marcas = self::marks( $mia );
 		if ( isset( $marcas[ $punto['id'] ] ) ) {
@@ -407,18 +456,16 @@ final class Attendance {
 			return $html . sprintf(
 				'<div class="%1$s evt-asistencia__hecha" role="status"><span class="evt-asistencia__tic" aria-hidden="true">✓</span>'
 					. '<strong>Asistencia confirmada</strong><span class="evt-asistencia__hora">%2$s</span>'
-					. '<span>%3$s. Ya puede cerrar esta página.</span></div>',
+					. '<span>%4$s</span><span>%3$s. Ya puede cerrar esta página.</span></div>',
 				esc_attr( Assets::alert_class( 'success' ) ),
 				esc_html( self::time( $marcas[ $punto['id'] ]['at'] ) ),
-				esc_html( $punto['label'] )
-			);
+				esc_html( $punto['label'] ),
+				esc_html( $nombre )
+			) . $salir;
 		}
 		if ( true !== $punto['open'] ) {
 			return $html . self::say( 'info', 'Este control de asistencia no está abierto ahora. Vuelva a escanear el código cuando la organización lo indique.' );
 		}
-
-		$meta   = Registrations::meta( $mia );
-		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		return $html . '<p class="evt-asistencia__nombre">' . esc_html( $nombre ) . '</p>'
 			. '<p class="evt-asistencia__ayuda">Pulse el botón para dejar constancia de que está aquí. Se guardará la hora.</p>'
@@ -433,9 +480,9 @@ final class Attendance {
 				esc_attr( self::FIELD_TOKEN ),
 				esc_attr( $punto['token'] )
 			)
-			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Confirmar asistencia</button></p>'
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">' . esc_html( self::BUTTON ) . '</button></p>'
 			. '</form>'
-			. '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
+			. $salir;
 	}
 
 	// ─── la organización ───────────────────────────────────────────────────

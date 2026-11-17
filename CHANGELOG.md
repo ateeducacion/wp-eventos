@@ -18,6 +18,8 @@ en el subsitio `eventos` se hace después.
 ### Cambiado
 
 - La página que abre el QR en el móvil dice de qué evento es, el botón pasa a llamarse «Confirmar asistencia» y deja cerrar la sesión a quien haya entrado con la cuenta de otra persona
+- El enlace del QR va por el identificador de la página y no por su dirección: un cartel impreso sigue valiendo aunque después cambie el nombre del evento o de la página
+- Sin la página de inscripción publicada no se ofrece descargar el cartel, porque no llevaría a ningún sitio
 
 ## [0.2.0] — 2026-11-17
 

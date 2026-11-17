@@ -40,7 +40,7 @@ final class EventAttendancePanel {
 				. 'y es la que abren los códigos QR. Publíquela en «Páginas» para que funcionen.</p>';
 		}
 
-		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ) );
+		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ), $datos );
 		$html .= self::marks( $m, $datos );
 		return $html;
 	}
@@ -50,9 +50,10 @@ final class EventAttendancePanel {
 	 *
 	 * @param array<string, mixed>             $m      Model.
 	 * @param array<int, array<string, mixed>> $puntos Checkpoints, with their URL.
+	 * @param array<string, mixed>             $datos  Attendance model.
 	 * @return string
 	 */
-	private static function points( array $m, array $puntos ): string {
+	private static function points( array $m, array $puntos, array $datos = array() ): string {
 		$op    = EventWorkspace::PANEL_ATTENDANCE;
 		$filas = $puntos;
 		if ( count( $filas ) < Attendance::MAX_POINTS ) {
@@ -79,7 +80,7 @@ final class EventAttendancePanel {
 		}
 		$html .= '<div class="evt-puntos">';
 		foreach ( $filas as $i => $punto ) {
-			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ) );
+			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ), true === ( $datos['has_page'] ?? false ) );
 		}
 		$html .= '</div>';
 		if ( array() !== $puntos ) {
@@ -98,9 +99,10 @@ final class EventAttendancePanel {
 	 * @param int                  $i     Row index.
 	 * @param array<string, mixed> $punto Checkpoint; empty ID for the blank row.
 	 * @param string               $event Event title, for the poster.
+	 * @param bool                 $ready Whether the page the QR opens is published.
 	 * @return string
 	 */
-	private static function point( int $i, array $punto, string $event = '' ): string {
+	private static function point( int $i, array $punto, string $event = '', bool $ready = true ): string {
 		$nuevo = '' === (string) $punto['id'];
 		$html  = '<div class="evt-punto evt-tarjeta">';
 		$html .= sprintf( '<input type="hidden" name="evt_pt_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $punto['id'] ) );
@@ -115,20 +117,28 @@ final class EventAttendancePanel {
 			return $html . '</div>';
 		}
 
-		$html .= sprintf(
+		$html  .= sprintf(
 			'<div class="form-check form-switch evt-interruptor"><input class="form-check-input" type="checkbox" role="switch" id="evt-pt-open-%1$d" name="evt_pt_open[%1$d]" value="1"%2$s> <label class="form-check-label" for="evt-pt-open-%1$d">Abierto: registra asistencia ahora</label></div>',
 			$i,
 			checked( true, (bool) $punto['open'], false )
 		);
-		$html .= sprintf(
-			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s"></div>'
+		$cartel = Attendance::poster( (string) $punto['label'] );
+		$html  .= sprintf(
+			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s" data-evt-qr-heading="%6$s" data-evt-qr-steps="%7$s"></div>'
 				. '<p class="evt-ayuda"><a href="%1$s" target="_blank" rel="noopener">%3$s</a></p>',
 			esc_url( (string) $punto['url'] ),
 			esc_attr( 'Código QR de asistencia: ' . (string) $punto['label'] ),
 			esc_html( (string) $punto['url'] ),
 			esc_attr( (string) $punto['label'] ),
-			esc_attr( $event )
+			esc_attr( $event ),
+			esc_attr( $cartel['heading'] ),
+			esc_attr( implode( '|', $cartel['steps'] ) )
 		);
+		// Sin la página de inscripción publicada el código no lleva a ningún
+		// sitio: no se ofrece un cartel que habría que tirar.
+		if ( ! $ready ) {
+			return $html . self::remove_box( $i ) . '</div>';
+		}
 		// El botón nace oculto: lo enseña el guion cuando puede pintar el
 		// cartel. Sin JavaScript queda la dirección escrita, que es lo mismo.
 		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-qr-descargar hidden>Descargar el QR</button></p>';
@@ -138,11 +148,20 @@ final class EventAttendancePanel {
 			. '<li>Pruébelo con su móvil antes de que llegue la gente.</li>'
 			. '<li>Marque «Abierto» y guarde cuando empiece el control; desmárquelo al terminar.</li>'
 			. '</ol></div>';
-		$html .= sprintf(
+		return $html . self::remove_box( $i ) . '</div>';
+	}
+
+	/**
+	 * The «remove this checkpoint» box of one row.
+	 *
+	 * @param int $i Row index.
+	 * @return string
+	 */
+	private static function remove_box( int $i ): string {
+		return sprintf(
 			'<p class="evt-campo"><label class="evt-check"><input type="checkbox" name="evt_pt_remove[%1$d]" value="1"> Quitar este punto al guardar</label></p>',
 			$i
 		);
-		return $html . '</div>';
 	}
 
 	/**
@@ -158,7 +177,7 @@ final class EventAttendancePanel {
 			. 'un A4 vale hasta unos dos metros; para una sala entera, proyéctelo.</li>'
 			. '<li><strong>Cuándo.</strong> Cada punto solo registra mientras está abierto. Ábralo al empezar y ciérrelo al terminar: '
 			. 'así una foto del código no sirve desde fuera.</li>'
-			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «Confirmar asistencia». Ve la hora registrada en pantalla.</li>'
+			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «' . esc_html( Attendance::BUTTON ) . '». Ve la hora registrada en pantalla.</li>'
 			. '<li><strong>Si algo falla.</strong> Tenga impresa la hoja de firmas y marque después a mano en la tabla de abajo a quien no pudo con el móvil.</li>'
 			. '</ul></details>';
 	}

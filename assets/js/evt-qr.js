@@ -17,11 +17,6 @@
 
 	var ANCHO = 1240; // Un A4 a 150 ppp: se imprime nítido y pesa poco.
 	var MARGEN = 90;
-	var PASOS = [
-		'1. Escanee el código con la cámara del móvil',
-		'2. Inicie sesión con su cuenta',
-		'3. Pulse «Confirmar asistencia»',
-	];
 
 	function codigo( url ) {
 		// Tipo 0: el más pequeño en el que quepa la dirección. Corrección
@@ -52,7 +47,7 @@
 	}
 
 	// El cartel: título del evento, nombre del punto, el código y los pasos.
-	function cartel( url, evento, punto ) {
+	function cartel( url, evento, titulo, pasos ) {
 		var lienzo = document.createElement( 'canvas' );
 		var ctx = lienzo.getContext ? lienzo.getContext( '2d' ) : null;
 		if ( ! ctx ) {
@@ -76,15 +71,16 @@
 
 		texto( evento, 44, false, 1.3 );
 		y += 20;
-		texto( 'Control de asistencia: ' + punto, 68, true, 1.2 );
+		texto( titulo, 68, true, 1.2 );
 		y += 50;
 		var qr = codigo( url );
 		var n = qr.getModuleCount();
 		var celda = Math.floor( ( util - 160 ) / ( n + 8 ) ); // 4 módulos de margen por lado.
 		var lado = celda * ( n + 8 );
-		var qrY = y;
-		y += lado + 50;
-		PASOS.forEach( function ( paso ) {
+		// En píxeles enteros: con decimales cada módulo sale con el borde gris.
+		var qrY = Math.round( y );
+		y = qrY + lado + 50;
+		pasos.forEach( function ( paso ) {
 			texto( paso, 40, false, 1.5 );
 		} );
 
@@ -96,7 +92,8 @@
 		ctx.textAlign = 'center';
 		bloques.forEach( function ( b ) {
 			ctx.font = b.font;
-			ctx.fillText( b.texto, ANCHO / 2, b.y );
+			// El ancho máximo encoge una palabra que sola no quepa, en vez de cortarla.
+			ctx.fillText( b.texto, ANCHO / 2, b.y, util );
 		} );
 		var qrX = Math.round( ( ANCHO - lado ) / 2 );
 		for ( var f = 0; f < n; f++ ) {
@@ -127,7 +124,13 @@
 			return;
 		}
 		var punto = qr.getAttribute( 'data-evt-qr-label' ) || '';
-		var lienzo = cartel( qr.getAttribute( 'data-evt-qr' ), qr.getAttribute( 'data-evt-qr-event' ) || '', punto );
+		// Los textos vienen del servidor: el cartel dice lo mismo que la página.
+		var lienzo = cartel(
+			qr.getAttribute( 'data-evt-qr' ),
+			qr.getAttribute( 'data-evt-qr-event' ) || '',
+			qr.getAttribute( 'data-evt-qr-heading' ) || punto,
+			( qr.getAttribute( 'data-evt-qr-steps' ) || '' ).split( '|' ).filter( Boolean )
+		);
 		if ( ! lienzo ) {
 			return;
 		}

@@ -21,6 +21,7 @@ afterEach( () => {
 describe( 'evt-qr', () => {
 	it( 'paints an SVG code in every box, with its text alternative', async () => {
 		window.qrcode = require( 'qrcode-generator' );
+		vi.spyOn( HTMLCanvasElement.prototype, 'getContext' ).mockReturnValue( null );
 		document.body.innerHTML =
 			'<div data-evt-qr="https://example.org/evento/inscripcion/?asistencia=abc" data-evt-qr-alt="QR de Entrada"></div>';
 
@@ -39,15 +40,16 @@ describe( 'evt-qr', () => {
 			fillRect: vi.fn(),
 			fillText: vi.fn(),
 		};
-		const getContext = vi.spyOn( HTMLCanvasElement.prototype, 'getContext' ).mockReturnValue( ctx );
-		const toDataURL = vi.spyOn( HTMLCanvasElement.prototype, 'toDataURL' ).mockReturnValue( 'data:image/png;base64,AAAA' );
+		vi.spyOn( HTMLCanvasElement.prototype, 'getContext' ).mockReturnValue( ctx );
+		vi.spyOn( HTMLCanvasElement.prototype, 'toDataURL' ).mockReturnValue( 'data:image/png;base64,AAAA' );
 		let bajado = null;
-		const click = vi.spyOn( HTMLAnchorElement.prototype, 'click' ).mockImplementation( function () {
+		vi.spyOn( HTMLAnchorElement.prototype, 'click' ).mockImplementation( function () {
 			bajado = { href: this.href, download: this.download };
 		} );
 		document.body.innerHTML =
 			'<div class="evt-punto">' +
-			'<div data-evt-qr="https://example.org/x/?asistencia=abc" data-evt-qr-label="Entrada principal" data-evt-qr-event="Jornada de prueba"></div>' +
+			'<div data-evt-qr="https://example.org/x/?asistencia=abc" data-evt-qr-label="Entrada principal" data-evt-qr-event="Jornada de prueba" ' +
+			'data-evt-qr-heading="Control de asistencia: Entrada principal" data-evt-qr-steps="1. Escanee|3. Pulse «Confirmar asistencia»"></div>' +
 			'<button type="button" data-evt-qr-descargar hidden>Descargar el QR</button>' +
 			'<div data-evt-qr-despues hidden></div></div>';
 
@@ -59,20 +61,18 @@ describe( 'evt-qr', () => {
 
 		expect( bajado.download ).toBe( 'asistencia-entrada-principal.png' );
 		expect( bajado.href ).toContain( 'data:image/png' );
+		// El código se pinta en píxeles enteros, para que salga nítido.
+		expect( ctx.fillRect.mock.calls.every( ( c ) => Number.isInteger( c[ 0 ] ) && Number.isInteger( c[ 1 ] ) ) ).toBe( true );
 		const escrito = ctx.fillText.mock.calls.map( ( c ) => c[ 0 ] ).join( ' ' );
 		expect( escrito ).toContain( 'Jornada de prueba' );
 		expect( escrito ).toContain( 'Control de asistencia: Entrada principal' );
 		expect( escrito ).toContain( 'Confirmar asistencia' );
 		expect( document.querySelector( '[data-evt-qr-despues]' ).hidden ).toBe( false );
-
-		getContext.mockRestore();
-		toDataURL.mockRestore();
-		click.mockRestore();
 	} );
 
 	it( 'keeps the download button hidden when there is no canvas to draw on', async () => {
 		window.qrcode = require( 'qrcode-generator' );
-		const getContext = vi.spyOn( HTMLCanvasElement.prototype, 'getContext' ).mockReturnValue( null );
+		vi.spyOn( HTMLCanvasElement.prototype, 'getContext' ).mockReturnValue( null );
 		document.body.innerHTML =
 			'<div class="evt-punto"><div data-evt-qr="https://example.org/x"></div>' +
 			'<button type="button" data-evt-qr-descargar hidden></button></div>';
@@ -80,7 +80,6 @@ describe( 'evt-qr', () => {
 		await load();
 
 		expect( document.querySelector( '[data-evt-qr-descargar]' ).hidden ).toBe( true );
-		getContext.mockRestore();
 	} );
 
 	it( 'does nothing without the library: the link below still works', async () => {

@@ -111,6 +111,11 @@ tamaño. El botón de la página que abre el QR se llama **«Confirmar
 asistencia»**, que es como se le dice a esto en casi todas partes, y la página
 deja cerrar la sesión a quien esté con la cuenta de otra persona.
 
+El enlace del QR va **por el ID** de la página de inscripción y no por su
+dirección: lo impreso sobrevive a un cambio de slug, porque el tipo es
+jerárquico y WordPress no guarda redirecciones de slugs antiguos para esos
+tipos. Sin la página publicada no se ofrece el cartel.
+
 ## Referencias
 
 - `src/Evt/PublicFront/Attendance.php`,
