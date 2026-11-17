@@ -24,6 +24,32 @@ catorce ADR del [registro](../adr/registro.md). Los marcados **F2**, **F3** y
 entienda por lo que deja fuera, y se cerrarán con su propia ADR cuando les
 toque. Ninguno está entregado: a esta fecha no hay nada desplegado en el
 subsitio `eventos`.
+**Revisión del 2026-11-17:** el aplicativo está desplegado (v0.2.1) y buena
+parte de lo marcado F2 y F3 está entregado por las ADR posteriores. Este
+documento no se reescribe; lo que cambió respecto a lo escrito es esto:
+
+- **Inscripciones (§5.4, RF-VIS-06 y RF-VIS-07).** RF-INS-01 dejó de valer:
+  las inscripciones son del aplicativo
+  ([ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md))
+  y las gestiona quien edita el evento, no un rol del gestor de formularios.
+  RF-INS-02 a RF-INS-05 y RF-VIS-07 están cubiertos por ADR-0031, ADR-0033,
+  ADR-0043 y ADR-0050; el formulario de inscripción ya no es el de antes.
+- **URL (RF-VIS-01, RNF-URL).** Se conservan
+  ([ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md)),
+  y lo histórico se importó a un sitio limpio
+  ([ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md))
+  en vez de migrarse en el mismo.
+- **Fuera de alcance (§7).** El registro de asistencia ya **no** está fuera:
+  lo decide la [ADR-0053](../adr/ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md).
+  Los certificados siguen fuera.
+- **Reutilizar ponentes (§8).** El criterio «da de alta un ponente y lo
+  reutiliza en un segundo evento» no se cumple a propósito: el ponente es de
+  su evento y no se copia
+  ([ADR-0021](../adr/ADR-0021-el-ponente-pertenece-a-su-evento.md),
+  [ADR-0028](../adr/ADR-0028-no-se-copian-ponentes.md)).
+- **Auditoría (§8).** Sigue sin escribirse
+  ([ADR-0012](../adr/ADR-0012-politica-de-edicion-y-auditoria.md)).
+
 **Fecha:** 2026-09-12
 **Fuentes:**
 

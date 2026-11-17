@@ -6,8 +6,9 @@
 
 Un aplicativo para WordPress que gestiona **encuentros, jornadas y congresos**:
 cada evento con su portada y sus secciones (programa, ponentes, inscripción,
-contacto…), su programa por días y sedes, sus ponentes, las inscripciones con
-elección de taller y aforo, y un taller de gestión donde cada ámbito organiza
+contacto…), su programa por días y sedes, sus ponentes, las inscripciones
+—con correo de confirmación, elección de uno o varios talleres con aforo y
+control de asistencia con QR— y un taller de gestión donde cada ámbito organiza
 solo lo suyo.
 
 No es un plugin: se instala pegando un único **Code Snippet**, generado desde

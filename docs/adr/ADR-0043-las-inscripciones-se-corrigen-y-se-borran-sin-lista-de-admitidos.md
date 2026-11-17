@@ -1,13 +1,13 @@
 ---
 id: ADR-0043
 title: "Las inscripciones se corrigen y se borran desde el taller; no hay aforo del evento ni lista de admitidos"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0027, ADR-0031, ADR-0032, ADR-0033, ADR-0036]
+  adrs: [ADR-0027, ADR-0031, ADR-0032, ADR-0033, ADR-0036, ADR-0050, ADR-0052]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -19,7 +19,11 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `Registrations::update()` y `Registrations::delete()`
+(`src/Evt/PublicFront/Registrations.php`); pruebas en
+`tests/unit/test-registration-admin.php`. La adenda del final recoge lo que
+cambió la ADR-0050.
 
 ## Contexto
 
@@ -135,3 +139,16 @@ como documento en la página de inscripción, y la lista sale del CSV de
 - **Aforo del evento con lista de espera y estados admitida/excluida.**
   Descartada por ahora: ningún evento publicado lo usó, y es un flujo entero,
   con avisos, plazos y reclamaciones, que merece su propia decisión.
+
+## Adenda — 2026-11-17: los talleres, en plural
+
+Donde esta ADR dice «el taller» de una inscripción, desde la
+[ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) son
+los talleres: al corregir una inscripción se eligen con casillas y pasan por
+las mismas reglas que en el formulario público —cuántos, sin repetir taller ni
+solaparse— (`WorkshopChoice::check()`, `src/Evt/Domain/WorkshopChoice.php`). Y
+desde «Participantes» la organización también puede dar de alta a una persona
+([ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md)). Lo que esta
+ADR descarta —aforo del evento y lista de admitidos— sigue descartado.
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

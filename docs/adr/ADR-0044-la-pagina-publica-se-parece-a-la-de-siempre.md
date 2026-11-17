@@ -1,7 +1,7 @@
 ---
 id: ADR-0044
 title: "La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/View/EventChrome.php` y las claves de
+apariencia de `src/Evt/Meta/EventMetaKeys.php` (`evt_accent`,
+`evt_header_bg_image_id`…); pruebas en `tests/unit/test-appearance-meta.php`.
 
 ## Contexto
 

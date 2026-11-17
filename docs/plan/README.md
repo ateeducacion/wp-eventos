@@ -22,8 +22,8 @@ golpe.
 
 | ID | Título | Estado |
 |----|--------|--------|
-| [PLAN-0001](PLAN-0001-implantacion-por-fases.md) | Implantación por fases del aplicativo de eventos | Propuesta |
-| [PLAN-0002](PLAN-0002-continuar-el-diseno.md) | Continuar el diseño: dónde se ha quedado el trabajo y cómo seguir | Propuesta |
+| [PLAN-0001](PLAN-0001-implantacion-por-fases.md) | Implantación por fases del aplicativo de eventos | Cumplido (2026-11-17); la fase 2, por otro camino (ADR-0045) |
+| [PLAN-0002](PLAN-0002-continuar-el-diseno.md) | Continuar el diseño: dónde se ha quedado el trabajo y cómo seguir | Histórico: lo encolado está hecho |
 
 El PLAN-0002 no es una fase: es el **documento de continuación** del
 2026-09-13. Dice dónde está cada cosa, con qué cifras se cerró el día —medidas,

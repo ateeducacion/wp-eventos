@@ -24,4 +24,4 @@ evento; en los SDD, cómo se construye.
 
 | ID | Título | Estado |
 |----|--------|--------|
-| [REQ-0001](REQ-0001-aplicativo-de-eventos.md) | Aplicativo de eventos | Vigente; el alcance de la fase 1 se concreta en SDD-0002 |
+| [REQ-0001](REQ-0001-aplicativo-de-eventos.md) | Aplicativo de eventos | Vigente, con la revisión del 2026-11-17 al principio: qué cambiaron las ADR posteriores |

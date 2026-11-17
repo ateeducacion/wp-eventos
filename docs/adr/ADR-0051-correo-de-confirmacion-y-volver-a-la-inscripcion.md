@@ -1,7 +1,7 @@
 ---
 id: ADR-0051
 title: "Correo de confirmación con el enlace, volver con la cuenta y un documento por evento"
-status: Propuesta
+status: Aceptada
 date: 2026-11-17
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/SignupMail.php` y
+`Registrations::of_user()`; pruebas en `tests/unit/test-signup-return.php`.
+Salió en la v0.2.0.
 
 ## Contexto
 

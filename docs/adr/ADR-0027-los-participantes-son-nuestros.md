@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0001, SDD-0002]
-  adrs: [ADR-0001, ADR-0007, ADR-0018, ADR-0020, ADR-0026]
+  adrs: [ADR-0001, ADR-0007, ADR-0018, ADR-0020, ADR-0026, ADR-0032]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -191,3 +191,15 @@ para ver funcionando la tabla, el filtro y la exportación.
   qué texto se aceptó y cuándo se guardará con la inscripción cuando la haya.
 - No hay paginación: el evento mayor medido tiene 446 inscripciones y cabe en
   una tabla. Si aparece uno de miles, es lo primero que habría que mirar.
+
+## Adenda — 2026-11-17: el formulario ya existe
+
+El «a medias» del estado de arriba se cerró con la
+[ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md): las
+inscripciones son `evt_registration` y quien contesta de serie al filtro
+`evt_participants` es el propio aplicativo (`Registrations::participants()`,
+`src/Evt/PublicFront/Registrations.php`). El filtro se queda como costura para
+sumar filas de otra fuente desde un snippet, y esas filas son de solo lectura
+(`Participants::KEY_REG`, `src/Evt/PublicFront/Participants.php`).
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

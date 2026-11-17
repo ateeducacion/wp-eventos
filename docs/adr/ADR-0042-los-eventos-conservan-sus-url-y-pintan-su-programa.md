@@ -1,7 +1,7 @@
 ---
 id: ADR-0042
 title: "Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada: la opción `evt_root_urls` de `src/Evt/Admin/Settings.php` y
+`src/Evt/PublicFront/Block/ProgrammeBlock.php`; pruebas en
+`tests/unit/test-event-urls.php` y `tests/unit/test-programme-block.php`.
 
 ## Contexto
 

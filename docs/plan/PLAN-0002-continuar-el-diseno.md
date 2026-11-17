@@ -17,6 +17,20 @@ ai_assistance:
 
 # PLAN-0002 — Continuar el diseño
 
+> **Revisión del 2026-11-17.** Este documento es el punto de continuación del
+> 2026-09-13 y se conserva como tal. De lo que dejó encolado en §3: la fila 1
+> está hecha (`npm run snippets`, `.env.dist` y `LICENSE`; no hay
+> `CONTRIBUTING` ni `SECURITY.md`); la fila 5, en lo esencial, con las
+> ADR-0031 a ADR-0040 y la ADR-0048 —la lista de espera la descartó la
+> ADR-0043—; y la fila 4 ya no hace
+> falta, porque al filtro `evt_participants` contesta el propio aplicativo
+> (`Registrations::participants()`,
+> [ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)).
+> Las filas 2 (columna «Evento» de ponentes y actividades en el escritorio) y 3
+> (`Domain/Schedule.php`, aviso de solapes en la parrilla) no constan en el
+> código. El estado vigente está en el
+> [CHANGELOG](../../CHANGELOG.md) y en [`docs/arquitectura.md`](../arquitectura.md).
+
 Este documento existe para que quien retome el trabajo **no tenga que hacer
 arqueología**. Está escrito para alguien que no ha visto nada de esto: no da por
 sabido ni el proyecto, ni las decisiones, ni dónde vive cada cosa.

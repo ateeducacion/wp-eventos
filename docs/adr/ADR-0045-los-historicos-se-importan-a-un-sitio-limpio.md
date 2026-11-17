@@ -1,7 +1,7 @@
 ---
 id: ADR-0045
 title: "Los eventos históricos se importan a un sitio limpio y el antiguo se conserva al lado"
-status: Propuesta
+status: Aceptada
 date: 2026-09-28
 related:
   issues: []
@@ -19,7 +19,9 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1. La
+importación se hizo el 2026-09-28 y su resultado está en la adenda del final;
+el importador no se versiona.
 
 ## Contexto
 

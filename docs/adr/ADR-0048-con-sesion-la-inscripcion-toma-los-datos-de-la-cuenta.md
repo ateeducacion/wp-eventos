@@ -1,7 +1,7 @@
 ---
 id: ADR-0048
 title: "Con sesión, la inscripción toma de la cuenta el nombre, el correo y el centro"
-status: Propuesta
+status: Aceptada
 date: 2026-09-28
 related:
   issues: []
@@ -19,7 +19,11 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `Registrations::from_profile()`
+(`src/Evt/PublicFront/Registrations.php`) con la meta de usuario
+`RegistrationMetaKeys::USER_CENTRE_CODE`; pruebas en
+`tests/unit/test-signup-form.php`.
 
 ## Contexto
 

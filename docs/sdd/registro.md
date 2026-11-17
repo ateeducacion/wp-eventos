@@ -31,6 +31,16 @@ el aplicativo tome el relevo, no antes.
 El diseño vigente y los pendientes abiertos se consultan en **SDD-0002**; las
 decisiones que lo sostienen están en el [índice de ADR](../adr/registro.md).
 
+**Revisión del 2026-11-17.** El aplicativo tomó el relevo: los eventos se
+importaron a un sitio limpio el 2026-09-28
+([ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md),
+adenda) y la v0.2.1 está desplegada. El sitio anterior se conserva al lado,
+pero ya no es el que se usa, así que la investigación del sistema anterior pasa
+a `Sustituida` por SDD-0002, como se dejó escrito arriba. SDD-0002 es ahora,
+sobre todo, histórico: la foto vigente está en
+[`docs/arquitectura.md`](../arquitectura.md), y su «Estado» dice qué ha
+cambiado.
+
 En la revisión documental del 2026-09-12 los dos SDD se cotejaron contra las
 catorce ADR y contra el material de `.local/`. Se corrigieron tres cifras de
 SDD-0001 —el número de inscripciones, cuántas vistas sirven a un solo evento y
@@ -41,5 +51,5 @@ de inscripciones, que ahora es la **3** y no la 2. El detalle está en el
 
 | ID | Contenido | Estado | Sustituido por |
 |----|-----------|--------|----------------|
-| `.local/` (investigación del sistema anterior) | Cómo funciona hoy el sistema de eventos: el formulario, la vista que interpola sus páginas, la taxonomía `convocatoria` y los roles de área | Aceptada (histórico vivo) | — |
-| [SDD-0002](SDD-0002-arquitectura-de-reemplazo.md) | El aplicativo que lo sustituye: CPT `evt_event` jerárquico, tres taxonomías, ámbito por área | Aceptada | — |
+| `.local/` (investigación del sistema anterior) | Cómo funcionaba el sistema de eventos anterior: el formulario, la vista que interpola sus páginas, la taxonomía `convocatoria` y los roles de área | Sustituida (histórico) | [SDD-0002](SDD-0002-arquitectura-de-reemplazo.md) |
+| [SDD-0002](SDD-0002-arquitectura-de-reemplazo.md) | El aplicativo que lo sustituye: CPT `evt_event` jerárquico, tres taxonomías, ámbito por área; desde el 2026-11-17, sobre todo histórico (ver su «Estado») | Aceptada | — |

@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0003, ADR-0010, ADR-0014, ADR-0016, ADR-0019, ADR-0022, ADR-0023]
+  adrs: [ADR-0003, ADR-0010, ADR-0014, ADR-0016, ADR-0019, ADR-0022, ADR-0023, ADR-0041]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -296,3 +296,16 @@ Reglas que no cambian por esto:
   evento por fuera.
 - [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) — la arquitectura de
   reemplazo.
+
+## Adenda — 2026-11-17: las pestañas son ahora un menú lateral
+
+La pantalla única sigue, pero su forma la cambió la
+[ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md):
+las pestañas de arriba son un **menú lateral en tres grupos** (Contenido,
+Inscripción y Configuración), «Talleres» deja de ser pestaña y vive dentro de
+«Programa», y las altas se abren en un panel lateral. Después se sumó
+«Asistencia» ([ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md)).
+La lista vigente de paneles la da `EventWorkspace::panels()`
+(`src/Evt/PublicFront/EventWorkspace.php`).
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.
