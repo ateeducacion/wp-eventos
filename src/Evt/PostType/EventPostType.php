@@ -92,6 +92,8 @@ final class EventPostType {
 
 		add_filter( 'request', array( self::class, 'resolve_request' ) );
 		add_filter( 'post_type_link', array( self::class, 'root_link' ), 10, 2 );
+		// Después de `root_link()`: manda sobre la dirección en la raíz.
+		add_filter( 'post_type_link', array( self::class, 'draft_link' ), 20, 2 );
 		add_filter( 'redirect_canonical', array( self::class, 'keep_entry_url' ) );
 		add_filter( 'query_vars', array( self::class, 'query_vars' ) );
 	}
@@ -204,7 +206,10 @@ final class EventPostType {
 	 */
 	public static function entry_url( int $section_id, int $entry_id ): string {
 		$url = (string) get_permalink( $section_id );
-		if ( ! get_option( 'permalink_structure' ) ) {
+		// Sin enlaces bonitos, o con la página en una dirección `?p=` —la de un
+		// evento en borrador—, la ficha va por parámetro: pegarle `/entry/N`
+		// detrás de una consulta no lleva a ningún sitio.
+		if ( ! get_option( 'permalink_structure' ) || false !== strpos( $url, '?' ) ) {
 			return add_query_arg( self::ENTRY_VAR, $entry_id, $url );
 		}
 		return user_trailingslashit( trailingslashit( $url ) . 'entry/' . $entry_id );
@@ -238,6 +243,39 @@ final class EventPostType {
 			return $url;
 		}
 		return user_trailingslashit( home_url( '/' . get_page_uri( $post ) ) );
+	}
+
+	/**
+	 * The plain URL of a page whose event has no name in the URL yet.
+	 *
+	 * Un evento en borrador no tiene `post_name`: WordPress no se lo pone
+	 * hasta publicarlo. Sus páginas sí lo tienen, y la dirección bonita se
+	 * compone sin el tramo del evento —`/evento/programa/`, o `/programa/` con
+	 * las direcciones en la raíz—, que lleva a otra cosa: la pantalla del
+	 * taller u otra página del sitio. Mientras falte ese tramo, la página va
+	 * por `?post_type=evt_event&p=N`, que siempre llega a ella; al publicar el
+	 * evento recupera su dirección sola.
+	 *
+	 * @param mixed $url  Permalink.
+	 * @param mixed $post Post.
+	 * @return mixed
+	 */
+	public static function draft_link( $url, $post ) {
+		if ( ! $post instanceof \WP_Post || self::POST_TYPE !== $post->post_type || ! get_option( 'permalink_structure' ) ) {
+			return $url;
+		}
+		foreach ( get_post_ancestors( $post ) as $ancestro ) {
+			if ( '' === (string) get_post_field( 'post_name', $ancestro ) ) {
+				return add_query_arg(
+					array(
+						'post_type' => self::POST_TYPE,
+						'p'         => (int) $post->ID,
+					),
+					home_url( '/' )
+				);
+			}
+		}
+		return $url;
 	}
 
 	/**

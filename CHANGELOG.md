@@ -27,6 +27,10 @@ en el subsitio `eventos` se hace después.
 - Al corregir una inscripción, los talleres se eligen con casillas y pasan por las mismas reglas que en el formulario público
 - Bootstrap 5.3.9, Bootstrap Icons 1.13.2 y Tom Select 2.7.0 en las pantallas que los cargan
 
+### Corregido
+
+- En un evento en borrador, los enlaces a sus páginas —programa, ponentes, inscripción, multimedia, contacto— llevaban a otro sitio: ahora van a cada página, y al publicarlo recuperan su dirección de siempre
+
 ### Pendiente antes de desplegar
 
 - Actualizar también los snippets sueltos «Bootstrap 5» y «Roles y perfiles», que cambian de versión de librería
