@@ -1,7 +1,7 @@
 ---
 id: ADR-0041
 title: "La gestión se agrupa en un menú lateral y los eventos se publican en una línea del tiempo"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/View/EventWorkspaceView.php` (el menú
+lateral) y `src/Evt/PublicFront/Timeline.php` (la línea del tiempo); pruebas en
+`tests/unit/test-workspace-panels.php` y `tests/unit/test-timeline.php`.
 
 ## Contexto
 

@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0024, ADR-0026, ADR-0027, ADR-0031, ADR-0032]
+  adrs: [ADR-0024, ADR-0026, ADR-0027, ADR-0031, ADR-0032, ADR-0050, ADR-0051]
 supersedes: []
 superseded_by: []
 ai_assistance:

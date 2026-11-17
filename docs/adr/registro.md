@@ -224,23 +224,33 @@ Sigue abierto, y no se ha tocado, el otro pendiente que salió del mismo cotejo:
 página de sistema. Es un pendiente real (P-05 del plan) y no tiene nada que ver
 con el anterior, aunque el parecido de las cifras invitaba a confundirlos.
 
-Ninguna está en `Propuesta`: lo que sigue abierto se anota como pendiente en
-[SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md), no como una ADR a
-medias. Y hay una sustitución, la única hasta ahora:
+Solo una está en `Propuesta`, la
+[ADR-0047](ADR-0047-un-evento-en-dos-idiomas-son-dos-eventos-enlazados.md),
+que fija una dirección sin código detrás; lo demás que sigue abierto se anota
+como pendiente en [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md). Hay
+dos sustituciones:
 [ADR-0007](ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md) dejaba
 las inscripciones en el gestor de formularios del sistema anterior, y la
-[ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) las trae aquí.
-Se conserva por su contexto, que es la evidencia de las tres que vinieron
-después; lo que ya no vale es su decisión.
+[ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) las trae aquí;
+[ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) migraba lo
+histórico en el mismo sitio, y la
+[ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) lo importa
+a uno limpio. Las dos se conservan por su contexto; lo que ya no vale es su
+decisión.
+
+Cuando una ADR posterior cambia **parte** de otra sin sustituirla entera, la
+columna «Estado» lo dice —«modificada por», «ampliada por»— y la ADR afectada
+lleva una adenda que apunta a la nueva. No es un estado más: la ADR sigue
+`Aceptada` en lo que no se tocó.
 
 | ID | Título | Estado | Fecha original | SDD relacionada |
 |----|--------|--------|----------------|-----------------|
 | [ADR-0001](ADR-0001-repo-entorno-desarrollo-no-plugin.md) | El repositorio es un entorno de desarrollo, no un plugin | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0002](ADR-0002-sincronizacion-snippets-eval-file.md) | Sincronización de snippets con wp eval-file y la API de Code Snippets | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0002](ADR-0002-sincronizacion-snippets-eval-file.md) | Sincronización de snippets con wp eval-file y la API de Code Snippets | Aceptada (modificada por [ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md)) | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0003](ADR-0003-cpt-jerarquico-frente-a-paginas-generadas.md) | Un CPT jerárquico en lugar de páginas creadas por un formulario | Aceptada | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0004](ADR-0004-una-taxonomia-por-dimension.md) | Una taxonomía por dimensión en lugar de la única convocatoria | Aceptada | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0005](ADR-0005-el-estado-del-evento-se-deriva-de-las-fechas.md) | El estado del evento se deriva de las fechas | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) | El área es un ámbito, no un rol | Aceptada | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) | El área es un ámbito, no un rol | Aceptada (modificada por [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md)) | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0007](ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md) | Las inscripciones siguen en el sistema anterior en la fase 1 | **Sustituida** por [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) | 2026-09-12 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) | Se migra el contenedor de los eventos históricos y se congela su contenido | **Sustituida** por [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0009](ADR-0009-identificadores-internos-en-ingles.md) | Identificadores internos en inglés, lo que se ve en castellano | Aceptada | 2026-09-12 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
@@ -252,42 +262,42 @@ después; lo que ya no vale es su decisión.
 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md) | Las librerías de terceros se cargan desde jsDelivr con SRI; en desarrollo, desde node_modules | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0016](ADR-0016-borrar-es-enviar-a-la-papelera.md) | Borrar es enviar a la papelera; el borrado definitivo se queda en el escritorio | Aceptada | 2026-09-13 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0017](ADR-0017-el-estado-historico-cierra-la-edicion.md) | El estado «histórico» cierra la edición de un evento, y es una marca distinta de evt_legacy | Aceptada | 2026-09-13 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) | El taller del evento es una sola pantalla, no pestañas sueltas | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0019](ADR-0019-el-tipo-de-pagina-se-elige-al-crear.md) | El tipo de una página se elige al crear y no se cambia | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0020](ADR-0020-el-consentimiento-es-una-casilla.md) | El consentimiento es una casilla: simplificación administrativa | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0021](ADR-0021-el-ponente-pertenece-a-su-evento.md) | El ponente pertenece a su evento, no a un catálogo global | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) | El taller del evento es una sola pantalla: las páginas a la izquierda, sus elementos a la derecha | Aceptada (modificada por [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md)) | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0019](ADR-0019-el-tipo-de-pagina-se-elige-al-crear.md) | El tipo de una página se elige al crearla y no se cambia después | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0020](ADR-0020-el-consentimiento-es-una-casilla.md) | El consentimiento es una casilla: se acepta en pantalla y se guarda qué se aceptó y cuándo | Aceptada | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0021](ADR-0021-el-ponente-pertenece-a-su-evento.md) | El ponente pertenece a su evento: no se comparte, se copia | Aceptada (la copia la retira la [ADR-0028](ADR-0028-no-se-copian-ponentes.md)) | 2026-09-13 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0022](ADR-0022-la-pagina-de-evento-se-pinta-entera.md) | La página pública de un evento se pinta entera, sin el tema | Aceptada | 2026-09-13 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0023](ADR-0023-bloqueo-de-edicion-con-el-de-wordpress.md) | Que dos personas no se pisen: se usa el bloqueo de edición nativo de WordPress, no uno propio | Aceptada | 2026-09-13 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0024](ADR-0024-un-dia-puede-tener-dos-sedes.md) | Un día puede tener dos sedes: la sede es un dato de la actividad, no del día | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0024](ADR-0024-un-dia-puede-tener-dos-sedes.md) | Un día puede tener dos sedes: la sede es de la actividad | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0025](ADR-0025-no-se-duplican-eventos.md) | No se duplican eventos: se tarda menos en crearlo que en corregir la copia | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0026](ADR-0026-ponentes-y-actividades-cuelgan-del-evento.md) | Los ponentes y las actividades cuelgan del evento por `post_parent` | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0027](ADR-0027-los-participantes-son-nuestros.md) | Los participantes son nuestros: no se lee el sistema viejo | Aceptada | 2026-09-14 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0027](ADR-0027-los-participantes-son-nuestros.md) | Los participantes son nuestros: no se lee el sistema viejo | Aceptada (completada por [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)) | 2026-09-14 | `.local/` (investigación del sistema anterior), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0028](ADR-0028-no-se-copian-ponentes.md) | No se copian ponentes de otro evento: se vuelven a meter | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0029](ADR-0029-botones-de-icono-e-interruptor-de-publicacion.md) | Botones de icono con bocadillo, y la publicación como interruptor | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) | El repositorio se publica como software libre y no lleva dentro nada de nadie | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md) | El formulario de inscripción es un núcleo fijo más unas pocas preguntas por evento | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md) | El formulario de inscripción es un núcleo fijo más unas pocas preguntas por evento | Aceptada (ampliada por [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md)) | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) | La inscripción es un contenido del evento, y no se enseña en el escritorio | Aceptada (sustituye a la [ADR-0007](ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md)) | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) | Elegir taller: aforo duro, cambio hasta el cierre y un solo candado por evento | Aceptada | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) | Elegir taller: aforo duro, cambio hasta el cierre y un solo candado por evento | Aceptada (modificada por [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) y [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md)) | 2026-09-14 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0034](ADR-0034-main-solo-se-mezcla-con-revision-y-ci-en-verde.md) | La rama `main` solo se mezcla con una revisión y el CI en verde | Aceptada | 2026-09-16 | [ADR-0011](ADR-0011-ci-y-politica-de-pruebas.md) |
 | [ADR-0035](ADR-0035-sincronizacion-de-snippets-por-contenido.md) | Sincronización de snippets por contenido | Aceptada | 2026-09-19 | [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) | Los ficheros aportados en una inscripción no son adjuntos de WordPress | Propuesta | 2026-09-19 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) |
+| [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) | Los ficheros aportados en una inscripción no son adjuntos de WordPress | Aceptada | 2026-09-19 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md) |
 | [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) | El catálogo de centros educativos es un dato maestro externo y se cachea localmente | Aceptada | 2026-09-20 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md) |
 | [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md) | Ámbitos organizativos jerárquicos para la edición | Aceptada | 2026-09-20 | [ADR-0006](ADR-0006-el-area-es-un-ambito-no-un-rol.md) |
-| [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) | Inscribirse pide sesión salvo que el evento la abra, y adjuntar la pide siempre | Propuesta | 2026-09-27 | [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
-| [ADR-0040](ADR-0040-captcha-altcha-para-la-inscripcion-sin-sesion.md) | La inscripción sin sesión pasa por ALTCHA, con el servidor escrito aquí | Propuesta | 2026-09-27 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) |
-| [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) | La gestión se agrupa en un menú lateral y los eventos se publican en una línea del tiempo | Propuesta | 2026-09-27 | [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) |
-| [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa | Propuesta | 2026-09-27 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) |
-| [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md) | Las inscripciones se corrigen y se borran desde el taller; no hay aforo del evento ni lista de admitidos | Propuesta | 2026-09-27 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
-| [ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) | La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas | Propuesta | 2026-09-27 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) |
-| [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | Los eventos históricos se importan a un sitio limpio y el antiguo se conserva al lado | Propuesta | 2026-09-28 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
-| [ADR-0046](ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md) | El mapa de la página de contacto es Leaflet con puntos propios, y debajo la misma lista | Propuesta | 2026-09-28 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
+| [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) | Inscribirse pide sesión salvo que el evento la abra, y adjuntar la pide siempre | Aceptada | 2026-09-27 | [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
+| [ADR-0040](ADR-0040-captcha-altcha-para-la-inscripcion-sin-sesion.md) | La inscripción sin sesión pasa por ALTCHA, con el servidor escrito aquí | Aceptada | 2026-09-27 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0039](ADR-0039-inscribirse-pide-sesion-salvo-que-el-evento-la-abra.md) |
+| [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) | La gestión se agrupa en un menú lateral y los eventos se publican en una línea del tiempo | Aceptada | 2026-09-27 | [ADR-0018](ADR-0018-el-taller-del-evento-es-una-sola-pantalla.md) |
+| [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Los eventos conservan sus URL de hoy y su página pública pinta ponentes y programa | Aceptada | 2026-09-27 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md) |
+| [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md) | Las inscripciones se corrigen y se borran desde el taller; no hay aforo del evento ni lista de admitidos | Aceptada (modificada por [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md)) | 2026-09-27 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) |
+| [ADR-0044](ADR-0044-la-pagina-publica-se-parece-a-la-de-siempre.md) | La página pública de un evento se parece a la de siempre: cabecera por sección, acento y programa en pestañas | Aceptada | 2026-09-27 | [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md), [ADR-0041](ADR-0041-interfaz-de-gestion-agrupada-y-linea-del-tiempo-publica.md) |
+| [ADR-0045](ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) | Los eventos históricos se importan a un sitio limpio y el antiguo se conserva al lado | Aceptada (sustituye a la [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md)) | 2026-09-28 | [ADR-0008](ADR-0008-migracion-de-los-eventos-historicos.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
+| [ADR-0046](ADR-0046-el-mapa-de-contacto-es-leaflet-con-puntos-propios.md) | El mapa de la página de contacto es Leaflet con puntos propios, y debajo la misma lista | Aceptada | 2026-09-28 | [ADR-0015](ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
 | [ADR-0047](ADR-0047-un-evento-en-dos-idiomas-son-dos-eventos-enlazados.md) | Un evento en dos idiomas son dos eventos enlazados | Propuesta | 2026-09-28 | [ADR-0032](ADR-0032-la-inscripcion-es-un-contenido-del-evento.md), [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) |
-| [ADR-0048](ADR-0048-con-sesion-la-inscripcion-toma-los-datos-de-la-cuenta.md) | Con sesión, la inscripción toma de la cuenta el nombre, el correo y el centro | Propuesta | 2026-09-28 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) |
-| [ADR-0049](ADR-0049-la-organizacion-y-el-pie-se-escriben-en-ajustes.md) | La organización y los enlaces del pie se escriben en «Ajustes» | Propuesta | 2026-09-29 | [ADR-0020](ADR-0020-el-consentimiento-es-una-casilla.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
-| [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) | Varios talleres por persona, sin repetir taller ni solaparse | Propuesta | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md) | Correo de confirmación con el enlace, volver con la cuenta y un documento por evento | Propuesta | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md) | La organización inscribe a una persona, y declara su consentimiento | Propuesta | 2026-11-17 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
-| [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) | Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas | Propuesta | 2026-11-17 | [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0048](ADR-0048-con-sesion-la-inscripcion-toma-los-datos-de-la-cuenta.md) | Con sesión, la inscripción toma de la cuenta el nombre, el correo y el centro | Aceptada | 2026-09-28 | [ADR-0031](ADR-0031-el-formulario-de-inscripcion-es-nucleo-fijo-mas-preguntas.md), [ADR-0037](ADR-0037-el-catalogo-de-centros-es-externo-y-se-cachea-localmente.md) |
+| [ADR-0049](ADR-0049-la-organizacion-y-el-pie-se-escriben-en-ajustes.md) | La organización y los enlaces del pie se escriben en «Ajustes» | Aceptada | 2026-09-29 | [ADR-0020](ADR-0020-el-consentimiento-es-una-casilla.md), [ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md) |
+| [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) | Varios talleres por persona, sin repetir taller ni solaparse | Aceptada | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md) | Correo de confirmación con el enlace, volver con la cuenta y un documento por evento | Aceptada | 2026-11-17 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md) | La organización inscribe a una persona, y declara su consentimiento | Aceptada | 2026-11-17 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) | Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas | Aceptada | 2026-11-17 | [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -630,3 +640,19 @@ documento dos veces en un evento. La
 organización inscribir a alguien declarando su consentimiento, y la
 [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) añade el
 control de asistencia con un QR por punto, marcas a mano y hoja de firmas.
+
+**Revisión de estados, 2026-11-17.** Con la v0.2.1 en `main` se cotejó cada
+ADR con el código. Pasan de `Propuesta` a `Aceptada` las que ya están
+implementadas y desplegadas —ADR-0036, ADR-0039 a ADR-0046 y ADR-0048 a
+ADR-0053—; cada una dice en su «Estado» dónde está su código y su prueba. La
+ADR-0045 lo está porque la importación se hizo (su adenda del 2026-09-28), y
+con ello la sustitución de la ADR-0008 queda en firme. La
+[ADR-0047](ADR-0047-un-evento-en-dos-idiomas-son-dos-eventos-enlazados.md) se
+queda en `Propuesta`: no hay código de eventos enlazados por idioma. Las que
+otras posteriores modificaron en parte llevan una adenda que lo dice —ADR-0002,
+ADR-0006, ADR-0018, ADR-0021, ADR-0027, ADR-0031 y ADR-0043; la ADR-0033 ya la
+tenía— y su fila de la tabla lo anota. Lo que la revisión encontró y **no**
+resuelve: la auditoría de mutaciones que decide la
+[ADR-0012](ADR-0012-politica-de-edicion-y-auditoria.md) sigue sin escribirse
+(no hay registro de cambios en `src/Evt/`), y queda como pendiente en
+[SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md).

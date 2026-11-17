@@ -1,7 +1,7 @@
 ---
 id: ADR-0053
 title: "Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas"
-status: Propuesta
+status: Aceptada
 date: 2026-11-17
 related:
   issues: []
@@ -19,7 +19,10 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/Attendance.php` y
+`src/Evt/PublicFront/View/EventAttendancePanel.php`; pruebas en
+`tests/unit/test-attendance.php`. Salió en la v0.2.0 y su adenda, en la v0.2.1.
 
 ## Contexto
 

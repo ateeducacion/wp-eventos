@@ -168,14 +168,9 @@ cd wp-eventos
 Verás muchas líneas de descarga y al final `Resolving deltas: 100% ... done.`
 Ya tienes la carpeta `wp-eventos` en tu carpeta personal.
 
-> **Si sale `Repository not found`, no has hecho nada mal.** A fecha de hoy
-> (2026-09-13) el repositorio **todavía no está publicado en GitHub**: se está
-> escribiendo en local y aún no tiene ni servidor remoto ni permisos dados.
-> Comprobado con `gh repo view ateeducacion/wp-eventos`, que responde
-> «Could not resolve to a Repository». Mientras siga así, pide al equipo la
-> carpeta del proyecto y sáltate este apartado: todo lo demás de esta guía
-> funciona igual, salvo el `git pull` del final del apartado y el `git push` del
-> paso 4, que necesitan el repositorio publicado.
+> **Si sale `Repository not found`**, revisa que la dirección está bien
+> copiada. El repositorio es público: se puede clonar sin permisos, y para
+> proponer cambios (paso 4) hace falta que el equipo te dé acceso de escritura.
 
 **A partir de ahí, cada vez que te sientes a trabajar, lo primero es esto:**
 
@@ -228,8 +223,10 @@ Entorno listo:
 
 Ábrelo en el navegador: <http://localhost:8798/wp-admin/>, usuario **`admin`**,
 contraseña **`password`**. Tienes que ver el escritorio de WordPress en
-castellano y, en el menú de la izquierda, **Eventos**, **Ponentes** y
-**Actividades**.
+castellano y, en el menú de la izquierda, **Eventos**, con **Ponentes** y
+**Actividades** dentro. Ese menú solo lo ve administración; quien organiza
+eventos trabaja desde el aplicativo, en
+<http://localhost:8798/eventos-gestion/>.
 
 Hay más cuentas para probar qué ve cada perfil, todas con la contraseña
 `password`: `coordinacion`, `organizacion`, `organizacion2` y `organizacion3`.

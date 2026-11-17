@@ -1,7 +1,7 @@
 ---
 id: ADR-0040
 title: "La inscripción sin sesión pasa por ALTCHA, con el servidor escrito aquí"
-status: Propuesta
+status: Aceptada
 date: 2026-09-27
 related:
   issues: []
@@ -19,7 +19,9 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/Captcha.php`, con sus pruebas en
+`tests/unit/test-captcha.php`.
 
 ## Contexto
 

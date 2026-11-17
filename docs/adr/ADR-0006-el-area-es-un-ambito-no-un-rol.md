@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0001, SDD-0002]
-  adrs: [ADR-0003, ADR-0004, ADR-0009, ADR-0012]
+  adrs: [ADR-0003, ADR-0004, ADR-0009, ADR-0012, ADR-0038]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -336,3 +336,23 @@ anterior (ADR-0007).
   según [ADR-0009](ADR-0009-identificadores-internos-en-ingles.md). Los roles
   viejos conservan sus slugs con acentos mal transliterados: no se renombran
   porque renombrar un slug desasigna a quien lo tenga.
+
+## Adenda — 2026-11-17: modificada por la ADR-0038
+
+La separación entre área y rol sigue vigente, pero tres piezas de la decisión
+de arriba las cambió la
+[ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md), y en ellas manda
+esa:
+
+- **El actor ya no es solo `evt_organiser`**: el rol nativo `editor` es el
+  recomendado, y `evt_organiser` se conserva por compatibilidad
+  (`evt_role_definitions()`, `snippets/roles-and-profiles.php`).
+- **Una persona tiene un solo ámbito**, que alcanza a sus descendientes; un
+  perfil con varios queda sin acceso hasta que administración elija uno
+  (`EventAccess::scope_assignment_state()`). Un evento sí puede tener varios.
+- **La excepción del evento recién creado se estrecha**: solo el auto-borrador
+  sin ámbito lo abre quien lo creó, y al guardarlo `EventAccess::stamp_area()`
+  le pone el ámbito del autor (`EventAccess::can_open()`,
+  `src/Evt/Access/EventAccess.php`).
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

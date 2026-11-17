@@ -21,7 +21,29 @@ ai_assistance:
 
 **Aceptada** como diseño de la fase 1, el 2026-09-12.
 
-Aceptada no quiere decir desplegada. A esta fecha el sitio de destino sigue
+**Revisión del 2026-11-17.** El aplicativo está desplegado (v0.2.1) y este
+documento ha pasado a ser, sobre todo, histórico: describe el diseño con el que
+se empezó. Lo que cambió después lo deciden las ADR posteriores, y la foto
+vigente está en [`docs/arquitectura.md`](../arquitectura.md) —modelo de datos,
+claves de la inscripción, roles y comandos— y en la anatomía de `src/Evt/` de
+[`AGENTS.md`](../../AGENTS.md). Lo que más ha cambiado respecto a lo de abajo:
+
+- Hay **cuatro** tipos de contenido: se suma `evt_registration`, la
+  inscripción colgada del evento
+  ([ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)),
+  con sus claves en `src/Evt/Meta/RegistrationMetaKeys.php`.
+- `src/Evt/` tiene 72 ficheros PHP —70 en `src/Evt/load-order.php`, más la propia lista y `bootstrap.php`—, no doce.
+- Los eventos históricos no se migraron en el mismo sitio: se importaron a un
+  sitio limpio ([ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md)),
+  así que §8 (la convivencia) ya no describe lo que pasó.
+- El actor recomendado es el `editor` nativo, con un ámbito jerárquico
+  ([ADR-0038](../adr/ADR-0038-ambitos-organizativos-jerarquicos.md)).
+- Las URL de siempre se conservan
+  ([ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md)).
+
+Los pendientes del final están revisados a esta fecha.
+
+Lo que sigue es el texto del 2026-09-12. Aceptada no quiere decir desplegada. A esta fecha el sitio de destino sigue
 funcionando exactamente como lo describe la investigación del sistema anterior
 (`.local/`): un formulario único, la plantilla que interpola la página y la
 taxonomía que lo mezcla todo. Lo que hay escrito en este repositorio son
@@ -165,6 +187,7 @@ capacidades no encuentra los roles y falla en silencio.
 | Evento y sus páginas | `evt_event` | sí | sí | las `page` jerárquicas |
 | Ponente | `evt_speaker` | no | **no** | el formulario de ponentes del sistema anterior |
 | Actividad | `evt_activity` | no | **no** | el formulario de actividades del sistema anterior |
+| Inscripción *(añadido el 2026-11-17)* | `evt_registration` | no | **no**, y sin escritorio ni REST | las entradas del formulario de inscripción del sistema anterior ([ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)) |
 
 `evt_event` es jerárquico porque un evento es a la vez su portada
 (`post_parent = 0`) y sus páginas satélite
@@ -746,6 +769,16 @@ es convivencia, no solución.
 
 ### 8. Convivencia con lo legacy durante la transición
 
+> **Revisión del 2026-11-17: no se hizo así.** La convivencia de abajo suponía
+> migrar en el mismo sitio
+> ([ADR-0008](../adr/ADR-0008-migracion-de-los-eventos-historicos.md)). Esa
+> ADR la sustituyó la
+> [ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md):
+> lo histórico se importó a un sitio limpio y el anterior se conserva al lado,
+> y las inscripciones ya son del aplicativo
+> ([ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)).
+> Se deja el texto como registro del plan de entonces.
+
 Los dos sistemas conviven, y esa convivencia tiene reglas
 ([ADR-0007](../adr/ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md),
 [ADR-0008](../adr/ADR-0008-migracion-de-los-eventos-historicos.md)):
@@ -777,7 +810,7 @@ formulario.
 | Situación | Qué hace hoy el código | Valoración |
 |---|---|---|
 | Perfil sin área, sin `evt_edit_all_areas` | Listado vacío (`EventAdmin::scope_admin_query()`) y `can_edit()` deniega (`EventAccess.php`), con motivo en castellano (`why_not_editable()`) | Correcto: fail-closed |
-| Evento recién creado, todavía sin área | Lo edita su autoría (`EventAccess.php`) | Correcto, pero si nadie le pone el área el evento queda visible solo para su autoría y la administración, sin aviso |
+| Evento recién creado, todavía sin área | Lo edita su autoría (`EventAccess.php`) | Correcto, pero si nadie le pone el área el evento queda visible solo para su autoría y la administración, sin aviso. *Revisado el 2026-11-17: ya no es así. Solo el auto-borrador sin ámbito lo abre su autoría, y al guardarlo `EventAccess::stamp_area()` le pone el del autor (`EventAccess::can_open()`, [ADR-0038](../adr/ADR-0038-ambitos-organizativos-jerarquicos.md))* |
 | Fecha mal tecleada | `sanitize_date()` la guarda **vacía** (`EventMetaRegistration.php`) | **Discutible**: se pierde el dato en silencio y el evento queda «próximo» para siempre (`EventState.php`). Debería avisarse en la pantalla de edición |
 | Fin anterior al inicio | `EventState` normaliza fin = inicio (`of()`); `EventInput` sí lo marca como error `date_order` (`EventInput::validate()`) | Las dos reglas conviven porque `EventInput` valida la entrada y `EventState` no puede fallar al pintar |
 | Evento de un solo día | Fin vacío = fin igual a inicio (`EventState.php`) | Correcto: no obliga a rellenar dos campos |
@@ -870,8 +903,8 @@ son las condiciones de «hecho» que faltan.
 | Una taxonomía por dimensión en lugar de la única `convocatoria` | [ADR-0004](../adr/ADR-0004-una-taxonomia-por-dimension.md) | Aceptada |
 | El estado del evento se deriva de las fechas | [ADR-0005](../adr/ADR-0005-el-estado-del-evento-se-deriva-de-las-fechas.md) | Aceptada |
 | El área es un ámbito, no un rol | [ADR-0006](../adr/ADR-0006-el-area-es-un-ambito-no-un-rol.md) | Aceptada |
-| Las inscripciones se quedan en el sistema anterior durante la fase 1 | [ADR-0007](../adr/ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md) | Aceptada |
-| Se migra el contenedor de los eventos históricos y se congela su contenido | [ADR-0008](../adr/ADR-0008-migracion-de-los-eventos-historicos.md) | Aceptada |
+| Las inscripciones se quedan en el sistema anterior durante la fase 1 | [ADR-0007](../adr/ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md) | Sustituida por [ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md) |
+| Se migra el contenedor de los eventos históricos y se congela su contenido | [ADR-0008](../adr/ADR-0008-migracion-de-los-eventos-historicos.md) | Sustituida por [ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md) |
 | Identificadores internos en inglés, lo que se ve en castellano | [ADR-0009](../adr/ADR-0009-identificadores-internos-en-ingles.md) | Aceptada |
 | La página la genera código versionado, no una plantilla del sistema anterior | [ADR-0010](../adr/ADR-0010-la-pagina-la-genera-codigo-versionado.md) | Aceptada |
 | Integración continua y política de pruebas | [ADR-0011](../adr/ADR-0011-ci-y-politica-de-pruebas.md) | Aceptada |
@@ -881,14 +914,22 @@ son las condiciones de «hecho» que faltan.
 | Las librerías de terceros se cargan desde jsDelivr con SRI; en desarrollo, desde `node_modules` | [ADR-0015](../adr/ADR-0015-librerias-de-terceros-desde-cdn-con-sri.md) | Aceptada |
 | La página pública de un evento se pinta entera, sin el tema | [ADR-0022](../adr/ADR-0022-la-pagina-de-evento-se-pinta-entera.md) | Aceptada |
 | Que dos personas no se pisen: el bloqueo de edición es el nativo de WordPress | [ADR-0023](../adr/ADR-0023-bloqueo-de-edicion-con-el-de-wordpress.md) | Aceptada |
-| Reescritura de URL: conservar `/eventos/<slug>/` en la raíz del subsitio | **ADR pendiente** | — |
-| Diseño de las sedes repetibles (este documento, §4) | **ADR pendiente** | — |
+| Reescritura de URL: conservar `/eventos/<slug>/` en la raíz del subsitio | [ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Aceptada |
+| Diseño de las sedes repetibles (este documento, §4) | [ADR-0024](../adr/ADR-0024-un-dia-puede-tener-dos-sedes.md): la sede es de la actividad, no una lista del evento | Aceptada |
+| La inscripción y todo lo que cuelga de ella | ADR-0031 a ADR-0033, ADR-0036, ADR-0039, ADR-0040, ADR-0043, ADR-0048 y ADR-0050 a ADR-0053, en el [índice](../adr/registro.md) | Aceptadas |
 
 ## Pendientes y trabajo futuro
 
+> **Revisión del 2026-11-17.** Marcado con *(hecho)* o *(ya no aplica)* lo que
+> se cerró desde que se escribió esta lista, con la ADR o la ruta que lo
+> prueba. Lo que no lleva marca sigue abierto o no tiene evidencia en el
+> repositorio.
+
 ### Lo que falta para cerrar la fase 1
 
-- [ ] **Las sedes** (§4): declarar `evt_venue` como meta repetible, la clave
+- [ ] *(ya no aplica: la sede es un dato de cada actividad,
+      `evt_activity_venue`, [ADR-0024](../adr/ADR-0024-un-dia-puede-tener-dos-sedes.md))*
+      **Las sedes** (§4): declarar `evt_venue` como meta repetible, la clave
       estable por sede y `evt_venue_key` en `evt_activity`. Hoy es un texto
       libre (`EventMetaKeys::VENUE`), que es el campo de sedes de hoy con otro
       nombre.
@@ -896,7 +937,9 @@ son las condiciones de «hecho» que faltan.
       y a la vista de la portada: documento entero, cabecera, navegación entre
       secciones, tarjetas de la portada y pie del sitio
       ([ADR-0022](../adr/ADR-0022-la-pagina-de-evento-se-pinta-entera.md)).
-- [ ] **Los dos bloques que faltan** en ese armazón: la parrilla del programa y
+- [x] *(hecho: `src/Evt/PublicFront/Block/ProgrammeBlock.php`,
+      [ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md))*
+      **Los dos bloques que faltan** en ese armazón: la parrilla del programa y
       la ficha de ponentes, leyendo el dato del evento
       ([ADR-0010](../adr/ADR-0010-la-pagina-la-genera-codigo-versionado.md)).
 - [ ] **La auditoría** de la
@@ -912,15 +955,24 @@ son las condiciones de «hecho» que faltan.
       mandar una sección a la papelera
       ([ADR-0016](../adr/ADR-0016-borrar-es-enviar-a-la-papelera.md)). Qué pieza
       del ecosistema lo resolvería, con su coste, está catalogado en `.local/`.
-- [ ] **Las metas que las ADR fijan y no están declaradas**:
+- [ ] *(en parte ya no aplica: el formulario anterior ya no se enlaza
+      —[ADR-0032](../adr/ADR-0032-la-inscripcion-es-un-contenido-del-evento.md)—
+      y `evt_legacy` dejó de tener uso previsto con la
+      [ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md))*
+      **Las metas que las ADR fijan y no están declaradas**:
       el ID del formulario de inscripción y el de su vista de gestión
       ([ADR-0007](../adr/ADR-0007-las-inscripciones-siguen-en-el-sistema-anterior.md)),
       `evt_legacy` ([ADR-0008](../adr/ADR-0008-migracion-de-los-eventos-historicos.md))
       y la lista corta de ajustes de presentación por evento
       ([ADR-0010](../adr/ADR-0010-la-pagina-la-genera-codigo-versionado.md)).
-- [ ] **La reescritura de URL**: decidir y escribir cómo se conserva
+- [x] *(hecho: [ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md),
+      opción `evt_root_urls` de `src/Evt/Admin/Settings.php`)*
+      **La reescritura de URL**: decidir y escribir cómo se conserva
       `/eventos/<slug>/`. Es un criterio de aceptación que hoy no se cumple.
-- [ ] **El script de migración** de las páginas a `evt_event` y del reparto de
+- [x] *(hecho de otra forma: importación a un sitio limpio el 2026-09-28,
+      [ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md);
+      el importador no se versiona)*
+      **El script de migración** de las páginas a `evt_event` y del reparto de
       los términos de la taxonomía única entre las tres nuevas —área, tipología
       y curso, más los de estado, que desaparecen: reparto exacto, sin resto—,
       con la revisión a mano de las pocas páginas raíz todavía sin clasificar
@@ -959,10 +1011,13 @@ taller.
       `numberposts => 1`, en vez de recorrer la lista. Conservar el
       `hash_equals` sobre la encontrada: es una línea y mantiene lo que dice su
       docblock.
-- [ ] **`Registrations::has_any()`**: `numberposts => 1` y `fields => 'ids'`.
+- [x] *(hecho: `Registrations::has_any()` ya pide un solo ID)*
+      **`Registrations::has_any()`**: `numberposts => 1` y `fields => 'ids'`.
       Hoy carga la lista entera para devolver un booleano, dos veces por
       pantalla del taller.
-- [ ] **En `EventWorkspace`, calcular `Participants::rows()` una sola vez**:
+- [x] *(hecho: `EventWorkspace` la construye una vez y la pasa a
+      `panels()` y al panel)*
+      **En `EventWorkspace`, calcular `Participants::rows()` una sola vez**:
       `counts()` y `fill_programme()` la construyen las dos, con diez metas y
       un JSON por inscripción. Calcularla en `fill()` y pasársela a ambas. Sin
       caché estática en `Participants::rows()`: los tests añaden filtros entre
@@ -985,6 +1040,12 @@ tiene que quedar en unos 10 ms y unas décimas de MB con cualquier número de
 inscripciones.
 
 ### Fase 3: inscripciones, talleres, aforo y certificados
+
+> **Revisión del 2026-11-17.** La inscripción, los talleres con aforo, el
+> correo de confirmación y la asistencia ya están en el aplicativo
+> (ADR-0031 a ADR-0033 y ADR-0050 a ADR-0053). Quedan sin hacer los
+> certificados y clonar un evento, que la
+> [ADR-0025](../adr/ADR-0025-no-se-duplican-eventos.md) pospone.
 
 Nada de esto es un compromiso: son las piezas que la fase 3 tendría que
 resolver y el código del ecosistema que ya las resuelve, para no empezar de
@@ -1013,11 +1074,11 @@ lee y se adapta; no se copia sin leer.
   del 2026-09-12 sobre la que están medidos los hechos de este documento. No se
   versiona
   ([ADR-0030](../adr/ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
-- [Índice de ADR](../adr/registro.md) — las catorce decisiones y sus estados.
+- [Índice de ADR](../adr/registro.md) — las decisiones y sus estados.
 - [PLAN-0002](../plan/PLAN-0002-continuar-el-diseno.md) — dónde se ha quedado
   el trabajo, con qué cifras y qué queda encolado.
 - `src/Evt/load-order.php` — la lista de lo que existe hoy.
-- `snippets/roles-and-profiles.php` — los dos roles y el campo de área.
+- `snippets/roles-and-profiles.php` — los roles y el campo de ámbito del perfil.
 - `build/pack-snippet.php` — el empaquetador y la guarda del bundle.
 - `Makefile` — `bundle`, `sync-snippets`, `provision`, `check`.
 - `.local/` — el catálogo de piezas ya resueltas en otros aplicativos, con sus

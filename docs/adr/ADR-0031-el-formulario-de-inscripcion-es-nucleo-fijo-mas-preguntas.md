@@ -7,7 +7,7 @@ related:
   issues: []
   prs: []
   sdds: [SDD-0002]
-  adrs: [ADR-0007, ADR-0018, ADR-0020, ADR-0027]
+  adrs: [ADR-0007, ADR-0018, ADR-0020, ADR-0027, ADR-0036]
 supersedes: []
 superseded_by: []
 ai_assistance:
@@ -292,3 +292,14 @@ evento**, con el rótulo por cabecera.
 - Medición sobre los formularios de inscripción del sistema anterior. El
   material de investigación no se versiona
   ([ADR-0030](ADR-0030-el-repositorio-se-publica-sin-nada-de-nadie.md)).
+
+## Adenda — 2026-11-17: los tipos son cinco
+
+La lista cerrada de cuatro tipos de pregunta la amplió la
+[ADR-0036](ADR-0036-los-ficheros-de-una-inscripcion-no-son-adjuntos.md) con un
+quinto, `file`, para pedir un documento. La lista vigente es la de
+`RegistrationMetaKeys::question_types()` (`src/Evt/Meta/RegistrationMetaKeys.php`):
+`check`, `one`, `many`, `text` y `file`. Lo demás de esta ADR —núcleo fijo, sin
+lógica condicional ni reglas de validación propias— sigue igual.
+
+- **Asistencia de IA:** Claude Code, `claude-opus-5-5`.

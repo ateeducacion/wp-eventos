@@ -1,7 +1,7 @@
 ---
 id: ADR-0046
 title: "El mapa de la página de contacto es Leaflet con puntos propios, y debajo la misma lista"
-status: Propuesta
+status: Aceptada
 date: 2026-09-28
 related:
   issues: []
@@ -19,7 +19,9 @@ ai_assistance:
 
 ## Estado
 
-Propuesta
+Aceptada (2026-11-17), al cotejar los estados con `main` en la v0.2.1.
+Implementada en `src/Evt/PublicFront/ContactMap.php` y `assets/js/evt-mapa.js`;
+pruebas en `tests/unit/test-contact-map.php`.
 
 ## Contexto
 

@@ -21,6 +21,14 @@ ai_assistance:
 tal, con lo que dejó y con lo que dejó sin resolver. Las fases 1 a 4 son el
 orden propuesto, no una lista de tareas en marcha: a 2026-09-12 no hay nada
 desplegado en el sitio de destino y no se ha tocado nada allí.
+**Revisión del 2026-11-17:** el plan está **cumplido, por un camino
+distinto en la fase 2**. Las fases 1 y 3 están en el aplicativo desplegado
+(v0.2.1, ver el [CHANGELOG](../../CHANGELOG.md)); la fase 2 no migró en el
+mismo sitio sino que importó lo histórico a un sitio limpio
+([ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md)),
+y con eso la fase 4 deja de tener objeto en el sitio nuevo. La tabla de §3 y la
+nota de §9 dicen el estado de cada cosa; el resto del texto se conserva como
+se escribió.
 **Fecha:** 2026-09-12
 **Basado en:** [REQ-0001](../requisitos/REQ-0001-aplicativo-de-eventos.md),
 `.local/` (investigación del sistema anterior),
@@ -60,10 +68,10 @@ hay un fin de semana en el que las 163 páginas estén a medias.
 | Fase | Qué entrega | Estado | Depende de |
 |---|---|---|---|
 | **0** | Esqueleto del repositorio, entorno de desarrollo, modelo de datos registrado y probado | **Hecha** (2026-09-12) | — |
-| **1** | Alta, edición y publicación de eventos por las áreas: pantallas, permisos, escritorio y pintado de las páginas nuevas | Propuesta | Fase 0 |
-| **2** | Migración de los 163 contenidos históricos, con las URL intactas | Propuesta | Fase 1, y **bloqueada** por la reescritura de URL |
-| **3** | Inscripciones, selección de talleres y aforo dentro del aplicativo | Propuesta | Fase 2, y el análisis de protección de datos |
-| **4** | Retirada del camino viejo: la acción que crea páginas desde el formulario anterior, la concesión global de `unfiltered_html` y las Vistas huérfanas | Propuesta | Fases 2 y 3 |
+| **1** | Alta, edición y publicación de eventos por las áreas: pantallas, permisos, escritorio y pintado de las páginas nuevas | **Hecha** (v0.1.x; ADR-0018 a ADR-0029, ADR-0041, ADR-0042, ADR-0044) | Fase 0 |
+| **2** | Migración de los 163 contenidos históricos, con las URL intactas | **Hecha de otra forma** (2026-09-28): importación a un sitio limpio, [ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md); las URL, [ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md) | Fase 1, y **bloqueada** por la reescritura de URL |
+| **3** | Inscripciones, selección de talleres y aforo dentro del aplicativo | **Hecha** (v0.1.0 a v0.2.1; ADR-0031 a ADR-0033, ADR-0036, ADR-0039, ADR-0040, ADR-0043, ADR-0048, ADR-0050 a ADR-0053) | Fase 2, y el análisis de protección de datos |
+| **4** | Retirada del camino viejo: la acción que crea páginas desde el formulario anterior, la concesión global de `unfiltered_html` y las Vistas huérfanas | **Sin objeto en el sitio nuevo**: lo viejo se queda en el sitio anterior, que se conserva al lado (ADR-0045). Lo que se haga allí no consta en este repositorio | Fases 2 y 3 |
 
 ```text
 Fase 0 — esqueleto y entorno  ✔ hecha
@@ -349,6 +357,19 @@ dimensión; rehecho el recuento sobre el material de `.local/`, el reparto es
 exacto y el desajuste venía de haber contado de menos los términos de área.
 P-15 decía que tres ADR citaban números de fase distintos de los de aquí;
 están corregidos en su texto (§3.1).
+
+**Revisión del 2026-11-17.** P-01 está cerrado por la
+[ADR-0042](../adr/ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md)
+(la opción `evt_root_urls`, `src/Evt/Admin/Settings.php`). P-03, P-04, P-05,
+P-06, P-09 y P-12 dejaron de tener objeto con la importación a un sitio limpio
+([ADR-0045](../adr/ADR-0045-los-historicos-se-importan-a-un-sitio-limpio.md)) y
+con los talleres propios del aplicativo
+([ADR-0033](../adr/ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md)):
+no hay páginas `page` que migrar ni fragmentos de talleres que reactivar. P-13
+lo resuelve en las pantallas del aplicativo el snippet `snippets/bootstrap5.php`.
+Para P-10 existe la herramienta (`make profile`), pero no hay en el repositorio
+una línea base del sistema anterior. P-02, P-11, P-14 y P-16 no tienen
+evidencia de cierre aquí. La tabla se deja como se escribió.
 
 | # | Pendiente | Riesgo | Bloquea | Cómo se cierra |
 |---|---|---|---|---|
