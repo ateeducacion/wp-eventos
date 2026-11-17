@@ -382,10 +382,11 @@ final class Attendance {
 		if ( null === $punto ) {
 			return self::say( 'warning', 'Este código de asistencia no es de este evento, o ya no existe. Avise a la organización.' );
 		}
-		$html = '<h2 class="evt-asistencia__titulo">Asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
+		$html = '<p class="evt-asistencia__evento">' . esc_html( (string) get_the_title( $event_id ) ) . '</p>'
+			. '<h2 class="evt-asistencia__titulo">Control de asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
 
 		if ( ! is_user_logged_in() ) {
-			return $html . self::say( 'info', 'Para registrar su asistencia, inicie sesión con su cuenta.' )
+			return $html . self::say( 'info', 'Para confirmar su asistencia, inicie sesión con su cuenta.' )
 				. sprintf( '<p><a class="%1$s evt-asistencia__boton" href="%2$s">Iniciar sesión</a></p>', esc_attr( Assets::button_class( true ) ), esc_url( wp_login_url( self::url( $event_id, $punto ) ) ) );
 		}
 
@@ -405,7 +406,7 @@ final class Attendance {
 			// pregunte en la puerta.
 			return $html . sprintf(
 				'<div class="%1$s evt-asistencia__hecha" role="status"><span class="evt-asistencia__tic" aria-hidden="true">✓</span>'
-					. '<strong>Asistencia registrada</strong><span class="evt-asistencia__hora">%2$s</span>'
+					. '<strong>Asistencia confirmada</strong><span class="evt-asistencia__hora">%2$s</span>'
 					. '<span>%3$s. Ya puede cerrar esta página.</span></div>',
 				esc_attr( Assets::alert_class( 'success' ) ),
 				esc_html( self::time( $marcas[ $punto['id'] ]['at'] ) ),
@@ -420,6 +421,7 @@ final class Attendance {
 		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		return $html . '<p class="evt-asistencia__nombre">' . esc_html( $nombre ) . '</p>'
+			. '<p class="evt-asistencia__ayuda">Pulse el botón para dejar constancia de que está aquí. Se guardará la hora.</p>'
 			. '<form method="post" class="evt-asistencia">'
 			. wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD, true, false )
 			. sprintf(
@@ -431,8 +433,9 @@ final class Attendance {
 				esc_attr( self::FIELD_TOKEN ),
 				esc_attr( $punto['token'] )
 			)
-			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Registrar mi asistencia</button></p>'
-			. '</form>';
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Confirmar asistencia</button></p>'
+			. '</form>'
+			. '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
 	}
 
 	// ─── la organización ───────────────────────────────────────────────────

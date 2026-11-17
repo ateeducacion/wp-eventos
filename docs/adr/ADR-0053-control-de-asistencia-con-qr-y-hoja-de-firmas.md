@@ -101,6 +101,16 @@ debajo está el enlace escrito.
   donde enseñarlas.
 - Una librería más que mantener al día.
 
+## Adenda — 2026-11-17
+
+El QR de cada punto se **descarga como cartel** (PNG): el evento, el nombre del
+punto, el código y los tres pasos. Lo pinta el navegador en un lienzo con la
+misma librería; el servidor no genera imágenes. Tras bajarlo, la pestaña dice
+qué hacer con él, y una ayuda desplegable explica dónde colocarlo y a qué
+tamaño. El botón de la página que abre el QR se llama **«Confirmar
+asistencia»**, que es como se le dice a esto en casi todas partes, y la página
+deja cerrar la sesión a quien esté con la cuenta de otra persona.
+
 ## Referencias
 
 - `src/Evt/PublicFront/Attendance.php`,

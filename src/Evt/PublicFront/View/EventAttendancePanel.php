@@ -79,9 +79,12 @@ final class EventAttendancePanel {
 		}
 		$html .= '<div class="evt-puntos">';
 		foreach ( $filas as $i => $punto ) {
-			$html .= self::point( (int) $i, $punto );
+			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ) );
 		}
 		$html .= '</div>';
+		if ( array() !== $puntos ) {
+			$html .= self::help();
+		}
 		$html .= '<p class="evt-ayuda">Cambiar el nombre de un punto no cambia su código: el QR impreso sigue valiendo. '
 			. 'Quitarlo lo invalida, y las marcas que tuviera dejan de verse.</p>';
 		$html .= '<div class="evt-acciones"><button class="' . esc_attr( Assets::button_class( true ) ) . '" type="submit">Guardar los puntos</button></div>';
@@ -94,9 +97,10 @@ final class EventAttendancePanel {
 	 *
 	 * @param int                  $i     Row index.
 	 * @param array<string, mixed> $punto Checkpoint; empty ID for the blank row.
+	 * @param string               $event Event title, for the poster.
 	 * @return string
 	 */
-	private static function point( int $i, array $punto ): string {
+	private static function point( int $i, array $punto, string $event = '' ): string {
 		$nuevo = '' === (string) $punto['id'];
 		$html  = '<div class="evt-punto evt-tarjeta">';
 		$html .= sprintf( '<input type="hidden" name="evt_pt_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $punto['id'] ) );
@@ -117,17 +121,46 @@ final class EventAttendancePanel {
 			checked( true, (bool) $punto['open'], false )
 		);
 		$html .= sprintf(
-			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s"></div>'
+			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s"></div>'
 				. '<p class="evt-ayuda"><a href="%1$s" target="_blank" rel="noopener">%3$s</a></p>',
 			esc_url( (string) $punto['url'] ),
 			esc_attr( 'Código QR de asistencia: ' . (string) $punto['label'] ),
-			esc_html( (string) $punto['url'] )
+			esc_html( (string) $punto['url'] ),
+			esc_attr( (string) $punto['label'] ),
+			esc_attr( $event )
 		);
+		// El botón nace oculto: lo enseña el guion cuando puede pintar el
+		// cartel. Sin JavaScript queda la dirección escrita, que es lo mismo.
+		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-qr-descargar hidden>Descargar el QR</button></p>';
+		$html .= '<div class="' . esc_attr( Assets::alert_class( 'success' ) ) . ' evt-qr-despues" data-evt-qr-despues role="status" hidden>'
+			. '<p><strong>Cartel descargado.</strong> Y ahora:</p><ol>'
+			. '<li>Imprímalo en A4 o proyéctelo a pantalla completa.</li>'
+			. '<li>Pruébelo con su móvil antes de que llegue la gente.</li>'
+			. '<li>Marque «Abierto» y guarde cuando empiece el control; desmárquelo al terminar.</li>'
+			. '</ol></div>';
 		$html .= sprintf(
 			'<p class="evt-campo"><label class="evt-check"><input type="checkbox" name="evt_pt_remove[%1$d]" value="1"> Quitar este punto al guardar</label></p>',
 			$i
 		);
 		return $html . '</div>';
+	}
+
+	/**
+	 * Where to put the QR and how to run a checkpoint, folded away.
+	 *
+	 * @return string
+	 */
+	private static function help(): string {
+		return '<details class="evt-ayuda-qr"><summary>Dónde colocar el QR y cómo usarlo</summary><ul>'
+			. '<li><strong>Dónde.</strong> En la puerta de la sala o junto a la mesa de acreditación, a la altura de los ojos, con buena luz y sin reflejos. '
+			. 'Si se espera mucha gente, ponga varias copias separadas para que no se forme cola.</li>'
+			. '<li><strong>Tamaño.</strong> El código debe medir al menos una décima parte de la distancia desde la que se escanea: '
+			. 'un A4 vale hasta unos dos metros; para una sala entera, proyéctelo.</li>'
+			. '<li><strong>Cuándo.</strong> Cada punto solo registra mientras está abierto. Ábralo al empezar y ciérrelo al terminar: '
+			. 'así una foto del código no sirve desde fuera.</li>'
+			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «Confirmar asistencia». Ve la hora registrada en pantalla.</li>'
+			. '<li><strong>Si algo falla.</strong> Tenga impresa la hoja de firmas y marque después a mano en la tabla de abajo a quien no pudo con el móvil.</li>'
+			. '</ul></details>';
 	}
 
 	/**
