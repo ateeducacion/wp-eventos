@@ -1547,3 +1547,11 @@ body .swal2-container { z-index: 100010; }
 .evt-qr svg { display: block; width: 100%; max-width: 15rem; height: auto; background: #fff; }
 .evt-qr:empty { display: none; }
 .evt-punto a { overflow-wrap: anywhere; }
+/* Un botón que nace oculto se queda oculto aunque su clase le ponga `display`. */
+.evt-punto [hidden] { display: none !important; }
+.evt-qr-despues ol { margin: .25rem 0 0; padding-left: 1.2em; }
+.evt-qr-despues p { margin: 0; }
+.evt-ayuda-qr { margin-block: 1rem; }
+.evt-ayuda-qr summary { cursor: pointer; font-weight: 600; }
+.evt-ayuda-qr ul { margin: .5rem 0 0; padding-left: 1.2em; }
+.evt-ayuda-qr li { margin-bottom: .4rem; }

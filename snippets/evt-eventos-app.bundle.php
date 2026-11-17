@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.2.0
+ * @version 0.2.1
  */
 
 // phpcs:disable
@@ -13327,6 +13327,16 @@ final class Attendance {
 
 
 
+	public const BUTTON = 'Confirmar asistencia';
+
+
+
+
+	public const HEADING = 'Control de asistencia: ';
+
+
+
+
 	public const ARG_TOKEN = 'asistencia';
 
 
@@ -13509,8 +13519,40 @@ final class Attendance {
 
 
 
+
+
+
+
+
 	public static function url( int $event_id, array $punto ): string {
-		return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		$pagina = SignupForm::page( $event_id );
+		if ( $pagina <= 0 ) {
+			return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+		}
+		return add_query_arg(
+			array(
+				'p'             => $pagina,
+				self::ARG_TOKEN => (string) $punto['token'],
+			),
+			home_url( '/' )
+		);
+	}
+
+
+
+
+
+
+
+	public static function poster( string $label ): array {
+		return array(
+			'heading' => self::HEADING . $label,
+			'steps'   => array(
+				'1. Escanee el código con la cámara del móvil',
+				'2. Inicie sesión con su cuenta',
+				'3. Pulse «' . self::BUTTON . '»',
+			),
+		);
 	}
 
 
@@ -13677,12 +13719,17 @@ final class Attendance {
 		if ( null === $punto ) {
 			return self::say( 'warning', 'Este código de asistencia no es de este evento, o ya no existe. Avise a la organización.' );
 		}
-		$html = '<h2 class="evt-asistencia__titulo">Asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
+		$html = '<p class="evt-asistencia__evento">' . esc_html( (string) get_the_title( $event_id ) ) . '</p>'
+			. '<h2 class="evt-asistencia__titulo">' . esc_html( self::HEADING . $punto['label'] ) . '</h2>';
 
 		if ( ! is_user_logged_in() ) {
-			return $html . self::say( 'info', 'Para registrar su asistencia, inicie sesión con su cuenta.' )
+			return $html . self::say( 'info', 'Para confirmar su asistencia, inicie sesión con su cuenta.' )
 				. sprintf( '<p><a class="%1$s evt-asistencia__boton" href="%2$s">Iniciar sesión</a></p>', esc_attr( Assets::button_class( true ) ), esc_url( wp_login_url( self::url( $event_id, $punto ) ) ) );
 		}
+
+
+
+		$salir = '<p class="evt-asistencia__ayuda">¿No es usted? <a href="' . esc_url( wp_logout_url( self::url( $event_id, $punto ) ) ) . '">Cierre la sesión</a> y entre con su cuenta.</p>';
 
 		$mia = Registrations::of_user( $event_id );
 		if ( $mia <= 0 ) {
@@ -13691,8 +13738,11 @@ final class Attendance {
 				'warning',
 				'No encontramos ninguna inscripción en este evento hecha con su cuenta (' . $user->user_email . '). '
 					. 'Avise a la organización: le registrarán la asistencia a mano.'
-			);
+			) . $salir;
 		}
+
+		$meta   = Registrations::meta( $mia );
+		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
 
 		$marcas = self::marks( $mia );
 		if ( isset( $marcas[ $punto['id'] ] ) ) {
@@ -13700,21 +13750,20 @@ final class Attendance {
 
 			return $html . sprintf(
 				'<div class="%1$s evt-asistencia__hecha" role="status"><span class="evt-asistencia__tic" aria-hidden="true">✓</span>'
-					. '<strong>Asistencia registrada</strong><span class="evt-asistencia__hora">%2$s</span>'
-					. '<span>%3$s. Ya puede cerrar esta página.</span></div>',
+					. '<strong>Asistencia confirmada</strong><span class="evt-asistencia__hora">%2$s</span>'
+					. '<span>%4$s</span><span>%3$s. Ya puede cerrar esta página.</span></div>',
 				esc_attr( Assets::alert_class( 'success' ) ),
 				esc_html( self::time( $marcas[ $punto['id'] ]['at'] ) ),
-				esc_html( $punto['label'] )
-			);
+				esc_html( $punto['label'] ),
+				esc_html( $nombre )
+			) . $salir;
 		}
 		if ( true !== $punto['open'] ) {
 			return $html . self::say( 'info', 'Este control de asistencia no está abierto ahora. Vuelva a escanear el código cuando la organización lo indique.' );
 		}
 
-		$meta   = Registrations::meta( $mia );
-		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
-
 		return $html . '<p class="evt-asistencia__nombre">' . esc_html( $nombre ) . '</p>'
+			. '<p class="evt-asistencia__ayuda">Pulse el botón para dejar constancia de que está aquí. Se guardará la hora.</p>'
 			. '<form method="post" class="evt-asistencia">'
 			. wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD, true, false )
 			. sprintf(
@@ -13726,8 +13775,9 @@ final class Attendance {
 				esc_attr( self::FIELD_TOKEN ),
 				esc_attr( $punto['token'] )
 			)
-			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Registrar mi asistencia</button></p>'
-			. '</form>';
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">' . esc_html( self::BUTTON ) . '</button></p>'
+			. '</form>'
+			. $salir;
 	}
 
 
@@ -18596,7 +18646,7 @@ final class EventAttendancePanel {
 				. 'y es la que abren los códigos QR. Publíquela en «Páginas» para que funcionen.</p>';
 		}
 
-		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ) );
+		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ), $datos );
 		$html .= self::marks( $m, $datos );
 		return $html;
 	}
@@ -18608,7 +18658,8 @@ final class EventAttendancePanel {
 
 
 
-	private static function points( array $m, array $puntos ): string {
+
+	private static function points( array $m, array $puntos, array $datos = array() ): string {
 		$op    = EventWorkspace::PANEL_ATTENDANCE;
 		$filas = $puntos;
 		if ( count( $filas ) < Attendance::MAX_POINTS ) {
@@ -18635,9 +18686,12 @@ final class EventAttendancePanel {
 		}
 		$html .= '<div class="evt-puntos">';
 		foreach ( $filas as $i => $punto ) {
-			$html .= self::point( (int) $i, $punto );
+			$html .= self::point( (int) $i, $punto, (string) ( $m['title'] ?? '' ), true === ( $datos['has_page'] ?? false ) );
 		}
 		$html .= '</div>';
+		if ( array() !== $puntos ) {
+			$html .= self::help();
+		}
 		$html .= '<p class="evt-ayuda">Cambiar el nombre de un punto no cambia su código: el QR impreso sigue valiendo. '
 			. 'Quitarlo lo invalida, y las marcas que tuviera dejan de verse.</p>';
 		$html .= '<div class="evt-acciones"><button class="' . esc_attr( Assets::button_class( true ) ) . '" type="submit">Guardar los puntos</button></div>';
@@ -18652,7 +18706,9 @@ final class EventAttendancePanel {
 
 
 
-	private static function point( int $i, array $punto ): string {
+
+
+	private static function point( int $i, array $punto, string $event = '', bool $ready = true ): string {
 		$nuevo = '' === (string) $punto['id'];
 		$html  = '<div class="evt-punto evt-tarjeta">';
 		$html .= sprintf( '<input type="hidden" name="evt_pt_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $punto['id'] ) );
@@ -18667,23 +18723,69 @@ final class EventAttendancePanel {
 			return $html . '</div>';
 		}
 
-		$html .= sprintf(
+		$html  .= sprintf(
 			'<div class="form-check form-switch evt-interruptor"><input class="form-check-input" type="checkbox" role="switch" id="evt-pt-open-%1$d" name="evt_pt_open[%1$d]" value="1"%2$s> <label class="form-check-label" for="evt-pt-open-%1$d">Abierto: registra asistencia ahora</label></div>',
 			$i,
 			checked( true, (bool) $punto['open'], false )
 		);
-		$html .= sprintf(
-			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s"></div>'
+		$cartel = Attendance::poster( (string) $punto['label'] );
+		$html  .= sprintf(
+			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s" data-evt-qr-label="%4$s" data-evt-qr-event="%5$s" data-evt-qr-heading="%6$s" data-evt-qr-steps="%7$s"></div>'
 				. '<p class="evt-ayuda"><a href="%1$s" target="_blank" rel="noopener">%3$s</a></p>',
 			esc_url( (string) $punto['url'] ),
 			esc_attr( 'Código QR de asistencia: ' . (string) $punto['label'] ),
-			esc_html( (string) $punto['url'] )
+			esc_html( (string) $punto['url'] ),
+			esc_attr( (string) $punto['label'] ),
+			esc_attr( $event ),
+			esc_attr( $cartel['heading'] ),
+			esc_attr( implode( '|', $cartel['steps'] ) )
 		);
-		$html .= sprintf(
+
+
+		if ( ! $ready ) {
+			return $html . self::remove_box( $i ) . '</div>';
+		}
+
+
+		$html .= '<p class="evt-acciones"><button type="button" class="' . esc_attr( Assets::button_class() ) . '" data-evt-qr-descargar hidden>Descargar el QR</button></p>';
+		$html .= '<div class="' . esc_attr( Assets::alert_class( 'success' ) ) . ' evt-qr-despues" data-evt-qr-despues role="status" hidden>'
+			. '<p><strong>Cartel descargado.</strong> Y ahora:</p><ol>'
+			. '<li>Imprímalo en A4 o proyéctelo a pantalla completa.</li>'
+			. '<li>Pruébelo con su móvil antes de que llegue la gente.</li>'
+			. '<li>Marque «Abierto» y guarde cuando empiece el control; desmárquelo al terminar.</li>'
+			. '</ol></div>';
+		return $html . self::remove_box( $i ) . '</div>';
+	}
+
+
+
+
+
+
+
+	private static function remove_box( int $i ): string {
+		return sprintf(
 			'<p class="evt-campo"><label class="evt-check"><input type="checkbox" name="evt_pt_remove[%1$d]" value="1"> Quitar este punto al guardar</label></p>',
 			$i
 		);
-		return $html . '</div>';
+	}
+
+
+
+
+
+
+	private static function help(): string {
+		return '<details class="evt-ayuda-qr"><summary>Dónde colocar el QR y cómo usarlo</summary><ul>'
+			. '<li><strong>Dónde.</strong> En la puerta de la sala o junto a la mesa de acreditación, a la altura de los ojos, con buena luz y sin reflejos. '
+			. 'Si se espera mucha gente, ponga varias copias separadas para que no se forme cola.</li>'
+			. '<li><strong>Tamaño.</strong> El código debe medir al menos una décima parte de la distancia desde la que se escanea: '
+			. 'un A4 vale hasta unos dos metros; para una sala entera, proyéctelo.</li>'
+			. '<li><strong>Cuándo.</strong> Cada punto solo registra mientras está abierto. Ábralo al empezar y ciérrelo al terminar: '
+			. 'así una foto del código no sirve desde fuera.</li>'
+			. '<li><strong>Qué hace quien asiste.</strong> Escanea con la cámara del móvil, inicia sesión con su cuenta y pulsa «' . esc_html( Attendance::BUTTON ) . '». Ve la hora registrada en pantalla.</li>'
+			. '<li><strong>Si algo falla.</strong> Tenga impresa la hoja de firmas y marque después a mano en la tabla de abajo a quien no pudo con el móvil.</li>'
+			. '</ul></details>';
 	}
 
 
@@ -29015,6 +29117,14 @@ body .swal2-container { z-index: 100010; }
 .evt-qr svg { display: block; width: 100%; max-width: 15rem; height: auto; background: #fff; }
 .evt-qr:empty { display: none; }
 .evt-punto a { overflow-wrap: anywhere; }
+/* Un botón que nace oculto se queda oculto aunque su clase le ponga `display`. */
+.evt-punto [hidden] { display: none !important; }
+.evt-qr-despues ol { margin: .25rem 0 0; padding-left: 1.2em; }
+.evt-qr-despues p { margin: 0; }
+.evt-ayuda-qr { margin-block: 1rem; }
+.evt-ayuda-qr summary { cursor: pointer; font-weight: 600; }
+.evt-ayuda-qr ul { margin: .5rem 0 0; padding-left: 1.2em; }
+.evt-ayuda-qr li { margin-bottom: .4rem; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -30201,9 +30311,20 @@ body .swal2-container { z-index: 100010; }
 	margin-block: 0.5rem 1rem;
 }
 
+.evt-asistencia__evento {
+	margin: 0;
+	font-size: 0.95rem;
+	opacity: 0.8;
+}
+
 .evt-asistencia__nombre {
 	font-size: 1.15rem;
 	font-weight: 600;
+}
+
+.evt-asistencia__ayuda {
+	font-size: 0.95rem;
+	margin-block: 0.75rem;
 }
 
 /* El botón, a todo el ancho y alto: se pulsa con el pulgar y sin apuntar. */
@@ -32120,9 +32241,147 @@ body .swal2-container { z-index: 100010; }
  * imprima o se proyecte nítido a cualquier tamaño. Si la librería no llega, no
  * se pinta nada: debajo está la dirección escrita, que se puede copiar o
  * pegar en cualquier generador de QR.
+ *
+ * Cada punto tiene además un botón `[data-evt-qr-descargar]` que baja un
+ * cartel en PNG —el evento, el punto, el código y los tres pasos— listo para
+ * imprimir o proyectar, y enseña después qué hacer con él. El botón nace
+ * oculto y solo aparece si hay con qué pintar el cartel.
  */
 ( function () {
 	\'use strict\';
+
+	var ANCHO = 1240; // Un A4 a 150 ppp: se imprime nítido y pesa poco.
+	var MARGEN = 90;
+
+	function codigo( url ) {
+		// Tipo 0: el más pequeño en el que quepa la dirección. Corrección
+		// M: aguanta un proyector con reflejos sin hacer el código enorme.
+		var qr = window.qrcode( 0, \'M\' );
+		qr.addData( url );
+		qr.make();
+		return qr;
+	}
+
+	// Parte un texto en las líneas que caben en `ancho`.
+	function lineas( ctx, texto, ancho ) {
+		var out = [];
+		var linea = \'\';
+		String( texto ).split( /\\s+/ ).forEach( function ( palabra ) {
+			var prueba = linea ? linea + \' \' + palabra : palabra;
+			if ( linea && ctx.measureText( prueba ).width > ancho ) {
+				out.push( linea );
+				linea = palabra;
+			} else {
+				linea = prueba;
+			}
+		} );
+		if ( linea ) {
+			out.push( linea );
+		}
+		return out;
+	}
+
+	// El cartel: título del evento, nombre del punto, el código y los pasos.
+	function cartel( url, evento, titulo, pasos ) {
+		var lienzo = document.createElement( \'canvas\' );
+		var ctx = lienzo.getContext ? lienzo.getContext( \'2d\' ) : null;
+		if ( ! ctx ) {
+			return null;
+		}
+		var util = ANCHO - 2 * MARGEN;
+		var fuente = \'system-ui, -apple-system, "Segoe UI", Arial, sans-serif\';
+		var bloques = [];
+		var y = MARGEN;
+
+		function texto( cadena, px, negrita, interlinea ) {
+			if ( ! cadena ) {
+				return;
+			}
+			ctx.font = ( negrita ? \'bold \' : \'\' ) + px + \'px \' + fuente;
+			lineas( ctx, cadena, util ).forEach( function ( l ) {
+				y += px * interlinea;
+				bloques.push( { font: ctx.font, texto: l, y: y } );
+			} );
+		}
+
+		texto( evento, 44, false, 1.3 );
+		y += 20;
+		texto( titulo, 68, true, 1.2 );
+		y += 50;
+		var qr = codigo( url );
+		var n = qr.getModuleCount();
+		var celda = Math.floor( ( util - 160 ) / ( n + 8 ) ); // 4 módulos de margen por lado.
+		var lado = celda * ( n + 8 );
+		// En píxeles enteros: con decimales cada módulo sale con el borde gris.
+		var qrY = Math.round( y );
+		y = qrY + lado + 50;
+		pasos.forEach( function ( paso ) {
+			texto( paso, 40, false, 1.5 );
+		} );
+
+		lienzo.width = ANCHO;
+		lienzo.height = y + MARGEN;
+		ctx.fillStyle = \'#fff\';
+		ctx.fillRect( 0, 0, lienzo.width, lienzo.height );
+		ctx.fillStyle = \'#000\';
+		ctx.textAlign = \'center\';
+		bloques.forEach( function ( b ) {
+			ctx.font = b.font;
+			// El ancho máximo encoge una palabra que sola no quepa, en vez de cortarla.
+			ctx.fillText( b.texto, ANCHO / 2, b.y, util );
+		} );
+		var qrX = Math.round( ( ANCHO - lado ) / 2 );
+		for ( var f = 0; f < n; f++ ) {
+			for ( var c = 0; c < n; c++ ) {
+				if ( qr.isDark( f, c ) ) {
+					ctx.fillRect( qrX + ( c + 4 ) * celda, qrY + ( f + 4 ) * celda, celda, celda );
+				}
+			}
+		}
+		return lienzo;
+	}
+
+	// «Entrada principal» → «asistencia-entrada-principal.png».
+	function nombre( punto ) {
+		var limpio = String( punto )
+			.normalize( \'NFD\' )
+			.replace( /[̀-ͯ]/g, \'\' )
+			.toLowerCase()
+			.replace( /[^a-z0-9]+/g, \'-\' )
+			.replace( /^-+|-+$/g, \'\' );
+		return \'asistencia-\' + ( limpio || \'qr\' ) + \'.png\';
+	}
+
+	function descargar( boton ) {
+		var caja = boton.closest( \'.evt-punto\' );
+		var qr = caja ? caja.querySelector( \'[data-evt-qr]\' ) : null;
+		if ( ! qr ) {
+			return;
+		}
+		var punto = qr.getAttribute( \'data-evt-qr-label\' ) || \'\';
+		// Los textos vienen del servidor: el cartel dice lo mismo que la página.
+		var lienzo = cartel(
+			qr.getAttribute( \'data-evt-qr\' ),
+			qr.getAttribute( \'data-evt-qr-event\' ) || \'\',
+			qr.getAttribute( \'data-evt-qr-heading\' ) || punto,
+			( qr.getAttribute( \'data-evt-qr-steps\' ) || \'\' ).split( \'|\' ).filter( Boolean )
+		);
+		if ( ! lienzo ) {
+			return;
+		}
+		var enlace = document.createElement( \'a\' );
+		enlace.href = lienzo.toDataURL( \'image/png\' );
+		enlace.download = nombre( punto );
+		document.body.appendChild( enlace );
+		enlace.click();
+		enlace.remove();
+
+		// Lo que viene después de tenerlo: dónde ponerlo y qué no olvidar.
+		var despues = caja.querySelector( \'[data-evt-qr-despues]\' );
+		if ( despues ) {
+			despues.hidden = false;
+		}
+	}
 
 	function pintar() {
 		if ( typeof window.qrcode !== \'function\' ) {
@@ -32133,18 +32392,25 @@ body .swal2-container { z-index: 100010; }
 			if ( ! url ) {
 				return;
 			}
-			// Tipo 0: el más pequeño en el que quepa la dirección. Corrección
-			// M: aguanta un proyector con reflejos sin hacer el código enorme.
-			var qr = window.qrcode( 0, \'M\' );
-			qr.addData( url );
-			qr.make();
-			caja.innerHTML = qr.createSvgTag( {
+			caja.innerHTML = codigo( url ).createSvgTag( {
 				cellSize: 8,
 				margin: 4,
 				scalable: true,
 				alt: caja.getAttribute( \'data-evt-qr-alt\' ) || \'Código QR\',
 			} );
 			caja.classList.add( \'evt-qr--listo\' );
+		} );
+
+		// Sin lienzo no hay cartel que bajar, y el botón se queda oculto.
+		var prueba = document.createElement( \'canvas\' );
+		if ( ! prueba.getContext || ! prueba.getContext( \'2d\' ) ) {
+			return;
+		}
+		document.querySelectorAll( \'[data-evt-qr-descargar]\' ).forEach( function ( boton ) {
+			boton.hidden = false;
+			boton.addEventListener( \'click\', function () {
+				descargar( boton );
+			} );
 		} );
 	}
 

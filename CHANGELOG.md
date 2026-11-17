@@ -8,6 +8,19 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.2.1] — 2026-11-17
+
+### Añadido
+
+- Asistencia: cada punto de control tiene un botón «Descargar el QR» que baja un cartel listo para imprimir o proyectar —el evento, el punto, el código y los tres pasos—, y después dice qué hacer con él
+- Asistencia: una ayuda desplegable explica dónde colocar el QR, a qué tamaño, cuándo abrir el punto y qué hacer si algo falla
+
+### Cambiado
+
+- La página que abre el QR en el móvil dice de qué evento es, el botón pasa a llamarse «Confirmar asistencia» y deja cerrar la sesión a quien haya entrado con la cuenta de otra persona
+- El enlace del QR va por el identificador de la página y no por su dirección: un cartel impreso sigue valiendo aunque después cambie el nombre del evento o de la página
+- Sin la página de inscripción publicada no se ofrece descargar el cartel, porque no llevaría a ningún sitio
+
 ## [0.2.0] — 2026-11-17
 
 ### Añadido

@@ -1183,9 +1183,20 @@
 	margin-block: 0.5rem 1rem;
 }
 
+.evt-asistencia__evento {
+	margin: 0;
+	font-size: 0.95rem;
+	opacity: 0.8;
+}
+
 .evt-asistencia__nombre {
 	font-size: 1.15rem;
 	font-weight: 600;
+}
+
+.evt-asistencia__ayuda {
+	font-size: 0.95rem;
+	margin-block: 0.75rem;
 }
 
 /* El botón, a todo el ancho y alto: se pulsa con el pulgar y sin apuntar. */

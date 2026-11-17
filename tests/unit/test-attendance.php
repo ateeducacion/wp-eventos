@@ -108,7 +108,7 @@ class Test_Attendance extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Pulsar «Registrar mi asistencia» desde el QR.
+	 * Pulsar «Confirmar asistencia» desde el QR.
 	 *
 	 * @param array<string, mixed> $punto Checkpoint.
 	 * @return string|null
@@ -204,7 +204,7 @@ class Test_Attendance extends WP_UnitTestCase {
 				),
 			)
 		)[0];
-		$this->assertStringContainsString( 'Registrar mi asistencia', Attendance::block( $this->evento ) );
+		$this->assertStringContainsString( 'Confirmar asistencia', Attendance::block( $this->evento ) );
 		$vuelta = $this->marcar( $punto );
 		$this->assertSame( $punto['token'], $this->query_arg( (string) $vuelta, Attendance::ARG_TOKEN ), 'vuelve a la misma página' );
 
@@ -228,7 +228,7 @@ class Test_Attendance extends WP_UnitTestCase {
 		);
 		$this->marcar( $punto );
 		$this->assertSame( '2027-02-06 09:05:00', Attendance::marks( $id )[ $punto['id'] ]['at'], 'escanear dos veces no mueve la hora' );
-		$this->assertStringContainsString( 'Asistencia registrada', Attendance::block( $this->evento ) );
+		$this->assertStringContainsString( 'Asistencia confirmada', Attendance::block( $this->evento ) );
 		$this->assertStringContainsString( '9:05', Attendance::block( $this->evento ) );
 	}
 
@@ -375,5 +375,75 @@ class Test_Attendance extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Hoja de firmas para imprimir', $html );
 		$this->assertStringContainsString( 'Pérez, Ana', $html );
 		$this->assertStringContainsString( 'name="evt_at[', $html );
+
+		// Lo que lee `evt-qr.js` para bajar el cartel: si un lado renombra un
+		// atributo, el botón no aparece o el cartel sale sin texto.
+		$this->assertStringContainsString( 'class="evt-punto ', $html );
+		$this->assertStringContainsString( 'data-evt-qr-descargar hidden', $html );
+		$this->assertStringContainsString( 'data-evt-qr-despues', $html );
+		$this->assertStringContainsString( 'data-evt-qr-label="Entrada"', $html );
+		$this->assertStringContainsString( 'data-evt-qr-heading="' . Attendance::HEADING . 'Entrada"', $html );
+		$this->assertStringContainsString( 'Pulse «' . Attendance::BUTTON . '»', $html );
+		$this->assertStringContainsString( 'data-evt-qr-event="', $html );
+	}
+
+	/**
+	 * Sin la página de inscripción publicada no se ofrece un cartel que no lleva a ningún sitio.
+	 */
+	public function test_no_poster_without_the_signup_page() {
+		$this->guardar_puntos(
+			array(
+				array(
+					'label' => 'Entrada',
+					'open'  => true,
+				),
+			)
+		);
+		foreach ( get_children(
+			array(
+				'post_parent' => $this->evento,
+				'post_type'   => 'evt_event',
+			)
+		) as $hija ) {
+			wp_update_post(
+				array(
+					'ID'          => $hija->ID,
+					'post_status' => 'draft',
+				)
+			);
+		}
+		$this->acting_as( $this->admin );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $this->evento;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_ATTENDANCE;
+		$html                              = EventWorkspaceView::html( EventWorkspace::model() );
+
+		$this->assertStringNotContainsString( 'data-evt-qr-descargar', $html );
+		$this->assertStringContainsString( 'no tiene publicada su página de inscripción', $html );
+	}
+
+	/**
+	 * El enlace del QR va por ID y la salida de la sesión vuelve con el testigo.
+	 */
+	public function test_the_link_survives_a_new_slug_and_logout_comes_back() {
+		$punto = $this->guardar_puntos(
+			array(
+				array(
+					'label' => 'Entrada',
+					'open'  => true,
+				),
+			)
+		)[0];
+		$url   = Attendance::url( $this->evento, $punto );
+		$this->assertSame( (string) \Evt\PublicFront\SignupForm::page( $this->evento ), $this->query_arg( $url, 'p' ), 'por ID: un slug nuevo no rompe lo impreso' );
+		$this->assertSame( $punto['token'], $this->query_arg( $url, Attendance::ARG_TOKEN ) );
+
+		// Una cuenta sin inscripción: tiene que poder salir y volver aquí.
+		$otra = self::factory()->user->create();
+		$this->acting_as( $otra );
+		$_GET[ Attendance::ARG_TOKEN ] = $punto['token'];
+		$html                          = Attendance::block( $this->evento );
+		$this->assertStringContainsString( 'Cierre la sesión', $html );
+		$this->assertStringContainsString( rawurlencode( Attendance::ARG_TOKEN . '=' . $punto['token'] ), $html );
+		$this->assertStringContainsString( get_the_title( $this->evento ), $html );
 	}
 }
