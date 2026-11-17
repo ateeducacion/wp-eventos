@@ -25408,6 +25408,197 @@ final class EventView {
 
 namespace Evt\PublicFront;
 
+use Evt\Access\EventAccess;
+use Evt\PostType\EventPostType;
+use Evt\PublicFront\View\EventChrome;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class DraftNotice {
+
+
+
+
+	public const STATUSES = array( 'draft', 'pending', 'future', 'private' );
+
+
+
+
+	public const PRIORITY = 1;
+
+
+
+
+
+
+	public static function register(): void {
+		add_action( 'template_redirect', array( self::class, 'maybe_show' ), self::PRIORITY );
+	}
+
+
+
+
+
+
+	public static function maybe_show(): void {
+		if ( is_admin() || ! is_404() ) {
+			return;
+		}
+		$id = self::requested();
+		if ( $id <= 0 || ! self::is_being_prepared( $id ) ) {
+			return;
+		}
+
+		status_header( 404 );
+		nocache_headers();
+		Shell::send_header( 'Content-Type: text/html; charset=utf-8' );
+		Shell::send_header( 'X-Robots-Tag: noindex' );
+		echo self::document( $id ); 
+		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+
+	public static function is_being_prepared( int $post_id ): bool {
+		if ( EventPostType::POST_TYPE !== get_post_type( $post_id ) ) {
+			return false;
+		}
+		$raiz    = EventAccess::root_id( $post_id );
+		$estados = array( (string) get_post_status( $post_id ), (string) get_post_status( $raiz ) );
+		if ( in_array( 'trash', $estados, true ) ) {
+			return false;
+		}
+		return array() !== array_intersect( $estados, self::STATUSES );
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function requested(): int {
+		foreach ( array( 'p', 'page_id' ) as $clave ) {
+			$id = absint( get_query_var( $clave ) );
+			if ( $id > 0 && EventPostType::POST_TYPE === get_post_type( $id ) ) {
+				return $id;
+			}
+		}
+		foreach ( array( EventPostType::POST_TYPE, 'pagename', 'name' ) as $clave ) {
+			$ruta = trim( (string) get_query_var( $clave ), '/' );
+			if ( '' === $ruta ) {
+				continue;
+			}
+			$post = get_page_by_path( $ruta, OBJECT, EventPostType::POST_TYPE );
+			if ( $post instanceof \WP_Post ) {
+				return (int) $post->ID;
+			}
+		}
+		return 0;
+	}
+
+
+
+
+
+
+
+	public static function document( int $post_id ): string {
+		$aqui   = self::here( $post_id );
+		$pagina = EventAccess::root_id( $post_id ) === $post_id
+			|| 'publish' !== get_post_status( EventAccess::root_id( $post_id ) );
+		$que    = $pagina ? 'Este evento todavía no se ha publicado' : 'Esta página del evento todavía no se ha publicado';
+
+		$cuerpo = '<p>' . esc_html( $que ) . ' y se encuentra en <strong>modo borrador</strong>.</p>';
+		if ( is_user_logged_in() ) {
+			$user    = wp_get_current_user();
+			$cuerpo .= '<p>' . esc_html(
+				sprintf(
+					'Ha iniciado sesión como %s, y esa cuenta no puede ver este borrador. Si tiene que prepararlo, pida a la administración del sitio que le asigne el ámbito del evento.',
+					'' !== (string) $user->display_name ? $user->display_name : $user->user_login
+				)
+			) . '</p>';
+			$cuerpo .= sprintf(
+				'<p><a href="%1$s">Entrar con otra cuenta</a></p>',
+				esc_url( wp_logout_url( wp_login_url( $aqui ) ) )
+			);
+		} else {
+			$cuerpo .= '<p>Se informará cuando lo esté, a través de los canales habituales y en la página de inicio de este sitio. '
+				. sprintf( '(<a href="%1$s">Acceso para responsables</a>)', esc_url( wp_login_url( $aqui ) ) )
+				. '</p>';
+		}
+
+		$chrome = EventChrome::chrome();
+		$logo   = '' !== (string) $chrome['brand_logo']
+			? sprintf(
+				'<p class="logo"><img src="%1$s" alt="%2$s" width="300" /></p>',
+				esc_url( (string) $chrome['brand_logo'] ),
+				esc_attr( (string) $chrome['brand_alt'] )
+			)
+			: '';
+
+		return '<!doctype html><html lang="es"><head><meta charset="utf-8" />'
+			. '<meta name="viewport" content="width=device-width, initial-scale=1" />'
+			. '<meta name="robots" content="noindex" />'
+			. '<title>' . esc_html( 'Evento en borrador – ' . get_bloginfo( 'name' ) ) . '</title>'
+			. '<style>'
+			. 'body{background:#f0f0f1;color:#1d2327;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:2rem 1rem}'
+			. 'main{background:#fff;max-width:40rem;margin:0 auto;padding:1.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.13)}'
+			. '.logo img{max-width:100%;height:auto}a{color:#2271b1}'
+			. '</style></head><body><main role="main">'
+			. $logo
+			. $cuerpo
+			. '</main></body></html>';
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function here( int $post_id ): string {
+		return (string) get_permalink( $post_id );
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
 use Evt\Meta\EventMetaKeys;
 
 
@@ -27935,6 +28126,7 @@ use Evt\PublicFront\Assets;
 use Evt\PublicFront\CustomCode;
 use Evt\PublicFront\EventList;
 use Evt\PublicFront\EventView;
+use Evt\PublicFront\DraftNotice;
 use Evt\PublicFront\EventWorkspace;
 use Evt\PublicFront\Home;
 use Evt\PublicFront\PageForm;
@@ -28024,6 +28216,7 @@ final class App {
 
 
 		EventView::register();
+		DraftNotice::register();
 
 		ContactMap::register();
 

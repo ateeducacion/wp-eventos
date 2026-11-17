@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0053, ADR-0054]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0053, ADR-0054, ADR-0055]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -299,6 +299,7 @@ lleva una adenda que apunta a la nueva. No es un estado más: la ADR sigue
 | [ADR-0052](ADR-0052-la-organizacion-inscribe-a-una-persona.md) | La organización inscribe a una persona, y declara su consentimiento | Aceptada | 2026-11-17 | [ADR-0043](ADR-0043-las-inscripciones-se-corrigen-y-se-borran-sin-lista-de-admitidos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) | Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas | Aceptada | 2026-11-17 | [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0054](ADR-0054-el-ambito-de-la-persona-se-guarda-por-sitio.md) | El ámbito de la persona se guarda por sitio | Propuesta | 2026-11-17 | [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0055](ADR-0055-un-evento-en-borrador-avisa-en-vez-de-dar-404.md) | Un evento en borrador avisa en vez de dar 404 | Propuesta | 2026-11-17 | [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**
@@ -663,3 +664,9 @@ usuario es de toda la red y los términos de `evt_area` son de cada sitio. La
 [ADR-0054](ADR-0054-el-ambito-de-la-persona-se-guarda-por-sitio.md) guarda el
 ámbito de cada persona por sitio con `update_user_option()`, y sigue leyendo
 la copia de la red hasta que se vuelve a guardar el perfil.
+
+**El borrador avisa, 2026-11-17: ADR-0055.** Quien abría el enlace de un evento
+sin publicar recibía el 404 del tema, que dice que la página no existe. La
+[ADR-0055](ADR-0055-un-evento-en-borrador-avisa-en-vez-de-dar-404.md) sirve en
+su lugar un aviso de que está en borrador, con acceso para responsables, y dice
+con qué cuenta se ha entrado cuando esa cuenta no tiene permiso.

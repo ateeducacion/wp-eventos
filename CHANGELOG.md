@@ -42,6 +42,7 @@ en el subsitio `eventos` se hace después.
 
 ### Cambiado
 
+- Un evento en borrador ya no dice «No se encontró la página»: avisa de que está en borrador y se publicará, con un acceso para responsables, y con la sesión iniciada dice con qué cuenta se ha entrado si esa cuenta no puede verlo
 - El ámbito de cada persona se guarda por sitio y no en toda la red: en un multisitio, cambiarlo en un subsitio ya no lo cambia en los demás, y el número de un ámbito no se confunde con el de otro sitio. Lo de antes se sigue leyendo hasta que se vuelve a guardar el perfil, y «Ajustes» enseña quién sigue así
 
 ### Pendiente antes de desplegar
