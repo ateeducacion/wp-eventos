@@ -55,6 +55,15 @@ final class Participants {
 	public const KEY_REG = '_reg';
 
 	/**
+	 * What separates two workshops in the «Taller» column (ADR-0050).
+	 *
+	 * La columna sigue siendo texto —es lo que lee una hoja de cálculo—, y una
+	 * persona con dos talleres los lleva los dos en ella. Una barra y no una
+	 * coma: hay títulos de taller con comas.
+	 */
+	public const SEPARATOR = ' | ';
+
+	/**
 	 * The columns of the table, in order, with their heading.
 	 *
 	 * Es el contrato con quien conteste al filtro: una fila es este array.
@@ -154,7 +163,7 @@ final class Participants {
 		$buscado = self::fold( $texto );
 		$out     = array();
 		foreach ( $filas as $fila ) {
-			if ( '' !== $taller && ( $fila['workshop'] ?? '' ) !== $taller ) {
+			if ( '' !== $taller && ! in_array( $taller, self::split( (string) ( $fila['workshop'] ?? '' ) ), true ) ) {
 				continue;
 			}
 			// Se busca en las columnas declaradas y en ninguna otra clave: lo
@@ -180,13 +189,24 @@ final class Participants {
 	public static function workshops( array $filas ): array {
 		$out = array();
 		foreach ( $filas as $fila ) {
-			$taller = trim( (string) ( $fila['workshop'] ?? '' ) );
-			if ( '' !== $taller && ! in_array( $taller, $out, true ) ) {
-				$out[] = $taller;
+			foreach ( self::split( (string) ( $fila['workshop'] ?? '' ) ) as $taller ) {
+				if ( ! in_array( $taller, $out, true ) ) {
+					$out[] = $taller;
+				}
 			}
 		}
 		sort( $out );
 		return $out;
+	}
+
+	/**
+	 * The workshops one «Taller» cell holds.
+	 *
+	 * @param string $celda Cell text.
+	 * @return string[]
+	 */
+	public static function split( string $celda ): array {
+		return array_values( array_filter( array_map( 'trim', explode( trim( self::SEPARATOR ), $celda ) ), 'strlen' ) );
 	}
 
 	/**
@@ -219,6 +239,21 @@ final class Participants {
 
 		// CRLF y BOM: los dos son para que el fichero se abra donde se va a
 		// abrir, que es una hoja de cálculo de escritorio y no un editor.
+		return "\xEF\xBB\xBF" . implode( "\r\n", $lineas ) . "\r\n";
+	}
+
+	/**
+	 * Any table as a CSV file, with the same rules as {@see csv()}.
+	 *
+	 * @param string[]          $cabeceras Headings.
+	 * @param array<int, mixed> $filas     Rows, each a list of cells in heading order.
+	 * @return string
+	 */
+	public static function table_csv( array $cabeceras, array $filas ): string {
+		$lineas = array( self::csv_line( array_map( 'strval', $cabeceras ) ) );
+		foreach ( $filas as $fila ) {
+			$lineas[] = self::csv_line( array_map( 'strval', array_values( (array) $fila ) ) );
+		}
 		return "\xEF\xBB\xBF" . implode( "\r\n", $lineas ) . "\r\n";
 	}
 

@@ -53,12 +53,37 @@ final class RegistrationMetaKeys {
 	public const REG_CONSENT_AT      = 'evt_reg_consent_at';
 
 	/**
-	 * The activity ID of the chosen workshop, 0 for none.
+	 * The activity IDs of the chosen workshops, comma-separated; '' for none.
 	 *
-	 * Un identificador y no un título: el título se retoca y la elección
-	 * seguiría apuntando al taller que es (ADR-0033).
+	 * Identificadores y no títulos: el título se retoca y la elección seguiría
+	 * apuntando al taller que es (ADR-0033). Una lista desde la ADR-0050; lo
+	 * guardado antes, un solo número, se sigue leyendo igual
+	 * ({@see \Evt\Domain\WorkshopChoice::ids()}).
 	 */
 	public const REG_WORKSHOP = 'evt_reg_workshop';
+
+	/**
+	 * The account that signed up, 0 when nobody had a session (ADR-0051).
+	 *
+	 * Es lo que deja volver a la propia inscripción con la sesión iniciada, sin
+	 * el enlace del correo, y lo que la reconoce al marcar la asistencia.
+	 */
+	public const REG_USER = 'evt_reg_user';
+
+	/**
+	 * Who in the organisation made this registration, 0 when the person did (ADR-0052).
+	 *
+	 * Con esto, el consentimiento de esa inscripción se lee como lo que es: lo
+	 * declaró quien organiza en nombre de la persona, no lo marcó ella.
+	 */
+	public const REG_BY = 'evt_reg_by';
+
+	/**
+	 * Attendance marks, as JSON keyed by checkpoint ID (ADR-0053).
+	 *
+	 * Cada marca dice cuándo y cómo: `{"at":"Y-m-d H:i:s","by":"qr"|"manual"}`.
+	 */
+	public const REG_ATTENDANCE = 'evt_reg_attendance';
 
 	/**
 	 * Answers to the questions of the event, as JSON keyed by question ID.
@@ -123,6 +148,25 @@ final class RegistrationMetaKeys {
 	public const WORKSHOP_END   = 'evt_workshop_end';
 
 	/**
+	 * How many workshops one person may choose; 0 or nothing means one (ADR-0050).
+	 */
+	public const WORKSHOP_MAX = 'evt_workshop_max';
+
+	/**
+	 * Extra instructions shown above the workshop choice, in the organiser's words.
+	 */
+	public const WORKSHOP_HELP = 'evt_workshop_help';
+
+	/**
+	 * The attendance checkpoints of the event, as JSON (ADR-0053).
+	 *
+	 * Una lista de `{"id","label","token","open"}`: «Entrada», «Mediodía»,
+	 * «Salida»… El testigo va en el enlace del QR y solo marca si el punto está
+	 * abierto.
+	 */
+	public const ATTENDANCE_POINTS = 'evt_attendance_points';
+
+	/**
 	 * The two consent texts and the version they are on.
 	 *
 	 * La versión sube cuando se cambia cualquiera de los dos textos, y **no**
@@ -152,6 +196,9 @@ final class RegistrationMetaKeys {
 			self::REG_ANSWERS,
 			self::REG_FILES,
 			self::REG_TOKEN,
+			self::REG_USER,
+			self::REG_BY,
+			self::REG_ATTENDANCE,
 		);
 	}
 
@@ -170,6 +217,9 @@ final class RegistrationMetaKeys {
 			self::WORKSHOP_OPEN,
 			self::WORKSHOP_START,
 			self::WORKSHOP_END,
+			self::WORKSHOP_MAX,
+			self::WORKSHOP_HELP,
+			self::ATTENDANCE_POINTS,
 			self::CONSENT_PRIVACY,
 			self::CONSENT_IMAGE,
 			self::CONSENT_VERSION,

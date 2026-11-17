@@ -78,8 +78,8 @@ final class RegistrationMetaRegistration {
 				'sanitize' => 'sanitize_text_field',
 			),
 			RegistrationMetaKeys::REG_WORKSHOP        => array(
-				'type'     => 'integer',
-				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_workshops' ),
 			),
 			RegistrationMetaKeys::REG_ANSWERS         => array(
 				'type'     => 'string',
@@ -93,6 +93,18 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_token' ),
 			),
+			RegistrationMetaKeys::REG_USER            => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::REG_BY              => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::REG_ATTENDANCE      => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_attendance' ),
+			),
 		);
 	}
 
@@ -103,47 +115,59 @@ final class RegistrationMetaRegistration {
 	 */
 	public static function signup_schema(): array {
 		return array(
-			RegistrationMetaKeys::SIGNUP_OPEN      => array(
+			RegistrationMetaKeys::SIGNUP_OPEN       => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::SIGNUP_START     => array(
+			RegistrationMetaKeys::SIGNUP_START      => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::SIGNUP_END       => array(
+			RegistrationMetaKeys::SIGNUP_END        => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::SIGNUP_PUBLIC    => array(
+			RegistrationMetaKeys::SIGNUP_PUBLIC     => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::SIGNUP_QUESTIONS => array(
+			RegistrationMetaKeys::SIGNUP_QUESTIONS  => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_questions' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_OPEN    => array(
+			RegistrationMetaKeys::WORKSHOP_OPEN     => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_START   => array(
+			RegistrationMetaKeys::WORKSHOP_START    => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_END     => array(
+			RegistrationMetaKeys::WORKSHOP_END      => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::CONSENT_PRIVACY  => array(
+			RegistrationMetaKeys::WORKSHOP_MAX      => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::WORKSHOP_HELP     => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			RegistrationMetaKeys::ATTENDANCE_POINTS => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_points' ),
+			),
+			RegistrationMetaKeys::CONSENT_PRIVACY   => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			RegistrationMetaKeys::CONSENT_IMAGE    => array(
+			RegistrationMetaKeys::CONSENT_IMAGE     => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			RegistrationMetaKeys::CONSENT_VERSION  => array(
+			RegistrationMetaKeys::CONSENT_VERSION   => array(
 				'type'     => 'integer',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
 			),
@@ -212,6 +236,36 @@ final class RegistrationMetaRegistration {
 	public static function sanitize_token( $value ): string {
 		$token = is_scalar( $value ) ? strtolower( trim( (string) $value ) ) : '';
 		return (bool) preg_match( '/^[a-f0-9]{40}$/', $token ) ? $token : '';
+	}
+
+	/**
+	 * Keep a list of workshop IDs as «12,34», and nothing else.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_workshops( $value ): string {
+		return \Evt\Domain\WorkshopChoice::store( \Evt\Domain\WorkshopChoice::ids( $value ) );
+	}
+
+	/**
+	 * Store attendance marks as JSON: per checkpoint, when and how.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_attendance( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\Attendance::read_marks( $value ) );
+	}
+
+	/**
+	 * Store the attendance checkpoints as JSON, normalised.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_points( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\Attendance::read_points( $value ) );
 	}
 
 	/**

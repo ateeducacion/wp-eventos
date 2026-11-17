@@ -280,3 +280,18 @@ necesita una tabla de relación.
   que es lo que hace que haya talleres simultáneos.
 - `ProgrammeMetaKeys::ACTIVITY_SEATS` y `EventWorkspace::seats_taken()` — el
   aforo y su recuento, hoy informativos.
+
+## Adenda — 2026-11-17: varios talleres y el correo
+
+Dos de las consecuencias de arriba tienen ya su decisión:
+
+- «**Se elige un taller, no varios**»: la
+  [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md)
+  deja elegir varios. `evt_reg_workshop` pasa a ser una lista, el candado sigue
+  siendo uno por evento y alrededor de la elección entera, y lo guardado antes
+  —un número— se lee igual.
+- «**Los correos de confirmación no los decide esta ADR**»: los decide la
+  [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md).
+
+Lo demás de esta ADR sigue como está.
+

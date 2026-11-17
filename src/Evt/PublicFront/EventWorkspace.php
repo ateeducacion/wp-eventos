@@ -14,6 +14,7 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
 use Evt\Domain\EventState;
 use Evt\Domain\SignupQuestions;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
@@ -108,6 +109,17 @@ final class EventWorkspace {
 	 * Tab where the signup form of the event is set up (ADR-0031, ADR-0032).
 	 */
 	public const PANEL_SIGNUP = 'inscripcion';
+
+	/**
+	 * Tab of the attendance checkpoints and the marks (ADR-0053).
+	 */
+	public const PANEL_ATTENDANCE = 'asistencia';
+
+	/**
+	 * Save the manual marks, and export the attendance.
+	 */
+	public const OP_ATT_MARKS  = 'att_marks';
+	public const OP_ATT_EXPORT = 'att_export';
 
 	/**
 	 * Query arg carrying the speaker or activity being edited.
@@ -264,6 +276,9 @@ final class EventWorkspace {
 		self::OP_UNPUBLISH,
 		self::OP_REG_SAVE,
 		self::OP_REG_DELETE,
+		self::PANEL_ATTENDANCE,
+		self::OP_ATT_MARKS,
+		self::OP_ATT_EXPORT,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -390,13 +405,14 @@ final class EventWorkspace {
 		// apunta y cómo es el evento (ADR-0041). Los talleres viven dentro del
 		// programa: un taller es una actividad con plazas.
 		$rotulos = array(
-			self::PANEL_SECTIONS  => array( 'Páginas', self::GROUP_CONTENT ),
-			self::PANEL_SPEAKERS  => array( 'Ponentes', self::GROUP_CONTENT ),
-			self::PANEL_PROGRAMME => array( 'Programa y talleres', self::GROUP_CONTENT ),
-			self::PANEL_SIGNUP    => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
-			self::PANEL_PEOPLE    => array( 'Participantes', self::GROUP_SIGNUP ),
-			self::PANEL_SETTINGS  => array( 'Datos del evento', self::GROUP_CONFIG ),
-			self::PANEL_LOOK      => array( 'Apariencia', self::GROUP_CONFIG ),
+			self::PANEL_SECTIONS   => array( 'Páginas', self::GROUP_CONTENT ),
+			self::PANEL_SPEAKERS   => array( 'Ponentes', self::GROUP_CONTENT ),
+			self::PANEL_PROGRAMME  => array( 'Programa y talleres', self::GROUP_CONTENT ),
+			self::PANEL_SIGNUP     => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
+			self::PANEL_PEOPLE     => array( 'Participantes', self::GROUP_SIGNUP ),
+			self::PANEL_ATTENDANCE => array( 'Asistencia', self::GROUP_SIGNUP ),
+			self::PANEL_SETTINGS   => array( 'Datos del evento', self::GROUP_CONFIG ),
+			self::PANEL_LOOK       => array( 'Apariencia', self::GROUP_CONFIG ),
 		);
 		if ( self::may_edit_code( $user_id, $event_id ) ) {
 			$rotulos[ self::PANEL_CODE ] = array( 'Código', self::GROUP_CONFIG );
@@ -432,11 +448,12 @@ final class EventWorkspace {
 			return array();
 		}
 		return array(
-			self::PANEL_SECTIONS  => count( self::children( $event_id ) ),
-			self::PANEL_SPEAKERS  => count( Programme::speakers( $event_id ) ),
-			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
-			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
-			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
+			self::PANEL_SECTIONS   => count( self::children( $event_id ) ),
+			self::PANEL_SPEAKERS   => count( Programme::speakers( $event_id ) ),
+			self::PANEL_PROGRAMME  => count( Programme::activities( $event_id ) ),
+			self::PANEL_SIGNUP     => count( Registrations::questions( $event_id ) ),
+			self::PANEL_PEOPLE     => count( $people ?? Participants::rows( $event_id ) ),
+			self::PANEL_ATTENDANCE => count( Attendance::points( $event_id ) ),
 		);
 	}
 
@@ -564,6 +581,19 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_ATT_EXPORT === $op ) {
+			// El mismo nombre que la lista de participantes, con otro prefijo.
+			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
+			return;
+		}
+		if ( self::PANEL_ATTENDANCE === $op ) {
+			self::save_points( $event_id, $destino );
+			return;
+		}
+		if ( self::OP_ATT_MARKS === $op ) {
+			self::save_marks( $event_id, $destino );
+			return;
+		}
 		if ( self::OP_REG_SAVE === $op ) {
 			self::save_registration( $event_id, $row_id, $destino );
 			return;
@@ -612,6 +642,9 @@ final class EventWorkspace {
 		}
 		if ( in_array( $op, array( self::OP_EXPORT, self::OP_REG_SAVE, self::OP_REG_DELETE ), true ) ) {
 			return self::PANEL_PEOPLE;
+		}
+		if ( self::OP_ATT_MARKS === $op || self::OP_ATT_EXPORT === $op ) {
+			return self::PANEL_ATTENDANCE;
 		}
 		// Borrar y restaurar una ficha vuelven a donde se pulsó, que puede ser
 		// Ponentes o Programa: el panel viaja en el propio envío.
@@ -749,73 +782,116 @@ final class EventWorkspace {
 	}
 
 	/**
-	 * Correct one registration: its core, its answers and its workshop.
+	 * Correct one registration —or make a new one— with its core, answers and workshops.
 	 *
-	 * Se valida como al inscribirse, salvo dos cosas: el consentimiento no se
-	 * vuelve a pedir —lo dio la persona, no quien corrige— y el centro que ya
-	 * tenía vale aunque el catálogo de hoy no lo traiga. El taller pasa por
-	 * el mismo candado y el mismo aforo que cuando lo elige la persona.
+	 * Se valida como al inscribirse, salvo el consentimiento: al corregir no se
+	 * vuelve a pedir —lo dio la persona, no quien corrige— y al inscribir a
+	 * alguien lo **declara quien organiza**, que marca que la persona conoce y
+	 * acepta los textos; la inscripción guarda quién lo hizo (ADR-0052). El
+	 * centro que ya tenía vale aunque el catálogo de hoy no lo traiga. Los
+	 * talleres pasan por el mismo candado, el mismo aforo y las mismas reglas
+	 * que cuando los elige la persona.
 	 *
 	 * @param int    $event_id        Event post ID.
-	 * @param int    $registration_id Registration post ID.
+	 * @param int    $registration_id Registration post ID; 0 to make a new one.
 	 * @param string $destino         Where to go back to.
 	 * @return void
 	 */
 	private static function save_registration( int $event_id, int $registration_id, string $destino ): void {
-		if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+		$nueva  = 0 === $registration_id;
+		$volver = $nueva
+			? add_query_arg( self::ARG_NEW, '1', $destino )
+			: add_query_arg( self::ARG_ROW, (string) $registration_id, $destino );
+		if ( ! $nueva && ! Registrations::belongs( $event_id, $registration_id ) ) {
 			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
 			Shell::leave( $destino );
 			return;
 		}
-		$centros = Registrations::centres();
-		$actual  = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
+		$tecleado = array(
+			'tax_id'  => self::field( 'evt_rg_tax_id' ),
+			'name'    => self::field( 'evt_rg_name' ),
+			'surname' => self::field( 'evt_rg_surname' ),
+			'email'   => self::field( 'evt_rg_email' ),
+			'phone'   => self::field( 'evt_rg_phone' ),
+			'centre'  => self::field( 'evt_rg_centre' ),
+		);
+		$centros  = Registrations::centres();
+		$actual   = $nueva ? '' : (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
 		if ( '' !== $actual && ! isset( $centros[ $actual ] ) ) {
 			$centros[ $actual ] = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
 		}
-		$nucleo = \Evt\Domain\RegistrationInput::core(
-			array(
-				'tax_id'  => self::field( 'evt_rg_tax_id' ),
-				'name'    => self::field( 'evt_rg_name' ),
-				'surname' => self::field( 'evt_rg_surname' ),
-				'email'   => self::field( 'evt_rg_email' ),
-				'phone'   => self::field( 'evt_rg_phone' ),
-				'centre'  => self::field( 'evt_rg_centre' ),
-				'consent' => true,
-			),
-			$centros
-		);
+		$nucleo = \Evt\Domain\RegistrationInput::core( array_merge( $tecleado, array( 'consent' => true ) ), $centros );
 		// Una inscripción que llegó con el nombre del centro y sin código lo
 		// conserva si no se escribe uno: corregir el correo no obliga a buscar
 		// el código de su centro.
-		$nombre_centro = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
-		if ( '' === self::field( 'evt_rg_centre' ) && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
+		$nombre_centro = $nueva ? '' : (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		if ( '' === $tecleado['centre'] && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
 			$nucleo['errors']         = array_values( array_diff( $nucleo['errors'], array( 'centre' ) ) );
 			$nucleo['ok']             = array() === $nucleo['errors'];
 			$nucleo['data']['centre'] = $nombre_centro;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); cada respuesta la sanea SignupQuestions::answers().
-		$crudas     = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); cada respuesta la sanea SignupQuestions::answers() y los talleres WorkshopChoice::ids().
+		$crudas   = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		$talleres = WorkshopChoice::ids( wp_unslash( $_POST['evt_rg_workshop'] ?? array() ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$respuestas = SignupQuestions::answers( Registrations::questions( $event_id ), $crudas );
+
+		$error = '';
 		if ( true !== $nucleo['ok'] || true !== $respuestas['ok'] ) {
-			self::set_flash( 'error', \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) ) );
-			Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			$error = \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) );
+		} elseif ( $nueva && '' === self::field( 'evt_rg_consent' ) ) {
+			$error = 'Para inscribir a alguien, marque que conoce y acepta la información de protección de datos del evento.';
+		} elseif ( Registrations::by_tax_id( $event_id, (string) $nucleo['data']['tax_id'], $registration_id ) > 0 ) {
+			$error = 'Ya hay otra inscripción en este evento con ese documento de identidad. Búsquela en la lista y corrija esa.';
+		}
+		if ( '' !== $error ) {
+			self::set_flash( 'error', $error, $nueva ? $tecleado : array() );
+			Shell::leave( $volver );
 			return;
 		}
 
-		Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
-
-		$taller = absint( self::field( 'evt_rg_workshop' ) );
-		$antes  = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
-		if ( $taller !== $antes ) {
-			$sitio = Registrations::seat( $event_id, $registration_id, $taller );
-			if ( true !== $sitio['ok'] ) {
-				$motivo = 'sin_plazas' === $sitio['error'] ? 'ese taller está completo' : 'ese taller no es de este evento';
-				self::set_flash( 'error', 'Datos guardados, pero el taller no se ha cambiado: ' . $motivo . '.' );
-				Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+		if ( $nueva ) {
+			$alta = Registrations::add( $event_id, (array) $nucleo['data'], (array) $respuestas['data'], 0, get_current_user_id() );
+			if ( (int) $alta['id'] <= 0 ) {
+				self::set_flash(
+					'error',
+					'repetida' === $alta['error']
+						? 'Ya hay otra inscripción en este evento con ese documento de identidad. Búsquela en la lista y corrija esa.'
+						: 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+					$tecleado
+				);
+				Shell::leave( $volver );
 				return;
 			}
+			$registration_id = (int) $alta['id'];
+		} else {
+			Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
 		}
 
+		$sitio = Registrations::seat( $event_id, $registration_id, $talleres );
+		$aviso = '';
+		if ( true !== $sitio['ok'] ) {
+			$aviso = ' Pero los talleres no se han cambiado: ' . ( 'sin_plazas' === $sitio['error']
+				? 'uno de los elegidos está completo, y un taller completo no admite a nadie más.'
+				: SignupForm::why_no_seat( $sitio['error'], Registrations::max_workshops( $event_id ) ) );
+		}
+
+		if ( $nueva ) {
+			$correo = '' !== self::field( 'evt_rg_mail' )
+				? ( SignupMail::confirmation( $registration_id, SignupMail::BY_ORG )
+					? ' Se le ha enviado el correo con el enlace a su inscripción.'
+					: ' No se ha podido enviar el correo con su enlace.' )
+				: '';
+			self::set_flash( '' === $aviso ? 'ok' : 'aviso', 'Persona inscrita.' . $correo . $aviso );
+			Shell::leave( '' === $aviso ? $destino : add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			return;
+		}
+
+		if ( '' !== $aviso ) {
+			self::set_flash( 'error', 'Datos guardados.' . $aviso );
+			Shell::leave( $volver );
+			return;
+		}
 		self::set_flash( 'ok', 'Inscripción corregida.' );
 		Shell::leave( $destino );
 	}
@@ -1060,9 +1136,17 @@ final class EventWorkspace {
 			self::field( self::ARG_WORKSHOP )
 		);
 
-		$cuerpo = Participants::csv( $filas );
-		$nombre = Participants::filename( (string) get_post_field( 'post_title', $event_id ) );
+		self::send_csv( Participants::csv( $filas ), Participants::filename( (string) get_post_field( 'post_title', $event_id ) ) );
+	}
 
+	/**
+	 * Write a CSV as a download, and stop.
+	 *
+	 * @param string $cuerpo The file.
+	 * @param string $nombre Its name.
+	 * @return void
+	 */
+	private static function send_csv( string $cuerpo, string $nombre ): void {
 		// `Shell::leave()` no vale aquí: esto no redirige, escribe el fichero.
 		if ( ! headers_sent() ) {
 			header( 'Content-Type: text/csv; charset=utf-8' );
@@ -1073,6 +1157,65 @@ final class EventWorkspace {
 		echo $cuerpo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- es un CSV, no HTML; Participants::csv() lo entrecomilla y desactiva las fórmulas.
 		// Sin URL: esto no redirige, ya ha escrito el fichero.
 		Shell::leave();
+	}
+
+	/**
+	 * Save the attendance checkpoints: their names and whether they mark now.
+	 *
+	 * @param int    $event_id Event post ID.
+	 * @param string $destino  Where to go back to.
+	 * @return void
+	 */
+	private static function save_points( int $event_id, string $destino ): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); cada fila la sanea Attendance::merge_points().
+		$ids      = (array) wp_unslash( $_POST['evt_pt_id'] ?? array() );
+		$rotulos  = (array) wp_unslash( $_POST['evt_pt_label'] ?? array() );
+		$abiertos = (array) wp_unslash( $_POST['evt_pt_open'] ?? array() );
+		$quitados = (array) wp_unslash( $_POST['evt_pt_remove'] ?? array() );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		$filas = array();
+		foreach ( $rotulos as $i => $rotulo ) {
+			$filas[] = array(
+				'id'     => sanitize_key( (string) ( $ids[ $i ] ?? '' ) ),
+				'label'  => sanitize_text_field( (string) $rotulo ),
+				'open'   => ! empty( $abiertos[ $i ] ),
+				'remove' => ! empty( $quitados[ $i ] ),
+			);
+		}
+		$puntos = Attendance::merge_points( Attendance::points( $event_id ), $filas );
+		update_post_meta( $event_id, RegistrationMetaKeys::ATTENDANCE_POINTS, wp_slash( (string) wp_json_encode( $puntos ) ) );
+		self::set_flash( 'ok', 'Puntos de asistencia guardados.' );
+		Shell::leave( $destino );
+	}
+
+	/**
+	 * Save what the organisation ticked by hand, row by row.
+	 *
+	 * @param int    $event_id Event post ID.
+	 * @param string $destino  Where to go back to.
+	 * @return void
+	 */
+	private static function save_marks( int $event_id, string $destino ): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- el nonce lo comprobó handle(); se leen identificadores y se comparan con los del evento.
+		$filas   = array_map( 'absint', (array) wp_unslash( $_POST['evt_at_rows'] ?? array() ) );
+		$marcado = (array) wp_unslash( $_POST['evt_at'] ?? array() );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		$todos = wp_list_pluck( Attendance::points( $event_id ), 'id' );
+		foreach ( $filas as $registration_id ) {
+			// Solo las inscripciones de este evento: el identificador viene del
+			// formulario y no se cree.
+			if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+				continue;
+			}
+			$suyos = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
+				? array_map( 'sanitize_key', array_keys( $marcado[ $registration_id ] ) )
+				: array();
+			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos );
+		}
+		self::set_flash( 'ok', 'Asistencia guardada.' );
+		Shell::leave( add_query_arg( self::ARG_WORKSHOP, self::field( self::ARG_WORKSHOP ), $destino ) );
 	}
 
 	/**
@@ -1708,6 +1851,8 @@ final class EventWorkspace {
 			'workshop_open'   => (bool) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ),
 			'workshop_start'  => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, true ),
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
+			'workshop_max'    => Registrations::max_workshops( $event_id ),
+			'workshop_help'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, true ),
 			'consent_privacy' => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_PRIVACY, true ),
 			'consent_image'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_IMAGE, true ),
 			'consent_version' => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
@@ -1735,6 +1880,9 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, min( 10, max( 1, (int) self::field( 'evt_workshop_max' ) ) ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, sanitize_textarea_field( wp_unslash( (string) ( $_POST['evt_workshop_help'] ?? '' ) ) ) );
 
 		// El botón de la portada y la inscripción en otro sitio viven aquí, con
 		// el resto de la inscripción, y no en «Datos» (ADR-0041).
@@ -2100,6 +2248,8 @@ final class EventWorkspace {
 			'q_locked'       => false,
 			'signup'         => array(),
 			'form_id'        => 0,
+			'centres'        => array(),
+			'attendance'     => array(),
 		);
 	}
 
@@ -2258,6 +2408,12 @@ final class EventWorkspace {
 		}
 
 		$m['edit_values'] = self::row_values( $event_id, (int) $m['edit_row'], (string) $m['panel'] );
+		if ( self::PANEL_PEOPLE === $m['panel'] && true === $m['adding'] && array() === $m['edit_values'] ) {
+			$m['edit_values'] = self::blank_registration( (array) $m['flash']['values'] );
+		}
+		if ( self::PANEL_PEOPLE === $m['panel'] && array() !== $m['edit_values'] ) {
+			$m['centres'] = Registrations::centres();
+		}
 		// El formulario de alta y edición va en un panel lateral que se abre
 		// por la dirección: sin JavaScript funciona igual, y al fallar un
 		// guardado se vuelve con el panel abierto y el aviso dentro.
@@ -2268,6 +2424,22 @@ final class EventWorkspace {
 		$m['people_tags']  = Participants::workshops( $todos );
 		$m['people']       = Participants::filter( $todos, (string) $m['people_q'], (string) $m['people_filter'] );
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
+
+		if ( self::PANEL_ATTENDANCE === $m['panel'] ) {
+			$taller = absint( $m['people_filter'] );
+			$puntos = array();
+			foreach ( Attendance::points( $event_id ) as $punto ) {
+				$punto['url'] = Attendance::url( $event_id, $punto );
+				$puntos[]     = $punto;
+			}
+			$m['attendance'] = array(
+				'points'    => $puntos,
+				'rows'      => Attendance::rows( $event_id, $taller ),
+				'workshop'  => $taller,
+				'workshops' => Registrations::workshop_labels( $event_id ),
+				'has_page'  => SignupForm::page( $event_id ) > 0,
+			);
+		}
 
 		return $m;
 	}
@@ -2310,11 +2482,36 @@ final class EventWorkspace {
 				'phone'       => $meta[ RegistrationMetaKeys::REG_PHONE ],
 				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
 				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ],
-				'workshop'    => (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ],
+				'workshops'   => Registrations::workshops_of( $row_id ),
 				'answers'     => Registrations::answers( $row_id ),
 			);
 		}
 		return array();
+	}
+
+	/**
+	 * An empty registration for the «Inscribir a una persona» form.
+	 *
+	 * @param array<string, string> $tecleado What a failed submit carried, to repaint it.
+	 * @return array<string, mixed>
+	 */
+	private static function blank_registration( array $tecleado ): array {
+		$vacia = array(
+			'id'          => 0,
+			'tax_id'      => '',
+			'name'        => '',
+			'surname'     => '',
+			'email'       => '',
+			'phone'       => '',
+			'centre'      => '',
+			'centre_code' => (string) ( $tecleado['centre'] ?? '' ),
+			'workshops'   => array(),
+			'answers'     => array(),
+		);
+		foreach ( array( 'tax_id', 'name', 'surname', 'email', 'phone' ) as $clave ) {
+			$vacia[ $clave ] = (string) ( $tecleado[ $clave ] ?? '' );
+		}
+		return $vacia;
 	}
 
 	/**

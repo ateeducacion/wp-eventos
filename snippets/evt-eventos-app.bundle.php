@@ -1502,7 +1502,32 @@ final class RegistrationMetaKeys {
 
 
 
+
+
 	public const REG_WORKSHOP = 'evt_reg_workshop';
+
+
+
+
+
+
+
+	public const REG_USER = 'evt_reg_user';
+
+
+
+
+
+
+
+	public const REG_BY = 'evt_reg_by';
+
+
+
+
+
+
+	public const REG_ATTENDANCE = 'evt_reg_attendance';
 
 
 
@@ -1569,6 +1594,25 @@ final class RegistrationMetaKeys {
 
 
 
+	public const WORKSHOP_MAX = 'evt_workshop_max';
+
+
+
+
+	public const WORKSHOP_HELP = 'evt_workshop_help';
+
+
+
+
+
+
+
+
+	public const ATTENDANCE_POINTS = 'evt_attendance_points';
+
+
+
+
 
 
 
@@ -1596,6 +1640,9 @@ final class RegistrationMetaKeys {
 			self::REG_ANSWERS,
 			self::REG_FILES,
 			self::REG_TOKEN,
+			self::REG_USER,
+			self::REG_BY,
+			self::REG_ATTENDANCE,
 		);
 	}
 
@@ -1614,6 +1661,9 @@ final class RegistrationMetaKeys {
 			self::WORKSHOP_OPEN,
 			self::WORKSHOP_START,
 			self::WORKSHOP_END,
+			self::WORKSHOP_MAX,
+			self::WORKSHOP_HELP,
+			self::ATTENDANCE_POINTS,
 			self::CONSENT_PRIVACY,
 			self::CONSENT_IMAGE,
 			self::CONSENT_VERSION,
@@ -2496,6 +2546,255 @@ final class RegistrationInput {
 	private static function text( array $raw, string $key ): string {
 		$value = $raw[ $key ] ?? '';
 		return is_scalar( $value ) ? trim( (string) $value ) : '';
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\Domain;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class WorkshopChoice {
+
+
+
+
+	public const TOO_MANY = 'demasiados';
+
+
+
+
+	public const REPEATED = 'repetido';
+
+
+
+
+	public const CLASH = 'solapa';
+
+
+
+
+	public const NOT_HERE = 'no_es_un_taller_del_evento';
+
+
+
+
+
+
+
+
+
+
+
+	public static function ids( $value ): array {
+		if ( is_array( $value ) ) {
+			$trozos = $value;
+		} elseif ( is_scalar( $value ) ) {
+			$trozos = explode( ',', (string) $value );
+		} else {
+			$trozos = array();
+		}
+
+		$out = array();
+		foreach ( $trozos as $trozo ) {
+			$id = is_scalar( $trozo ) ? (int) trim( (string) $trozo ) : 0;
+			if ( $id > 0 && ! in_array( $id, $out, true ) ) {
+				$out[] = $id;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function store( array $ids ): string {
+		return implode( ',', self::ids( $ids ) );
+	}
+
+
+
+
+
+
+
+
+
+	public static function max( $value ): int {
+		$n = is_scalar( $value ) ? (int) $value : 0;
+		return max( 1, $n );
+	}
+
+
+
+
+
+
+
+
+
+	public static function check( array $workshops, array $chosen, int $max ): string {
+		$chosen = self::ids( $chosen );
+
+		foreach ( $chosen as $id ) {
+			if ( ! isset( $workshops[ $id ] ) ) {
+				return self::NOT_HERE;
+			}
+		}
+		if ( count( $chosen ) > max( 1, $max ) ) {
+			return self::TOO_MANY;
+		}
+
+		$n = count( $chosen );
+		for ( $i = 0; $i < $n; $i++ ) {
+			for ( $j = $i + 1; $j < $n; $j++ ) {
+				$a = $workshops[ $chosen[ $i ] ];
+				$b = $workshops[ $chosen[ $j ] ];
+				if ( self::key( (string) ( $a['title'] ?? '' ) ) === self::key( (string) ( $b['title'] ?? '' ) ) ) {
+					return self::REPEATED;
+				}
+				if ( self::clash( $a, $b ) ) {
+					return self::CLASH;
+				}
+			}
+		}
+		return '';
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function clash( array $a, array $b ): bool {
+		if ( (string) ( $a['date'] ?? '' ) !== (string) ( $b['date'] ?? '' ) ) {
+			return false;
+		}
+		$a_desde = self::minutes( (string) ( $a['start'] ?? '' ) );
+		$b_desde = self::minutes( (string) ( $b['start'] ?? '' ) );
+		if ( null === $a_desde || null === $b_desde ) {
+			return false;
+		}
+		$a_hasta = self::minutes( (string) ( $a['end'] ?? '' ) ) ?? $a_desde;
+		$b_hasta = self::minutes( (string) ( $b['end'] ?? '' ) ) ?? $b_desde;
+
+		if ( $a_desde === $b_desde ) {
+			return true;
+		}
+		return $a_desde < $b_hasta && $b_desde < $a_hasta;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function key( string $title ): string {
+		$title = strtr(
+			$title,
+			array(
+				'á' => 'a',
+				'é' => 'e',
+				'í' => 'i',
+				'ó' => 'o',
+				'ú' => 'u',
+				'ü' => 'u',
+				'ñ' => 'n',
+				'Á' => 'a',
+				'É' => 'e',
+				'Í' => 'i',
+				'Ó' => 'o',
+				'Ú' => 'u',
+				'Ü' => 'u',
+				'Ñ' => 'n',
+			)
+		);
+		$title = function_exists( 'mb_strtolower' ) ? mb_strtolower( $title, 'UTF-8' ) : strtolower( $title );
+		return trim( (string) preg_replace( '/\s+/u', ' ', $title ) );
+	}
+
+
+
+
+
+
+
+
+	public static function why( string $error, int $max ): string {
+		$textos = array(
+			self::TOO_MANY => 1 === $max
+				? 'En este evento solo se elige un taller.'
+				: sprintf( 'En este evento se eligen como mucho %d talleres.', $max ),
+			self::REPEATED => 'Ha elegido dos sesiones del mismo taller. Elija solo una: la otra plaza es para quien todavía no lo tiene.',
+			self::CLASH    => 'Ha elegido dos talleres que coinciden en hora. Elija uno de los dos.',
+			self::NOT_HERE => 'Ese taller no es de este evento.',
+		);
+		return $textos[ $error ] ?? '';
+	}
+
+
+
+
+
+
+
+	public static function rules_text( int $max ): string {
+		$cuantos = 1 === $max
+			? 'Puede elegir un taller.'
+			: sprintf( 'Puede elegir hasta %d talleres.', $max );
+		return $cuantos . ' Si un taller se repite en dos horarios, apúntese solo a una sesión;'
+			. ' y no puede elegir dos talleres que coincidan en hora.'
+			. ' Mientras el plazo esté abierto puede cambiar su elección; un taller lleno deja de aparecer.';
+	}
+
+
+
+
+
+
+
+	private static function minutes( string $hhmm ): ?int {
+		if ( ! preg_match( '/^(\d{1,2}):(\d{2})/', trim( $hhmm ), $m ) ) {
+			return null;
+		}
+		return (int) $m[1] * 60 + (int) $m[2];
 	}
 }
 
@@ -4980,8 +5279,8 @@ final class RegistrationMetaRegistration {
 				'sanitize' => 'sanitize_text_field',
 			),
 			RegistrationMetaKeys::REG_WORKSHOP        => array(
-				'type'     => 'integer',
-				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_workshops' ),
 			),
 			RegistrationMetaKeys::REG_ANSWERS         => array(
 				'type'     => 'string',
@@ -4995,6 +5294,18 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_token' ),
 			),
+			RegistrationMetaKeys::REG_USER            => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::REG_BY              => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::REG_ATTENDANCE      => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_attendance' ),
+			),
 		);
 	}
 
@@ -5005,47 +5316,59 @@ final class RegistrationMetaRegistration {
 
 	public static function signup_schema(): array {
 		return array(
-			RegistrationMetaKeys::SIGNUP_OPEN      => array(
+			RegistrationMetaKeys::SIGNUP_OPEN       => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::SIGNUP_START     => array(
+			RegistrationMetaKeys::SIGNUP_START      => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::SIGNUP_END       => array(
+			RegistrationMetaKeys::SIGNUP_END        => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::SIGNUP_PUBLIC    => array(
+			RegistrationMetaKeys::SIGNUP_PUBLIC     => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::SIGNUP_QUESTIONS => array(
+			RegistrationMetaKeys::SIGNUP_QUESTIONS  => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_questions' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_OPEN    => array(
+			RegistrationMetaKeys::WORKSHOP_OPEN     => array(
 				'type'     => 'boolean',
 				'sanitize' => array( self::class, 'sanitize_bool' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_START   => array(
+			RegistrationMetaKeys::WORKSHOP_START    => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::WORKSHOP_END     => array(
+			RegistrationMetaKeys::WORKSHOP_END      => array(
 				'type'     => 'string',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_date' ),
 			),
-			RegistrationMetaKeys::CONSENT_PRIVACY  => array(
+			RegistrationMetaKeys::WORKSHOP_MAX      => array(
+				'type'     => 'integer',
+				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
+			),
+			RegistrationMetaKeys::WORKSHOP_HELP     => array(
+				'type'     => 'string',
+				'sanitize' => 'sanitize_textarea_field',
+			),
+			RegistrationMetaKeys::ATTENDANCE_POINTS => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_points' ),
+			),
+			RegistrationMetaKeys::CONSENT_PRIVACY   => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			RegistrationMetaKeys::CONSENT_IMAGE    => array(
+			RegistrationMetaKeys::CONSENT_IMAGE     => array(
 				'type'     => 'string',
 				'sanitize' => 'wp_kses_post',
 			),
-			RegistrationMetaKeys::CONSENT_VERSION  => array(
+			RegistrationMetaKeys::CONSENT_VERSION   => array(
 				'type'     => 'integer',
 				'sanitize' => array( EventMetaRegistration::class, 'sanitize_id' ),
 			),
@@ -5114,6 +5437,36 @@ final class RegistrationMetaRegistration {
 	public static function sanitize_token( $value ): string {
 		$token = is_scalar( $value ) ? strtolower( trim( (string) $value ) ) : '';
 		return (bool) preg_match( '/^[a-f0-9]{40}$/', $token ) ? $token : '';
+	}
+
+
+
+
+
+
+
+	public static function sanitize_workshops( $value ): string {
+		return \Evt\Domain\WorkshopChoice::store( \Evt\Domain\WorkshopChoice::ids( $value ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_attendance( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\Attendance::read_marks( $value ) );
+	}
+
+
+
+
+
+
+
+	public static function sanitize_points( $value ): string {
+		return (string) wp_json_encode( \Evt\PublicFront\Attendance::read_points( $value ) );
 	}
 
 
@@ -9937,6 +10290,15 @@ final class Participants {
 
 
 
+	public const SEPARATOR = ' | ';
+
+
+
+
+
+
+
+
 
 	public static function columns(): array {
 		return array(
@@ -10030,7 +10392,7 @@ final class Participants {
 		$buscado = self::fold( $texto );
 		$out     = array();
 		foreach ( $filas as $fila ) {
-			if ( '' !== $taller && ( $fila['workshop'] ?? '' ) !== $taller ) {
+			if ( '' !== $taller && ! in_array( $taller, self::split( (string) ( $fila['workshop'] ?? '' ) ), true ) ) {
 				continue;
 			}
 
@@ -10056,13 +10418,24 @@ final class Participants {
 	public static function workshops( array $filas ): array {
 		$out = array();
 		foreach ( $filas as $fila ) {
-			$taller = trim( (string) ( $fila['workshop'] ?? '' ) );
-			if ( '' !== $taller && ! in_array( $taller, $out, true ) ) {
-				$out[] = $taller;
+			foreach ( self::split( (string) ( $fila['workshop'] ?? '' ) ) as $taller ) {
+				if ( ! in_array( $taller, $out, true ) ) {
+					$out[] = $taller;
+				}
 			}
 		}
 		sort( $out );
 		return $out;
+	}
+
+
+
+
+
+
+
+	public static function split( string $celda ): array {
+		return array_values( array_filter( array_map( 'trim', explode( trim( self::SEPARATOR ), $celda ) ), 'strlen' ) );
 	}
 
 
@@ -10095,6 +10468,21 @@ final class Participants {
 
 
 
+		return "\xEF\xBB\xBF" . implode( "\r\n", $lineas ) . "\r\n";
+	}
+
+
+
+
+
+
+
+
+	public static function table_csv( array $cabeceras, array $filas ): string {
+		$lineas = array( self::csv_line( array_map( 'strval', $cabeceras ) ) );
+		foreach ( $filas as $fila ) {
+			$lineas[] = self::csv_line( array_map( 'strval', array_values( (array) $fila ) ) );
+		}
 		return "\xEF\xBB\xBF" . implode( "\r\n", $lineas ) . "\r\n";
 	}
 
@@ -10180,6 +10568,7 @@ namespace Evt\PublicFront;
 
 use Evt\Domain\RegistrationInput;
 use Evt\Domain\SignupQuestions;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\RegistrationPostType;
@@ -10267,14 +10656,16 @@ final class Registrations {
 
 	public static function participants( array $filas, int $event_id ): array {
 		$preguntas = self::questions( $event_id );
-		$talleres  = array();
-		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			$talleres[ $taller->ID ] = (string) $taller->post_title;
-		}
+		$talleres  = self::workshop_labels( $event_id );
 
 		foreach ( self::all( $event_id ) as $inscripcion ) {
-			$meta   = self::meta( $inscripcion->ID );
-			$taller = (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ];
+			$meta    = self::meta( $inscripcion->ID );
+			$elegido = array();
+			foreach ( WorkshopChoice::ids( $meta[ RegistrationMetaKeys::REG_WORKSHOP ] ) as $taller ) {
+				if ( isset( $talleres[ $taller ] ) ) {
+					$elegido[] = $talleres[ $taller ];
+				}
+			}
 
 
 
@@ -10294,7 +10685,7 @@ final class Registrations {
 				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
 				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ] ?? '',
 				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
-				'workshop'    => $talleres[ $taller ] ?? '',
+				'workshop'    => implode( Participants::SEPARATOR, $elegido ),
 				'date'        => get_the_date( 'Y-m-d H:i', $inscripcion ),
 				'consent'     => self::consent_text( $meta ),
 				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
@@ -10367,7 +10758,8 @@ final class Registrations {
 		if ( '' === $cuando ) {
 			return '';
 		}
-		return 'Sí (v' . $meta[ RegistrationMetaKeys::REG_CONSENT_VERSION ] . ', ' . $cuando . ')';
+		$quien = (int) $meta[ RegistrationMetaKeys::REG_BY ] > 0 ? ', declarado por la organización' : '';
+		return 'Sí (v' . $meta[ RegistrationMetaKeys::REG_CONSENT_VERSION ] . ', ' . $cuando . $quien . ')';
 	}
 
 
@@ -10433,6 +10825,134 @@ final class Registrations {
 	}
 
 
+
+
+
+
+
+
+
+
+
+
+
+	public static function by_tax_id( int $event_id, string $tax_id, int $except = 0 ): int {
+		$tax_id = RegistrationInput::tax_id( $tax_id );
+		if ( '' === $tax_id ) {
+			return 0;
+		}
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			if ( (int) $inscripcion->ID === $except ) {
+				continue;
+			}
+			$suyo = RegistrationInput::tax_id( (string) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_TAX_ID, true ) );
+			if ( $suyo === $tax_id ) {
+				return (int) $inscripcion->ID;
+			}
+		}
+		return 0;
+	}
+
+
+
+
+
+
+
+
+	public static function by_email( int $event_id, string $email ): array {
+		$email = strtolower( trim( $email ) );
+		if ( '' === $email ) {
+			return array();
+		}
+		$out = array();
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			if ( strtolower( trim( (string) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_EMAIL, true ) ) ) === $email ) {
+				$out[] = (int) $inscripcion->ID;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function of_user( int $event_id, int $user_id = 0 ): int {
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+		if ( $user_id <= 0 || $event_id <= 0 ) {
+			return 0;
+		}
+		$todas = self::all( $event_id );
+		foreach ( $todas as $inscripcion ) {
+			if ( (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_USER, true ) === $user_id ) {
+				return (int) $inscripcion->ID;
+			}
+		}
+		$user = get_userdata( $user_id );
+		if ( ! $user instanceof \WP_User || ! is_email( $user->user_email ) ) {
+			return 0;
+		}
+		$suyas = self::by_email( $event_id, (string) $user->user_email );
+		return array() === $suyas ? 0 : $suyas[0];
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function add( int $event_id, array $core, array $answers, int $user_id = 0, int $by = 0 ): array {
+		if ( ! self::lock( $event_id ) ) {
+			return array(
+				'id'    => 0,
+				'error' => 'ocupado',
+			);
+		}
+		try {
+			if ( self::by_tax_id( $event_id, (string) ( $core['tax_id'] ?? '' ) ) > 0 ) {
+				return array(
+					'id'    => 0,
+					'error' => 'repetida',
+				);
+			}
+			$id = self::create( $event_id, $core, $answers );
+			if ( $id <= 0 ) {
+				return array(
+					'id'    => 0,
+					'error' => 'no_guardada',
+				);
+			}
+			update_post_meta( $id, RegistrationMetaKeys::REG_USER, max( 0, $user_id ) );
+			update_post_meta( $id, RegistrationMetaKeys::REG_BY, max( 0, $by ) );
+			return array(
+				'id'    => $id,
+				'error' => '',
+			);
+		} finally {
+			self::unlock( $event_id );
+		}
+	}
 
 
 
@@ -10598,18 +11118,27 @@ final class Registrations {
 
 
 
-	public static function seat( int $event_id, int $registration_id, int $activity_id ): array {
+
+
+
+
+
+	public static function seat( int $event_id, int $registration_id, $activities ): array {
 		if ( $event_id <= 0 || (int) get_post_field( 'post_parent', $registration_id ) !== $event_id ) {
 			return array(
 				'ok'    => false,
 				'error' => 'no_es_de_este_evento',
 			);
 		}
-		if ( $activity_id > 0 && ! self::is_workshop_of( $event_id, $activity_id ) ) {
-			return array(
-				'ok'    => false,
-				'error' => 'no_es_un_taller_del_evento',
-			);
+		$pedidos = WorkshopChoice::ids( $activities );
+		$mapa    = self::workshop_map( $event_id );
+		foreach ( $pedidos as $id ) {
+			if ( ! isset( $mapa[ $id ] ) ) {
+				return array(
+					'ok'    => false,
+					'error' => WorkshopChoice::NOT_HERE,
+				);
+			}
 		}
 
 		if ( ! self::lock( $event_id ) ) {
@@ -10620,24 +11149,40 @@ final class Registrations {
 		}
 
 		try {
-			$actual = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
-			if ( $actual === $activity_id ) {
+			$actuales = self::workshops_of( $registration_id );
+			$iguales  = $pedidos;
+			sort( $iguales );
+			$antes = $actuales;
+			sort( $antes );
+			if ( $iguales === $antes ) {
 				return array(
 					'ok'    => true,
 					'error' => '',
 				);
 			}
 
-			if ( $activity_id > 0 && ! self::fits( $event_id, $activity_id, $registration_id ) ) {
+			$regla = WorkshopChoice::check( $mapa, $pedidos, self::max_workshops( $event_id ) );
+			if ( '' !== $regla ) {
 				return array(
 					'ok'    => false,
-					'error' => 'sin_plazas',
+					'error' => $regla,
 				);
 			}
 
 
 
-			update_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, $activity_id );
+			foreach ( array_diff( $pedidos, $actuales ) as $nuevo ) {
+				if ( ! self::fits( $event_id, (int) $nuevo, $registration_id ) ) {
+					return array(
+						'ok'    => false,
+						'error' => 'sin_plazas',
+					);
+				}
+			}
+
+
+
+			update_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, WorkshopChoice::store( $pedidos ) );
 
 			return array(
 				'ok'    => true,
@@ -10646,6 +11191,26 @@ final class Registrations {
 		} finally {
 			self::unlock( $event_id );
 		}
+	}
+
+
+
+
+
+
+
+	public static function workshops_of( int $registration_id ): array {
+		return WorkshopChoice::ids( get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true ) );
+	}
+
+
+
+
+
+
+
+	public static function max_workshops( int $event_id ): int {
+		return WorkshopChoice::max( get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, true ) );
 	}
 
 
@@ -10681,7 +11246,7 @@ final class Registrations {
 			if ( (int) $inscripcion->ID === $except ) {
 				continue;
 			}
-			if ( (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true ) === $activity_id ) {
+			if ( in_array( $activity_id, self::workshops_of( (int) $inscripcion->ID ), true ) ) {
 				++$n;
 			}
 		}
@@ -10701,26 +11266,22 @@ final class Registrations {
 
 
 	public static function choices( int $event_id, int $registration_id = 0 ): array {
-		$mio = $registration_id > 0
-			? (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true )
-			: 0;
+		$mios = $registration_id > 0 ? self::workshops_of( $registration_id ) : array();
 
 
-		$ocupados = array_count_values(
-			array_map(
-				static function ( \WP_Post $inscripcion ): int {
-					return (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true );
-				},
-				self::all( $event_id )
-			)
-		);
+		$ocupados = array();
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			foreach ( self::workshops_of( (int) $inscripcion->ID ) as $taller ) {
+				$ocupados[ $taller ] = ( $ocupados[ $taller ] ?? 0 ) + 1;
+			}
+		}
 
-		$out = array();
-		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			$id      = (int) $taller->ID;
-			$aforo   = (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true );
+		$rotulos = self::workshop_labels( $event_id );
+		$out     = array();
+		foreach ( self::workshop_map( $event_id ) as $id => $taller ) {
+			$aforo   = (int) $taller['seats'];
 			$ocupado = $ocupados[ $id ] ?? 0;
-			$suyo    = $id === $mio;
+			$suyo    = in_array( $id, $mios, true );
 
 			if ( ! $suyo && $aforo > 0 && $ocupado >= $aforo ) {
 				continue;
@@ -10728,7 +11289,10 @@ final class Registrations {
 
 			$out[] = array(
 				'id'    => $id,
-				'title' => (string) $taller->post_title,
+				'title' => (string) $taller['title'],
+				'label' => (string) ( $rotulos[ $id ] ?? $taller['title'] ),
+				'when'  => self::when( $taller ),
+				'venue' => (string) $taller['venue'],
 				'seats' => $aforo,
 				'taken' => $ocupado,
 				'mine'  => $suyo,
@@ -10743,14 +11307,68 @@ final class Registrations {
 
 
 
-
-	private static function is_workshop_of( int $event_id, int $activity_id ): bool {
+	public static function workshop_map( int $event_id ): array {
+		$out = array();
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			if ( (int) $taller->ID === $activity_id ) {
-				return true;
-			}
+			$id         = (int) $taller->ID;
+			$out[ $id ] = array(
+				'title' => (string) $taller->post_title,
+				'date'  => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_DATE, true ),
+				'start' => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_START, true ),
+				'end'   => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_END, true ),
+				'venue' => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VENUE, true ),
+				'seats' => (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true ),
+			);
 		}
-		return false;
+		return $out;
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function workshop_labels( int $event_id ): array {
+		$mapa   = self::workshop_map( $event_id );
+		$veces  = array();
+		$claves = array();
+		foreach ( $mapa as $id => $taller ) {
+			$claves[ $id ]           = WorkshopChoice::key( $taller['title'] );
+			$veces[ $claves[ $id ] ] = ( $veces[ $claves[ $id ] ] ?? 0 ) + 1;
+		}
+		$out = array();
+		foreach ( $mapa as $id => $taller ) {
+			$cuando     = self::when( $taller );
+			$out[ $id ] = $veces[ $claves[ $id ] ] > 1 && '' !== $cuando
+				? $taller['title'] . ' (' . $cuando . ')'
+				: $taller['title'];
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function when( array $taller ): string {
+		$partes = array();
+		$fecha  = \DateTimeImmutable::createFromFormat( '!Y-m-d', (string) ( $taller['date'] ?? '' ), wp_timezone() );
+		if ( false !== $fecha ) {
+			$partes[] = wp_date( 'j/n/Y', $fecha->getTimestamp() );
+		}
+		$desde = (string) ( $taller['start'] ?? '' );
+		$hasta = (string) ( $taller['end'] ?? '' );
+		if ( '' !== $desde ) {
+			$partes[] = '' !== $hasta ? $desde . '–' . $hasta : $desde;
+		}
+		return implode( ', ', $partes );
 	}
 
 
@@ -11923,6 +12541,7 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\EventPostType;
@@ -11954,6 +12573,7 @@ final class SignupForm {
 
 	public const OP_SIGNUP   = 'inscribir';
 	public const OP_WORKSHOP = 'taller';
+	public const OP_RESEND   = 'recuperar';
 
 	public const FIELD_EVENT   = 'evt_signup_event';
 	public const FIELD_TOKEN   = 'evt_token';
@@ -11966,6 +12586,25 @@ final class SignupForm {
 
 
 	public const ARG_TOKEN = 'inscripcion';
+
+
+
+
+
+
+
+
+	public const ARG_SEAT = 'taller_no';
+
+
+
+
+	public const ARG_MAIL = 'sin_correo';
+
+
+
+
+	public const FIELD_WORKSHOP = 'evt_workshop';
 
 
 
@@ -12027,7 +12666,7 @@ final class SignupForm {
 	public static function maybe_handle_submit(): void {
 
 		$op = isset( $_POST[ self::FIELD_OP ] ) ? sanitize_key( wp_unslash( $_POST[ self::FIELD_OP ] ) ) : '';
-		if ( self::OP_SIGNUP !== $op && self::OP_WORKSHOP !== $op ) {
+		if ( ! in_array( $op, array( self::OP_SIGNUP, self::OP_WORKSHOP, self::OP_RESEND ), true ) ) {
 			return;
 		}
 
@@ -12047,6 +12686,10 @@ final class SignupForm {
 
 		if ( self::OP_SIGNUP === $op ) {
 			self::signup( $event_id, $raw );
+			return;
+		}
+		if ( self::OP_RESEND === $op ) {
+			self::resend( $event_id, $raw );
 			return;
 		}
 		self::workshop( $event_id, $raw );
@@ -12098,11 +12741,36 @@ final class SignupForm {
 			return;
 		}
 
-		$id = Registrations::create( $event_id, $v['core'], $v['answers'] );
+
+
+
+		$talleres = self::workshops_open( $event_id ) ? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) : array();
+		$maximo   = Registrations::max_workshops( $event_id );
+		$regla    = WorkshopChoice::check( Registrations::workshop_map( $event_id ), $talleres, $maximo );
+		if ( '' !== $regla ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => WorkshopChoice::why( $regla, $maximo ) . ' No se ha guardado la inscripción: corríjalo y vuelva a enviarla.',
+			);
+			return;
+		}
+
+		$alta = Registrations::add( $event_id, $v['core'], $v['answers'], get_current_user_id() );
+		if ( 'repetida' === $alta['error'] ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'Ya hay una inscripción en este evento con ese documento de identidad. Si es la suya, '
+					. 'pida más abajo que le reenviemos el enlace a su correo para consultarla o cambiar de taller.',
+			);
+			return;
+		}
+		$id = (int) $alta['id'];
 		if ( $id <= 0 ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+				'message' => 'ocupado' === $alta['error']
+					? 'Hay muchas personas inscribiéndose a la vez. Vuelva a enviar el formulario en unos segundos.'
+					: 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
 			);
 			return;
 		}
@@ -12122,12 +12790,51 @@ final class SignupForm {
 
 
 
-		$taller = isset( $raw['evt_workshop'] ) ? (int) $raw['evt_workshop'] : 0;
-		if ( $taller > 0 && self::workshops_open( $event_id ) ) {
-			Registrations::seat( $event_id, $id, $taller );
+		$args = array();
+		if ( array() !== $talleres ) {
+			$sitio = Registrations::seat( $event_id, $id, $talleres );
+			if ( ! $sitio['ok'] ) {
+				$args[ self::ARG_SEAT ] = $sitio['error'];
+			}
 		}
 
-		Shell::leave( self::link( $event_id, (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true ) ) );
+
+
+		if ( ! SignupMail::confirmation( $id, SignupMail::SIGNED_UP ) ) {
+			$args[ self::ARG_MAIL ] = '1';
+		}
+
+		Shell::leave( add_query_arg( $args, self::link( $event_id, (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true ) ) ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	private static function resend( int $event_id, array $raw ): void {
+		$correo = strtolower( trim( sanitize_email( (string) ( $raw['email'] ?? '' ) ) ) );
+		if ( ! is_email( $correo ) ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'Escriba el correo con el que se inscribió.',
+			);
+			return;
+		}
+		if ( EventPostType::is_root( $event_id ) ) {
+			SignupMail::resend( Registrations::by_email( $event_id, $correo ) );
+		}
+		self::$notice = array(
+			'level'   => 'success',
+			'message' => 'Si hay una inscripción en este evento con ese correo, le acabamos de enviar el enlace. '
+				. 'Revise también la carpeta de correo no deseado. Si no llega en unos minutos, avise a la organización.',
+		);
 	}
 
 
@@ -12139,12 +12846,12 @@ final class SignupForm {
 
 	private static function workshop( int $event_id, array $raw ): void {
 		$token = isset( $raw[ self::FIELD_TOKEN ] ) ? (string) $raw[ self::FIELD_TOKEN ] : '';
-		$id    = Registrations::by_token( $event_id, $token );
+		$id    = '' !== $token ? Registrations::by_token( $event_id, $token ) : Registrations::of_user( $event_id );
 
 		if ( $id <= 0 ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'Este enlace ya no sirve. Pida uno nuevo desde el correo de confirmación.',
+				'message' => 'Este enlace ya no sirve. Pida que se lo reenviemos con el correo con el que se inscribió.',
 			);
 			return;
 		}
@@ -12156,11 +12863,11 @@ final class SignupForm {
 			return;
 		}
 
-		$res = Registrations::seat( $event_id, $id, isset( $raw['evt_workshop'] ) ? (int) $raw['evt_workshop'] : 0 );
+		$res = Registrations::seat( $event_id, $id, WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) );
 		if ( ! $res['ok'] ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => self::why_no_seat( $res['error'] ),
+				'message' => self::why_no_seat( $res['error'], Registrations::max_workshops( $event_id ) ),
 			);
 			return;
 		}
@@ -12174,11 +12881,16 @@ final class SignupForm {
 
 
 
-	public static function why_no_seat( string $error ): string {
+
+	public static function why_no_seat( string $error, int $max = 1 ): string {
 		$textos = array(
-			'sin_plazas' => 'Ese taller se ha llenado mientras rellenaba la página. Elija otro de la lista, que está al día.',
+			'sin_plazas' => 'Un taller de los que eligió se ha llenado mientras rellenaba la página. Elija otro de la lista, que está al día.',
 			'ocupado'    => 'Hay varias personas eligiendo taller a la vez. Vuelva a intentarlo en unos segundos.',
 		);
+		$regla  = WorkshopChoice::why( $error, $max );
+		if ( '' !== $regla ) {
+			return $regla;
+		}
 		return $textos[ $error ] ?? 'No se ha podido guardar la elección.';
 	}
 
@@ -12226,7 +12938,11 @@ final class SignupForm {
 	public static function current( int $event_id ): int {
 
 		$token = isset( $_GET[ self::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_TOKEN ] ) ) : '';
-		return '' === $token ? 0 : Registrations::by_token( $event_id, $token );
+		if ( '' !== $token ) {
+			return Registrations::by_token( $event_id, $token );
+		}
+
+		return is_user_logged_in() ? Registrations::of_user( $event_id ) : 0;
 	}
 
 
@@ -12347,6 +13063,855 @@ final class SignupForm {
 
 namespace Evt\PublicFront;
 
+use Evt\Meta\EventMetaKeys;
+use Evt\Meta\RegistrationMetaKeys;
+use Evt\Domain\DateRange;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class SignupMail {
+
+
+
+
+	public const HOOK = 'evt_mail';
+
+
+
+
+	public const SIGNED_UP = 'alta';
+	public const BY_ORG    = 'organizacion';
+	public const RESENT    = 'recordatorio';
+
+
+
+
+
+
+
+	public const RESEND_WAIT = 600;
+
+
+
+
+
+
+
+
+	public static function confirmation( int $registration_id, string $why = self::SIGNED_UP ): bool {
+		$event_id = (int) get_post_field( 'post_parent', $registration_id );
+		if ( $event_id <= 0 ) {
+			return false;
+		}
+		$para = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_EMAIL, true );
+		if ( ! is_email( $para ) ) {
+			return false;
+		}
+		$correo = self::message( $registration_id, $why );
+		return self::send( $para, $correo['subject'], $correo['body'], $registration_id );
+	}
+
+
+
+
+
+
+
+	public static function resend( array $registration_ids ): void {
+		foreach ( $registration_ids as $id ) {
+			$clave = 'evt_resent_' . (int) $id;
+			if ( false !== get_transient( $clave ) ) {
+				continue;
+			}
+			set_transient( $clave, 1, self::RESEND_WAIT );
+			self::confirmation( (int) $id, self::RESENT );
+		}
+	}
+
+
+
+
+
+
+
+
+	public static function message( int $registration_id, string $why = self::SIGNED_UP ): array {
+		$event_id = (int) get_post_field( 'post_parent', $registration_id );
+		$evento   = self::plain( (string) get_the_title( $event_id ) );
+		$meta     = Registrations::meta( $registration_id );
+		$nombre   = trim( $meta[ RegistrationMetaKeys::REG_NAME ] );
+
+		$lineas   = array();
+		$lineas[] = '' !== $nombre ? 'Hola, ' . $nombre . ':' : 'Hola:';
+		$lineas[] = '';
+		if ( self::BY_ORG === $why ) {
+			$lineas[] = 'La organización de «' . $evento . '» le ha inscrito en el evento.';
+		} elseif ( self::RESENT === $why ) {
+			$lineas[] = 'Nos ha pedido de nuevo el enlace de su inscripción en «' . $evento . '».';
+		} else {
+			$lineas[] = 'Su inscripción en «' . $evento . '» está registrada.';
+		}
+		$lineas[] = '';
+
+		$lineas[] = 'Referencia: ' . (string) get_post_field( 'post_title', $registration_id );
+		$fechas   = DateRange::of(
+			(string) get_post_meta( $event_id, EventMetaKeys::START_DATE, true ),
+			(string) get_post_meta( $event_id, EventMetaKeys::END_DATE, true )
+		);
+		if ( '' !== $fechas ) {
+			$lineas[] = 'Fechas: ' . $fechas;
+		}
+		$rotulos  = Registrations::workshop_labels( $event_id );
+		$talleres = array();
+		foreach ( Registrations::workshops_of( $registration_id ) as $taller ) {
+			if ( isset( $rotulos[ $taller ] ) ) {
+				$talleres[] = self::plain( $rotulos[ $taller ] );
+			}
+		}
+		if ( array() !== $talleres ) {
+			$lineas[] = ( count( $talleres ) > 1 ? 'Talleres: ' : 'Taller: ' ) . implode( '; ', $talleres );
+		}
+
+		$lineas[] = '';
+		$lineas[] = 'Para consultar su inscripción, y elegir o cambiar taller mientras el plazo esté abierto, entre en:';
+		$lineas[] = SignupForm::link( $event_id, (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_TOKEN, true ) );
+		$lineas[] = '';
+		$lineas[] = 'El enlace es personal: quien lo tenga puede ver y cambiar su inscripción. No reenvíe este correo.';
+		$lineas[] = '';
+		$lineas[] = 'Este correo es un aviso automático: no hace falta responderlo.';
+
+		return array(
+			'subject' => 'Inscripción en «' . $evento . '»',
+			'body'    => implode( "\n", $lineas ),
+		);
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function send( string $to, string $subject, string $body, int $registration_id ): bool {
+		$correo = array(
+			'to'      => $to,
+
+			'subject' => trim( (string) preg_replace( '/[\r\n]+/', ' ', $subject ) ),
+			'body'    => $body,
+			'headers' => array( 'Content-Type: text/plain; charset=UTF-8' ),
+		);
+
+
+
+
+
+
+
+		$correo = apply_filters( self::HOOK, $correo, $registration_id );
+		if ( ! is_array( $correo ) ) {
+			return false;
+		}
+
+		try {
+			return (bool) wp_mail(
+				(string) ( $correo['to'] ?? '' ),
+				(string) ( $correo['subject'] ?? '' ),
+				(string) ( $correo['body'] ?? '' ),
+				(array) ( $correo['headers'] ?? array() )
+			);
+		} catch ( \Throwable $e ) {
+
+			return false;
+		}
+	}
+
+
+
+
+
+
+
+	private static function plain( string $texto ): string {
+		return html_entity_decode( wp_strip_all_tags( $texto ), ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
+use Evt\Access\EventAccess;
+use Evt\Meta\RegistrationMetaKeys;
+use Evt\PostType\EventPostType;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+final class Attendance {
+
+
+
+
+	public const ARG_TOKEN = 'asistencia';
+
+
+
+
+	public const ARG_SHEET = 'hoja';
+
+
+
+
+	public const FIELD_OP     = 'evt_attendance_op';
+	public const OP_MARK      = 'marcar';
+	public const FIELD_EVENT  = 'evt_attendance_event';
+	public const FIELD_TOKEN  = 'evt_attendance_token';
+	public const NONCE_ACTION = 'evt_attendance';
+	public const NONCE_FIELD  = '_evt_attendance_nonce';
+
+
+
+
+	public const BY_QR     = 'qr';
+	public const BY_MANUAL = 'manual';
+
+
+
+
+	public const MAX_POINTS = 10;
+
+
+
+
+
+
+
+
+	public const VENDOR = array(
+		'evt-qrcode' => array(
+			'url' => 'https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js',
+			'sri' => 'sha384-e9EFD6BGC90bkW9aDV5xbbBfzwN7G8YImHao2lfLVKV/hPB0E0go+H3I64h7oHtA',
+		),
+	);
+
+
+
+
+
+
+	public static function register(): void {
+		add_action( 'init', array( self::class, 'maybe_handle_submit' ), 20 );
+
+
+		add_action( 'template_redirect', array( self::class, 'require_login' ), EventView::PRIORITY - 2 );
+		add_action( 'template_redirect', array( self::class, 'maybe_print_sheet' ), 15 );
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_qr' ), 20 );
+		add_filter( 'script_loader_tag', array( self::class, 'integrity' ), 10, 3 );
+		add_filter( 'body_class', array( self::class, 'body_class' ) );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function body_class( array $classes ): array {
+		if ( '' !== self::token_in_request() && is_singular( EventPostType::POST_TYPE ) ) {
+			$classes[] = 'evt-ev--asistencia';
+		}
+		return $classes;
+	}
+
+
+
+
+
+
+
+
+
+	public static function read_points( $value ): array {
+		$lista = is_array( $value ) ? $value : json_decode( is_scalar( $value ) ? (string) $value : '', true );
+		$out   = array();
+		foreach ( is_array( $lista ) ? $lista : array() as $punto ) {
+			if ( ! is_array( $punto ) ) {
+				continue;
+			}
+			$id    = strtolower( (string) ( $punto['id'] ?? '' ) );
+			$token = strtolower( (string) ( $punto['token'] ?? '' ) );
+			$label = mb_substr( trim( sanitize_text_field( (string) ( $punto['label'] ?? '' ) ) ), 0, 60 );
+			if ( ! preg_match( '/^[a-f0-9]{8}$/', $id ) || ! preg_match( '/^[a-f0-9]{32}$/', $token ) || '' === $label ) {
+				continue;
+			}
+			$out[] = array(
+				'id'    => $id,
+				'label' => $label,
+				'token' => $token,
+				'open'  => ! empty( $punto['open'] ),
+			);
+			if ( count( $out ) >= self::MAX_POINTS ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function read_marks( $value ): array {
+		$mapa = is_array( $value ) ? $value : json_decode( is_scalar( $value ) ? (string) $value : '', true );
+		$out  = array();
+		foreach ( is_array( $mapa ) ? $mapa : array() as $id => $marca ) {
+			$id = strtolower( (string) $id );
+			if ( ! preg_match( '/^[a-f0-9]{8}$/', $id ) || ! is_array( $marca ) ) {
+				continue;
+			}
+			$cuando = (string) ( $marca['at'] ?? '' );
+			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $cuando ) ) {
+				continue;
+			}
+			$out[ $id ] = array(
+				'at' => $cuando,
+				'by' => self::BY_MANUAL === ( $marca['by'] ?? '' ) ? self::BY_MANUAL : self::BY_QR,
+			);
+		}
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function points( int $event_id ): array {
+		return self::read_points( get_post_meta( $event_id, RegistrationMetaKeys::ATTENDANCE_POINTS, true ) );
+	}
+
+
+
+
+
+
+
+	public static function marks( int $registration_id ): array {
+		return self::read_marks( get_post_meta( $registration_id, RegistrationMetaKeys::REG_ATTENDANCE, true ) );
+	}
+
+
+
+
+
+
+
+
+	public static function point_by_token( int $event_id, string $token ): ?array {
+		$token = strtolower( trim( $token ) );
+		if ( ! preg_match( '/^[a-f0-9]{32}$/', $token ) ) {
+			return null;
+		}
+		foreach ( self::points( $event_id ) as $punto ) {
+			if ( hash_equals( $punto['token'], $token ) ) {
+				return $punto;
+			}
+		}
+		return null;
+	}
+
+
+
+
+
+
+
+
+	public static function url( int $event_id, array $punto ): string {
+		return add_query_arg( self::ARG_TOKEN, (string) $punto['token'], SignupForm::link( $event_id, '' ) );
+	}
+
+
+
+
+
+
+	public static function token_in_request(): string {
+
+		return isset( $_GET[ self::ARG_TOKEN ] ) ? sanitize_key( wp_unslash( $_GET[ self::ARG_TOKEN ] ) ) : '';
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function mark( int $registration_id, string $point_id, string $by = self::BY_QR ): string {
+		$marcas = self::marks( $registration_id );
+		if ( ! isset( $marcas[ $point_id ] ) ) {
+			$marcas[ $point_id ] = array(
+				'at' => current_time( 'mysql' ),
+				'by' => self::BY_MANUAL === $by ? self::BY_MANUAL : self::BY_QR,
+			);
+			update_post_meta( $registration_id, RegistrationMetaKeys::REG_ATTENDANCE, wp_slash( (string) wp_json_encode( $marcas ) ) );
+		}
+		return $marcas[ $point_id ]['at'];
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function set_manual( int $registration_id, array $checked, array $all ): void {
+		$marcas = self::marks( $registration_id );
+		$antes  = $marcas;
+		foreach ( $all as $id ) {
+			$puesto = in_array( $id, $checked, true );
+			if ( $puesto && ! isset( $marcas[ $id ] ) ) {
+				$marcas[ $id ] = array(
+					'at' => current_time( 'mysql' ),
+					'by' => self::BY_MANUAL,
+				);
+			} elseif ( ! $puesto ) {
+				unset( $marcas[ $id ] );
+			}
+		}
+		if ( $marcas !== $antes ) {
+			update_post_meta( $registration_id, RegistrationMetaKeys::REG_ATTENDANCE, wp_slash( (string) wp_json_encode( $marcas ) ) );
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function merge_points( array $antes, array $filas ): array {
+		$por_id = array();
+		foreach ( $antes as $punto ) {
+			$por_id[ $punto['id'] ] = $punto;
+		}
+		$out = array();
+		foreach ( $filas as $fila ) {
+			$rotulo = trim( (string) ( $fila['label'] ?? '' ) );
+			if ( '' === $rotulo || ! empty( $fila['remove'] ) ) {
+				continue;
+			}
+			$id    = (string) ( $fila['id'] ?? '' );
+			$viejo = $por_id[ $id ] ?? null;
+			$out[] = array(
+				'id'    => null !== $viejo ? $viejo['id'] : bin2hex( random_bytes( 4 ) ),
+				'label' => $rotulo,
+				'token' => null !== $viejo ? $viejo['token'] : bin2hex( random_bytes( 16 ) ),
+				'open'  => ! empty( $fila['open'] ),
+			);
+		}
+		return self::read_points( $out );
+	}
+
+
+
+
+
+
+
+
+	public static function require_login(): void {
+		if ( is_user_logged_in() || '' === self::token_in_request() || ! is_singular( EventPostType::POST_TYPE ) ) {
+			return;
+		}
+		$aqui = add_query_arg( self::ARG_TOKEN, self::token_in_request(), (string) get_permalink( get_queried_object_id() ) );
+		Shell::leave( wp_login_url( $aqui ) );
+	}
+
+
+
+
+
+
+	public static function maybe_handle_submit(): void {
+
+		if ( self::OP_MARK !== sanitize_key( wp_unslash( (string) ( $_POST[ self::FIELD_OP ] ?? '' ) ) ) ) {
+			return;
+		}
+		$nonce    = sanitize_text_field( wp_unslash( (string) ( $_POST[ self::NONCE_FIELD ] ?? '' ) ) );
+		$event_id = absint( wp_unslash( $_POST[ self::FIELD_EVENT ] ?? 0 ) );
+		$token    = sanitize_key( wp_unslash( (string) ( $_POST[ self::FIELD_TOKEN ] ?? '' ) ) );
+
+		if ( ! is_user_logged_in() || false === wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) {
+			return;
+		}
+
+		$punto = self::point_by_token( $event_id, $token );
+		$mia   = Registrations::of_user( $event_id );
+		if ( null !== $punto && true === $punto['open'] && $mia > 0 ) {
+			self::mark( $mia, $punto['id'], self::BY_QR );
+		}
+
+
+		Shell::leave( null !== $punto ? self::url( $event_id, $punto ) : SignupForm::link( $event_id, '' ) );
+	}
+
+
+
+
+
+
+
+	public static function block( int $event_id ): string {
+		return '<div class="evt-asistencia">' . self::block_inner( $event_id ) . '</div>';
+	}
+
+
+
+
+
+
+
+	private static function block_inner( int $event_id ): string {
+		$punto = self::point_by_token( $event_id, self::token_in_request() );
+		if ( null === $punto ) {
+			return self::say( 'warning', 'Este código de asistencia no es de este evento, o ya no existe. Avise a la organización.' );
+		}
+		$html = '<h2 class="evt-asistencia__titulo">Asistencia: ' . esc_html( $punto['label'] ) . '</h2>';
+
+		if ( ! is_user_logged_in() ) {
+			return $html . self::say( 'info', 'Para registrar su asistencia, inicie sesión con su cuenta.' )
+				. sprintf( '<p><a class="%1$s evt-asistencia__boton" href="%2$s">Iniciar sesión</a></p>', esc_attr( Assets::button_class( true ) ), esc_url( wp_login_url( self::url( $event_id, $punto ) ) ) );
+		}
+
+		$mia = Registrations::of_user( $event_id );
+		if ( $mia <= 0 ) {
+			$user = wp_get_current_user();
+			return $html . self::say(
+				'warning',
+				'No encontramos ninguna inscripción en este evento hecha con su cuenta (' . $user->user_email . '). '
+					. 'Avise a la organización: le registrarán la asistencia a mano.'
+			);
+		}
+
+		$marcas = self::marks( $mia );
+		if ( isset( $marcas[ $punto['id'] ] ) ) {
+
+
+			return $html . sprintf(
+				'<div class="%1$s evt-asistencia__hecha" role="status"><span class="evt-asistencia__tic" aria-hidden="true">✓</span>'
+					. '<strong>Asistencia registrada</strong><span class="evt-asistencia__hora">%2$s</span>'
+					. '<span>%3$s. Ya puede cerrar esta página.</span></div>',
+				esc_attr( Assets::alert_class( 'success' ) ),
+				esc_html( self::time( $marcas[ $punto['id'] ]['at'] ) ),
+				esc_html( $punto['label'] )
+			);
+		}
+		if ( true !== $punto['open'] ) {
+			return $html . self::say( 'info', 'Este control de asistencia no está abierto ahora. Vuelva a escanear el código cuando la organización lo indique.' );
+		}
+
+		$meta   = Registrations::meta( $mia );
+		$nombre = trim( $meta[ RegistrationMetaKeys::REG_NAME ] . ' ' . $meta[ RegistrationMetaKeys::REG_SURNAME ] );
+
+		return $html . '<p class="evt-asistencia__nombre">' . esc_html( $nombre ) . '</p>'
+			. '<form method="post" class="evt-asistencia">'
+			. wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD, true, false )
+			. sprintf(
+				'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d"><input type="hidden" name="%5$s" value="%6$s">',
+				esc_attr( self::FIELD_OP ),
+				esc_attr( self::OP_MARK ),
+				esc_attr( self::FIELD_EVENT ),
+				$event_id,
+				esc_attr( self::FIELD_TOKEN ),
+				esc_attr( $punto['token'] )
+			)
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . ' btn-lg evt-asistencia__boton">Registrar mi asistencia</button></p>'
+			. '</form>';
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function rows( int $event_id, int $workshop_id = 0 ): array {
+		$rotulos = Registrations::workshop_labels( $event_id );
+		$out     = array();
+		foreach ( Registrations::all( $event_id ) as $inscripcion ) {
+			$id    = (int) $inscripcion->ID;
+			$suyos = Registrations::workshops_of( $id );
+			if ( $workshop_id > 0 && ! in_array( $workshop_id, $suyos, true ) ) {
+				continue;
+			}
+			$meta  = Registrations::meta( $id );
+			$out[] = array(
+				'id'        => $id,
+				'name'      => $meta[ RegistrationMetaKeys::REG_NAME ],
+				'surname'   => $meta[ RegistrationMetaKeys::REG_SURNAME ],
+				'tax_id'    => $meta[ RegistrationMetaKeys::REG_TAX_ID ],
+				'centre'    => $meta[ RegistrationMetaKeys::REG_CENTRE ],
+				'workshops' => implode( Participants::SEPARATOR, array_values( array_intersect_key( $rotulos, array_flip( $suyos ) ) ) ),
+				'marks'     => self::marks( $id ),
+			);
+		}
+
+		usort(
+			$out,
+			static function ( array $a, array $b ): int {
+				return strcoll( $a['surname'] . ' ' . $a['name'], $b['surname'] . ' ' . $b['name'] );
+			}
+		);
+		return $out;
+	}
+
+
+
+
+
+
+
+	public static function csv( int $event_id ): string {
+		$puntos    = self::points( $event_id );
+		$cabeceras = array_merge( array( 'Apellidos', 'Nombre', 'Documento', 'Centro', 'Taller' ), wp_list_pluck( $puntos, 'label' ) );
+		$filas     = array();
+		foreach ( self::rows( $event_id ) as $fila ) {
+			$linea = array( $fila['surname'], $fila['name'], $fila['tax_id'], $fila['centre'], $fila['workshops'] );
+			foreach ( $puntos as $punto ) {
+				$marca   = $fila['marks'][ $punto['id'] ] ?? null;
+				$linea[] = null === $marca ? '' : $marca['at'] . ( self::BY_MANUAL === $marca['by'] ? ' (a mano)' : '' );
+			}
+			$filas[] = $linea;
+		}
+		return Participants::table_csv( $cabeceras, $filas );
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function maybe_print_sheet(): void {
+
+		if ( ! isset( $_GET[ self::ARG_SHEET ] ) || ! Shell::is_app_page() ) {
+			return;
+		}
+		$event_id = absint( wp_unslash( $_GET[ EventWorkspace::ARG_EVENT ] ?? 0 ) );
+		$taller   = absint( wp_unslash( $_GET[ EventWorkspace::ARG_WORKSHOP ] ?? 0 ) );
+
+		if ( $event_id <= 0 || ! EventAccess::can_open( get_current_user_id(), $event_id ) ) {
+			return;
+		}
+		nocache_headers();
+		Shell::send_header( 'Content-Type: text/html; charset=utf-8' );
+		echo self::sheet( $event_id, $taller ); 
+		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+	public static function sheet( int $event_id, int $workshop_id = 0 ): string {
+		$puntos  = self::points( $event_id );
+		$firmas  = array() !== $puntos ? wp_list_pluck( $puntos, 'label' ) : array( 'Firma' );
+		$rotulos = Registrations::workshop_labels( $event_id );
+		$titulo  = (string) get_the_title( $event_id );
+		$sub     = $workshop_id > 0 && isset( $rotulos[ $workshop_id ] ) ? 'Taller: ' . $rotulos[ $workshop_id ] : 'Todas las personas inscritas';
+
+		ob_start();
+		?>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title><?php echo esc_html( 'Hoja de firmas — ' . $titulo ); ?></title>
+<style>
+	body { font: 11pt/1.35 system-ui, sans-serif; margin: 1.5cm; color: #000; }
+	h1 { font-size: 15pt; margin: 0 0 .2em; }
+	p { margin: 0 0 1em; }
+	table { width: 100%; border-collapse: collapse; }
+	th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; }
+	th { background: #eee; }
+	td.firma { width: 14%; height: 1.4cm; }
+	td.n { width: 2em; text-align: right; }
+	.no-imprimir { margin-bottom: 1em; }
+	@media print { .no-imprimir { display: none; } body { margin: 0; } thead { display: table-header-group; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<p class="no-imprimir"><button type="button" onclick="window.print()">Imprimir</button></p>
+<h1><?php echo esc_html( $titulo ); ?></h1>
+<p><?php echo esc_html( $sub ); ?> · Hoja de firmas</p>
+<table>
+	<thead>
+		<tr>
+			<th class="n">N.º</th>
+			<th>Apellidos y nombre</th>
+			<th>Documento</th>
+			<th>Centro</th>
+			<?php foreach ( $firmas as $firma ) : ?>
+				<th><?php echo esc_html( (string) $firma ); ?></th>
+			<?php endforeach; ?>
+		</tr>
+	</thead>
+	<tbody>
+		<?php foreach ( self::rows( $event_id, $workshop_id ) as $i => $fila ) : ?>
+			<tr>
+				<td class="n"><?php echo esc_html( (string) ( $i + 1 ) ); ?></td>
+				<td><?php echo esc_html( trim( $fila['surname'] . ', ' . $fila['name'], ', ' ) ); ?></td>
+				<td><?php echo esc_html( $fila['tax_id'] ); ?></td>
+				<td><?php echo esc_html( $fila['centre'] ); ?></td>
+				<?php foreach ( $firmas as $firma ) : ?>
+					<td class="firma"></td>
+				<?php endforeach; ?>
+			</tr>
+		<?php endforeach; ?>
+	</tbody>
+</table>
+</body>
+</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+	public static function enqueue_qr(): void {
+
+		$panel = sanitize_key( wp_unslash( (string) ( $_GET[ EventWorkspace::ARG_PANEL ] ?? '' ) ) );
+		if ( EventWorkspace::PANEL_ATTENDANCE !== $panel || ! Shell::is_app_page() ) {
+			return;
+		}
+
+		wp_enqueue_script( 'evt-qrcode', self::VENDOR['evt-qrcode']['url'], array(), null, true ); 
+		wp_add_inline_script( 'evt-qrcode', Assets::contents( 'js/evt-qr.js' ) );
+	}
+
+
+
+
+
+
+
+
+
+	public static function integrity( $tag, $handle, $src ): string {
+		if ( ! isset( self::VENDOR[ $handle ] ) || 0 !== strpos( (string) $src, 'https://cdn.jsdelivr.net/' ) ) {
+			return (string) $tag;
+		}
+		$atributos = ' integrity="' . esc_attr( self::VENDOR[ $handle ]['sri'] ) . '" crossorigin="anonymous"';
+		return (string) preg_replace( '/^<script\b/', '<script' . $atributos, (string) $tag, 1 );
+	}
+
+
+
+
+
+
+
+	public static function time( string $mysql ): string {
+		$fecha = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $mysql, wp_timezone() );
+		return false === $fecha ? $mysql : wp_date( 'G:i', $fecha->getTimestamp() );
+	}
+
+
+
+
+
+
+
+
+	private static function say( string $tono, string $text ): string {
+		return '<p class="' . esc_attr( Assets::alert_class( $tono ) ) . '" role="status">' . esc_html( $text ) . '</p>';
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront;
+
 use Evt\Access\EventAccess;
 use Evt\Admin\Settings;
 use Evt\Domain\ActivityInput;
@@ -12354,6 +13919,7 @@ use Evt\Domain\DateRange;
 use Evt\Domain\EventInput;
 use Evt\Domain\EventState;
 use Evt\Domain\SignupQuestions;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
@@ -12448,6 +14014,17 @@ final class EventWorkspace {
 
 
 	public const PANEL_SIGNUP = 'inscripcion';
+
+
+
+
+	public const PANEL_ATTENDANCE = 'asistencia';
+
+
+
+
+	public const OP_ATT_MARKS  = 'att_marks';
+	public const OP_ATT_EXPORT = 'att_export';
 
 
 
@@ -12604,6 +14181,9 @@ final class EventWorkspace {
 		self::OP_UNPUBLISH,
 		self::OP_REG_SAVE,
 		self::OP_REG_DELETE,
+		self::PANEL_ATTENDANCE,
+		self::OP_ATT_MARKS,
+		self::OP_ATT_EXPORT,
 		...self::ROW_OPS,
 		...self::PROGRAMME_OPS,
 	);
@@ -12730,13 +14310,14 @@ final class EventWorkspace {
 
 
 		$rotulos = array(
-			self::PANEL_SECTIONS  => array( 'Páginas', self::GROUP_CONTENT ),
-			self::PANEL_SPEAKERS  => array( 'Ponentes', self::GROUP_CONTENT ),
-			self::PANEL_PROGRAMME => array( 'Programa y talleres', self::GROUP_CONTENT ),
-			self::PANEL_SIGNUP    => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
-			self::PANEL_PEOPLE    => array( 'Participantes', self::GROUP_SIGNUP ),
-			self::PANEL_SETTINGS  => array( 'Datos del evento', self::GROUP_CONFIG ),
-			self::PANEL_LOOK      => array( 'Apariencia', self::GROUP_CONFIG ),
+			self::PANEL_SECTIONS   => array( 'Páginas', self::GROUP_CONTENT ),
+			self::PANEL_SPEAKERS   => array( 'Ponentes', self::GROUP_CONTENT ),
+			self::PANEL_PROGRAMME  => array( 'Programa y talleres', self::GROUP_CONTENT ),
+			self::PANEL_SIGNUP     => array( 'Formulario y plazos', self::GROUP_SIGNUP ),
+			self::PANEL_PEOPLE     => array( 'Participantes', self::GROUP_SIGNUP ),
+			self::PANEL_ATTENDANCE => array( 'Asistencia', self::GROUP_SIGNUP ),
+			self::PANEL_SETTINGS   => array( 'Datos del evento', self::GROUP_CONFIG ),
+			self::PANEL_LOOK       => array( 'Apariencia', self::GROUP_CONFIG ),
 		);
 		if ( self::may_edit_code( $user_id, $event_id ) ) {
 			$rotulos[ self::PANEL_CODE ] = array( 'Código', self::GROUP_CONFIG );
@@ -12772,11 +14353,12 @@ final class EventWorkspace {
 			return array();
 		}
 		return array(
-			self::PANEL_SECTIONS  => count( self::children( $event_id ) ),
-			self::PANEL_SPEAKERS  => count( Programme::speakers( $event_id ) ),
-			self::PANEL_PROGRAMME => count( Programme::activities( $event_id ) ),
-			self::PANEL_SIGNUP    => count( Registrations::questions( $event_id ) ),
-			self::PANEL_PEOPLE    => count( $people ?? Participants::rows( $event_id ) ),
+			self::PANEL_SECTIONS   => count( self::children( $event_id ) ),
+			self::PANEL_SPEAKERS   => count( Programme::speakers( $event_id ) ),
+			self::PANEL_PROGRAMME  => count( Programme::activities( $event_id ) ),
+			self::PANEL_SIGNUP     => count( Registrations::questions( $event_id ) ),
+			self::PANEL_PEOPLE     => count( $people ?? Participants::rows( $event_id ) ),
+			self::PANEL_ATTENDANCE => count( Attendance::points( $event_id ) ),
 		);
 	}
 
@@ -12904,6 +14486,19 @@ final class EventWorkspace {
 			self::export_participants( $event_id );
 			return;
 		}
+		if ( self::OP_ATT_EXPORT === $op ) {
+
+			self::send_csv( Attendance::csv( $event_id ), 'asistencia-' . substr( Participants::filename( (string) get_post_field( 'post_title', $event_id ) ), strlen( 'participantes-' ) ) );
+			return;
+		}
+		if ( self::PANEL_ATTENDANCE === $op ) {
+			self::save_points( $event_id, $destino );
+			return;
+		}
+		if ( self::OP_ATT_MARKS === $op ) {
+			self::save_marks( $event_id, $destino );
+			return;
+		}
 		if ( self::OP_REG_SAVE === $op ) {
 			self::save_registration( $event_id, $row_id, $destino );
 			return;
@@ -12952,6 +14547,9 @@ final class EventWorkspace {
 		}
 		if ( in_array( $op, array( self::OP_EXPORT, self::OP_REG_SAVE, self::OP_REG_DELETE ), true ) ) {
 			return self::PANEL_PEOPLE;
+		}
+		if ( self::OP_ATT_MARKS === $op || self::OP_ATT_EXPORT === $op ) {
+			return self::PANEL_ATTENDANCE;
 		}
 
 
@@ -13101,61 +14699,104 @@ final class EventWorkspace {
 
 
 
+
+
+
 	private static function save_registration( int $event_id, int $registration_id, string $destino ): void {
-		if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+		$nueva  = 0 === $registration_id;
+		$volver = $nueva
+			? add_query_arg( self::ARG_NEW, '1', $destino )
+			: add_query_arg( self::ARG_ROW, (string) $registration_id, $destino );
+		if ( ! $nueva && ! Registrations::belongs( $event_id, $registration_id ) ) {
 			self::set_flash( 'error', 'Esa inscripción no es de este evento, o ya no existe.' );
 			Shell::leave( $destino );
 			return;
 		}
-		$centros = Registrations::centres();
-		$actual  = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
+		$tecleado = array(
+			'tax_id'  => self::field( 'evt_rg_tax_id' ),
+			'name'    => self::field( 'evt_rg_name' ),
+			'surname' => self::field( 'evt_rg_surname' ),
+			'email'   => self::field( 'evt_rg_email' ),
+			'phone'   => self::field( 'evt_rg_phone' ),
+			'centre'  => self::field( 'evt_rg_centre' ),
+		);
+		$centros  = Registrations::centres();
+		$actual   = $nueva ? '' : (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE_CODE, true );
 		if ( '' !== $actual && ! isset( $centros[ $actual ] ) ) {
 			$centros[ $actual ] = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
 		}
-		$nucleo = \Evt\Domain\RegistrationInput::core(
-			array(
-				'tax_id'  => self::field( 'evt_rg_tax_id' ),
-				'name'    => self::field( 'evt_rg_name' ),
-				'surname' => self::field( 'evt_rg_surname' ),
-				'email'   => self::field( 'evt_rg_email' ),
-				'phone'   => self::field( 'evt_rg_phone' ),
-				'centre'  => self::field( 'evt_rg_centre' ),
-				'consent' => true,
-			),
-			$centros
-		);
+		$nucleo = \Evt\Domain\RegistrationInput::core( array_merge( $tecleado, array( 'consent' => true ) ), $centros );
 
 
 
-		$nombre_centro = (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
-		if ( '' === self::field( 'evt_rg_centre' ) && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
+		$nombre_centro = $nueva ? '' : (string) get_post_meta( $registration_id, RegistrationMetaKeys::REG_CENTRE, true );
+		if ( '' === $tecleado['centre'] && '' === $actual && '' !== $nombre_centro && array( 'centre' ) === array_intersect( $nucleo['errors'], array( 'centre' ) ) ) {
 			$nucleo['errors']         = array_values( array_diff( $nucleo['errors'], array( 'centre' ) ) );
 			$nucleo['ok']             = array() === $nucleo['errors'];
 			$nucleo['data']['centre'] = $nombre_centro;
 		}
 
-		$crudas     = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		$crudas   = isset( $_POST['evt_rg_answers'] ) && is_array( $_POST['evt_rg_answers'] ) ? wp_unslash( $_POST['evt_rg_answers'] ) : array();
+		$talleres = WorkshopChoice::ids( wp_unslash( $_POST['evt_rg_workshop'] ?? array() ) );
+
 		$respuestas = SignupQuestions::answers( Registrations::questions( $event_id ), $crudas );
+
+		$error = '';
 		if ( true !== $nucleo['ok'] || true !== $respuestas['ok'] ) {
-			self::set_flash( 'error', \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) ) );
-			Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			$error = \Evt\Domain\RegistrationInput::why( array_merge( $nucleo['errors'], $respuestas['errors'] ) );
+		} elseif ( $nueva && '' === self::field( 'evt_rg_consent' ) ) {
+			$error = 'Para inscribir a alguien, marque que conoce y acepta la información de protección de datos del evento.';
+		} elseif ( Registrations::by_tax_id( $event_id, (string) $nucleo['data']['tax_id'], $registration_id ) > 0 ) {
+			$error = 'Ya hay otra inscripción en este evento con ese documento de identidad. Búsquela en la lista y corrija esa.';
+		}
+		if ( '' !== $error ) {
+			self::set_flash( 'error', $error, $nueva ? $tecleado : array() );
+			Shell::leave( $volver );
 			return;
 		}
 
-		Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
-
-		$taller = absint( self::field( 'evt_rg_workshop' ) );
-		$antes  = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
-		if ( $taller !== $antes ) {
-			$sitio = Registrations::seat( $event_id, $registration_id, $taller );
-			if ( true !== $sitio['ok'] ) {
-				$motivo = 'sin_plazas' === $sitio['error'] ? 'ese taller está completo' : 'ese taller no es de este evento';
-				self::set_flash( 'error', 'Datos guardados, pero el taller no se ha cambiado: ' . $motivo . '.' );
-				Shell::leave( add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+		if ( $nueva ) {
+			$alta = Registrations::add( $event_id, (array) $nucleo['data'], (array) $respuestas['data'], 0, get_current_user_id() );
+			if ( (int) $alta['id'] <= 0 ) {
+				self::set_flash(
+					'error',
+					'repetida' === $alta['error']
+						? 'Ya hay otra inscripción en este evento con ese documento de identidad. Búsquela en la lista y corrija esa.'
+						: 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+					$tecleado
+				);
+				Shell::leave( $volver );
 				return;
 			}
+			$registration_id = (int) $alta['id'];
+		} else {
+			Registrations::update( $event_id, $registration_id, (array) $nucleo['data'], (array) $respuestas['data'] );
 		}
 
+		$sitio = Registrations::seat( $event_id, $registration_id, $talleres );
+		$aviso = '';
+		if ( true !== $sitio['ok'] ) {
+			$aviso = ' Pero los talleres no se han cambiado: ' . ( 'sin_plazas' === $sitio['error']
+				? 'uno de los elegidos está completo, y un taller completo no admite a nadie más.'
+				: SignupForm::why_no_seat( $sitio['error'], Registrations::max_workshops( $event_id ) ) );
+		}
+
+		if ( $nueva ) {
+			$correo = '' !== self::field( 'evt_rg_mail' )
+				? ( SignupMail::confirmation( $registration_id, SignupMail::BY_ORG )
+					? ' Se le ha enviado el correo con el enlace a su inscripción.'
+					: ' No se ha podido enviar el correo con su enlace.' )
+				: '';
+			self::set_flash( '' === $aviso ? 'ok' : 'aviso', 'Persona inscrita.' . $correo . $aviso );
+			Shell::leave( '' === $aviso ? $destino : add_query_arg( self::ARG_ROW, (string) $registration_id, $destino ) );
+			return;
+		}
+
+		if ( '' !== $aviso ) {
+			self::set_flash( 'error', 'Datos guardados.' . $aviso );
+			Shell::leave( $volver );
+			return;
+		}
 		self::set_flash( 'ok', 'Inscripción corregida.' );
 		Shell::leave( $destino );
 	}
@@ -13400,9 +15041,17 @@ final class EventWorkspace {
 			self::field( self::ARG_WORKSHOP )
 		);
 
-		$cuerpo = Participants::csv( $filas );
-		$nombre = Participants::filename( (string) get_post_field( 'post_title', $event_id ) );
+		self::send_csv( Participants::csv( $filas ), Participants::filename( (string) get_post_field( 'post_title', $event_id ) ) );
+	}
 
+
+
+
+
+
+
+
+	private static function send_csv( string $cuerpo, string $nombre ): void {
 
 		if ( ! headers_sent() ) {
 			header( 'Content-Type: text/csv; charset=utf-8' );
@@ -13413,6 +15062,65 @@ final class EventWorkspace {
 		echo $cuerpo; 
 
 		Shell::leave();
+	}
+
+
+
+
+
+
+
+
+	private static function save_points( int $event_id, string $destino ): void {
+
+		$ids      = (array) wp_unslash( $_POST['evt_pt_id'] ?? array() );
+		$rotulos  = (array) wp_unslash( $_POST['evt_pt_label'] ?? array() );
+		$abiertos = (array) wp_unslash( $_POST['evt_pt_open'] ?? array() );
+		$quitados = (array) wp_unslash( $_POST['evt_pt_remove'] ?? array() );
+
+
+		$filas = array();
+		foreach ( $rotulos as $i => $rotulo ) {
+			$filas[] = array(
+				'id'     => sanitize_key( (string) ( $ids[ $i ] ?? '' ) ),
+				'label'  => sanitize_text_field( (string) $rotulo ),
+				'open'   => ! empty( $abiertos[ $i ] ),
+				'remove' => ! empty( $quitados[ $i ] ),
+			);
+		}
+		$puntos = Attendance::merge_points( Attendance::points( $event_id ), $filas );
+		update_post_meta( $event_id, RegistrationMetaKeys::ATTENDANCE_POINTS, wp_slash( (string) wp_json_encode( $puntos ) ) );
+		self::set_flash( 'ok', 'Puntos de asistencia guardados.' );
+		Shell::leave( $destino );
+	}
+
+
+
+
+
+
+
+
+	private static function save_marks( int $event_id, string $destino ): void {
+
+		$filas   = array_map( 'absint', (array) wp_unslash( $_POST['evt_at_rows'] ?? array() ) );
+		$marcado = (array) wp_unslash( $_POST['evt_at'] ?? array() );
+
+
+		$todos = wp_list_pluck( Attendance::points( $event_id ), 'id' );
+		foreach ( $filas as $registration_id ) {
+
+
+			if ( ! Registrations::belongs( $event_id, $registration_id ) ) {
+				continue;
+			}
+			$suyos = isset( $marcado[ $registration_id ] ) && is_array( $marcado[ $registration_id ] )
+				? array_map( 'sanitize_key', array_keys( $marcado[ $registration_id ] ) )
+				: array();
+			Attendance::set_manual( $registration_id, array_values( array_intersect( $suyos, $todos ) ), $todos );
+		}
+		self::set_flash( 'ok', 'Asistencia guardada.' );
+		Shell::leave( add_query_arg( self::ARG_WORKSHOP, self::field( self::ARG_WORKSHOP ), $destino ) );
 	}
 
 
@@ -14048,6 +15756,8 @@ final class EventWorkspace {
 			'workshop_open'   => (bool) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, true ),
 			'workshop_start'  => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, true ),
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
+			'workshop_max'    => Registrations::max_workshops( $event_id ),
+			'workshop_help'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, true ),
 			'consent_privacy' => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_PRIVACY, true ),
 			'consent_image'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_IMAGE, true ),
 			'consent_version' => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
@@ -14075,6 +15785,9 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_OPEN, '' !== $talleres );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, min( 10, max( 1, (int) self::field( 'evt_workshop_max' ) ) ) );
+
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, sanitize_textarea_field( wp_unslash( (string) ( $_POST['evt_workshop_help'] ?? '' ) ) ) );
 
 
 
@@ -14440,6 +16153,8 @@ final class EventWorkspace {
 			'q_locked'       => false,
 			'signup'         => array(),
 			'form_id'        => 0,
+			'centres'        => array(),
+			'attendance'     => array(),
 		);
 	}
 
@@ -14598,6 +16313,12 @@ final class EventWorkspace {
 		}
 
 		$m['edit_values'] = self::row_values( $event_id, (int) $m['edit_row'], (string) $m['panel'] );
+		if ( self::PANEL_PEOPLE === $m['panel'] && true === $m['adding'] && array() === $m['edit_values'] ) {
+			$m['edit_values'] = self::blank_registration( (array) $m['flash']['values'] );
+		}
+		if ( self::PANEL_PEOPLE === $m['panel'] && array() !== $m['edit_values'] ) {
+			$m['centres'] = Registrations::centres();
+		}
 
 
 
@@ -14608,6 +16329,22 @@ final class EventWorkspace {
 		$m['people_tags']  = Participants::workshops( $todos );
 		$m['people']       = Participants::filter( $todos, (string) $m['people_q'], (string) $m['people_filter'] );
 		$m['form_id']      = (int) self::meta( $event_id, EventMetaKeys::SIGNUP_FORM_ID );
+
+		if ( self::PANEL_ATTENDANCE === $m['panel'] ) {
+			$taller = absint( $m['people_filter'] );
+			$puntos = array();
+			foreach ( Attendance::points( $event_id ) as $punto ) {
+				$punto['url'] = Attendance::url( $event_id, $punto );
+				$puntos[]     = $punto;
+			}
+			$m['attendance'] = array(
+				'points'    => $puntos,
+				'rows'      => Attendance::rows( $event_id, $taller ),
+				'workshop'  => $taller,
+				'workshops' => Registrations::workshop_labels( $event_id ),
+				'has_page'  => SignupForm::page( $event_id ) > 0,
+			);
+		}
 
 		return $m;
 	}
@@ -14650,11 +16387,36 @@ final class EventWorkspace {
 				'phone'       => $meta[ RegistrationMetaKeys::REG_PHONE ],
 				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
 				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ],
-				'workshop'    => (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ],
+				'workshops'   => Registrations::workshops_of( $row_id ),
 				'answers'     => Registrations::answers( $row_id ),
 			);
 		}
 		return array();
+	}
+
+
+
+
+
+
+
+	private static function blank_registration( array $tecleado ): array {
+		$vacia = array(
+			'id'          => 0,
+			'tax_id'      => '',
+			'name'        => '',
+			'surname'     => '',
+			'email'       => '',
+			'phone'       => '',
+			'centre'      => '',
+			'centre_code' => (string) ( $tecleado['centre'] ?? '' ),
+			'workshops'   => array(),
+			'answers'     => array(),
+		);
+		foreach ( array( 'tax_id', 'name', 'surname', 'email', 'phone' ) as $clave ) {
+			$vacia[ $clave ] = (string) ( $tecleado[ $clave ] ?? '' );
+		}
+		return $vacia;
 	}
 
 
@@ -15876,8 +17638,20 @@ final class EventParticipantsPanel {
 
 
 	public static function html( array $m ): string {
+		$cajon = '';
+		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
+			$cajon = PanelParts::drawer(
+				0 === (int) $m['edit_values']['id'] ? 'Inscribir a una persona' : 'Corregir inscripción',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
+				(array) $m['flash'],
+				true,
+				true
+			);
+		}
+
 		if ( 0 === (int) $m['people_total'] ) {
-			return self::empty_state( $m );
+			return $cajon . self::empty_state( $m );
 		}
 
 		$filas = (array) $m['people'];
@@ -15887,21 +17661,9 @@ final class EventParticipantsPanel {
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Participantes</h2>
 			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
-		</div></div>
+		</div><?php echo self::add_button( $m ); ?></div>
 
-		<?php
-		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
-			$cajon = PanelParts::drawer(
-				'Corregir inscripción',
-				self::form( $m ),
-				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
-				(array) $m['flash'],
-				true,
-				true
-			);
-			echo $cajon; 
-		}
-		?>
+		<?php echo $cajon; ?>
 		<?php echo self::counters( $m, $filas ); ?>
 		<?php echo self::filter( $m ); ?>
 
@@ -15942,6 +17704,27 @@ final class EventParticipantsPanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+
+
+
+	private static function add_button( array $m ): string {
+		if ( true !== ( $m['can_edit'] ?? false ) || true === ( $m['archived'] ?? false ) ) {
+			return '';
+		}
+		return sprintf(
+			'<div class="evt-acciones"><a data-evt-abrir-cajon class="%1$s" href="%2$s">%3$s Inscribir a una persona</a></div>',
+			esc_attr( Assets::button_class( true ) ),
+			esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE, array( EventWorkspace::ARG_NEW => '1' ) ) ),
+			wp_kses( Shell::icon_plus(), PanelParts::SVG )
+		);
 	}
 
 
@@ -16024,6 +17807,10 @@ final class EventParticipantsPanel {
 	private static function form( array $m ): string {
 		$v         = (array) $m['edit_values'];
 		$id        = (int) $v['id'];
+		$nueva     = 0 === $id;
+		$maximo    = max( 1, (int) ( $m['signup']['workshop_max'] ?? 1 ) );
+		$suyos     = array_map( 'intval', (array) ( $v['workshops'] ?? array() ) );
+		$centros   = (array) ( $m['centres'] ?? array() );
 		$op        = EventWorkspace::OP_REG_SAVE;
 		$preguntas = Registrations::questions( (int) $m['event_id'] );
 		$respuesta = (array) $v['answers'];
@@ -16054,8 +17841,17 @@ final class EventParticipantsPanel {
 			<div class="evt-form-campo">
 				<label for="evt-rg-centre">Código del centro</label>
 				<input type="text" id="evt-rg-centre" name="evt_rg_centre" inputmode="numeric" pattern="\d{8}" <?php echo '' === (string) $v['centre_code'] && '' !== (string) $v['centre'] ? '' : 'required'; ?>
+					<?php echo array() !== $centros ? 'list="evt-rg-centros"' : ''; ?> autocomplete="off"
 					value="<?php echo esc_attr( (string) $v['centre_code'] ); ?>" />
-				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial.' ); ?> El nombre sale del catálogo de centros.</small>
+				<?php if ( array() !== $centros ) : ?>
+					<?php ?>
+					<datalist id="evt-rg-centros">
+						<?php foreach ( $centros as $codigo => $denominacion ) : ?>
+							<option value="<?php echo esc_attr( (string) $codigo ); ?>"><?php echo esc_html( (string) $denominacion ); ?></option>
+						<?php endforeach; ?>
+					</datalist>
+				<?php endif; ?>
+				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial; escriba el nombre y elija.' ); ?> El nombre sale del catálogo de centros.</small>
 			</div>
 
 			<?php foreach ( $preguntas as $pregunta ) : ?>
@@ -16063,33 +17859,51 @@ final class EventParticipantsPanel {
 			<?php endforeach; ?>
 
 			<?php if ( array() !== (array) $m['workshops'] ) : ?>
-				<div class="evt-form-campo">
-					<label for="evt-rg-workshop">Taller</label>
-					<select id="evt-rg-workshop" name="evt_rg_workshop">
-						<option value="0">Sin taller</option>
-						<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
-							<option value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php selected( (int) $v['workshop'], (int) $taller['id'] ); ?>>
-								<?php echo esc_html( (string) $taller['title'] . ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' ) ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-					<small>Con el mismo aforo que cuando lo elige la persona: un taller completo no admite a nadie más.</small>
-				</div>
+				<fieldset class="evt-form-campo">
+					<legend><?php echo esc_html( 1 === $maximo ? 'Taller' : sprintf( 'Talleres (hasta %d)', $maximo ) ); ?></legend>
+					<?php if ( 1 === $maximo ) : ?>
+						<label><input type="radio" name="evt_rg_workshop" value="0" <?php checked( array() === $suyos ); ?> /> Sin taller</label>
+					<?php endif; ?>
+					<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
+						<?php
+						$cuando = trim( (string) $taller['date'] . ' ' . (string) $taller['start'] );
+						$rotulo = (string) $taller['title']
+							. ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' )
+							. ( '' !== $cuando ? ' · ' . $cuando : '' );
+						?>
+						<label><input type="<?php echo 1 === $maximo ? 'radio' : 'checkbox'; ?>" name="evt_rg_workshop<?php echo 1 === $maximo ? '' : '[]'; ?>"
+							value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php checked( in_array( (int) $taller['id'], $suyos, true ) ); ?> />
+							<?php echo esc_html( $rotulo ); ?></label>
+					<?php endforeach; ?>
+					<small>Con el mismo aforo y las mismas reglas que cuando los elige la persona: un taller completo no admite a nadie más, y no se eligen dos sesiones del mismo taller ni dos que coincidan en hora.</small>
+				</fieldset>
 			<?php endif; ?>
 
-			<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+			<?php if ( $nueva ) : ?>
+				<div class="evt-form-campo">
+					<label><input type="checkbox" name="evt_rg_consent" value="1" required /> La persona conoce y acepta la información de protección de datos y el consentimiento informado del evento.</label>
+					<small>Queda guardado que el consentimiento lo declaró la organización, y quién.</small>
+				</div>
+				<div class="evt-form-campo">
+					<label><input type="checkbox" name="evt_rg_mail" value="1" checked /> Enviarle el correo con el enlace a su inscripción</label>
+				</div>
+			<?php else : ?>
+				<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+			<?php endif; ?>
 
 			<div class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la inscripción</button>
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit"><?php echo esc_html( $nueva ? 'Inscribir' : 'Guardar la inscripción' ); ?></button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 
-		<section class="evt-tarjeta evt-peligro">
-			<h2>Borrar la inscripción</h2>
-			<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
-			<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); ?>
-		</section>
+		<?php if ( ! $nueva ) : ?>
+			<section class="evt-tarjeta evt-peligro">
+				<h2>Borrar la inscripción</h2>
+				<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
+				<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); ?>
+			</section>
+		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -16277,6 +18091,7 @@ final class EventParticipantsPanel {
 
 		ob_start();
 		?>
+		<?php echo self::add_button( $m ); ?>
 		<section class="evt-tarjeta">
 			<h2>Todavía no hay nadie inscrito</h2>
 			<p>
@@ -16432,6 +18247,20 @@ final class EventSignupPanel {
 		$html .= self::dates( 'evt_workshop_start', 'evt_workshop_end', 'evt-ws', (string) $a['workshop_start'], (string) $a['workshop_end'] );
 		$html .= '<p class="evt-ayuda">Sin fechas manda el interruptor. Quien ya se inscribió puede cambiar de taller '
 			. 'mientras siga abierto, y un taller lleno deja de poder elegirse.</p>';
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-ws-max">Talleres por persona</label>'
+				. '<input type="number" id="evt-ws-max" name="evt_workshop_max" min="1" max="10" step="1" value="%1$d">'
+				. '<small>Nadie puede elegir dos sesiones del mismo taller ni dos talleres que coincidan en hora.</small></p>',
+			max( 1, (int) ( $a['workshop_max'] ?? 1 ) )
+		);
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-ws-help">Instrucciones para elegir taller <span class="evt-opcional">(opcional)</span></label>'
+				. '<textarea id="evt-ws-help" name="evt_workshop_help" rows="3">%1$s</textarea>'
+				. '<small>Salen encima de la lista de talleres, antes de las reglas, que se añaden solas.</small></p>',
+			esc_textarea( (string) ( $a['workshop_help'] ?? '' ) )
+		);
+		$html .= '<p class="evt-ayuda">Un taller que se repite en dos horarios se crea dos veces en «Programa y talleres», '
+			. '<strong>con el mismo título</strong> y distinta hora: así nadie puede apuntarse a las dos sesiones.</p>';
 		return $html . '</fieldset>';
 	}
 
@@ -16684,6 +18513,256 @@ final class EventSignupPanel {
 			checked( true, $puesto, false ),
 			esc_html( $rotulo )
 		);
+	}
+}
+
+
+
+
+
+
+
+
+namespace Evt\PublicFront\View;
+
+use Evt\PublicFront\Assets;
+use Evt\PublicFront\Attendance;
+use Evt\PublicFront\EventWorkspace;
+
+
+
+
+
+
+
+
+
+
+final class EventAttendancePanel {
+
+
+
+
+
+
+
+	public static function html( array $m ): string {
+		$datos = (array) $m['attendance'];
+
+		$html = '<div class="evt-panel-cabecera"><div><h2 class="evt-panel-titulo">Asistencia</h2>'
+			. '<p class="evt-sub">Cada punto de control tiene un código QR. Quien asiste lo escanea, entra con su cuenta y registra la hora. '
+			. 'Un punto solo registra mientras está <strong>abierto</strong>: ábralo cuando lo proyecte y ciérrelo al terminar.</p></div></div>';
+
+		if ( true !== ( $datos['has_page'] ?? false ) ) {
+			$html .= '<p class="' . esc_attr( Assets::alert_class( 'warning' ) ) . '">El evento no tiene publicada su página de inscripción, '
+				. 'y es la que abren los códigos QR. Publíquela en «Páginas» para que funcionen.</p>';
+		}
+
+		$html .= self::points( $m, (array) ( $datos['points'] ?? array() ) );
+		$html .= self::marks( $m, $datos );
+		return $html;
+	}
+
+
+
+
+
+
+
+
+	private static function points( array $m, array $puntos ): string {
+		$op    = EventWorkspace::PANEL_ATTENDANCE;
+		$filas = $puntos;
+		if ( count( $filas ) < Attendance::MAX_POINTS ) {
+			$filas[] = array(
+				'id'    => '',
+				'label' => '',
+				'open'  => false,
+				'url'   => '',
+			);
+		}
+
+		$html  = '<form class="evt-form" method="post" action="">';
+		$html .= wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false, false );
+		$html .= sprintf(
+			'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d">',
+			esc_attr( EventWorkspace::FIELD_DO ),
+			esc_attr( $op ),
+			esc_attr( EventWorkspace::FIELD_EVENT ),
+			(int) $m['event_id']
+		);
+		$html .= '<section class="evt-tarjeta"><h3 class="evt-tarjeta__titulo">Puntos de control</h3>';
+		if ( array() === $puntos ) {
+			$html .= '<p class="evt-ayuda">Por ejemplo: «Entrada», «Mediodía» y «Salida». Escriba el primero y guarde.</p>';
+		}
+		$html .= '<div class="evt-puntos">';
+		foreach ( $filas as $i => $punto ) {
+			$html .= self::point( (int) $i, $punto );
+		}
+		$html .= '</div>';
+		$html .= '<p class="evt-ayuda">Cambiar el nombre de un punto no cambia su código: el QR impreso sigue valiendo. '
+			. 'Quitarlo lo invalida, y las marcas que tuviera dejan de verse.</p>';
+		$html .= '<div class="evt-acciones"><button class="' . esc_attr( Assets::button_class( true ) ) . '" type="submit">Guardar los puntos</button></div>';
+		$html .= '</section></form>';
+		return $html;
+	}
+
+
+
+
+
+
+
+
+	private static function point( int $i, array $punto ): string {
+		$nuevo = '' === (string) $punto['id'];
+		$html  = '<div class="evt-punto evt-tarjeta">';
+		$html .= sprintf( '<input type="hidden" name="evt_pt_id[%1$d]" value="%2$s">', $i, esc_attr( (string) $punto['id'] ) );
+		$html .= sprintf(
+			'<p class="evt-campo"><label for="evt-pt-%1$d">%3$s</label><input type="text" id="evt-pt-%1$d" name="evt_pt_label[%1$d]" value="%2$s" maxlength="60" placeholder="%4$s"></p>',
+			$i,
+			esc_attr( (string) $punto['label'] ),
+			$nuevo ? 'Añadir un punto' : 'Nombre',
+			$nuevo ? 'Entrada' : ''
+		);
+		if ( $nuevo ) {
+			return $html . '</div>';
+		}
+
+		$html .= sprintf(
+			'<div class="form-check form-switch evt-interruptor"><input class="form-check-input" type="checkbox" role="switch" id="evt-pt-open-%1$d" name="evt_pt_open[%1$d]" value="1"%2$s> <label class="form-check-label" for="evt-pt-open-%1$d">Abierto: registra asistencia ahora</label></div>',
+			$i,
+			checked( true, (bool) $punto['open'], false )
+		);
+		$html .= sprintf(
+			'<div class="evt-qr" data-evt-qr="%1$s" data-evt-qr-alt="%2$s"></div>'
+				. '<p class="evt-ayuda"><a href="%1$s" target="_blank" rel="noopener">%3$s</a></p>',
+			esc_url( (string) $punto['url'] ),
+			esc_attr( 'Código QR de asistencia: ' . (string) $punto['label'] ),
+			esc_html( (string) $punto['url'] )
+		);
+		$html .= sprintf(
+			'<p class="evt-campo"><label class="evt-check"><input type="checkbox" name="evt_pt_remove[%1$d]" value="1"> Quitar este punto al guardar</label></p>',
+			$i
+		);
+		return $html . '</div>';
+	}
+
+
+
+
+
+
+
+
+	private static function marks( array $m, array $datos ): string {
+		$puntos   = (array) ( $datos['points'] ?? array() );
+		$filas    = (array) ( $datos['rows'] ?? array() );
+		$talleres = (array) ( $datos['workshops'] ?? array() );
+		$taller   = (int) ( $datos['workshop'] ?? 0 );
+		$event_id = (int) $m['event_id'];
+		$base     = EventWorkspace::url( $event_id, EventWorkspace::PANEL_ATTENDANCE );
+
+		$html = '<section class="evt-tarjeta"><h3 class="evt-tarjeta__titulo">Quién ha pasado</h3>';
+
+
+
+		$accion  = (string) strtok( $base, '?' );
+		$ocultos = array();
+		parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $ocultos );
+		$html .= '<form class="evt-form evt-filtro" method="get" action="' . esc_url( $accion ) . '">';
+		foreach ( $ocultos as $clave => $valor ) {
+			$html .= '<input type="hidden" name="' . esc_attr( (string) $clave ) . '" value="' . esc_attr( (string) $valor ) . '">';
+		}
+		if ( array() !== $talleres ) {
+			$html .= '<div class="evt-form-campo"><label for="evt-at-taller">Taller</label><select id="evt-at-taller" name="' . esc_attr( EventWorkspace::ARG_WORKSHOP ) . '"><option value="">Todas las personas</option>';
+			foreach ( $talleres as $id => $rotulo ) {
+				$html .= sprintf( '<option value="%1$d"%2$s>%3$s</option>', (int) $id, selected( $taller, (int) $id, false ), esc_html( (string) $rotulo ) );
+			}
+			$html .= '</select></div><div class="evt-acciones"><button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Filtrar</button></div>';
+		}
+		$html .= '</form>';
+
+		$hoja  = add_query_arg(
+			array(
+				Attendance::ARG_SHEET        => '1',
+				EventWorkspace::ARG_WORKSHOP => $taller > 0 ? (string) $taller : '',
+			),
+			$base
+		);
+		$html .= '<div class="evt-acciones">';
+		$html .= '<a class="' . esc_attr( Assets::button_class() ) . '" href="' . esc_url( $hoja ) . '" target="_blank" rel="noopener">Hoja de firmas para imprimir</a>';
+		$html .= self::export_form( $event_id );
+		$html .= '</div>';
+
+		if ( array() === $filas ) {
+			return $html . '<p class="evt-vacio">Todavía no hay nadie inscrito' . ( $taller > 0 ? ' en este taller' : '' ) . '.</p></section>';
+		}
+		if ( array() === $puntos ) {
+			return $html . '<p class="evt-ayuda">Cree un punto de control arriba para empezar a registrar la asistencia.</p></section>';
+		}
+
+		$op    = EventWorkspace::OP_ATT_MARKS;
+		$html .= '<form class="evt-form" method="post" action="">';
+		$html .= wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false, false );
+		$html .= sprintf(
+			'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d"><input type="hidden" name="%5$s" value="%6$s">',
+			esc_attr( EventWorkspace::FIELD_DO ),
+			esc_attr( $op ),
+			esc_attr( EventWorkspace::FIELD_EVENT ),
+			$event_id,
+			esc_attr( EventWorkspace::ARG_WORKSHOP ),
+			$taller > 0 ? (string) $taller : ''
+		);
+		$html .= '<p class="evt-ayuda">Las casillas son para marcar a mano a quien no pudo con el QR, o quitar una marca. Lo marcado a mano queda como tal.</p>';
+		$html .= '<div class="evt-tabla-caja"><table class="evt-tabla"><thead><tr><th scope="col">Persona</th><th scope="col">Centro</th>';
+		foreach ( $puntos as $punto ) {
+			$html .= '<th scope="col">' . esc_html( (string) $punto['label'] ) . '</th>';
+		}
+		$html .= '</tr></thead><tbody>';
+		foreach ( $filas as $fila ) {
+			$id    = (int) $fila['id'];
+			$html .= '<tr><td data-rotulo="Persona">' . esc_html( trim( $fila['surname'] . ', ' . $fila['name'], ', ' ) )
+				. '<input type="hidden" name="evt_at_rows[]" value="' . esc_attr( (string) $id ) . '"></td>'
+				. '<td data-rotulo="Centro">' . esc_html( '' !== (string) $fila['centre'] ? (string) $fila['centre'] : '—' ) . '</td>';
+			foreach ( $puntos as $punto ) {
+				$marca = $fila['marks'][ $punto['id'] ] ?? null;
+				$texto = null === $marca ? '' : Attendance::time( (string) $marca['at'] ) . ( Attendance::BY_MANUAL === $marca['by'] ? ' (a mano)' : '' );
+				$html .= sprintf(
+					'<td data-rotulo="%1$s"><label class="evt-check"><input type="checkbox" name="evt_at[%2$d][%3$s]" value="1"%4$s> %5$s</label></td>',
+					esc_attr( (string) $punto['label'] ),
+					$id,
+					esc_attr( (string) $punto['id'] ),
+					checked( null !== $marca, true, false ),
+					esc_html( $texto )
+				);
+			}
+			$html .= '</tr>';
+		}
+		$html .= '</tbody></table></div>';
+		$html .= '<div class="evt-acciones"><button class="' . esc_attr( Assets::button_class( true ) ) . '" type="submit">Guardar la asistencia</button></div>';
+		$html .= '</form></section>';
+		return $html;
+	}
+
+
+
+
+
+
+
+	private static function export_form( int $event_id ): string {
+		$op = EventWorkspace::OP_ATT_EXPORT;
+		return '<form class="evt-form" method="post" action="">'
+			. wp_nonce_field( EventWorkspace::nonce_action( $op ), EventWorkspace::nonce_name( $op ), false, false )
+			. sprintf(
+				'<input type="hidden" name="%1$s" value="%2$s"><input type="hidden" name="%3$s" value="%4$d">',
+				esc_attr( EventWorkspace::FIELD_DO ),
+				esc_attr( $op ),
+				esc_attr( EventWorkspace::FIELD_EVENT ),
+				$event_id
+			)
+			. '<button class="' . esc_attr( Assets::button_class() ) . '" type="submit">Exportar asistencia a CSV</button></form>';
 	}
 }
 
@@ -18201,6 +20280,8 @@ final class EventWorkspaceView {
 			echo EventSignupPanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
 			echo EventParticipantsPanel::html( $m ); 
+		} elseif ( EventWorkspace::PANEL_ATTENDANCE === $panel ) {
+			echo EventAttendancePanel::html( $m ); 
 		} elseif ( EventWorkspace::PANEL_SETTINGS === $panel ) {
 			echo self::publication( $m ); 
 			echo EventDataPanel::html( $m ); 
@@ -20914,8 +22995,10 @@ final class SectionsBlock {
 
 namespace Evt\PublicFront\Block;
 
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\Attendance;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\RegistrationFiles;
@@ -20963,6 +23046,12 @@ final class SignupBlock {
 			return '';
 		}
 
+
+
+		if ( '' !== Attendance::token_in_request() ) {
+			return Attendance::block( $evento );
+		}
+
 		$aviso = self::notice();
 		$mia   = SignupForm::current( $evento );
 
@@ -20973,7 +23062,7 @@ final class SignupBlock {
 
 		$cerrada = SignupForm::closed_because( $evento );
 		if ( '' !== $cerrada ) {
-			return $aviso . '<p class="evt-ins__cerrada alert alert-info">' . esc_html( $cerrada ) . '</p>';
+			return $aviso . '<p class="evt-ins__cerrada alert alert-info">' . esc_html( $cerrada ) . '</p>' . self::resend_form( $evento );
 		}
 
 		$sesion = SignupForm::login_needed( $evento );
@@ -20986,7 +23075,27 @@ final class SignupBlock {
 			);
 		}
 
-		return $aviso . self::form( $evento );
+		return $aviso . self::form( $evento ) . self::resend_form( $evento );
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private static function resend_form( int $evento ): string {
+		return '<details class="evt-ins__recuperar mt-4"><summary>¿Ya se inscribió? Le reenviamos el enlace de su inscripción</summary>'
+			. '<form class="evt-ins__recuperar-form mt-2" method="post">'
+			. self::hidden( $evento, SignupForm::OP_RESEND )
+			. '<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-recuperar">Correo con el que se inscribió</label>'
+			. '<input class="form-control" type="email" id="evt-ins-recuperar" name="email" autocomplete="email" required></p>'
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class() ) . '">Enviarme el enlace</button></p>'
+			. '</form></details>';
 	}
 
 
@@ -21064,19 +23173,47 @@ final class SignupBlock {
 		$html  = '<div class="evt-ins evt-ins--mia">';
 		$html .= '<p class="evt-ins__hecha alert alert-success">Su inscripción está registrada, ' . esc_html( $nombre ) . '.</p>';
 
+
+		$sin_taller = isset( $_GET[ SignupForm::ARG_SEAT ] ) ? sanitize_key( wp_unslash( $_GET[ SignupForm::ARG_SEAT ] ) ) : '';
+		$sin_correo = isset( $_GET[ SignupForm::ARG_MAIL ] );
+		$token      = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
+
+
+		if ( '' !== $sin_taller ) {
+			$html .= '<p class="evt-aviso alert alert-warning" role="alert">'
+				. esc_html( 'Está inscrito, pero sus talleres no se han guardado: ' . SignupForm::why_no_seat( $sin_taller, Registrations::max_workshops( $evento ) ) )
+				. '</p>';
+		}
+		if ( $sin_correo ) {
+			$html .= '<p class="evt-aviso alert alert-warning" role="alert">No hemos podido enviarle el correo de confirmación. '
+				. '<strong>Guarde la dirección de esta página</strong>: es el enlace para volver a su inscripción.</p>';
+		}
+
+		$rotulos = Registrations::workshop_labels( $evento );
+		$suyos   = array();
+		foreach ( Registrations::workshops_of( $mia ) as $taller ) {
+			if ( isset( $rotulos[ $taller ] ) ) {
+				$suyos[] = $rotulos[ $taller ];
+			}
+		}
+		if ( array() !== $suyos ) {
+			$html .= '<p class="evt-ins__mis-talleres"><strong>' . ( count( $suyos ) > 1 ? 'Sus talleres' : 'Su taller' ) . ':</strong> '
+				. esc_html( implode( '; ', $suyos ) ) . '</p>';
+		}
+
 		if ( ! SignupForm::workshops_open( $evento ) ) {
 			$html .= '<p class="evt-ins__cerrada alert alert-info">El plazo para elegir taller no está abierto.</p>';
 			return $html . '</div>';
 		}
 
-
-		$token = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
-
 		$html .= '<form class="evt-ins__taller" method="post">';
 		$html .= self::hidden( $evento, SignupForm::OP_WORKSHOP );
-		$html .= sprintf( '<input type="hidden" name="%1$s" value="%2$s">', esc_attr( SignupForm::FIELD_TOKEN ), esc_attr( $token ) );
+
+		if ( '' !== $token ) {
+			$html .= sprintf( '<input type="hidden" name="%1$s" value="%2$s">', esc_attr( SignupForm::FIELD_TOKEN ), esc_attr( $token ) );
+		}
 		$html .= self::workshops( $evento, $mia );
-		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar el taller</button></p>';
+		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar mi elección</button></p>';
 		$html .= '</form></div>';
 
 		return $html;
@@ -21321,18 +23458,37 @@ final class SignupBlock {
 			return '<p class="evt-ins__sin-talleres alert alert-warning">Ahora mismo no queda ningún taller con plazas libres.</p>';
 		}
 
-		$html  = '<fieldset class="evt-ins__talleres mb-3"><legend class="h5">Taller</legend>';
-		$html .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="evt_workshop" value="0"' . ( 0 === $mia ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
+		$maximo = Registrations::max_workshops( $evento );
+		$varios = $maximo > 1;
+		$ayuda  = trim( (string) get_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_HELP, true ) );
+
+		$html = '<fieldset class="evt-ins__talleres mb-3"><legend class="h5">' . ( $varios ? 'Talleres' : 'Taller' ) . '</legend>';
+
+
+		$html .= '<div class="evt-ins__instrucciones form-text mb-2">';
+		if ( '' !== $ayuda ) {
+			$html .= wp_kses_post( wpautop( esc_html( $ayuda ) ) );
+		}
+		$html .= '<p>' . esc_html( WorkshopChoice::rules_text( $maximo ) ) . '</p></div>';
+
+		if ( ! $varios ) {
+			$ninguno = array() === array_filter( wp_list_pluck( $opciones, 'mine' ) );
+			$html   .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="' . esc_attr( SignupForm::FIELD_WORKSHOP ) . '" value="0"' . ( $ninguno ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
+		}
 		foreach ( $opciones as $taller ) {
-			$libres = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
-			$html  .= sprintf(
-				'<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-%1$d" name="evt_workshop" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%4$s</label></div>',
+			$libres  = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
+			$detalle = array_filter( array( $taller['when'], $taller['venue'] ), 'strlen' );
+			$html   .= sprintf(
+				'<div class="evt-opcion form-check"><input class="form-check-input" type="%5$s" id="evt-taller-%1$d" name="%6$s" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%7$s%4$s</label></div>',
 				$taller['id'],
 				$taller['mine'] ? ' checked' : '',
 				esc_html( $taller['title'] ),
 				$taller['seats'] > 0
 					? ' <span class="evt-plazas">(' . (int) $libres . ' plazas libres)</span>'
-					: ''
+					: '',
+				$varios ? 'checkbox' : 'radio',
+				esc_attr( SignupForm::FIELD_WORKSHOP . ( $varios ? '[]' : '' ) ),
+				array() !== $detalle ? ' <span class="evt-taller__cuando">— ' . esc_html( implode( ', ', $detalle ) ) . '</span>' : ''
 			);
 		}
 		return $html . '</fieldset>';
@@ -25157,6 +27313,7 @@ use Evt\PublicFront\Registrations;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\ContactMap;
 use Evt\PublicFront\SignupForm;
+use Evt\PublicFront\Attendance;
 use Evt\PublicFront\Timeline;
 use Evt\PublicFront\Shell;
 use Evt\Taxonomy\EventTaxonomies;
@@ -25223,6 +27380,7 @@ final class App {
 		RegistrationFiles::register();
 		Captcha::register();
 		SignupForm::register();
+		Attendance::register();
 		EventList::register();
 		EventWorkspace::register();
 		PageForm::register();
@@ -26813,6 +28971,12 @@ body.evt-marco .evt-hoja { padding-top: 16px; padding-bottom: 24px; }
 /* SweetAlert2 abre por encima del panel lateral, que ya está a 100 001: un
    diálogo que se pide desde el panel no puede quedarse debajo. */
 body .swal2-container { z-index: 100010; }
+
+/* Asistencia: el QR de cada punto, grande para proyectarlo o imprimirlo (ADR-0053). */
+.evt-puntos { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.evt-qr svg { display: block; width: 100%; max-width: 15rem; height: auto; background: #fff; }
+.evt-qr:empty { display: none; }
+.evt-punto a { overflow-wrap: anywhere; }
 ',
   'css/evt-evento.css' => '/*
  * evt-evento.css — la hoja de la página pública de un evento.
@@ -27978,6 +30142,58 @@ body .swal2-container { z-index: 100010; }
 .evt-ev__mapa-puntos {
 	margin: 0;
 	padding-left: 1.2em;
+}
+
+/* ─── la asistencia, abierta desde un QR (ADR-0053) ───────────────────── */
+
+/* Quien escanea está en una cola con el móvil: solo el recuadro de asistencia,
+   sin el texto de la página de inscripción ni el cartel. */
+.evt-ev--asistencia .evt-ev__bloque:not(.evt-ev__bloque--inscripcion) {
+	display: none;
+}
+
+.evt-asistencia {
+	max-width: 32rem;
+	margin-inline: auto;
+	text-align: center;
+}
+
+.evt-asistencia__titulo {
+	font-size: 1.5rem;
+	margin-block: 0.5rem 1rem;
+}
+
+.evt-asistencia__nombre {
+	font-size: 1.15rem;
+	font-weight: 600;
+}
+
+/* El botón, a todo el ancho y alto: se pulsa con el pulgar y sin apuntar. */
+.evt-asistencia__boton {
+	display: block;
+	width: 100%;
+	min-height: 3.5rem;
+	font-size: 1.25rem;
+}
+
+.evt-asistencia__hecha {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.25rem;
+	padding-block: 1.5rem;
+	font-size: 1.1rem;
+}
+
+.evt-asistencia__tic {
+	font-size: 3rem;
+	line-height: 1;
+}
+
+.evt-asistencia__hora {
+	font-size: 2.5rem;
+	font-weight: 700;
+	line-height: 1.1;
 }
 ',
   'css/evt-linea.css' => '/*
@@ -29856,6 +32072,49 @@ body .swal2-container { z-index: 100010; }
 			mapa.fitBounds( window.L.featureGroup( marcas ).getBounds(), { padding: [ 30, 30 ] } );
 		}
 	} );
+}() );
+',
+  'js/evt-qr.js' => '/*
+ * evt-qr.js — los códigos QR de los puntos de asistencia (ADR-0053).
+ *
+ * Cada `[data-evt-qr]` lleva la dirección que tiene que abrir el móvil. Con la
+ * librería `qrcode-generator` se pinta el código dentro, en SVG, para que se
+ * imprima o se proyecte nítido a cualquier tamaño. Si la librería no llega, no
+ * se pinta nada: debajo está la dirección escrita, que se puede copiar o
+ * pegar en cualquier generador de QR.
+ */
+( function () {
+	\'use strict\';
+
+	function pintar() {
+		if ( typeof window.qrcode !== \'function\' ) {
+			return;
+		}
+		document.querySelectorAll( \'[data-evt-qr]\' ).forEach( function ( caja ) {
+			var url = caja.getAttribute( \'data-evt-qr\' );
+			if ( ! url ) {
+				return;
+			}
+			// Tipo 0: el más pequeño en el que quepa la dirección. Corrección
+			// M: aguanta un proyector con reflejos sin hacer el código enorme.
+			var qr = window.qrcode( 0, \'M\' );
+			qr.addData( url );
+			qr.make();
+			caja.innerHTML = qr.createSvgTag( {
+				cellSize: 8,
+				margin: 4,
+				scalable: true,
+				alt: caja.getAttribute( \'data-evt-qr-alt\' ) || \'Código QR\',
+			} );
+			caja.classList.add( \'evt-qr--listo\' );
+		} );
+	}
+
+	if ( document.readyState === \'loading\' ) {
+		document.addEventListener( \'DOMContentLoaded\', pintar );
+	} else {
+		pintar();
+	}
 }() );
 ',
 ) );

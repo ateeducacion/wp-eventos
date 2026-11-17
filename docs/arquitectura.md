@@ -75,7 +75,7 @@ El bundle no se edita a mano: se regenera.
 | `evt_event` | **Jerárquico**: la raíz es el evento y las hijas, sus secciones (programa, ponentes, inscripción, contacto…), con el tipo en `evt_section_type` |
 | `evt_speaker` | Ponente o persona comunicadora, colgada del evento |
 | `evt_activity` | Actividad del programa: ponencia, mesa redonda, taller… Un taller es una actividad con plazas |
-| `evt_registration` | Una inscripción, colgada del evento. Elegir taller es el ID de la actividad guardado en ella, no otro tipo de contenido |
+| `evt_registration` | Una inscripción, colgada del evento. Elegir taller es guardar en ella los ID de las actividades, no otro tipo de contenido. Lleva también la cuenta que la hizo, quién de la organización la creó si no fue la persona, y sus marcas de asistencia |
 
 | Taxonomía | Eje | Ejemplos |
 |---|---|---|
@@ -93,6 +93,25 @@ usuario `codigo`— y no se pueden cambiar en el formulario: el servidor los
 vuelve a poner al recibirlo. Se da por hecho que esos datos de la cuenta son
 correctos. El código de centro sale en el perfil como «Código de centro»: lo
 cambia administración y los demás lo ven de solo lectura (ADR-0048).
+
+Cada evento dice cuántos talleres elige cada persona (uno, si no dice nada).
+Dos actividades con **el mismo título** son sesiones del mismo taller y no se
+eligen juntas, y tampoco dos que se solapen en hora (ADR-0050). Un documento de
+identidad se inscribe una sola vez por evento (ADR-0051).
+
+Al inscribirse sale un **correo en texto plano** con el enlace personal a la
+inscripción, para volver a elegir o cambiar taller; si se pierde, se pide otra
+vez escribiendo el correo. Con sesión no hace falta el enlace: la cuenta
+encuentra su inscripción. El único sitio que manda correo es
+`PublicFront/SignupMail`, con el remitente de WordPress y el filtro `evt_mail`
+(ADR-0051). La organización puede inscribir a una persona desde
+«Participantes», y entonces el consentimiento queda como declarado por ella
+(ADR-0052).
+
+La **asistencia** se controla con puntos —«Entrada», «Salida»…— que tienen
+cada uno un QR. Quien asiste lo escanea, inicia sesión y pulsa un botón; solo
+marca con el punto abierto. La organización marca a mano a quien no pudo, y
+hay hoja de firmas para imprimir y exportación a CSV (ADR-0053).
 
 Los documentos que aporta quien se inscribe **no son adjuntos de WordPress**:
 se guardan aparte, con nombre opaco, y solo se descargan desde el aplicativo

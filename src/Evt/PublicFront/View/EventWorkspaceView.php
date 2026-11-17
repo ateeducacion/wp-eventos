@@ -77,6 +77,8 @@ final class EventWorkspaceView {
 			echo EventSignupPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_PEOPLE === $panel ) {
 			echo EventParticipantsPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
+		} elseif ( EventWorkspace::PANEL_ATTENDANCE === $panel ) {
+			echo EventAttendancePanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 		} elseif ( EventWorkspace::PANEL_SETTINGS === $panel ) {
 			echo self::publication( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
 			echo EventDataPanel::html( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.

@@ -9,6 +9,7 @@ namespace Evt\PublicFront;
 
 use Evt\Access\EventAccess;
 use Evt\Domain\RegistrationInput;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\EventPostType;
@@ -40,6 +41,7 @@ final class SignupForm {
 
 	public const OP_SIGNUP   = 'inscribir';
 	public const OP_WORKSHOP = 'taller';
+	public const OP_RESEND   = 'recuperar';
 
 	public const FIELD_EVENT   = 'evt_signup_event';
 	public const FIELD_TOKEN   = 'evt_token';
@@ -52,6 +54,25 @@ final class SignupForm {
 	 * Query argument that carries the token back in a link.
 	 */
 	public const ARG_TOKEN = 'inscripcion';
+
+	/**
+	 * Query argument that says the workshops could not be saved, and why.
+	 *
+	 * La inscripción ya existe cuando se toman las plazas: si la última se fue
+	 * en ese instante, la persona está inscrita sin taller y hay que decírselo
+	 * en la pantalla a la que se vuelve.
+	 */
+	public const ARG_SEAT = 'taller_no';
+
+	/**
+	 * Query argument that says the confirmation email could not be sent.
+	 */
+	public const ARG_MAIL = 'sin_correo';
+
+	/**
+	 * Field of the workshops chosen: one value, or a list.
+	 */
+	public const FIELD_WORKSHOP = 'evt_workshop';
 
 	/**
 	 * What the last submit left to say, for the block to paint.
@@ -113,7 +134,7 @@ final class SignupForm {
 	public static function maybe_handle_submit(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- se comprueba justo debajo.
 		$op = isset( $_POST[ self::FIELD_OP ] ) ? sanitize_key( wp_unslash( $_POST[ self::FIELD_OP ] ) ) : '';
-		if ( self::OP_SIGNUP !== $op && self::OP_WORKSHOP !== $op ) {
+		if ( ! in_array( $op, array( self::OP_SIGNUP, self::OP_WORKSHOP, self::OP_RESEND ), true ) ) {
 			return;
 		}
 
@@ -133,6 +154,10 @@ final class SignupForm {
 
 		if ( self::OP_SIGNUP === $op ) {
 			self::signup( $event_id, $raw );
+			return;
+		}
+		if ( self::OP_RESEND === $op ) {
+			self::resend( $event_id, $raw );
 			return;
 		}
 		self::workshop( $event_id, $raw );
@@ -184,11 +209,36 @@ final class SignupForm {
 			return;
 		}
 
-		$id = Registrations::create( $event_id, $v['core'], $v['answers'] );
+		// Las reglas de los talleres se miran **antes** de crear nada: elegir dos
+		// sesiones del mismo taller es un error de la persona, y se corrige en el
+		// formulario, no con una inscripción hecha a medias (ADR-0050).
+		$talleres = self::workshops_open( $event_id ) ? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) : array();
+		$maximo   = Registrations::max_workshops( $event_id );
+		$regla    = WorkshopChoice::check( Registrations::workshop_map( $event_id ), $talleres, $maximo );
+		if ( '' !== $regla ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => WorkshopChoice::why( $regla, $maximo ) . ' No se ha guardado la inscripción: corríjalo y vuelva a enviarla.',
+			);
+			return;
+		}
+
+		$alta = Registrations::add( $event_id, $v['core'], $v['answers'], get_current_user_id() );
+		if ( 'repetida' === $alta['error'] ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'Ya hay una inscripción en este evento con ese documento de identidad. Si es la suya, '
+					. 'pida más abajo que le reenviemos el enlace a su correo para consultarla o cambiar de taller.',
+			);
+			return;
+		}
+		$id = (int) $alta['id'];
 		if ( $id <= 0 ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
+				'message' => 'ocupado' === $alta['error']
+					? 'Hay muchas personas inscribiéndose a la vez. Vuelva a enviar el formulario en unos segundos.'
+					: 'No se ha podido guardar la inscripción. Vuelva a intentarlo.',
 			);
 			return;
 		}
@@ -206,14 +256,53 @@ final class SignupForm {
 			return;
 		}
 
-		// El taller, si se pidió uno y su plazo está abierto, va por el mismo
-		// camino que un cambio: el candado y el aforo mandan igual (ADR-0033).
-		$taller = isset( $raw['evt_workshop'] ) ? (int) $raw['evt_workshop'] : 0;
-		if ( $taller > 0 && self::workshops_open( $event_id ) ) {
-			Registrations::seat( $event_id, $id, $taller );
+		// Los talleres van por el mismo camino que un cambio: el candado y el
+		// aforo mandan igual (ADR-0033).
+		$args = array();
+		if ( array() !== $talleres ) {
+			$sitio = Registrations::seat( $event_id, $id, $talleres );
+			if ( ! $sitio['ok'] ) {
+				$args[ self::ARG_SEAT ] = $sitio['error'];
+			}
 		}
 
-		Shell::leave( self::link( $event_id, (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true ) ) );
+		// El correo, con los talleres ya puestos. Si no sale, la persona sigue
+		// inscrita: se le dice que guarde el enlace de la pantalla.
+		if ( ! SignupMail::confirmation( $id, SignupMail::SIGNED_UP ) ) {
+			$args[ self::ARG_MAIL ] = '1';
+		}
+
+		Shell::leave( add_query_arg( $args, self::link( $event_id, (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true ) ) ) );
+	}
+
+	/**
+	 * Send the link again to the email typed, if it is signed up.
+	 *
+	 * La respuesta es **la misma** haya o no una inscripción con ese correo:
+	 * si no, el formulario serviría para averiguar quién está inscrito. El
+	 * enlace solo va a la dirección guardada en la inscripción, nunca a otra.
+	 *
+	 * @param int                  $event_id Event post ID.
+	 * @param array<string, mixed> $raw      Submitted fields.
+	 * @return void
+	 */
+	private static function resend( int $event_id, array $raw ): void {
+		$correo = strtolower( trim( sanitize_email( (string) ( $raw['email'] ?? '' ) ) ) );
+		if ( ! is_email( $correo ) ) {
+			self::$notice = array(
+				'level'   => 'error',
+				'message' => 'Escriba el correo con el que se inscribió.',
+			);
+			return;
+		}
+		if ( EventPostType::is_root( $event_id ) ) {
+			SignupMail::resend( Registrations::by_email( $event_id, $correo ) );
+		}
+		self::$notice = array(
+			'level'   => 'success',
+			'message' => 'Si hay una inscripción en este evento con ese correo, le acabamos de enviar el enlace. '
+				. 'Revise también la carpeta de correo no deseado. Si no llega en unos minutos, avise a la organización.',
+		);
 	}
 
 	/**
@@ -225,12 +314,12 @@ final class SignupForm {
 	 */
 	private static function workshop( int $event_id, array $raw ): void {
 		$token = isset( $raw[ self::FIELD_TOKEN ] ) ? (string) $raw[ self::FIELD_TOKEN ] : '';
-		$id    = Registrations::by_token( $event_id, $token );
+		$id    = '' !== $token ? Registrations::by_token( $event_id, $token ) : Registrations::of_user( $event_id );
 
 		if ( $id <= 0 ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => 'Este enlace ya no sirve. Pida uno nuevo desde el correo de confirmación.',
+				'message' => 'Este enlace ya no sirve. Pida que se lo reenviemos con el correo con el que se inscribió.',
 			);
 			return;
 		}
@@ -242,11 +331,11 @@ final class SignupForm {
 			return;
 		}
 
-		$res = Registrations::seat( $event_id, $id, isset( $raw['evt_workshop'] ) ? (int) $raw['evt_workshop'] : 0 );
+		$res = Registrations::seat( $event_id, $id, WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) );
 		if ( ! $res['ok'] ) {
 			self::$notice = array(
 				'level'   => 'error',
-				'message' => self::why_no_seat( $res['error'] ),
+				'message' => self::why_no_seat( $res['error'], Registrations::max_workshops( $event_id ) ),
 			);
 			return;
 		}
@@ -258,13 +347,18 @@ final class SignupForm {
 	 * Why a seat was refused, in Spanish.
 	 *
 	 * @param string $error Error code.
+	 * @param int    $max   How many workshops may be chosen.
 	 * @return string
 	 */
-	public static function why_no_seat( string $error ): string {
+	public static function why_no_seat( string $error, int $max = 1 ): string {
 		$textos = array(
-			'sin_plazas' => 'Ese taller se ha llenado mientras rellenaba la página. Elija otro de la lista, que está al día.',
+			'sin_plazas' => 'Un taller de los que eligió se ha llenado mientras rellenaba la página. Elija otro de la lista, que está al día.',
 			'ocupado'    => 'Hay varias personas eligiendo taller a la vez. Vuelva a intentarlo en unos segundos.',
 		);
+		$regla  = WorkshopChoice::why( $error, $max );
+		if ( '' !== $regla ) {
+			return $regla;
+		}
 		return $textos[ $error ] ?? 'No se ha podido guardar la elección.';
 	}
 
@@ -312,7 +406,11 @@ final class SignupForm {
 	public static function current( int $event_id ): int {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- un testigo de lectura, no una escritura.
 		$token = isset( $_GET[ self::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::ARG_TOKEN ] ) ) : '';
-		return '' === $token ? 0 : Registrations::by_token( $event_id, $token );
+		if ( '' !== $token ) {
+			return Registrations::by_token( $event_id, $token );
+		}
+		// Con sesión no hace falta el enlace: la cuenta dice quién es (ADR-0051).
+		return is_user_logged_in() ? Registrations::of_user( $event_id ) : 0;
 	}
 
 	/**

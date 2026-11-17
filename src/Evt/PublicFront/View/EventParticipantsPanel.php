@@ -35,8 +35,20 @@ final class EventParticipantsPanel {
 	 * @return string
 	 */
 	public static function html( array $m ): string {
+		$cajon = '';
+		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
+			$cajon = PanelParts::drawer(
+				0 === (int) $m['edit_values']['id'] ? 'Inscribir a una persona' : 'Corregir inscripción',
+				self::form( $m ),
+				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
+				(array) $m['flash'],
+				true,
+				true
+			);
+		}
+
 		if ( 0 === (int) $m['people_total'] ) {
-			return self::empty_state( $m );
+			return $cajon . self::empty_state( $m );
 		}
 
 		$filas = (array) $m['people'];
@@ -46,21 +58,9 @@ final class EventParticipantsPanel {
 		<div class="evt-panel-cabecera"><div>
 			<h2 class="evt-panel-titulo">Participantes</h2>
 			<p class="evt-sub">Se filtra por cualquier dato —un apellido, un centro, un taller— y se exporta a CSV lo que quede filtrado.</p>
-		</div></div>
+		</div><?php echo self::add_button( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?></div>
 
-		<?php
-		if ( array() !== (array) ( $m['edit_values'] ?? array() ) ) {
-			$cajon = PanelParts::drawer(
-				'Corregir inscripción',
-				self::form( $m ),
-				EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ),
-				(array) $m['flash'],
-				true,
-				true
-			);
-			echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado.
-		}
-		?>
+		<?php echo $cajon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::counters( $m, $filas ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<?php echo self::filter( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 
@@ -101,6 +101,27 @@ final class EventParticipantsPanel {
 		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The «Inscribir a una persona» button, for whoever may edit the event.
+	 *
+	 * Para quien llama por teléfono porque no sabe inscribirse: la organización
+	 * la inscribe y le llega el mismo correo con su enlace (ADR-0052).
+	 *
+	 * @param array<string, mixed> $m Model.
+	 * @return string
+	 */
+	private static function add_button( array $m ): string {
+		if ( true !== ( $m['can_edit'] ?? false ) || true === ( $m['archived'] ?? false ) ) {
+			return '';
+		}
+		return sprintf(
+			'<div class="evt-acciones"><a data-evt-abrir-cajon class="%1$s" href="%2$s">%3$s Inscribir a una persona</a></div>',
+			esc_attr( Assets::button_class( true ) ),
+			esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE, array( EventWorkspace::ARG_NEW => '1' ) ) ),
+			wp_kses( Shell::icon_plus(), PanelParts::SVG )
+		);
 	}
 
 	/**
@@ -183,6 +204,10 @@ final class EventParticipantsPanel {
 	private static function form( array $m ): string {
 		$v         = (array) $m['edit_values'];
 		$id        = (int) $v['id'];
+		$nueva     = 0 === $id;
+		$maximo    = max( 1, (int) ( $m['signup']['workshop_max'] ?? 1 ) );
+		$suyos     = array_map( 'intval', (array) ( $v['workshops'] ?? array() ) );
+		$centros   = (array) ( $m['centres'] ?? array() );
 		$op        = EventWorkspace::OP_REG_SAVE;
 		$preguntas = Registrations::questions( (int) $m['event_id'] );
 		$respuesta = (array) $v['answers'];
@@ -213,8 +238,17 @@ final class EventParticipantsPanel {
 			<div class="evt-form-campo">
 				<label for="evt-rg-centre">Código del centro</label>
 				<input type="text" id="evt-rg-centre" name="evt_rg_centre" inputmode="numeric" pattern="\d{8}" <?php echo '' === (string) $v['centre_code'] && '' !== (string) $v['centre'] ? '' : 'required'; ?>
+					<?php echo array() !== $centros ? 'list="evt-rg-centros"' : ''; ?> autocomplete="off"
 					value="<?php echo esc_attr( (string) $v['centre_code'] ); ?>" />
-				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial.' ); ?> El nombre sale del catálogo de centros.</small>
+				<?php if ( array() !== $centros ) : ?>
+					<?php // Se escribe el nombre o el código y el navegador propone; lo que se envía es el código. ?>
+					<datalist id="evt-rg-centros">
+						<?php foreach ( $centros as $codigo => $denominacion ) : ?>
+							<option value="<?php echo esc_attr( (string) $codigo ); ?>"><?php echo esc_html( (string) $denominacion ); ?></option>
+						<?php endforeach; ?>
+					</datalist>
+				<?php endif; ?>
+				<small><?php echo esc_html( '' !== (string) $v['centre'] ? 'Ahora: ' . (string) $v['centre'] . '.' : 'Los ocho dígitos del código oficial; escriba el nombre y elija.' ); ?> El nombre sale del catálogo de centros.</small>
 			</div>
 
 			<?php foreach ( $preguntas as $pregunta ) : ?>
@@ -222,33 +256,51 @@ final class EventParticipantsPanel {
 			<?php endforeach; ?>
 
 			<?php if ( array() !== (array) $m['workshops'] ) : ?>
-				<div class="evt-form-campo">
-					<label for="evt-rg-workshop">Taller</label>
-					<select id="evt-rg-workshop" name="evt_rg_workshop">
-						<option value="0">Sin taller</option>
-						<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
-							<option value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php selected( (int) $v['workshop'], (int) $taller['id'] ); ?>>
-								<?php echo esc_html( (string) $taller['title'] . ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' ) ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-					<small>Con el mismo aforo que cuando lo elige la persona: un taller completo no admite a nadie más.</small>
-				</div>
+				<fieldset class="evt-form-campo">
+					<legend><?php echo esc_html( 1 === $maximo ? 'Taller' : sprintf( 'Talleres (hasta %d)', $maximo ) ); ?></legend>
+					<?php if ( 1 === $maximo ) : ?>
+						<label><input type="radio" name="evt_rg_workshop" value="0" <?php checked( array() === $suyos ); ?> /> Sin taller</label>
+					<?php endif; ?>
+					<?php foreach ( (array) $m['workshops'] as $taller ) : ?>
+						<?php
+						$cuando = trim( (string) $taller['date'] . ' ' . (string) $taller['start'] );
+						$rotulo = (string) $taller['title']
+							. ( (int) $taller['seats'] > 0 ? sprintf( ' (%d de %d)', (int) $taller['taken'], (int) $taller['seats'] ) : '' )
+							. ( '' !== $cuando ? ' · ' . $cuando : '' );
+						?>
+						<label><input type="<?php echo 1 === $maximo ? 'radio' : 'checkbox'; ?>" name="evt_rg_workshop<?php echo 1 === $maximo ? '' : '[]'; ?>"
+							value="<?php echo esc_attr( (string) (int) $taller['id'] ); ?>" <?php checked( in_array( (int) $taller['id'], $suyos, true ) ); ?> />
+							<?php echo esc_html( $rotulo ); ?></label>
+					<?php endforeach; ?>
+					<small>Con el mismo aforo y las mismas reglas que cuando los elige la persona: un taller completo no admite a nadie más, y no se eligen dos sesiones del mismo taller ni dos que coincidan en hora.</small>
+				</fieldset>
 			<?php endif; ?>
 
-			<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+			<?php if ( $nueva ) : ?>
+				<div class="evt-form-campo">
+					<label><input type="checkbox" name="evt_rg_consent" value="1" required /> La persona conoce y acepta la información de protección de datos y el consentimiento informado del evento.</label>
+					<small>Queda guardado que el consentimiento lo declaró la organización, y quién.</small>
+				</div>
+				<div class="evt-form-campo">
+					<label><input type="checkbox" name="evt_rg_mail" value="1" checked /> Enviarle el correo con el enlace a su inscripción</label>
+				</div>
+			<?php else : ?>
+				<p class="evt-sub">El consentimiento, su fecha y los documentos aportados no se corrigen: son lo que aceptó y entregó la persona.</p>
+			<?php endif; ?>
 
 			<div class="evt-acciones">
-				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit">Guardar la inscripción</button>
+				<button class="<?php echo esc_attr( Assets::button_class( true ) ); ?>" type="submit"><?php echo esc_html( $nueva ? 'Inscribir' : 'Guardar la inscripción' ); ?></button>
 				<a class="<?php echo esc_attr( Assets::button_class() ); ?>" href="<?php echo esc_url( EventWorkspace::url( (int) $m['event_id'], EventWorkspace::PANEL_PEOPLE ) ); ?>" data-evt-cerrar-cajon>Cancelar</a>
 			</div>
 		</form>
 
-		<section class="evt-tarjeta evt-peligro">
-			<h2>Borrar la inscripción</h2>
-			<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
-			<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
-		</section>
+		<?php if ( ! $nueva ) : ?>
+			<section class="evt-tarjeta evt-peligro">
+				<h2>Borrar la inscripción</h2>
+				<p>Se borran sus datos y sus documentos. No hay papelera ni vuelta atrás.</p>
+				<?php echo self::delete_form( $m, $id, trim( (string) $v['name'] . ' ' . (string) $v['surname'] ), (string) $v['email'], false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+			</section>
+		<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -436,6 +488,7 @@ final class EventParticipantsPanel {
 
 		ob_start();
 		?>
+		<?php echo self::add_button( $m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		<section class="evt-tarjeta">
 			<h2>Todavía no hay nadie inscrito</h2>
 			<p>

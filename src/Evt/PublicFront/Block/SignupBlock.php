@@ -7,8 +7,10 @@
 
 namespace Evt\PublicFront\Block;
 
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PublicFront\Assets;
+use Evt\PublicFront\Attendance;
 use Evt\PublicFront\Captcha;
 use Evt\PublicFront\Registrations;
 use Evt\PublicFront\RegistrationFiles;
@@ -56,6 +58,12 @@ final class SignupBlock {
 			return '';
 		}
 
+		// Quien llega escaneando un QR de asistencia viene a marcarla, no a
+		// inscribirse: la misma página, otra cosa (ADR-0053).
+		if ( '' !== Attendance::token_in_request() ) {
+			return Attendance::block( $evento );
+		}
+
 		$aviso = self::notice();
 		$mia   = SignupForm::current( $evento );
 
@@ -66,7 +74,7 @@ final class SignupBlock {
 
 		$cerrada = SignupForm::closed_because( $evento );
 		if ( '' !== $cerrada ) {
-			return $aviso . '<p class="evt-ins__cerrada alert alert-info">' . esc_html( $cerrada ) . '</p>';
+			return $aviso . '<p class="evt-ins__cerrada alert alert-info">' . esc_html( $cerrada ) . '</p>' . self::resend_form( $evento );
 		}
 
 		$sesion = SignupForm::login_needed( $evento );
@@ -79,7 +87,27 @@ final class SignupBlock {
 			);
 		}
 
-		return $aviso . self::form( $evento );
+		return $aviso . self::form( $evento ) . self::resend_form( $evento );
+	}
+
+	/**
+	 * «Already signed up? We send you the link again.»
+	 *
+	 * Plegado y al final: lo busca quien perdió el correo, y no estorba a
+	 * quien se inscribe por primera vez. Sale también con la inscripción
+	 * cerrada, que es cuando más se busca el enlace para elegir taller.
+	 *
+	 * @param int $evento Event post ID.
+	 * @return string
+	 */
+	private static function resend_form( int $evento ): string {
+		return '<details class="evt-ins__recuperar mt-4"><summary>¿Ya se inscribió? Le reenviamos el enlace de su inscripción</summary>'
+			. '<form class="evt-ins__recuperar-form mt-2" method="post">'
+			. self::hidden( $evento, SignupForm::OP_RESEND )
+			. '<p class="evt-campo mb-3"><label class="form-label" for="evt-ins-recuperar">Correo con el que se inscribió</label>'
+			. '<input class="form-control" type="email" id="evt-ins-recuperar" name="email" autocomplete="email" required></p>'
+			. '<p><button type="submit" class="' . esc_attr( Assets::button_class() ) . '">Enviarme el enlace</button></p>'
+			. '</form></details>';
 	}
 
 	/**
@@ -157,19 +185,47 @@ final class SignupBlock {
 		$html  = '<div class="evt-ins evt-ins--mia">';
 		$html .= '<p class="evt-ins__hecha alert alert-success">Su inscripción está registrada, ' . esc_html( $nombre ) . '.</p>';
 
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- avisos de la redirección y el testigo de lectura; las escrituras llevan su nonce.
+		$sin_taller = isset( $_GET[ SignupForm::ARG_SEAT ] ) ? sanitize_key( wp_unslash( $_GET[ SignupForm::ARG_SEAT ] ) ) : '';
+		$sin_correo = isset( $_GET[ SignupForm::ARG_MAIL ] );
+		$token      = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		if ( '' !== $sin_taller ) {
+			$html .= '<p class="evt-aviso alert alert-warning" role="alert">'
+				. esc_html( 'Está inscrito, pero sus talleres no se han guardado: ' . SignupForm::why_no_seat( $sin_taller, Registrations::max_workshops( $evento ) ) )
+				. '</p>';
+		}
+		if ( $sin_correo ) {
+			$html .= '<p class="evt-aviso alert alert-warning" role="alert">No hemos podido enviarle el correo de confirmación. '
+				. '<strong>Guarde la dirección de esta página</strong>: es el enlace para volver a su inscripción.</p>';
+		}
+
+		$rotulos = Registrations::workshop_labels( $evento );
+		$suyos   = array();
+		foreach ( Registrations::workshops_of( $mia ) as $taller ) {
+			if ( isset( $rotulos[ $taller ] ) ) {
+				$suyos[] = $rotulos[ $taller ];
+			}
+		}
+		if ( array() !== $suyos ) {
+			$html .= '<p class="evt-ins__mis-talleres"><strong>' . ( count( $suyos ) > 1 ? 'Sus talleres' : 'Su taller' ) . ':</strong> '
+				. esc_html( implode( '; ', $suyos ) ) . '</p>';
+		}
+
 		if ( ! SignupForm::workshops_open( $evento ) ) {
 			$html .= '<p class="evt-ins__cerrada alert alert-info">El plazo para elegir taller no está abierto.</p>';
 			return $html . '</div>';
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- solo para devolverlo en el formulario; la escritura lleva su nonce.
-		$token = isset( $_GET[ SignupForm::ARG_TOKEN ] ) ? sanitize_text_field( wp_unslash( $_GET[ SignupForm::ARG_TOKEN ] ) ) : '';
-
 		$html .= '<form class="evt-ins__taller" method="post">';
 		$html .= self::hidden( $evento, SignupForm::OP_WORKSHOP );
-		$html .= sprintf( '<input type="hidden" name="%1$s" value="%2$s">', esc_attr( SignupForm::FIELD_TOKEN ), esc_attr( $token ) );
+		// Sin testigo —con sesión— no viaja: la cuenta dice de quién es.
+		if ( '' !== $token ) {
+			$html .= sprintf( '<input type="hidden" name="%1$s" value="%2$s">', esc_attr( SignupForm::FIELD_TOKEN ), esc_attr( $token ) );
+		}
 		$html .= self::workshops( $evento, $mia );
-		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar el taller</button></p>';
+		$html .= '<p class="evt-ins__enviar"><button type="submit" class="' . esc_attr( Assets::button_class( true ) ) . '">Guardar mi elección</button></p>';
 		$html .= '</form></div>';
 
 		return $html;
@@ -414,18 +470,37 @@ final class SignupBlock {
 			return '<p class="evt-ins__sin-talleres alert alert-warning">Ahora mismo no queda ningún taller con plazas libres.</p>';
 		}
 
-		$html  = '<fieldset class="evt-ins__talleres mb-3"><legend class="h5">Taller</legend>';
-		$html .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="evt_workshop" value="0"' . ( 0 === $mia ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
+		$maximo = Registrations::max_workshops( $evento );
+		$varios = $maximo > 1;
+		$ayuda  = trim( (string) get_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_HELP, true ) );
+
+		$html = '<fieldset class="evt-ins__talleres mb-3"><legend class="h5">' . ( $varios ? 'Talleres' : 'Taller' ) . '</legend>';
+		// Las instrucciones, antes de la lista: las reglas que el aplicativo hace
+		// cumplir, dichas siempre igual, y lo que quiera añadir la organización.
+		$html .= '<div class="evt-ins__instrucciones form-text mb-2">';
+		if ( '' !== $ayuda ) {
+			$html .= wp_kses_post( wpautop( esc_html( $ayuda ) ) );
+		}
+		$html .= '<p>' . esc_html( WorkshopChoice::rules_text( $maximo ) ) . '</p></div>';
+
+		if ( ! $varios ) {
+			$ninguno = array() === array_filter( wp_list_pluck( $opciones, 'mine' ) );
+			$html   .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="' . esc_attr( SignupForm::FIELD_WORKSHOP ) . '" value="0"' . ( $ninguno ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
+		}
 		foreach ( $opciones as $taller ) {
-			$libres = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
-			$html  .= sprintf(
-				'<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-%1$d" name="evt_workshop" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%4$s</label></div>',
+			$libres  = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
+			$detalle = array_filter( array( $taller['when'], $taller['venue'] ), 'strlen' );
+			$html   .= sprintf(
+				'<div class="evt-opcion form-check"><input class="form-check-input" type="%5$s" id="evt-taller-%1$d" name="%6$s" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%7$s%4$s</label></div>',
 				$taller['id'],
 				$taller['mine'] ? ' checked' : '',
 				esc_html( $taller['title'] ),
 				$taller['seats'] > 0
 					? ' <span class="evt-plazas">(' . (int) $libres . ' plazas libres)</span>'
-					: ''
+					: '',
+				$varios ? 'checkbox' : 'radio',
+				esc_attr( SignupForm::FIELD_WORKSHOP . ( $varios ? '[]' : '' ) ),
+				array() !== $detalle ? ' <span class="evt-taller__cuando">— ' . esc_html( implode( ', ', $detalle ) ) . '</span>' : ''
 			);
 		}
 		return $html . '</fieldset>';

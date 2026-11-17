@@ -9,6 +9,7 @@ namespace Evt\PublicFront;
 
 use Evt\Domain\RegistrationInput;
 use Evt\Domain\SignupQuestions;
+use Evt\Domain\WorkshopChoice;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
 use Evt\PostType\RegistrationPostType;
@@ -96,14 +97,16 @@ final class Registrations {
 	 */
 	public static function participants( array $filas, int $event_id ): array {
 		$preguntas = self::questions( $event_id );
-		$talleres  = array();
-		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			$talleres[ $taller->ID ] = (string) $taller->post_title;
-		}
+		$talleres  = self::workshop_labels( $event_id );
 
 		foreach ( self::all( $event_id ) as $inscripcion ) {
-			$meta   = self::meta( $inscripcion->ID );
-			$taller = (int) $meta[ RegistrationMetaKeys::REG_WORKSHOP ];
+			$meta    = self::meta( $inscripcion->ID );
+			$elegido = array();
+			foreach ( WorkshopChoice::ids( $meta[ RegistrationMetaKeys::REG_WORKSHOP ] ) as $taller ) {
+				if ( isset( $talleres[ $taller ] ) ) {
+					$elegido[] = $talleres[ $taller ];
+				}
+			}
 
 			// Los documentos privados: en la columna va su **nombre**, que es lo
 			// que se lee y lo que se exporta; la descarga la compone la pantalla
@@ -123,7 +126,7 @@ final class Registrations {
 				'email'       => $meta[ RegistrationMetaKeys::REG_EMAIL ],
 				'centre_code' => $meta[ RegistrationMetaKeys::REG_CENTRE_CODE ] ?? '',
 				'centre'      => $meta[ RegistrationMetaKeys::REG_CENTRE ],
-				'workshop'    => $talleres[ $taller ] ?? '',
+				'workshop'    => implode( Participants::SEPARATOR, $elegido ),
 				'date'        => get_the_date( 'Y-m-d H:i', $inscripcion ),
 				'consent'     => self::consent_text( $meta ),
 				'files'       => implode( ', ', wp_list_pluck( $documentos, 'name' ) ),
@@ -196,7 +199,8 @@ final class Registrations {
 		if ( '' === $cuando ) {
 			return '';
 		}
-		return 'Sí (v' . $meta[ RegistrationMetaKeys::REG_CONSENT_VERSION ] . ', ' . $cuando . ')';
+		$quien = (int) $meta[ RegistrationMetaKeys::REG_BY ] > 0 ? ', declarado por la organización' : '';
+		return 'Sí (v' . $meta[ RegistrationMetaKeys::REG_CONSENT_VERSION ] . ', ' . $cuando . $quien . ')';
 	}
 
 	/**
@@ -261,7 +265,135 @@ final class Registrations {
 		return (bool) preg_match( '/^[a-f0-9]{40}$/', $token );
 	}
 
+	/**
+	 * The registration of this event with this tax ID, 0 for none.
+	 *
+	 * Un documento, una inscripción por evento (ADR-0051): es lo que ya hacía el
+	 * sistema anterior, y la manera de que nadie se apunte dos veces y ocupe
+	 * dos plazas.
+	 *
+	 * @param int    $event_id Event post ID.
+	 * @param string $tax_id   Tax ID, as typed or stored.
+	 * @param int    $except   Registration not to count (the one being corrected).
+	 * @return int
+	 */
+	public static function by_tax_id( int $event_id, string $tax_id, int $except = 0 ): int {
+		$tax_id = RegistrationInput::tax_id( $tax_id );
+		if ( '' === $tax_id ) {
+			return 0;
+		}
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			if ( (int) $inscripcion->ID === $except ) {
+				continue;
+			}
+			$suyo = RegistrationInput::tax_id( (string) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_TAX_ID, true ) );
+			if ( $suyo === $tax_id ) {
+				return (int) $inscripcion->ID;
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * The registrations of this event made with this email.
+	 *
+	 * @param int    $event_id Event post ID.
+	 * @param string $email    Email.
+	 * @return int[]
+	 */
+	public static function by_email( int $event_id, string $email ): array {
+		$email = strtolower( trim( $email ) );
+		if ( '' === $email ) {
+			return array();
+		}
+		$out = array();
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			if ( strtolower( trim( (string) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_EMAIL, true ) ) ) === $email ) {
+				$out[] = (int) $inscripcion->ID;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * The registration of a logged-in person in this event, 0 for none.
+	 *
+	 * Primero la que hizo esa cuenta; si no hay, la que lleva el correo de la
+	 * cuenta —la que le hizo la organización, o la que hizo sin sesión—. El
+	 * correo de una cuenta no lo cambia nadie sin confirmarlo desde la
+	 * dirección nueva, y por eso vale como prueba aquí y no en un formulario
+	 * (ADR-0051).
+	 *
+	 * @param int $event_id Event post ID.
+	 * @param int $user_id  User ID; 0 for the current one.
+	 * @return int
+	 */
+	public static function of_user( int $event_id, int $user_id = 0 ): int {
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+		if ( $user_id <= 0 || $event_id <= 0 ) {
+			return 0;
+		}
+		$todas = self::all( $event_id );
+		foreach ( $todas as $inscripcion ) {
+			if ( (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_USER, true ) === $user_id ) {
+				return (int) $inscripcion->ID;
+			}
+		}
+		$user = get_userdata( $user_id );
+		if ( ! $user instanceof \WP_User || ! is_email( $user->user_email ) ) {
+			return 0;
+		}
+		$suyas = self::by_email( $event_id, (string) $user->user_email );
+		return array() === $suyas ? 0 : $suyas[0];
+	}
+
 	// ─── escribir ──────────────────────────────────────────────────────────
+
+	/**
+	 * Store one signup, unless that tax ID is already signed up to the event.
+	 *
+	 * Comprobar y crear van **dentro del candado del evento** (ADR-0033): sin
+	 * él, dos envíos del mismo documento a la vez —el doble clic de siempre—
+	 * leerían los dos «no hay ninguna» y crearían dos.
+	 *
+	 * @param int                  $event_id Event post ID.
+	 * @param array<string, mixed> $core     Validated core fields.
+	 * @param array<string, mixed> $answers  Validated answers, keyed by question ID.
+	 * @param int                  $user_id  Account signing up, 0 for none.
+	 * @param int                  $by       Organiser making it, 0 when the person does.
+	 * @return array{id:int, error:string} error: '' | 'repetida' | 'ocupado' | 'no_guardada'.
+	 */
+	public static function add( int $event_id, array $core, array $answers, int $user_id = 0, int $by = 0 ): array {
+		if ( ! self::lock( $event_id ) ) {
+			return array(
+				'id'    => 0,
+				'error' => 'ocupado',
+			);
+		}
+		try {
+			if ( self::by_tax_id( $event_id, (string) ( $core['tax_id'] ?? '' ) ) > 0 ) {
+				return array(
+					'id'    => 0,
+					'error' => 'repetida',
+				);
+			}
+			$id = self::create( $event_id, $core, $answers );
+			if ( $id <= 0 ) {
+				return array(
+					'id'    => 0,
+					'error' => 'no_guardada',
+				);
+			}
+			update_post_meta( $id, RegistrationMetaKeys::REG_USER, max( 0, $user_id ) );
+			update_post_meta( $id, RegistrationMetaKeys::REG_BY, max( 0, $by ) );
+			return array(
+				'id'    => $id,
+				'error' => '',
+			);
+		} finally {
+			self::unlock( $event_id );
+		}
+	}
 
 	/**
 	 * Store one signup.
@@ -412,33 +544,42 @@ final class Registrations {
 	// ─── el aforo, que es lo único con carrera dentro ──────────────────────
 
 	/**
-	 * Take a workshop seat, releasing the previous one, or say why not.
+	 * Take the workshop seats asked for, releasing the others, or say why not.
 	 *
-	 * Los tres pasos —contar, soltar y tomar— van **dentro del mismo candado**,
-	 * y eso es lo que impide que alguien se quede sin ninguno de los dos
-	 * talleres: o el cambio entero o nada (ADR-0033).
+	 * Lo que se pide es **la elección entera**: la lista de talleres con la
+	 * que se quiere quedar la persona. Uno solo, o el 0 de «ninguno», vale
+	 * igual que antes de que se pudieran elegir varios.
+	 *
+	 * Las reglas —cuántos, sin repetir taller y sin solaparse (ADR-0050)— y
+	 * las plazas van **dentro del mismo candado**, igual que soltar y tomar, y
+	 * eso es lo que impide que alguien se quede sin ninguno: o la elección
+	 * entera o nada (ADR-0033).
 	 *
 	 * Lo que **no** se hace, y se escribe para que no vuelva por parecer lo
 	 * natural: contar en PHP, comparar y escribir sin candado. Dos peticiones
 	 * leen 19 de 20 y las dos escriben.
 	 *
-	 * @param int $event_id        Event post ID.
-	 * @param int $registration_id Registration post ID.
-	 * @param int $activity_id     Workshop to take, 0 to just release.
+	 * @param int       $event_id        Event post ID.
+	 * @param int       $registration_id Registration post ID.
+	 * @param int|int[] $activities      Workshops to keep; 0 or [] to just release.
 	 * @return array{ok:bool, error:string}
 	 */
-	public static function seat( int $event_id, int $registration_id, int $activity_id ): array {
+	public static function seat( int $event_id, int $registration_id, $activities ): array {
 		if ( $event_id <= 0 || (int) get_post_field( 'post_parent', $registration_id ) !== $event_id ) {
 			return array(
 				'ok'    => false,
 				'error' => 'no_es_de_este_evento',
 			);
 		}
-		if ( $activity_id > 0 && ! self::is_workshop_of( $event_id, $activity_id ) ) {
-			return array(
-				'ok'    => false,
-				'error' => 'no_es_un_taller_del_evento',
-			);
+		$pedidos = WorkshopChoice::ids( $activities );
+		$mapa    = self::workshop_map( $event_id );
+		foreach ( $pedidos as $id ) {
+			if ( ! isset( $mapa[ $id ] ) ) {
+				return array(
+					'ok'    => false,
+					'error' => WorkshopChoice::NOT_HERE,
+				);
+			}
 		}
 
 		if ( ! self::lock( $event_id ) ) {
@@ -449,24 +590,40 @@ final class Registrations {
 		}
 
 		try {
-			$actual = (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true );
-			if ( $actual === $activity_id ) {
+			$actuales = self::workshops_of( $registration_id );
+			$iguales  = $pedidos;
+			sort( $iguales );
+			$antes = $actuales;
+			sort( $antes );
+			if ( $iguales === $antes ) {
 				return array(
 					'ok'    => true,
 					'error' => '',
 				);
 			}
 
-			if ( $activity_id > 0 && ! self::fits( $event_id, $activity_id, $registration_id ) ) {
+			$regla = WorkshopChoice::check( $mapa, $pedidos, self::max_workshops( $event_id ) );
+			if ( '' !== $regla ) {
 				return array(
 					'ok'    => false,
-					'error' => 'sin_plazas',
+					'error' => $regla,
 				);
 			}
 
+			// Solo se cuentan las plazas de lo que se **añade**: lo que ya tenía
+			// lo conserva aunque el taller se haya llenado después.
+			foreach ( array_diff( $pedidos, $actuales ) as $nuevo ) {
+				if ( ! self::fits( $event_id, (int) $nuevo, $registration_id ) ) {
+					return array(
+						'ok'    => false,
+						'error' => 'sin_plazas',
+					);
+				}
+			}
+
 			// Soltar y tomar, en el mismo turno: no existe el instante en el
-			// que esta persona se ha quedado sin ninguno de los dos.
-			update_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, $activity_id );
+			// que esta persona se ha quedado sin ninguno de los suyos.
+			update_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, WorkshopChoice::store( $pedidos ) );
 
 			return array(
 				'ok'    => true,
@@ -475,6 +632,26 @@ final class Registrations {
 		} finally {
 			self::unlock( $event_id );
 		}
+	}
+
+	/**
+	 * The workshops a registration holds, as IDs.
+	 *
+	 * @param int $registration_id Registration post ID.
+	 * @return int[]
+	 */
+	public static function workshops_of( int $registration_id ): array {
+		return WorkshopChoice::ids( get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true ) );
+	}
+
+	/**
+	 * How many workshops one person may choose in this event.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return int At least 1.
+	 */
+	public static function max_workshops( int $event_id ): int {
+		return WorkshopChoice::max( get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, true ) );
 	}
 
 	/**
@@ -510,7 +687,7 @@ final class Registrations {
 			if ( (int) $inscripcion->ID === $except ) {
 				continue;
 			}
-			if ( (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true ) === $activity_id ) {
+			if ( in_array( $activity_id, self::workshops_of( (int) $inscripcion->ID ), true ) ) {
 				++$n;
 			}
 		}
@@ -527,29 +704,25 @@ final class Registrations {
 	 *
 	 * @param int $event_id        Event post ID.
 	 * @param int $registration_id Who is choosing, 0 for a new signup.
-	 * @return array<int, array{id:int, title:string, seats:int, taken:int, mine:bool}>
+	 * @return array<int, array{id:int, title:string, label:string, when:string, venue:string, seats:int, taken:int, mine:bool}>
 	 */
 	public static function choices( int $event_id, int $registration_id = 0 ): array {
-		$mio = $registration_id > 0
-			? (int) get_post_meta( $registration_id, RegistrationMetaKeys::REG_WORKSHOP, true )
-			: 0;
+		$mios = $registration_id > 0 ? self::workshops_of( $registration_id ) : array();
 
 		// Se cuentan todas las plazas de una pasada, no una vuelta por taller.
-		$ocupados = array_count_values(
-			array_map(
-				static function ( \WP_Post $inscripcion ): int {
-					return (int) get_post_meta( $inscripcion->ID, RegistrationMetaKeys::REG_WORKSHOP, true );
-				},
-				self::all( $event_id )
-			)
-		);
+		$ocupados = array();
+		foreach ( self::all( $event_id ) as $inscripcion ) {
+			foreach ( self::workshops_of( (int) $inscripcion->ID ) as $taller ) {
+				$ocupados[ $taller ] = ( $ocupados[ $taller ] ?? 0 ) + 1;
+			}
+		}
 
-		$out = array();
-		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			$id      = (int) $taller->ID;
-			$aforo   = (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true );
+		$rotulos = self::workshop_labels( $event_id );
+		$out     = array();
+		foreach ( self::workshop_map( $event_id ) as $id => $taller ) {
+			$aforo   = (int) $taller['seats'];
 			$ocupado = $ocupados[ $id ] ?? 0;
-			$suyo    = $id === $mio;
+			$suyo    = in_array( $id, $mios, true );
 
 			if ( ! $suyo && $aforo > 0 && $ocupado >= $aforo ) {
 				continue;
@@ -557,7 +730,10 @@ final class Registrations {
 
 			$out[] = array(
 				'id'    => $id,
-				'title' => (string) $taller->post_title,
+				'title' => (string) $taller['title'],
+				'label' => (string) ( $rotulos[ $id ] ?? $taller['title'] ),
+				'when'  => self::when( $taller ),
+				'venue' => (string) $taller['venue'],
 				'seats' => $aforo,
 				'taken' => $ocupado,
 				'mine'  => $suyo,
@@ -567,19 +743,73 @@ final class Registrations {
 	}
 
 	/**
-	 * Whether an activity is a workshop of this event.
+	 * The workshops of an event with what the rules need: id => row.
 	 *
-	 * @param int $event_id    Event post ID.
-	 * @param int $activity_id Activity.
-	 * @return bool
+	 * @param int $event_id Event post ID.
+	 * @return array<int, array{title:string, date:string, start:string, end:string, venue:string, seats:int}>
 	 */
-	private static function is_workshop_of( int $event_id, int $activity_id ): bool {
+	public static function workshop_map( int $event_id ): array {
+		$out = array();
 		foreach ( Programme::workshops( $event_id ) as $taller ) {
-			if ( (int) $taller->ID === $activity_id ) {
-				return true;
-			}
+			$id         = (int) $taller->ID;
+			$out[ $id ] = array(
+				'title' => (string) $taller->post_title,
+				'date'  => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_DATE, true ),
+				'start' => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_START, true ),
+				'end'   => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_END, true ),
+				'venue' => (string) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_VENUE, true ),
+				'seats' => (int) get_post_meta( $id, ProgrammeMetaKeys::ACTIVITY_SEATS, true ),
+			);
 		}
-		return false;
+		return $out;
+	}
+
+	/**
+	 * How each workshop is named in lists: its title, plus when if it repeats.
+	 *
+	 * Un taller que se da dos veces tiene dos sesiones con el mismo título; en
+	 * la lista de participantes y en el CSV tienen que distinguirse, así que a
+	 * esas —y solo a esas— se les añade el día y la hora.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return array<int, string>
+	 */
+	public static function workshop_labels( int $event_id ): array {
+		$mapa   = self::workshop_map( $event_id );
+		$veces  = array();
+		$claves = array();
+		foreach ( $mapa as $id => $taller ) {
+			$claves[ $id ]           = WorkshopChoice::key( $taller['title'] );
+			$veces[ $claves[ $id ] ] = ( $veces[ $claves[ $id ] ] ?? 0 ) + 1;
+		}
+		$out = array();
+		foreach ( $mapa as $id => $taller ) {
+			$cuando     = self::when( $taller );
+			$out[ $id ] = $veces[ $claves[ $id ] ] > 1 && '' !== $cuando
+				? $taller['title'] . ' (' . $cuando . ')'
+				: $taller['title'];
+		}
+		return $out;
+	}
+
+	/**
+	 * When a workshop happens, as people read it: «6/2/2027, 15:00–16:15».
+	 *
+	 * @param array<string, mixed> $taller Row of {@see workshop_map()}.
+	 * @return string
+	 */
+	public static function when( array $taller ): string {
+		$partes = array();
+		$fecha  = \DateTimeImmutable::createFromFormat( '!Y-m-d', (string) ( $taller['date'] ?? '' ), wp_timezone() );
+		if ( false !== $fecha ) {
+			$partes[] = wp_date( 'j/n/Y', $fecha->getTimestamp() );
+		}
+		$desde = (string) ( $taller['start'] ?? '' );
+		$hasta = (string) ( $taller['end'] ?? '' );
+		if ( '' !== $desde ) {
+			$partes[] = '' !== $hasta ? $desde . '–' . $hasta : $desde;
+		}
+		return implode( ', ', $partes );
 	}
 
 	// ─── el candado ────────────────────────────────────────────────────────
