@@ -6,7 +6,7 @@ date: 2026-09-14
 related:
   issues: []
   prs: []
-  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0053, ADR-0054, ADR-0055]
+  adrs: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0016, ADR-0017, ADR-0018, ADR-0019, ADR-0020, ADR-0021, ADR-0022, ADR-0023, ADR-0024, ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0033, ADR-0034, ADR-0035, ADR-0036, ADR-0037, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043, ADR-0044, ADR-0045, ADR-0046, ADR-0047, ADR-0048, ADR-0049, ADR-0050, ADR-0051, ADR-0052, ADR-0053, ADR-0054, ADR-0055, ADR-0056]
   sdds: [SDD-0001, SDD-0002]
 supersedes: []
 superseded_by: []
@@ -300,6 +300,7 @@ lleva una adenda que apunta a la nueva. No es un estado más: la ADR sigue
 | [ADR-0053](ADR-0053-control-de-asistencia-con-qr-y-hoja-de-firmas.md) | Control de asistencia: puntos con QR que se marcan con la cuenta, y hoja de firmas | Aceptada | 2026-11-17 | [ADR-0051](ADR-0051-correo-de-confirmacion-y-volver-a-la-inscripcion.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0054](ADR-0054-el-ambito-de-la-persona-se-guarda-por-sitio.md) | El ámbito de la persona se guarda por sitio | Propuesta | 2026-11-17 | [ADR-0038](ADR-0038-ambitos-organizativos-jerarquicos.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
 | [ADR-0055](ADR-0055-un-evento-en-borrador-avisa-en-vez-de-dar-404.md) | Un evento en borrador avisa en vez de dar 404 | Propuesta | 2026-11-17 | [ADR-0042](ADR-0042-los-eventos-conservan-sus-url-y-pintan-su-programa.md), [SDD-0002](../sdd/SDD-0002-arquitectura-de-reemplazo.md) |
+| [ADR-0056](ADR-0056-los-talleres-se-eligen-en-el-formulario-o-aparte-y-dicen-sus-plazas.md) | Los talleres se eligen en el formulario o aparte, y cada uno dice sus plazas libres | Propuesta | 2026-11-18 | [ADR-0033](ADR-0033-elegir-taller-aforo-duro-y-cambio-hasta-el-cierre.md), [ADR-0050](ADR-0050-varios-talleres-por-persona-sin-repetir-ni-solapar.md) |
 
 **Ampliación del 2026-09-14: ADR-0024 y ADR-0025.** Las dos cierran preguntas
 que quedaron abiertas al implementar el diseño del día anterior. Un día **puede**

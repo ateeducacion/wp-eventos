@@ -113,6 +113,7 @@ dice de su inscripción.
 | `evt_signup_questions` | Las preguntas del evento, en JSON; cinco tipos: `check`, `one`, `many`, `text`, `file` |
 | `evt_workshop_open`, `evt_workshop_start`, `evt_workshop_end` | El plazo propio para elegir taller |
 | `evt_workshop_max`, `evt_workshop_help` | Cuántos talleres elige cada persona (uno si está vacío) y las instrucciones de encima de la lista (ADR-0050) |
+| `evt_workshop_where` | Dónde se eligen los talleres: `inscripcion` (en el formulario, por defecto) o `aparte` (después, desde la inscripción hecha) (ADR-0056) |
 | `evt_attendance_points` | Los puntos de control de asistencia, en JSON (ADR-0053) |
 | `evt_consent_privacy`, `evt_consent_image`, `evt_consent_version` | Los dos textos de consentimiento del evento y su versión |
 

@@ -6,7 +6,7 @@
  * Priority: 15
  *
  * @package Evt
- * @version 0.2.3
+ * @version 0.2.4
  */
 
 // phpcs:disable
@@ -1608,6 +1608,33 @@ final class RegistrationMetaKeys {
 
 
 
+	public const WORKSHOP_WHERE = 'evt_workshop_where';
+
+
+
+
+	public const WHERE_SIGNUP = 'inscripcion';
+	public const WHERE_APART  = 'aparte';
+
+
+
+
+
+
+	public static function workshop_places(): array {
+		return array(
+			self::WHERE_SIGNUP => 'En el formulario de inscripción',
+			self::WHERE_APART  => 'Aparte, después de inscribirse',
+		);
+	}
+
+
+
+
+
+
+
+
 	public const ATTENDANCE_POINTS = 'evt_attendance_points';
 
 
@@ -1663,6 +1690,7 @@ final class RegistrationMetaKeys {
 			self::WORKSHOP_END,
 			self::WORKSHOP_MAX,
 			self::WORKSHOP_HELP,
+			self::WORKSHOP_WHERE,
 			self::ATTENDANCE_POINTS,
 			self::CONSENT_PRIVACY,
 			self::CONSENT_IMAGE,
@@ -5589,6 +5617,10 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => 'sanitize_textarea_field',
 			),
+			RegistrationMetaKeys::WORKSHOP_WHERE    => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_workshop_where' ),
+			),
 			RegistrationMetaKeys::ATTENDANCE_POINTS => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_points' ),
@@ -5805,6 +5837,17 @@ final class RegistrationMetaRegistration {
 
 	public static function sanitize_bool( $value ): bool {
 		return (bool) $value;
+	}
+
+
+
+
+
+
+
+	public static function sanitize_workshop_where( $value ): string {
+		$value = is_scalar( $value ) ? (string) $value : '';
+		return isset( RegistrationMetaKeys::workshop_places()[ $value ] ) ? $value : RegistrationMetaKeys::WHERE_SIGNUP;
 	}
 }
 
@@ -13049,7 +13092,10 @@ final class SignupForm {
 
 
 
-		$talleres = self::workshops_open( $event_id ) ? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) : array();
+
+		$talleres = self::workshops_open( $event_id ) && self::workshops_in_form( $event_id )
+			? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() )
+			: array();
 		$maximo   = Registrations::max_workshops( $event_id );
 		$regla    = WorkshopChoice::check( Registrations::workshop_map( $event_id ), $talleres, $maximo );
 		if ( '' !== $regla ) {
@@ -13334,6 +13380,30 @@ final class SignupForm {
 	private static function day( string $ymd ): string {
 		$fecha = \DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, wp_timezone() );
 		return false === $fecha ? $ymd : wp_date( 'j/n/Y', $fecha->getTimestamp() );
+	}
+
+
+
+
+
+
+
+	public static function workshop_where( int $event_id ): string {
+		$valor = (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_WHERE, true );
+		return isset( RegistrationMetaKeys::workshop_places()[ $valor ] ) ? $valor : RegistrationMetaKeys::WHERE_SIGNUP;
+	}
+
+
+
+
+
+
+
+
+
+
+	public static function workshops_in_form( int $event_id ): bool {
+		return RegistrationMetaKeys::WHERE_SIGNUP === self::workshop_where( $event_id );
 	}
 
 
@@ -14287,6 +14357,7 @@ use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\Meta\RegistrationMetaRegistration;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
@@ -16150,6 +16221,7 @@ final class EventWorkspace {
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
 			'workshop_max'    => Registrations::max_workshops( $event_id ),
 			'workshop_help'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, true ),
+			'workshop_where'  => SignupForm::workshop_where( $event_id ),
 			'consent_privacy' => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_PRIVACY, true ),
 			'consent_image'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_IMAGE, true ),
 			'consent_version' => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
@@ -16202,6 +16274,7 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, min( 10, max( 1, (int) self::field( 'evt_workshop_max' ) ) ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_WHERE, RegistrationMetaRegistration::sanitize_workshop_where( self::field( 'evt_workshop_where' ) ) );
 
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, sanitize_textarea_field( wp_unslash( (string) ( $_POST['evt_workshop_help'] ?? '' ) ) ) );
 
@@ -18657,6 +18730,17 @@ final class EventSignupPanel {
 		$html  = '<fieldset class="evt-tarjeta evt-campos"><legend>Elegir taller</legend>';
 		$html .= self::toggle( 'evt_workshop_open', 'Se puede elegir taller', (bool) $a['workshop_open'] );
 		$html .= self::dates( 'evt_workshop_start', 'evt_workshop_end', 'evt-ws', (string) $a['workshop_start'], (string) $a['workshop_end'] );
+		$donde = (string) ( $a['workshop_where'] ?? RegistrationMetaKeys::WHERE_SIGNUP );
+		$html .= '<fieldset class="evt-campo"><legend>Dónde se eligen los talleres</legend>';
+		foreach ( RegistrationMetaKeys::workshop_places() as $valor => $rotulo ) {
+			$html .= sprintf(
+				'<label class="evt-check"><input type="radio" name="evt_workshop_where" value="%1$s"%2$s> %3$s</label>',
+				esc_attr( $valor ),
+				checked( $donde, $valor, false ),
+				esc_html( $rotulo )
+			);
+		}
+		$html .= '<small>«Aparte»: el formulario de inscripción no lleva talleres, y cada persona los elige después con el enlace de su correo o con su cuenta, mientras el plazo de talleres esté abierto. Útil cuando el programa se cierra más tarde que la inscripción.</small></fieldset>';
 		$html .= '<p class="evt-ayuda">Sin fechas manda el interruptor. Quien ya se inscribió puede cambiar de taller '
 			. 'mientras siga abierto, y un taller lleno deja de poder elegirse.</p>';
 		$html .= sprintf(
@@ -23722,7 +23806,7 @@ final class SignupBlock {
 		$html .= '</fieldset>';
 
 		$html .= self::questions( $evento );
-		$html .= self::workshops( $evento, 0 );
+		$html .= SignupForm::workshops_in_form( $evento ) ? self::workshops( $evento, 0 ) : self::workshops_later( $evento );
 		$html .= self::consent( $evento );
 
 
@@ -24053,22 +24137,62 @@ final class SignupBlock {
 			$html   .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="' . esc_attr( SignupForm::FIELD_WORKSHOP ) . '" value="0"' . ( $ninguno ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
 		}
 		foreach ( $opciones as $taller ) {
-			$libres  = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
 			$detalle = array_filter( array( $taller['when'], $taller['venue'] ), 'strlen' );
 			$html   .= sprintf(
 				'<div class="evt-opcion form-check"><input class="form-check-input" type="%5$s" id="evt-taller-%1$d" name="%6$s" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%7$s%4$s</label></div>',
 				$taller['id'],
 				$taller['mine'] ? ' checked' : '',
 				esc_html( $taller['title'] ),
-				$taller['seats'] > 0
-					? ' <span class="evt-plazas">(' . (int) $libres . ' plazas libres)</span>'
-					: '',
+				' ' . self::seats( $taller ),
 				$varios ? 'checkbox' : 'radio',
 				esc_attr( SignupForm::FIELD_WORKSHOP . ( $varios ? '[]' : '' ) ),
 				array() !== $detalle ? ' <span class="evt-taller__cuando">— ' . esc_html( implode( ', ', $detalle ) ) . '</span>' : ''
 			);
 		}
 		return $html . '</fieldset>';
+	}
+
+
+
+
+
+
+
+
+
+
+
+	public static function seats( array $taller ): string {
+		$aforo = (int) $taller['seats'];
+		if ( $aforo <= 0 ) {
+			return '<span class="evt-cupo evt-cupo--libre badge text-bg-light">Sin límite de plazas</span>';
+		}
+		$libres = max( 0, $aforo - (int) $taller['taken'] );
+		if ( ! empty( $taller['mine'] ) ) {
+			$texto = sprintf( 'Usted ocupa una de las %d plazas', $aforo );
+			$clase = 'evt-cupo--suya text-bg-success';
+		} elseif ( 1 === $libres ) {
+			$texto = sprintf( 'Queda 1 plaza de %d', $aforo );
+			$clase = 'evt-cupo--pocas text-bg-warning';
+		} else {
+			$texto = sprintf( 'Quedan %1$d de %2$d plazas', $libres, $aforo );
+			$clase = $libres <= max( 2, (int) ceil( $aforo / 10 ) ) ? 'evt-cupo--pocas text-bg-warning' : 'text-bg-light';
+		}
+		return '<span class="evt-cupo badge ' . esc_attr( $clase ) . '">' . esc_html( $texto ) . '</span>';
+	}
+
+
+
+
+
+
+
+	private static function workshops_later( int $evento ): string {
+		if ( array() === Registrations::workshop_labels( $evento ) ) {
+			return '';
+		}
+		return '<p class="evt-ins__talleres-despues alert alert-info">Los talleres se eligen después de inscribirse: '
+			. 'con el enlace que le llegará por correo, o entrando con su cuenta, mientras el plazo de talleres esté abierto.</p>';
 	}
 
 
@@ -31036,6 +31160,34 @@ body .swal2-container { z-index: 100010; }
 	font-size: 2.5rem;
 	font-weight: 700;
 	line-height: 1.1;
+}
+
+/* ─── el contador de plazas de cada taller (ADR-0056) ─────────────────── */
+
+/* Con o sin Bootstrap: la etiqueta se lee igual. Con él, `badge` y sus colores
+   mandan; sin él, esto la dibuja. */
+.evt-cupo {
+	display: inline-block;
+	margin-left: 0.35em;
+	padding: 0.15em 0.55em;
+	border-radius: 999px;
+	font-size: 0.8em;
+	font-weight: 600;
+	line-height: 1.4;
+	white-space: nowrap;
+	vertical-align: 0.1em;
+	background: #eef1f4;
+	color: #1d2327;
+}
+
+.evt-cupo--pocas {
+	background: #fff3cd;
+	color: #5c4400;
+}
+
+.evt-cupo--suya {
+	background: #d1e7dd;
+	color: #0f5132;
 }
 ',
   'css/evt-linea.css' => '/*

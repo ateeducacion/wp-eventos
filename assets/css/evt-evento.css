@@ -1226,3 +1226,31 @@
 	font-weight: 700;
 	line-height: 1.1;
 }
+
+/* ─── el contador de plazas de cada taller (ADR-0056) ─────────────────── */
+
+/* Con o sin Bootstrap: la etiqueta se lee igual. Con él, `badge` y sus colores
+   mandan; sin él, esto la dibuja. */
+.evt-cupo {
+	display: inline-block;
+	margin-left: 0.35em;
+	padding: 0.15em 0.55em;
+	border-radius: 999px;
+	font-size: 0.8em;
+	font-weight: 600;
+	line-height: 1.4;
+	white-space: nowrap;
+	vertical-align: 0.1em;
+	background: #eef1f4;
+	color: #1d2327;
+}
+
+.evt-cupo--pocas {
+	background: #fff3cd;
+	color: #5c4400;
+}
+
+.evt-cupo--suya {
+	background: #d1e7dd;
+	color: #0f5132;
+}

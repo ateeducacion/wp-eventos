@@ -219,7 +219,10 @@ final class SignupForm {
 		// Las reglas de los talleres se miran **antes** de crear nada: elegir dos
 		// sesiones del mismo taller es un error de la persona, y se corrige en el
 		// formulario, no con una inscripción hecha a medias (ADR-0050).
-		$talleres = self::workshops_open( $event_id ) ? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() ) : array();
+		// Con «aparte», el formulario no lleva talleres; lo que llegue se ignora.
+		$talleres = self::workshops_open( $event_id ) && self::workshops_in_form( $event_id )
+			? WorkshopChoice::ids( $raw[ self::FIELD_WORKSHOP ] ?? array() )
+			: array();
 		$maximo   = Registrations::max_workshops( $event_id );
 		$regla    = WorkshopChoice::check( Registrations::workshop_map( $event_id ), $talleres, $maximo );
 		if ( '' !== $regla ) {
@@ -507,7 +510,31 @@ final class SignupForm {
 	}
 
 	/**
-	 * Whether workshops can be chosen right now.
+	 * Where workshops are chosen in this event: in the signup form, or apart (ADR-0056).
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return string One of RegistrationMetaKeys::workshop_places().
+	 */
+	public static function workshop_where( int $event_id ): string {
+		$valor = (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_WHERE, true );
+		return isset( RegistrationMetaKeys::workshop_places()[ $valor ] ) ? $valor : RegistrationMetaKeys::WHERE_SIGNUP;
+	}
+
+	/**
+	 * Whether the signup form itself carries the workshop choice.
+	 *
+	 * Con «aparte», el formulario no los lleva aunque el plazo esté abierto: se
+	 * eligen después, desde la inscripción ya hecha (ADR-0056).
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return bool
+	 */
+	public static function workshops_in_form( int $event_id ): bool {
+		return RegistrationMetaKeys::WHERE_SIGNUP === self::workshop_where( $event_id );
+	}
+
+	/**
+	 * Whether workshops can be chosen right now, wherever they are chosen.
 	 *
 	 * Tiene plazo propio, con sus fechas, porque se abre cuando quien organiza
 	 * ha cerrado el programa y eso casi nunca coincide con abrir la inscripción

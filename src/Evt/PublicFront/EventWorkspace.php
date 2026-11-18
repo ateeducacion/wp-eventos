@@ -18,6 +18,7 @@ use Evt\Domain\WorkshopChoice;
 use Evt\Meta\EventMetaKeys;
 use Evt\Meta\ProgrammeMetaKeys;
 use Evt\Meta\RegistrationMetaKeys;
+use Evt\Meta\RegistrationMetaRegistration;
 use Evt\PostType\ActivityPostType;
 use Evt\PostType\EventPostType;
 use Evt\PostType\SpeakerPostType;
@@ -1881,6 +1882,7 @@ final class EventWorkspace {
 			'workshop_end'    => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, true ),
 			'workshop_max'    => Registrations::max_workshops( $event_id ),
 			'workshop_help'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, true ),
+			'workshop_where'  => SignupForm::workshop_where( $event_id ),
 			'consent_privacy' => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_PRIVACY, true ),
 			'consent_image'   => (string) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_IMAGE, true ),
 			'consent_version' => (int) get_post_meta( $event_id, RegistrationMetaKeys::CONSENT_VERSION, true ),
@@ -1933,6 +1935,7 @@ final class EventWorkspace {
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_START, self::field( 'evt_workshop_start' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_END, self::field( 'evt_workshop_end' ) );
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_MAX, min( 10, max( 1, (int) self::field( 'evt_workshop_max' ) ) ) );
+		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_WHERE, RegistrationMetaRegistration::sanitize_workshop_where( self::field( 'evt_workshop_where' ) ) );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- el nonce lo comprobó handle().
 		update_post_meta( $event_id, RegistrationMetaKeys::WORKSHOP_HELP, sanitize_textarea_field( wp_unslash( (string) ( $_POST['evt_workshop_help'] ?? '' ) ) ) );
 

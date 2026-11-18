@@ -158,6 +158,33 @@ final class RegistrationMetaKeys {
 	public const WORKSHOP_HELP = 'evt_workshop_help';
 
 	/**
+	 * Where workshops are chosen: in the signup form, or apart, after signing up.
+	 *
+	 * «En el formulario» es lo de siempre y el valor por defecto. «Aparte»
+	 * deja el formulario sin talleres: se eligen después con el enlace del
+	 * correo o con la cuenta, cuando la organización abre el plazo (ADR-0056).
+	 */
+	public const WORKSHOP_WHERE = 'evt_workshop_where';
+
+	/**
+	 * Values of WORKSHOP_WHERE.
+	 */
+	public const WHERE_SIGNUP = 'inscripcion';
+	public const WHERE_APART  = 'aparte';
+
+	/**
+	 * Where workshops are chosen, as people read it.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function workshop_places(): array {
+		return array(
+			self::WHERE_SIGNUP => 'En el formulario de inscripción',
+			self::WHERE_APART  => 'Aparte, después de inscribirse',
+		);
+	}
+
+	/**
 	 * The attendance checkpoints of the event, as JSON (ADR-0053).
 	 *
 	 * Una lista de `{"id","label","token","open"}`: «Entrada», «Mediodía»,
@@ -219,6 +246,7 @@ final class RegistrationMetaKeys {
 			self::WORKSHOP_END,
 			self::WORKSHOP_MAX,
 			self::WORKSHOP_HELP,
+			self::WORKSHOP_WHERE,
 			self::ATTENDANCE_POINTS,
 			self::CONSENT_PRIVACY,
 			self::CONSENT_IMAGE,

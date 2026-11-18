@@ -625,4 +625,64 @@ class Test_Signup_Form extends WP_UnitTestCase {
 		$html = $this->pintar( $evento );
 		$this->assertStringContainsString( 'no queda ningún taller con plazas libres', $html );
 	}
+
+	/**
+	 * Cada taller dice cuántas plazas le quedan, en el formulario y en la elección aparte.
+	 */
+	public function test_each_workshop_says_how_many_seats_are_left() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_OPEN, true );
+		$taller = $this->taller( $evento, 'Radio escolar' );
+
+		$this->assertStringContainsString( 'Quedan 20 de 20 plazas', $this->pintar( $evento ), 'en el formulario de inscripción' );
+
+		$this->enviar( $evento, $this->datos( array( 'evt_workshop' => (string) $taller ) ) );
+		$id                            = (int) Registrations::all( $evento )[0]->ID;
+		$_GET[ SignupForm::ARG_TOKEN ] = (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true );
+		$html                          = $this->pintar( $evento );
+		unset( $_GET[ SignupForm::ARG_TOKEN ] );
+		$this->assertStringContainsString( 'Usted ocupa una de las 20 plazas', $html, 'en la elección de quien ya está inscrita' );
+
+		// Quien llega después ve una plaza menos.
+		$this->assertStringContainsString( 'Quedan 19 de 20 plazas', $this->pintar( $evento ) );
+	}
+
+	/**
+	 * El contador: la última plaza se dice en singular, y sin aforo se dice que no hay límite.
+	 */
+	public function test_the_seats_counter_reads_well() {
+		$base = array(
+			'seats' => 10,
+			'taken' => 9,
+			'mine'  => false,
+		);
+		$this->assertStringContainsString( 'Queda 1 plaza de 10', SignupBlock::seats( $base ) );
+		$this->assertStringContainsString( 'Sin límite de plazas', SignupBlock::seats( array( 'seats' => 0 ) + $base ) );
+		$this->assertStringContainsString( 'Quedan 7 de 10 plazas', SignupBlock::seats( array( 'taken' => 3 ) + $base ) );
+	}
+
+	/**
+	 * Con «aparte», el formulario no lleva talleres, lo dice, y no guarda los que se cuelen.
+	 */
+	public function test_workshops_chosen_apart_are_not_in_the_signup_form() {
+		list( $evento ) = $this->evento_abierto();
+		update_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_OPEN, true );
+		update_post_meta( $evento, RegistrationMetaKeys::WORKSHOP_WHERE, RegistrationMetaKeys::WHERE_APART );
+		$taller = $this->taller( $evento, 'Radio escolar' );
+
+		$html = $this->pintar( $evento );
+		$this->assertStringNotContainsString( 'name="' . SignupForm::FIELD_WORKSHOP, $html );
+		$this->assertStringContainsString( 'Los talleres se eligen después de inscribirse', $html );
+
+		$this->enviar( $evento, $this->datos( array( 'evt_workshop' => (string) $taller ) ) );
+		$id = (int) Registrations::all( $evento )[0]->ID;
+		$this->assertSame( array(), Registrations::workshops_of( $id ), 'un taller colado en el envío no se guarda' );
+
+		// Y después, con su enlace, los elige.
+		$_GET[ SignupForm::ARG_TOKEN ] = (string) get_post_meta( $id, RegistrationMetaKeys::REG_TOKEN, true );
+		$html                          = $this->pintar( $evento );
+		unset( $_GET[ SignupForm::ARG_TOKEN ] );
+		$this->assertStringContainsString( 'name="' . SignupForm::FIELD_WORKSHOP, $html );
+		$this->assertStringContainsString( 'Quedan 20 de 20 plazas', $html );
+	}
 }

@@ -157,7 +157,7 @@ final class SignupBlock {
 		$html .= '</fieldset>';
 
 		$html .= self::questions( $evento );
-		$html .= self::workshops( $evento, 0 );
+		$html .= SignupForm::workshops_in_form( $evento ) ? self::workshops( $evento, 0 ) : self::workshops_later( $evento );
 		$html .= self::consent( $evento );
 
 		// Sin sesión, la casilla de ALTCHA (ADR-0040); con sesión no hace falta.
@@ -488,22 +488,62 @@ final class SignupBlock {
 			$html   .= '<div class="evt-opcion form-check"><input class="form-check-input" type="radio" id="evt-taller-0" name="' . esc_attr( SignupForm::FIELD_WORKSHOP ) . '" value="0"' . ( $ninguno ? ' checked' : '' ) . '> <label class="form-check-label" for="evt-taller-0">No elijo taller</label></div>';
 		}
 		foreach ( $opciones as $taller ) {
-			$libres  = $taller['seats'] > 0 ? max( 0, $taller['seats'] - $taller['taken'] ) : 0;
 			$detalle = array_filter( array( $taller['when'], $taller['venue'] ), 'strlen' );
 			$html   .= sprintf(
 				'<div class="evt-opcion form-check"><input class="form-check-input" type="%5$s" id="evt-taller-%1$d" name="%6$s" value="%1$d"%2$s> <label class="form-check-label" for="evt-taller-%1$d">%3$s%7$s%4$s</label></div>',
 				$taller['id'],
 				$taller['mine'] ? ' checked' : '',
 				esc_html( $taller['title'] ),
-				$taller['seats'] > 0
-					? ' <span class="evt-plazas">(' . (int) $libres . ' plazas libres)</span>'
-					: '',
+				' ' . self::seats( $taller ),
 				$varios ? 'checkbox' : 'radio',
 				esc_attr( SignupForm::FIELD_WORKSHOP . ( $varios ? '[]' : '' ) ),
 				array() !== $detalle ? ' <span class="evt-taller__cuando">— ' . esc_html( implode( ', ', $detalle ) ) . '</span>' : ''
 			);
 		}
 		return $html . '</fieldset>';
+	}
+
+	/**
+	 * The seats counter of one workshop, as the person choosing reads it.
+	 *
+	 * Lo que quede **antes** de su elección: en el taller que ya es suyo, su
+	 * plaza no se cuenta como libre, y se le dice que ocupa una. Sin aforo, se
+	 * dice también, para que la ausencia de cifra no parezca un olvido.
+	 *
+	 * @param array<string, mixed> $taller One of Registrations::choices().
+	 * @return string
+	 */
+	public static function seats( array $taller ): string {
+		$aforo = (int) $taller['seats'];
+		if ( $aforo <= 0 ) {
+			return '<span class="evt-cupo evt-cupo--libre badge text-bg-light">Sin límite de plazas</span>';
+		}
+		$libres = max( 0, $aforo - (int) $taller['taken'] );
+		if ( ! empty( $taller['mine'] ) ) {
+			$texto = sprintf( 'Usted ocupa una de las %d plazas', $aforo );
+			$clase = 'evt-cupo--suya text-bg-success';
+		} elseif ( 1 === $libres ) {
+			$texto = sprintf( 'Queda 1 plaza de %d', $aforo );
+			$clase = 'evt-cupo--pocas text-bg-warning';
+		} else {
+			$texto = sprintf( 'Quedan %1$d de %2$d plazas', $libres, $aforo );
+			$clase = $libres <= max( 2, (int) ceil( $aforo / 10 ) ) ? 'evt-cupo--pocas text-bg-warning' : 'text-bg-light';
+		}
+		return '<span class="evt-cupo badge ' . esc_attr( $clase ) . '">' . esc_html( $texto ) . '</span>';
+	}
+
+	/**
+	 * What the signup form says instead of the workshops, when they are chosen apart.
+	 *
+	 * @param int $evento Event post ID.
+	 * @return string
+	 */
+	private static function workshops_later( int $evento ): string {
+		if ( array() === Registrations::workshop_labels( $evento ) ) {
+			return '';
+		}
+		return '<p class="evt-ins__talleres-despues alert alert-info">Los talleres se eligen después de inscribirse: '
+			. 'con el enlace que le llegará por correo, o entrando con su cuenta, mientras el plazo de talleres esté abierto.</p>';
 	}
 
 	/**
