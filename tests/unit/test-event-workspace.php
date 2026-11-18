@@ -1183,6 +1183,28 @@ class Test_Event_Workspace extends WP_UnitTestCase {
 	}
 
 	/**
+	 * «Dónde se eligen los talleres» se guarda, y un valor que no es de la lista vuelve al formulario.
+	 */
+	public function test_where_workshops_are_chosen_is_saved() {
+		$area   = $this->area( 'Innovación' );
+		$uid    = $this->organiser( array( $area ) );
+		$evento = $this->event( $uid, array( $area ) );
+
+		$this->submit( $uid, EventWorkspace::PANEL_SIGNUP, $evento, 0, array( 'evt_workshop_where' => 'aparte' ) );
+		$this->assertSame( 'aparte', \Evt\PublicFront\SignupForm::workshop_where( $evento ) );
+
+		$this->submit( $uid, EventWorkspace::PANEL_SIGNUP, $evento, 0, array( 'evt_workshop_where' => 'cualquier-cosa' ) );
+		$this->assertSame( 'inscripcion', \Evt\PublicFront\SignupForm::workshop_where( $evento ) );
+
+		$this->acting_as( $uid );
+		$_GET[ EventWorkspace::ARG_EVENT ] = (string) $evento;
+		$_GET[ EventWorkspace::ARG_PANEL ] = EventWorkspace::PANEL_SIGNUP;
+		$html                              = \Evt\PublicFront\View\EventWorkspaceView::html( EventWorkspace::model() );
+		$this->assertStringContainsString( 'Dónde se eligen los talleres', $html );
+		$this->assertStringContainsString( 'Aparte, después de inscribirse', $html );
+	}
+
+	/**
 	 * «Quitar esta pregunta al guardar» la quita; varias filas nuevas se añaden de una vez.
 	 */
 	public function test_signup_questions_are_removed_and_added_in_one_go() {

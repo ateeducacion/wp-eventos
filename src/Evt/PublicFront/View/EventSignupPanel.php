@@ -122,6 +122,17 @@ final class EventSignupPanel {
 		$html  = '<fieldset class="evt-tarjeta evt-campos"><legend>Elegir taller</legend>';
 		$html .= self::toggle( 'evt_workshop_open', 'Se puede elegir taller', (bool) $a['workshop_open'] );
 		$html .= self::dates( 'evt_workshop_start', 'evt_workshop_end', 'evt-ws', (string) $a['workshop_start'], (string) $a['workshop_end'] );
+		$donde = (string) ( $a['workshop_where'] ?? RegistrationMetaKeys::WHERE_SIGNUP );
+		$html .= '<fieldset class="evt-campo"><legend>Dónde se eligen los talleres</legend>';
+		foreach ( RegistrationMetaKeys::workshop_places() as $valor => $rotulo ) {
+			$html .= sprintf(
+				'<label class="evt-check"><input type="radio" name="evt_workshop_where" value="%1$s"%2$s> %3$s</label>',
+				esc_attr( $valor ),
+				checked( $donde, $valor, false ),
+				esc_html( $rotulo )
+			);
+		}
+		$html .= '<small>«Aparte»: el formulario de inscripción no lleva talleres, y cada persona los elige después con el enlace de su correo o con su cuenta, mientras el plazo de talleres esté abierto. Útil cuando el programa se cierra más tarde que la inscripción.</small></fieldset>';
 		$html .= '<p class="evt-ayuda">Sin fechas manda el interruptor. Quien ya se inscribió puede cambiar de taller '
 			. 'mientras siga abierto, y un taller lleno deja de poder elegirse.</p>';
 		$html .= sprintf(

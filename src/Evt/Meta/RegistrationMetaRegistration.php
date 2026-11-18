@@ -155,6 +155,10 @@ final class RegistrationMetaRegistration {
 				'type'     => 'string',
 				'sanitize' => 'sanitize_textarea_field',
 			),
+			RegistrationMetaKeys::WORKSHOP_WHERE    => array(
+				'type'     => 'string',
+				'sanitize' => array( self::class, 'sanitize_workshop_where' ),
+			),
 			RegistrationMetaKeys::ATTENDANCE_POINTS => array(
 				'type'     => 'string',
 				'sanitize' => array( self::class, 'sanitize_points' ),
@@ -371,5 +375,16 @@ final class RegistrationMetaRegistration {
 	 */
 	public static function sanitize_bool( $value ): bool {
 		return (bool) $value;
+	}
+
+	/**
+	 * Where workshops are chosen: one of the closed list, the signup form otherwise.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_workshop_where( $value ): string {
+		$value = is_scalar( $value ) ? (string) $value : '';
+		return isset( RegistrationMetaKeys::workshop_places()[ $value ] ) ? $value : RegistrationMetaKeys::WHERE_SIGNUP;
 	}
 }

@@ -8,6 +8,13 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.3.0] — 2026-11-18
+
+### Añadido
+
+- Inscripción: en «Formulario y plazos», «Dónde se eligen los talleres»: en el formulario de inscripción, como hasta ahora, o aparte, después de inscribirse, con el enlace del correo o con la cuenta. Con «aparte», el formulario lo explica en lugar de la lista
+- Cada taller dice cuántas plazas le quedan —«Quedan 7 de 20 plazas», «Queda 1 plaza»—, tanto en el formulario como en la elección aparte; en el propio, «Usted ocupa una de las 20 plazas», y sin aforo, «Sin límite de plazas»
+
 ## [0.2.3] — 2026-11-17
 
 ### Añadido
