@@ -408,7 +408,7 @@ final class EventAppearancePanel {
 	 * What is known about one image of the event.
 	 *
 	 * El nombre es el del fichero y no el título del adjunto: en una
-	 * biblioteca de 4.597 adjuntos, «Captura de pantalla 2025-11-04» no
+	 * biblioteca con miles de adjuntos, «Captura de pantalla 2025-11-04» no
 	 * distingue nada y `cartel-jornadas-2026.jpg` sí.
 	 *
 	 * @param int $attachment_id Attachment ID.

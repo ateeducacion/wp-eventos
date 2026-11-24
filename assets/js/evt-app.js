@@ -350,9 +350,38 @@
 	 * sea un adjunto del tipo pedido y que quien lo manda edite el evento.
 	 */
 	var previos = typeof WeakMap === 'function' ? new WeakMap() : null;
+	var iniciales = typeof WeakMap === 'function' ? new WeakMap() : null;
 
 	function pieza( caja, nombre ) {
 		return caja.querySelector( '[data-evt-media-' + nombre + ']' );
+	}
+
+	/* Lo que el campo enseña ahora: para deshacer y para «Descartar». */
+	function foto( caja ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		return {
+			id: oculto ? oculto.value : '0',
+			src: mini ? mini.getAttribute( 'src' ) || '' : '',
+			alt: mini ? mini.alt : '',
+			name: nombre ? nombre.textContent : '',
+			size: medidas ? medidas.textContent : ''
+		};
+	}
+
+	function hayAlgo( id ) {
+		return '' !== id && '0' !== id;
+	}
+
+	/* El `hidden` cambia por guion y no avisa a nadie: sin este aviso, la barra
+	 * de guardar no se entera de que hay un cambio y salir no lo pregunta. */
+	function avisar( caja ) {
+		var oculto = pieza( caja, 'value' );
+		if ( oculto ) {
+			oculto.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+		}
 	}
 
 	function verDeshacer( caja, ver ) {
@@ -369,19 +398,20 @@
 		caja.classList.toggle( 'evt-media--error', !! error );
 	}
 
-	function poner( caja, adjunto ) {
-		var oculto = pieza( caja, 'value' );
+	/* Un mensaje viejo no sobrevive a lo siguiente que se haga en el campo. */
+	function limpiarEstado( caja ) {
+		var estado = pieza( caja, 'status' );
+		if ( estado ) {
+			estado.textContent = '';
+		}
+		marcarError( caja, false );
+		progreso( caja, null );
+	}
+
+	function mostrar( caja, hay ) {
 		var ficha = pieza( caja, 'card' );
 		var vacia = pieza( caja, 'empty' );
 		var aspa = pieza( caja, 'clear' );
-		var mini = pieza( caja, 'thumb' );
-		var nombre = pieza( caja, 'name' );
-		var medidas = pieza( caja, 'size' );
-		var hay = !! ( adjunto && adjunto.id );
-
-		if ( oculto ) {
-			oculto.value = hay ? String( adjunto.id ) : '0';
-		}
 		if ( ficha ) {
 			ficha.hidden = ! hay;
 		}
@@ -391,10 +421,22 @@
 		if ( aspa ) {
 			aspa.hidden = ! hay;
 		}
+	}
+
+	function poner( caja, adjunto ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		var hay = !! ( adjunto && adjunto.id );
+
+		if ( oculto ) {
+			oculto.value = hay ? String( adjunto.id ) : '0';
+		}
+		mostrar( caja, hay );
 		if ( ! hay ) {
 			return;
 		}
-		marcarError( caja, false );
 		verDeshacer( caja, false );
 
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
@@ -413,25 +455,39 @@
 		}
 	}
 
-	/* El aspa: se apunta lo que había, se deja el hueco y el foco pasa a
-	 * «Deshacer», porque el aspa acaba de desaparecer debajo del dedo. */
-	function quitar( caja ) {
+	function restaurar( caja, estado ) {
 		var oculto = pieza( caja, 'value' );
 		var mini = pieza( caja, 'thumb' );
 		var nombre = pieza( caja, 'name' );
 		var medidas = pieza( caja, 'size' );
-		if ( previos && oculto && '0' !== oculto.value && '' !== oculto.value ) {
-			previos.set( caja, {
-				id: oculto.value,
-				src: mini ? mini.getAttribute( 'src' ) : '',
-				alt: mini ? mini.alt : '',
-				name: nombre ? nombre.textContent : '',
-				size: medidas ? medidas.textContent : ''
-			} );
+		if ( oculto ) {
+			oculto.value = estado.id;
 		}
+		if ( mini ) {
+			mini.setAttribute( 'src', estado.src );
+			mini.alt = estado.alt;
+		}
+		if ( nombre ) {
+			nombre.textContent = estado.name;
+		}
+		if ( medidas ) {
+			medidas.textContent = estado.size;
+		}
+		mostrar( caja, hayAlgo( estado.id ) );
+	}
+
+	/* El aspa: se apunta lo que había, se deja el hueco y el foco pasa a
+	 * «Deshacer», porque el aspa acaba de desaparecer debajo del dedo. */
+	function quitar( caja ) {
+		var antes = foto( caja );
+		if ( previos && hayAlgo( antes.id ) ) {
+			previos.set( caja, antes );
+		}
+		limpiarEstado( caja );
 		poner( caja, null );
-		var hay = previos && previos.has( caja );
+		var hay = !! previos && previos.has( caja );
 		verDeshacer( caja, hay );
+		avisar( caja );
 		var boton = hay ? pieza( caja, 'restore' ) : pieza( caja, 'pick' );
 		if ( boton && ! boton.hidden && boton.focus ) {
 			boton.focus();
@@ -440,40 +496,14 @@
 
 	function deshacer( caja ) {
 		var antes = previos && previos.get( caja );
+		verDeshacer( caja, false );
 		if ( ! antes ) {
-			verDeshacer( caja, false );
 			return;
 		}
-		var oculto = pieza( caja, 'value' );
-		var mini = pieza( caja, 'thumb' );
-		var nombre = pieza( caja, 'name' );
-		var medidas = pieza( caja, 'size' );
-		var ficha = pieza( caja, 'card' );
-		var vacia = pieza( caja, 'empty' );
+		limpiarEstado( caja );
+		restaurar( caja, antes );
+		avisar( caja );
 		var aspa = pieza( caja, 'clear' );
-		if ( oculto ) {
-			oculto.value = antes.id;
-		}
-		if ( mini ) {
-			mini.setAttribute( 'src', antes.src || '' );
-			mini.alt = antes.alt;
-		}
-		if ( nombre ) {
-			nombre.textContent = antes.name;
-		}
-		if ( medidas ) {
-			medidas.textContent = antes.size;
-		}
-		if ( ficha ) {
-			ficha.hidden = false;
-		}
-		if ( vacia ) {
-			vacia.hidden = true;
-		}
-		if ( aspa ) {
-			aspa.hidden = false;
-		}
-		verDeshacer( caja, false );
 		if ( aspa && aspa.focus ) {
 			aspa.focus();
 		}
@@ -496,7 +526,9 @@
 		marco.on( 'select', function () {
 			var elegido = marco.state().get( 'selection' ).first();
 			if ( elegido ) {
+				limpiarEstado( caja );
 				poner( caja, elegido.toJSON() );
+				avisar( caja );
 			}
 		} );
 		marco.open();
@@ -521,12 +553,17 @@
 	} );
 
 	function mostrarBotones() {
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
+			if ( iniciales && ! iniciales.has( caja ) ) {
+				iniciales.set( caja, foto( caja ) );
+			}
+		} );
 		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media-actions]' ), function ( boton ) {
 			// El aspa solo cuando hay algo que quitar.
 			if ( boton.hasAttribute( 'data-evt-media-clear' ) ) {
 				var caja = boton.closest( '[data-evt-media]' );
 				var oculto = caja && pieza( caja, 'value' );
-				boton.hidden = ! oculto || '0' === oculto.value || '' === oculto.value;
+				boton.hidden = ! oculto || ! hayAlgo( oculto.value );
 				return;
 			}
 			boton.hidden = false;
@@ -538,6 +575,28 @@
 	mostrarBotones();
 	document.addEventListener( 'DOMContentLoaded', mostrarBotones );
 
+	/* «Descartar» es un `reset` del formulario, y un `reset` no devuelve un
+	 * `hidden` a su valor de origen: el valor de un `hidden` ES su atributo.
+	 * Así que cada campo vuelve a como lo pintó el servidor. El `reset` llega
+	 * antes de vaciar el formulario: se espera a que termine. */
+	document.addEventListener( 'reset', function ( e ) {
+		var form = e.target;
+		if ( ! iniciales || ! form || ! form.querySelectorAll ) {
+			return;
+		}
+		window.setTimeout( function () {
+			Array.prototype.forEach.call( form.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
+				var inicial = iniciales.get( caja );
+				if ( ! inicial ) {
+					return;
+				}
+				verDeshacer( caja, false );
+				limpiarEstado( caja );
+				restaurar( caja, inicial );
+			} );
+		}, 0 );
+	} );
+
 	function progreso( caja, porcentaje ) {
 		var barra = pieza( caja, 'progress' );
 		var relleno = pieza( caja, 'bar' );
@@ -547,6 +606,24 @@
 		if ( relleno && null !== porcentaje ) {
 			relleno.style.width = Math.max( 0, Math.min( 100, porcentaje ) ) + '%';
 		}
+	}
+
+	/* Lo que sube tiene que ser del tipo del campo: soltar un JPG en el del
+	 * programa lo sube igual, pero no se puede usar. Devuelve el motivo. */
+	function motivoRechazo( archivo, tipo, minimo ) {
+		if ( 'application/pdf' === tipo && 'application/pdf' !== archivo.mime ) {
+			return 'Aquí solo vale un PDF. El fichero se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( 'image' === tipo && archivo.type && 'image' !== archivo.type ) {
+			return 'Aquí solo vale una imagen. El fichero se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( minimo > 0 && ! archivo.width ) {
+			return 'No se ha podido leer el ancho de la imagen, y aquí hacen falta al menos ' + minimo + ' px. Se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( minimo > 0 && archivo.width < minimo ) {
+			return 'La imagen mide ' + archivo.width + ' px de ancho y aquí hacen falta al menos ' + minimo + '. Se ha quedado en la biblioteca, pero no se usa.';
+		}
+		return '';
 	}
 
 	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
@@ -585,12 +662,14 @@
 				},
 				success: function ( adjunto ) {
 					var archivo = adjunto.toJSON();
+					var motivo = motivoRechazo( archivo, tipo, minimo );
 					progreso( caja, null );
-					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
-						decir( 'La imagen mide ' + ( archivo.width || 0 ) + ' px de ancho y aquí hacen falta al menos ' + minimo + '. Se ha quedado en la biblioteca, pero no se usa.', true );
+					if ( motivo ) {
+						decir( motivo, true );
 						return;
 					}
 					poner( caja, archivo );
+					avisar( caja );
 					decir( 'Archivo subido. Guarde el formulario para aplicar el cambio.', false );
 				},
 				error: function ( mensaje ) {
@@ -601,6 +680,10 @@
 			if ( 'image' === tipo ) {
 				opciones.plupload.filters = {
 					mime_types: [ { title: 'Imágenes', extensions: 'jpg,jpeg,png,gif,webp' } ]
+				};
+			} else if ( 'application/pdf' === tipo ) {
+				opciones.plupload.filters = {
+					mime_types: [ { title: 'PDF', extensions: 'pdf' } ]
 				};
 			}
 			new window.wp.Uploader( opciones );

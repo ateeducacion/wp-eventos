@@ -825,9 +825,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 
 /* --- archivos gestionados con la biblioteca de medios -------------------- */
 
-/* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
-   adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
-   está es lo que llena la biblioteca de duplicados.
+/* El selector de medios en vez de un `file` pelado: en una biblioteca
+   grande, volver a subir el mismo cartel por no poder elegir el que ya está
+   es lo que la llena de duplicados.
 
    La pieza se comporta como en cualquier aplicación web: vacía, una zona de
    puntos que se pulsa o recibe el fichero; puesta, la imagen grande, entera y
@@ -898,6 +898,8 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-media-lienzo:hover .evt-media-sobre,
 .evt-media-lienzo:focus-within .evt-media-sobre { opacity: 1; }
 @media (hover: none) { .evt-media-sobre { opacity: 1; } }
+/* Sin guion el botón sigue oculto: sin él, la franja oscura sobraría. */
+.evt-media-sobre:has(> [hidden]) { display: none; }
 .evt-media-reemplazar {
   display: inline-flex;
   align-items: center;
@@ -977,7 +979,10 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 }
 /* Con la zona a la vista, el texto de «todavía no hay nada» sobra: es lo que
    se lee sin guion o sin permiso para subir. */
-.evt-media-zona:not([hidden]) + .evt-media-vacia { display: none; }
+.evt-media-zona:not([hidden]) + .evt-media-vacia:not(.evt-media-vacia--propia) { display: none; }
+/* Un texto propio del campo —«Sin foto. La ficha se ve igual, con las
+   iniciales.»— sí dice algo: se queda, como ayuda debajo de la zona. */
+.evt-media-zona:not([hidden]) + .evt-media-vacia--propia { margin-top: 8px; font-size: 12.5px; }
 .evt-media-vacia { margin: 0; font-size: 13.5px; color: var(--evt-texto-2); }
 
 /* Arrastrando un fichero encima: `drag-over` lo pone el cargador de WordPress. */
@@ -987,7 +992,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   background: var(--evt-pri-cont);
   box-shadow: 0 0 0 4px rgba(27, 79, 138, .15);
 }
-.evt-media.drag-over .evt-media-lienzo { box-shadow: inset 0 0 0 3px var(--evt-pri); }
+/* Con algo puesto, el aviso va en el marco: la imagen taparía un borde
+   interior, y la ficha de un PDF no tiene lienzo propio. */
+.evt-media.drag-over .evt-media-ficha { outline: 3px solid var(--evt-pri); outline-offset: 3px; border-radius: 10px; }
 
 /* No vale: el borde en rojo y el motivo debajo. */
 .evt-media--error .evt-media-zona { border-color: var(--evt-mal); background: var(--evt-mal-cont); }
@@ -1005,7 +1012,10 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-media-progreso > span { display: block; width: 0; height: 100%; background: var(--evt-pri); transition: width .2s; }
 
 .evt-media-estado { margin: 0; font-size: 13px; font-weight: 600; }
-.evt-media-estado:empty { display: none; }
+/* Sin `display: none` aunque esté vacía: una región `aria-live` que no se
+   pinta cuando le llega el texto no se anuncia, y el primer aviso —a veces
+   el único, como «fichero no admitido»— se perdería. */
+.evt-media-estado:empty { margin-top: -8px; }
 
 /* Recién quitada: nada se borra hasta guardar, así que se puede deshacer. */
 .evt-media-deshacer {

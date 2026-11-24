@@ -240,6 +240,57 @@ describe( 'media field', () => {
 		expect( document.activeElement ).toBe( $( '#clear' ) );
 	} );
 
+	it( 'tells the form that the file changed, so the save bar notices', async () => {
+		document.body.innerHTML = SET;
+		const frame = fakeMediaFrame( ATTACHMENT );
+		await load();
+		const changes = vi.fn();
+		document.addEventListener( 'change', changes );
+
+		click( $( '#clear' ) );
+		click( $( '[data-evt-media-restore]' ) );
+		click( $( '#replace' ) );
+		frame.select();
+		document.removeEventListener( 'change', changes );
+
+		expect( changes ).toHaveBeenCalledTimes( 3 );
+		expect( changes.mock.calls[ 0 ][ 0 ].target ).toBe( $( '[data-evt-media-value]' ) );
+	} );
+
+	it( 'puts the field back as the server drew it when the form is discarded', async () => {
+		document.body.innerHTML = SET;
+		const frame = fakeMediaFrame( ATTACHMENT );
+		await load();
+		vi.useFakeTimers();
+		try {
+			click( $( '#replace' ) );
+			frame.select();
+			click( $( '#clear' ) );
+			$( 'form' ).reset();
+			vi.runAllTimers();
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( $( '[data-evt-media-value]' ).value ).toBe( '9' );
+		expect( $( '[data-evt-media-card]' ).hidden ).toBe( false );
+		expect( $( '[data-evt-media-empty]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-undo]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-thumb]' ).getAttribute( 'src' ) ).toBe( 'http://localhost/antes.jpg' );
+		expect( $( '[data-evt-media-name]' ).textContent ).toBe( 'antes.jpg' );
+	} );
+
+	it( 'clears an old message when the file is removed', async () => {
+		document.body.innerHTML = SET;
+		await load();
+		$( '[data-evt-media-status]' ).textContent = 'Archivo subido.';
+		$( '[data-evt-media]' ).classList.add( 'evt-media--error' );
+
+		click( $( '#clear' ) );
+		expect( $( '[data-evt-media-status]' ).textContent ).toBe( '' );
+		expect( $( '[data-evt-media]' ).classList.contains( 'evt-media--error' ) ).toBe( false );
+	} );
+
 	it( 'drops the undo once another file is picked', async () => {
 		document.body.innerHTML = SET;
 		const frame = fakeMediaFrame( ATTACHMENT );
@@ -380,6 +431,30 @@ describe( 'media field', () => {
 
 			uploaders[ 0 ].success( file( { ...ATTACHMENT, width: 1200 } ) );
 			expect( $( '[data-evt-media]' ).classList.contains( 'evt-media--error' ) ).toBe( false );
+		} );
+
+		it( 'does not claim a width it could not read', async () => {
+			document.body.innerHTML = MEDIA;
+			const uploaders = fakeUploader();
+			await load();
+
+			uploaders[ 0 ].success( file( { ...ATTACHMENT, width: undefined } ) );
+			expect( $( '[data-evt-media-value]' ).value ).toBe( '0' );
+			expect( $( '[data-evt-media-status]' ).textContent ).toBe( 'No se ha podido leer el ancho de la imagen, y aquí hacen falta al menos 800 px. Se ha quedado en la biblioteca, pero no se usa.' );
+		} );
+
+		it( 'only takes a PDF in the PDF field', async () => {
+			document.body.innerHTML = MEDIA.replace( 'data-evt-media-type="image"', 'data-evt-media-type="application/pdf"' ).replace( 'data-evt-media-min-width="800"', '' );
+			const uploaders = fakeUploader();
+			await load();
+			expect( uploaders[ 0 ].plupload.filters.mime_types[ 0 ].extensions ).toBe( 'pdf' );
+
+			uploaders[ 0 ].success( file( { ...ATTACHMENT, mime: 'image/jpeg', type: 'image' } ) );
+			expect( $( '[data-evt-media-value]' ).value ).toBe( '0' );
+			expect( $( '[data-evt-media-status]' ).textContent ).toBe( 'Aquí solo vale un PDF. El fichero se ha quedado en la biblioteca, pero no se usa.' );
+
+			uploaders[ 0 ].success( file( { id: 77, url: 'http://localhost/p.pdf', filename: 'p.pdf', mime: 'application/pdf', type: 'application' } ) );
+			expect( $( '[data-evt-media-value]' ).value ).toBe( '77' );
 		} );
 
 		it( 'shows the upload error, or a generic one', async () => {

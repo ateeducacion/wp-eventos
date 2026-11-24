@@ -196,6 +196,9 @@ class Test_Views extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'aria-label="Quitar la imagen de: Cartel del evento"', $html, 'el aspa dice qué quita' );
 		$this->assertStringContainsString( 'data-evt-media-undo', $html );
 		$this->assertStringContainsString( 'al menos 1920 px de ancho', $html, 'el banner avisa de su límite en la zona' );
+		$this->assertStringContainsString( 'autocomplete="off" data-evt-media-value', $html, 'el navegador no devuelve un valor que la pantalla no enseña' );
+		$this->assertStringContainsString( 'Elija un PDF</strong> o arrástrelo aquí', $html, 'el PDF, en masculino' );
+		$this->assertStringContainsString( 'aria-describedby="evt_poster-deshacer"', $html, '«Deshacer» dice qué deshace' );
 		$this->assertStringContainsString( 'data-evt-media-status', $html );
 		$this->assertStringContainsString( 'data-evt-media-min-width="1920"', $html, 'el banner publica su límite también al cargador directo' );
 		$this->assertStringContainsString( 'cartel-jornadas.jpg', $html, 'el nombre del fichero que hay puesto' );
@@ -219,6 +222,7 @@ class Test_Views extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'data-evt-media-clear', $html );
 		$this->assertStringContainsString( 'o arrástrela aquí', $html );
 		$this->assertStringContainsString( 'Sin foto. La ficha se ve igual, con las iniciales.', $html );
+		$this->assertStringContainsString( 'evt-media-vacia--propia', $html, 'el texto propio de la foto se queda a la vista junto a la zona' );
 		$this->assertStringContainsString( 'data-evt-media-status', $html );
 	}
 

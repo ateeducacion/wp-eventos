@@ -318,7 +318,7 @@ final class PanelParts {
 		'what'    => 'la imagen',
 		'button'  => 'Usar esta imagen',
 		'choose'  => 'Elija una imagen',
-		'pick'    => 'Elegir la imagen de: ',
+		'drag'    => 'arrástrela',
 		'formats' => 'JPG, PNG, WEBP o GIF',
 		'empty'   => 'Todavía no hay ninguna imagen puesta.',
 		'clear'   => 'Quitar esta imagen al guardar',
@@ -336,7 +336,7 @@ final class PanelParts {
 		'what'    => 'el PDF',
 		'button'  => 'Usar este PDF',
 		'choose'  => 'Elija un PDF',
-		'pick'    => 'Elegir el PDF de: ',
+		'drag'    => 'arrástrelo',
 		'formats' => 'Un fichero PDF',
 		'empty'   => 'Todavía no hay ningún PDF puesto.',
 		'clear'   => 'Quitar este PDF al guardar',
@@ -383,7 +383,7 @@ final class PanelParts {
 
 			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
 			<input type="hidden" id="<?php echo esc_attr( $f['id'] ); ?>" name="<?php echo esc_attr( $f['name'] ); ?>"
-				value="<?php echo esc_attr( (string) $f['file_id'] ); ?>" data-evt-media-value />
+				value="<?php echo esc_attr( (string) $f['file_id'] ); ?>" autocomplete="off" data-evt-media-value />
 
 			<div class="evt-media-marco">
 				<?php echo self::media_card( $f ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
@@ -398,8 +398,8 @@ final class PanelParts {
 			<?php endif; ?>
 			<?php if ( $f['can_clear'] ) : ?>
 				<p class="evt-media-deshacer" data-evt-media-undo hidden>
-					<span>Se quitará al guardar.</span>
-					<button type="button" data-evt-media-restore>Deshacer</button>
+					<span id="<?php echo esc_attr( $f['id'] . '-deshacer' ); ?>">Se quitará al guardar.</span>
+					<button type="button" data-evt-media-restore aria-describedby="<?php echo esc_attr( $f['id'] . '-deshacer' ); ?>">Deshacer</button>
 				</p>
 			<?php endif; ?>
 
@@ -448,7 +448,8 @@ final class PanelParts {
 		if ( (int) $f['min_width'] > 0 ) {
 			$t['formats'] .= ' · al menos ' . (int) $f['min_width'] . ' px de ancho';
 		}
-		if ( '' !== (string) $f['empty'] ) {
+		$own_empty = '' !== (string) $f['empty'];
+		if ( $own_empty ) {
 			$t['empty'] = (string) $f['empty'];
 		}
 
@@ -474,6 +475,7 @@ final class PanelParts {
 			'file_name' => (string) $file['name'],
 			'size'      => $size,
 			'set'       => '' !== (string) $file['url'],
+			'own_empty' => $own_empty,
 			't'         => $t,
 		);
 	}
@@ -528,14 +530,14 @@ final class PanelParts {
 		?>
 		<div class="evt-media-hueco" data-evt-media-empty <?php echo esc_attr( $f['set'] ? 'hidden' : '' ); ?>>
 			<?php if ( $f['can_load'] ) : ?>
-				<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden
-					aria-label="<?php echo esc_attr( $f['t']['pick'] . $f['label'] ); ?>">
+				<?php // El nombre del botón es su texto visible —se puede decir en voz alta— y el campo va oculto detrás. ?>
+				<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden>
 					<span class="evt-media-zona-icono"><?php echo wp_kses( Shell::icon( 'cargar' ), self::SVG ); ?></span>
-					<span><strong><?php echo esc_html( $f['t']['choose'] ); ?></strong> o arrástrela aquí</span>
+					<span><strong><?php echo esc_html( $f['t']['choose'] ); ?></strong> <?php echo esc_html( 'o ' . $f['t']['drag'] . ' aquí' ); ?><span class="screen-reader-text"><?php echo esc_html( ' (' . $f['label'] . ')' ); ?></span></span>
 					<small><?php echo esc_html( $f['t']['formats'] ); ?></small>
 				</button>
 			<?php endif; ?>
-			<p class="evt-media-vacia"><?php echo esc_html( $f['t']['empty'] ); ?></p>
+			<p class="<?php echo esc_attr( 'evt-media-vacia' . ( $f['own_empty'] ? ' evt-media-vacia--propia' : '' ) ); ?>"><?php echo esc_html( $f['t']['empty'] ); ?></p>
 		</div>
 		<?php
 		return (string) ob_get_clean();
