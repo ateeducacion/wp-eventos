@@ -321,33 +321,62 @@
 	/* --- 4. Elegir un archivo de la biblioteca ---------------------------- */
 
 	/*
-	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`. La
-	 * ventana nativa de WordPress aporta biblioteca, subida por arrastre y la
-	 * previsualización del adjunto; la ficha conserva una vista rápida fuera.
+	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`
+	 * (`PanelParts::media_field()`). Vacío es una zona que se pulsa o recibe
+	 * el fichero arrastrado; puesto, la imagen grande con un aspa para quitarla
+	 * y «Reemplazar» encima. La ventana nativa de WordPress aporta biblioteca,
+	 * subida y previsualización.
 	 *
-	 *   [data-evt-media-value]   el `hidden` con el ID del adjunto: lo único que viaja
-	 *   [data-evt-media-card]    la ficha de lo que hay puesto ahora
-	 *   [data-evt-media-thumb]   su miniatura
-	 *   [data-evt-media-name]    su nombre de fichero
-	 *   [data-evt-media-size]    sus dimensiones
-	 *   [data-evt-media-empty]   la línea de «todavía no hay nada»
-	 *   [data-evt-media-actions] la fila de botones, oculta hasta que este guion llega
-	 *   [data-evt-media-pick]    «Elegir imagen»
-	 *   [data-evt-media-clear]   «Quitar»
+	 *   [data-evt-media-value]    el `hidden` con el ID del adjunto: lo único que viaja
+	 *   [data-evt-media-card]     lo que hay puesto ahora: imagen, nombre y medidas
+	 *   [data-evt-media-thumb]    la imagen
+	 *   [data-evt-media-name]     su nombre de fichero
+	 *   [data-evt-media-size]     sus dimensiones
+	 *   [data-evt-media-empty]    el hueco cuando no hay nada
+	 *   [data-evt-media-actions]  todo lo que solo sirve con guion: nace oculto
+	 *   [data-evt-media-pick]     la zona vacía y «Reemplazar»: abren la biblioteca
+	 *   [data-evt-media-clear]    el aspa
+	 *   [data-evt-media-undo]     «Se quitará al guardar · Deshacer»
+	 *   [data-evt-media-restore]  su botón
+	 *   [data-evt-media-progress] la barra de subida, con [data-evt-media-bar] dentro
+	 *   [data-evt-media-status]   lo que se anuncia: progreso, éxito o error
+	 *
+	 * Quitar no borra nada: deja el hueco y el `hidden` a cero, y hasta
+	 * guardar se puede deshacer. Por eso se guarda aparte lo que había.
 	 *
 	 * Sin guion no se ve ningún botón —uno que no abre nada solo estorba— y el
 	 * respaldo del `<noscript>` sigue siendo la forma de subir o de quitar. Y
 	 * el ID que se escribe aquí no autoriza nada: el servidor comprueba que
-	 * sea un adjunto de imagen y que quien lo manda edite el evento.
+	 * sea un adjunto del tipo pedido y que quien lo manda edite el evento.
 	 */
+	var previos = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+	function pieza( caja, nombre ) {
+		return caja.querySelector( '[data-evt-media-' + nombre + ']' );
+	}
+
+	function verDeshacer( caja, ver ) {
+		var deshacer = pieza( caja, 'undo' );
+		if ( deshacer ) {
+			deshacer.hidden = ! ver;
+		}
+		if ( ! ver && previos ) {
+			previos.delete( caja );
+		}
+	}
+
+	function marcarError( caja, error ) {
+		caja.classList.toggle( 'evt-media--error', !! error );
+	}
+
 	function poner( caja, adjunto ) {
-		var oculto = caja.querySelector( '[data-evt-media-value]' );
-		var ficha = caja.querySelector( '[data-evt-media-card]' );
-		var vacia = caja.querySelector( '[data-evt-media-empty]' );
-		var quitar = caja.querySelector( '[data-evt-media-clear]' );
-		var mini = caja.querySelector( '[data-evt-media-thumb]' );
-		var nombre = caja.querySelector( '[data-evt-media-name]' );
-		var medidas = caja.querySelector( '[data-evt-media-size]' );
+		var oculto = pieza( caja, 'value' );
+		var ficha = pieza( caja, 'card' );
+		var vacia = pieza( caja, 'empty' );
+		var aspa = pieza( caja, 'clear' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
 		var hay = !! ( adjunto && adjunto.id );
 
 		if ( oculto ) {
@@ -359,12 +388,14 @@
 		if ( vacia ) {
 			vacia.hidden = hay;
 		}
-		if ( quitar ) {
-			quitar.hidden = ! hay;
+		if ( aspa ) {
+			aspa.hidden = ! hay;
 		}
 		if ( ! hay ) {
 			return;
 		}
+		marcarError( caja, false );
+		verDeshacer( caja, false );
 
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
 		var chica = adjunto.sizes && ( adjunto.sizes.medium || adjunto.sizes.thumbnail );
@@ -379,6 +410,72 @@
 			medidas.textContent = adjunto.width && adjunto.height
 				? adjunto.width + ' × ' + adjunto.height + ' px'
 				: '';
+		}
+	}
+
+	/* El aspa: se apunta lo que había, se deja el hueco y el foco pasa a
+	 * «Deshacer», porque el aspa acaba de desaparecer debajo del dedo. */
+	function quitar( caja ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		if ( previos && oculto && '0' !== oculto.value && '' !== oculto.value ) {
+			previos.set( caja, {
+				id: oculto.value,
+				src: mini ? mini.getAttribute( 'src' ) : '',
+				alt: mini ? mini.alt : '',
+				name: nombre ? nombre.textContent : '',
+				size: medidas ? medidas.textContent : ''
+			} );
+		}
+		poner( caja, null );
+		var hay = previos && previos.has( caja );
+		verDeshacer( caja, hay );
+		var boton = hay ? pieza( caja, 'restore' ) : pieza( caja, 'pick' );
+		if ( boton && ! boton.hidden && boton.focus ) {
+			boton.focus();
+		}
+	}
+
+	function deshacer( caja ) {
+		var antes = previos && previos.get( caja );
+		if ( ! antes ) {
+			verDeshacer( caja, false );
+			return;
+		}
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		var ficha = pieza( caja, 'card' );
+		var vacia = pieza( caja, 'empty' );
+		var aspa = pieza( caja, 'clear' );
+		if ( oculto ) {
+			oculto.value = antes.id;
+		}
+		if ( mini ) {
+			mini.setAttribute( 'src', antes.src || '' );
+			mini.alt = antes.alt;
+		}
+		if ( nombre ) {
+			nombre.textContent = antes.name;
+		}
+		if ( medidas ) {
+			medidas.textContent = antes.size;
+		}
+		if ( ficha ) {
+			ficha.hidden = false;
+		}
+		if ( vacia ) {
+			vacia.hidden = true;
+		}
+		if ( aspa ) {
+			aspa.hidden = false;
+		}
+		verDeshacer( caja, false );
+		if ( aspa && aspa.focus ) {
+			aspa.focus();
 		}
 	}
 
@@ -407,7 +504,7 @@
 
 	document.addEventListener( 'click', function ( e ) {
 		var boton = e.target && e.target.closest
-			? e.target.closest( '[data-evt-media-pick], [data-evt-media-clear]' )
+			? e.target.closest( '[data-evt-media-pick], [data-evt-media-clear], [data-evt-media-restore]' )
 			: null;
 		var caja = boton && boton.closest( '[data-evt-media]' );
 		if ( ! caja ) {
@@ -415,15 +512,24 @@
 		}
 		e.preventDefault();
 		if ( boton.hasAttribute( 'data-evt-media-clear' ) ) {
-			poner( caja, null );
+			quitar( caja );
+		} else if ( boton.hasAttribute( 'data-evt-media-restore' ) ) {
+			deshacer( caja );
 		} else {
 			elegir( caja );
 		}
 	} );
 
 	function mostrarBotones() {
-		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media-actions]' ), function ( fila ) {
-			fila.hidden = false;
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media-actions]' ), function ( boton ) {
+			// El aspa solo cuando hay algo que quitar.
+			if ( boton.hasAttribute( 'data-evt-media-clear' ) ) {
+				var caja = boton.closest( '[data-evt-media]' );
+				var oculto = caja && pieza( caja, 'value' );
+				boton.hidden = ! oculto || '0' === oculto.value || '' === oculto.value;
+				return;
+			}
+			boton.hidden = false;
 		} );
 	}
 
@@ -431,6 +537,17 @@
 	// es por si algún día sube a la cabecera.
 	mostrarBotones();
 	document.addEventListener( 'DOMContentLoaded', mostrarBotones );
+
+	function progreso( caja, porcentaje ) {
+		var barra = pieza( caja, 'progress' );
+		var relleno = pieza( caja, 'bar' );
+		if ( barra ) {
+			barra.hidden = null === porcentaje;
+		}
+		if ( relleno && null !== porcentaje ) {
+			relleno.style.width = Math.max( 0, Math.min( 100, porcentaje ) ) + '%';
+		}
+	}
 
 	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
 	 * soltado. La subida crea el adjunto en WordPress inmediatamente; elegirlo
@@ -440,44 +557,45 @@
 			return;
 		}
 		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
-			if ( '1' === caja.dataset.evtUploader ) {
+			if ( '1' === caja.dataset.evtUploader || ! pieza( caja, 'pick' ) ) {
 				return;
 			}
 			caja.dataset.evtUploader = '1';
-			var estado = caja.querySelector( '[data-evt-media-status]' );
+			var estado = pieza( caja, 'status' );
 			var tipo = caja.getAttribute( 'data-evt-media-type' );
 			var minimo = parseInt( caja.getAttribute( 'data-evt-media-min-width' ) || '0', 10 );
+			function decir( texto, error ) {
+				if ( estado ) {
+					estado.textContent = texto;
+				}
+				marcarError( caja, error );
+			}
 			var opciones = {
 				container: caja,
 				dropzone: caja,
 				plupload: { multi_selection: false },
 				added: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = 'Subiendo ' + ( adjunto.get( 'filename' ) || 'el archivo' ) + '…';
-					}
+					progreso( caja, 0 );
+					decir( 'Subiendo ' + ( adjunto.get( 'filename' ) || 'el archivo' ) + '…', false );
 				},
 				progress: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = 'Subiendo… ' + ( adjunto.get( 'percent' ) || 0 ) + '%';
-					}
+					var por = adjunto.get( 'percent' ) || 0;
+					progreso( caja, por );
+					decir( 'Subiendo… ' + por + '%', false );
 				},
 				success: function ( adjunto ) {
 					var archivo = adjunto.toJSON();
+					progreso( caja, null );
 					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
-						if ( estado ) {
-							estado.textContent = 'La imagen se subió a la biblioteca, pero no se puede usar aquí: necesita al menos ' + minimo + ' px de ancho.';
-						}
+						decir( 'La imagen mide ' + ( archivo.width || 0 ) + ' px de ancho y aquí hacen falta al menos ' + minimo + '. Se ha quedado en la biblioteca, pero no se usa.', true );
 						return;
 					}
 					poner( caja, archivo );
-					if ( estado ) {
-						estado.textContent = 'Archivo subido. Guarde el formulario para aplicar el cambio.';
-					}
+					decir( 'Archivo subido. Guarde el formulario para aplicar el cambio.', false );
 				},
 				error: function ( mensaje ) {
-					if ( estado ) {
-						estado.textContent = mensaje || 'No se pudo subir el archivo.';
-					}
+					progreso( caja, null );
+					decir( mensaje || 'No se pudo subir el archivo.', true );
 				}
 			};
 			if ( 'image' === tipo ) {

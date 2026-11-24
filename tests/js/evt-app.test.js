@@ -157,14 +157,26 @@ describe( 'header preview', () => {
 describe( 'media field', () => {
 	const MEDIA = `<form><div data-evt-media data-evt-media-type="image" data-evt-media-title="Elegir el cartel" data-evt-media-min-width="800">
 		<input type="hidden" data-evt-media-value value="0">
-		<div data-evt-media-card hidden><img data-evt-media-thumb><span data-evt-media-name></span><span data-evt-media-size></span></div>
-		<p data-evt-media-empty>Todavía no hay imagen</p>
-		<div data-evt-media-actions hidden>
-			<button type="button" data-evt-media-pick>Elegir imagen</button>
-			<button type="button" data-evt-media-clear hidden>Quitar</button>
+		<div data-evt-media-card hidden>
+			<span><img data-evt-media-thumb>
+				<button type="button" id="clear" data-evt-media-clear data-evt-media-actions hidden>Quitar</button>
+				<button type="button" id="replace" data-evt-media-pick data-evt-media-actions hidden>Reemplazar</button></span>
+			<span data-evt-media-name></span><span data-evt-media-size></span>
 		</div>
+		<div data-evt-media-empty>
+			<button type="button" id="zone" data-evt-media-pick data-evt-media-actions hidden>Elija una imagen</button>
+			<p>Todavía no hay imagen</p>
+		</div>
+		<span data-evt-media-progress hidden><span data-evt-media-bar></span></span>
 		<p data-evt-media-status></p>
+		<p data-evt-media-undo hidden><span>Se quitará al guardar.</span><button type="button" data-evt-media-restore>Deshacer</button></p>
 	</div></form>`;
+
+	const SET = MEDIA.replace( 'value="0"', 'value="9"' )
+		.replace( '<div data-evt-media-card hidden>', '<div data-evt-media-card>' )
+		.replace( '<img data-evt-media-thumb>', '<img data-evt-media-thumb src="http://localhost/antes.jpg" alt="Antes">' )
+		.replace( '<span data-evt-media-name></span><span data-evt-media-size></span>', '<span data-evt-media-name>antes.jpg</span><span data-evt-media-size>800 × 600 px</span>' )
+		.replace( '<div data-evt-media-empty>', '<div data-evt-media-empty hidden>' );
 
 	const ATTACHMENT = {
 		id: 42,
@@ -190,10 +202,54 @@ describe( 'media field', () => {
 		return frame;
 	}
 
-	it( 'reveals the buttons once the script runs', async () => {
+	it( 'reveals the drop zone once the script runs, and the cross only with something to remove', async () => {
 		document.body.innerHTML = MEDIA;
 		await load();
-		expect( $( '[data-evt-media-actions]' ).hidden ).toBe( false );
+		expect( $( '#zone' ).hidden ).toBe( false );
+		expect( $( '#replace' ).hidden ).toBe( false );
+		expect( $( '#clear' ).hidden ).toBe( true );
+	} );
+
+	it( 'shows the cross when the field arrives with a file', async () => {
+		document.body.innerHTML = SET;
+		await load();
+		expect( $( '#clear' ).hidden ).toBe( false );
+	} );
+
+	it( 'removes with the cross and lets it be undone until saving', async () => {
+		document.body.innerHTML = SET;
+		await load();
+
+		click( $( '#clear' ) );
+		expect( $( '[data-evt-media-value]' ).value ).toBe( '0' );
+		expect( $( '[data-evt-media-card]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-empty]' ).hidden ).toBe( false );
+		expect( $( '[data-evt-media-undo]' ).hidden ).toBe( false );
+		expect( document.activeElement ).toBe( $( '[data-evt-media-restore]' ) );
+
+		click( $( '[data-evt-media-restore]' ) );
+		expect( $( '[data-evt-media-value]' ).value ).toBe( '9' );
+		expect( $( '[data-evt-media-card]' ).hidden ).toBe( false );
+		expect( $( '[data-evt-media-empty]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-undo]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-thumb]' ).getAttribute( 'src' ) ).toBe( 'http://localhost/antes.jpg' );
+		expect( $( '[data-evt-media-thumb]' ).alt ).toBe( 'Antes' );
+		expect( $( '[data-evt-media-name]' ).textContent ).toBe( 'antes.jpg' );
+		expect( $( '[data-evt-media-size]' ).textContent ).toBe( '800 × 600 px' );
+		expect( $( '#clear' ).hidden ).toBe( false );
+		expect( document.activeElement ).toBe( $( '#clear' ) );
+	} );
+
+	it( 'drops the undo once another file is picked', async () => {
+		document.body.innerHTML = SET;
+		const frame = fakeMediaFrame( ATTACHMENT );
+		await load();
+
+		click( $( '#clear' ) );
+		click( $( '#zone' ) );
+		frame.select();
+		expect( $( '[data-evt-media-value]' ).value ).toBe( '42' );
+		expect( $( '[data-evt-media-undo]' ).hidden ).toBe( true );
 	} );
 
 	it( 'opens the media library filtered by type and shows what is picked', async () => {
@@ -253,6 +309,7 @@ describe( 'media field', () => {
 		expect( $( '[data-evt-media-card]' ).hidden ).toBe( true );
 		expect( $( '[data-evt-media-empty]' ).hidden ).toBe( false );
 		expect( $( '[data-evt-media-clear]' ).hidden ).toBe( true );
+		expect( $( '[data-evt-media-undo]' ).hidden ).toBe( false );
 	} );
 
 	it( 'does nothing on pick when the media library is not loaded', async () => {
@@ -300,10 +357,13 @@ describe( 'media field', () => {
 
 			uploader.added( file( { filename: 'foto.jpg' } ) );
 			expect( status.textContent ).toBe( 'Subiendo foto.jpg…' );
+			expect( $( '[data-evt-media-progress]' ).hidden ).toBe( false );
 			uploader.progress( file( { percent: 40 } ) );
 			expect( status.textContent ).toBe( 'Subiendo… 40%' );
+			expect( $( '[data-evt-media-bar]' ).style.width ).toBe( '40%' );
 
 			uploader.success( file( { ...ATTACHMENT, width: 1200 } ) );
+			expect( $( '[data-evt-media-progress]' ).hidden ).toBe( true );
 			expect( $( '[data-evt-media-value]' ).value ).toBe( '42' );
 			expect( status.textContent ).toBe( 'Archivo subido. Guarde el formulario para aplicar el cambio.' );
 		} );
@@ -315,7 +375,11 @@ describe( 'media field', () => {
 
 			uploaders[ 0 ].success( file( { ...ATTACHMENT, width: 640 } ) );
 			expect( $( '[data-evt-media-value]' ).value ).toBe( '0' );
-			expect( $( '[data-evt-media-status]' ).textContent ).toContain( 'necesita al menos 800 px de ancho' );
+			expect( $( '[data-evt-media-status]' ).textContent ).toBe( 'La imagen mide 640 px de ancho y aquí hacen falta al menos 800. Se ha quedado en la biblioteca, pero no se usa.' );
+			expect( $( '[data-evt-media]' ).classList.contains( 'evt-media--error' ) ).toBe( true );
+
+			uploaders[ 0 ].success( file( { ...ATTACHMENT, width: 1200 } ) );
+			expect( $( '[data-evt-media]' ).classList.contains( 'evt-media--error' ) ).toBe( false );
 		} );
 
 		it( 'shows the upload error, or a generic one', async () => {
@@ -325,6 +389,7 @@ describe( 'media field', () => {
 
 			uploaders[ 0 ].error( 'Fichero demasiado grande.' );
 			expect( $( '[data-evt-media-status]' ).textContent ).toBe( 'Fichero demasiado grande.' );
+			expect( $( '[data-evt-media]' ).classList.contains( 'evt-media--error' ) ).toBe( true );
 			uploaders[ 0 ].error( '' );
 			expect( $( '[data-evt-media-status]' ).textContent ).toBe( 'No se pudo subir el archivo.' );
 		} );

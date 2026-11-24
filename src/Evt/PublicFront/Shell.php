@@ -947,6 +947,12 @@ final class Shell {
 			'lista'      => '<path fill="currentColor" d="M4 5h3v3H4V5Zm5 0h11v3H9V5Zm-5 5.5h3v3H4v-3Zm5 0h11v3H9v-3ZM4 16h3v3H4v-3Zm5 0h11v3H9v-3Z"/>',
 			// Flecha que vuelve: restaurar de la papelera.
 			'restaurar'  => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
+			// Aspa: quitar una imagen del campo.
+			'cerrar'     => '<path fill="currentColor" d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/>',
+			// Dos flechas en círculo: reemplazar una imagen por otra.
+			'reemplazar' => '<path fill="currentColor" d="M17 3l4 4-4 4V8H8a3 3 0 0 0-3 3H3a5 5 0 0 1 5-5h9V3ZM7 21l-4-4 4-4v3h9a3 3 0 0 0 3-3h2a5 5 0 0 1-5 5H7v3Z"/>',
+			// Flecha que sube a una bandeja: subir un fichero.
+			'cargar'     => '<path fill="currentColor" d="M12 3l5 5h-3.5v6h-3V8H7l5-5ZM4 15h2v4h12v-4h2v6H4v-6Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
 			return '';

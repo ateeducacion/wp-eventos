@@ -304,4 +304,136 @@ final class PanelParts {
 		}
 		return '' === $end ? $start : $start . ' – ' . $end;
 	}
+
+	/**
+	 * One file from the media library: a drop zone when empty, a big preview when set.
+	 *
+	 * Es la misma pieza para las imágenes de «Apariencia» y para la foto del
+	 * ponente, y se comporta como en cualquier aplicación web: vacía, la zona
+	 * entera se pulsa o recibe el fichero arrastrado; puesta, la imagen se ve
+	 * grande, con un aspa para quitarla y «Reemplazar» encima. Quitar no borra
+	 * nada hasta guardar, así que se puede deshacer.
+	 *
+	 * Lo único que viaja es el `hidden` con el identificador del adjunto. Los
+	 * botones nacen ocultos (`data-evt-media-actions`) y los enseña el guion:
+	 * sin guion no hay ninguno que no haga nada, se ve el texto de «todavía no
+	 * hay nada» y, si se pide, el respaldo del `<noscript>`.
+	 *
+	 * Claves de `$args`: `name` (el `hidden` con el ID), `id` (base de los
+	 * identificadores), `label`, `help`, `file` (id, url, name, width,
+	 * height), `can_load`, `can_clear`, `min_width`, `type` (`image` o
+	 * `application/pdf`), `title` (de la ventana de la biblioteca), `empty`
+	 * (lo que se lee sin nada y sin guion) y `fallback` (prefijo de los campos
+	 * del `<noscript>`; vacío, sin respaldo).
+	 *
+	 * @param array<string, mixed> $args Field settings, as listed above.
+	 * @return string
+	 */
+	public static function media_field( array $args ): string {
+		$name      = (string) ( $args['name'] ?? '' );
+		$id        = sanitize_html_class( (string) ( $args['id'] ?? $name ) );
+		$label     = (string) ( $args['label'] ?? '' );
+		$help      = (string) ( $args['help'] ?? '' );
+		$file      = (array) ( $args['file'] ?? array() );
+		$can_load  = ! empty( $args['can_load'] );
+		$can_clear = ! empty( $args['can_clear'] );
+		$min_width = (int) ( $args['min_width'] ?? 0 );
+		$type      = (string) ( $args['type'] ?? 'image' );
+		$fallback  = (string) ( $args['fallback'] ?? '' );
+		$pdf       = 'application/pdf' === $type;
+		$url       = (string) ( $file['url'] ?? '' );
+		$set       = '' !== $url;
+		$width     = (int) ( $file['width'] ?? 0 );
+		$height    = (int) ( $file['height'] ?? 0 );
+		$what      = $pdf ? 'el PDF' : 'la imagen';
+		$empty     = (string) ( $args['empty'] ?? ( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ) );
+		$formats   = $pdf ? 'Un fichero PDF' : 'JPG, PNG, WEBP o GIF';
+		if ( $min_width > 0 ) {
+			$formats .= ' · al menos ' . $min_width . ' px de ancho';
+		}
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( 'evt-form-campo evt-media' . ( $pdf ? ' evt-media--fichero' : '' ) ); ?>" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
+			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
+			data-evt-media-title="<?php echo esc_attr( (string) ( $args['title'] ?? $label ) ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
+			<span class="evt-media-rotulo"><?php echo esc_html( $label ); ?></span>
+			<?php if ( '' !== $help ) : ?>
+				<small class="evt-media-ayuda"><?php echo esc_html( $help ); ?></small>
+			<?php endif; ?>
+
+			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
+			<input type="hidden" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"
+				value="<?php echo esc_attr( (string) (int) ( $file['id'] ?? 0 ) ); ?>" data-evt-media-value />
+
+			<div class="evt-media-marco">
+				<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $set ? '' : 'hidden' ); ?>>
+					<span class="evt-media-lienzo">
+						<img class="evt-media-miniatura" data-evt-media-thumb src="<?php echo esc_url( $url ); ?>" alt="" />
+						<?php if ( $can_clear ) : ?>
+							<button type="button" class="evt-media-quitar" data-evt-media-clear data-evt-media-actions hidden
+								title="<?php echo esc_attr( 'Quitar ' . $what ); ?>" aria-label="<?php echo esc_attr( 'Quitar ' . $what . ' de: ' . $label ); ?>">
+								<?php echo wp_kses( Shell::icon( 'cerrar' ), self::SVG ); ?>
+							</button>
+						<?php endif; ?>
+						<?php if ( $can_load ) : ?>
+							<span class="evt-media-sobre">
+								<button type="button" class="evt-media-reemplazar" data-evt-media-pick data-evt-media-actions hidden
+									aria-label="<?php echo esc_attr( 'Reemplazar ' . $what . ' de: ' . $label ); ?>">
+									<?php echo wp_kses( Shell::icon( 'reemplazar' ), self::SVG ); ?>
+									Reemplazar
+								</button>
+							</span>
+						<?php endif; ?>
+					</span>
+					<span class="evt-media-datos">
+						<strong data-evt-media-name><?php echo esc_html( (string) ( $file['name'] ?? '' ) ); ?></strong>
+						<small data-evt-media-size><?php echo esc_html( $width > 0 && $height > 0 ? $width . ' × ' . $height . ' px' : '' ); ?></small>
+					</span>
+				</div>
+
+				<div class="evt-media-hueco" data-evt-media-empty <?php echo esc_attr( $set ? 'hidden' : '' ); ?>>
+					<?php if ( $can_load ) : ?>
+						<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden
+							aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir el PDF de: ' : 'Elegir la imagen de: ' ) . $label ); ?>">
+							<span class="evt-media-zona-icono"><?php echo wp_kses( Shell::icon( 'cargar' ), self::SVG ); ?></span>
+							<span><strong><?php echo esc_html( $pdf ? 'Elija un PDF' : 'Elija una imagen' ); ?></strong> o arrástrela aquí</span>
+							<small><?php echo esc_html( $formats ); ?></small>
+						</button>
+					<?php endif; ?>
+					<p class="evt-media-vacia"><?php echo esc_html( $empty ); ?></p>
+				</div>
+
+				<?php if ( $can_load ) : ?>
+					<span class="evt-media-progreso" data-evt-media-progress hidden><span data-evt-media-bar></span></span>
+				<?php endif; ?>
+			</div>
+
+			<?php if ( $can_load ) : ?>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+			<?php endif; ?>
+			<?php if ( $can_clear ) : ?>
+				<p class="evt-media-deshacer" data-evt-media-undo hidden>
+					<span>Se quitará al guardar.</span>
+					<button type="button" data-evt-media-restore>Deshacer</button>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( '' !== $fallback ) : ?>
+				<noscript>
+					<?php if ( $set && $can_clear ) : ?>
+						<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
+							<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $fallback . '_clear' ); ?>" value="1" />
+							<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
+						</label>
+					<?php endif; ?>
+					<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
+					<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $fallback . '_file' ); ?>"
+						accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
+				</noscript>
+			<?php endif; ?>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
 }

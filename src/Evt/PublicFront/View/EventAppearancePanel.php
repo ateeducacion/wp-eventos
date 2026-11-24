@@ -526,70 +526,19 @@ final class EventAppearancePanel {
 	 * @return string
 	 */
 	public static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
-		$pdf    = 'application/pdf' === $type;
-		$url    = (string) ( $imagen['url'] ?? '' );
-		$id     = sanitize_html_class( $campo );
-		$puesta = '' !== $url;
-		$ancho  = (int) ( $imagen['width'] ?? 0 );
-		$alto   = (int) ( $imagen['height'] ?? 0 );
-
-		ob_start();
-		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
-			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
-			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
-
-			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
-			<input type="hidden" name="<?php echo esc_attr( $campo . '_id' ); ?>"
-				value="<?php echo esc_attr( (string) (int) ( $imagen['id'] ?? 0 ) ); ?>" data-evt-media-value />
-
-			<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-				<img class="evt-media-miniatura" data-evt-media-thumb width="88" height="88"
-					src="<?php echo esc_url( $url ); ?>" alt="" />
-				<span class="evt-media-datos">
-					<strong data-evt-media-name><?php echo esc_html( (string) ( $imagen['name'] ?? '' ) ); ?></strong>
-					<small data-evt-media-size><?php echo esc_html( $ancho > 0 && $alto > 0 ? $ancho . ' × ' . $alto . ' px' : '' ); ?></small>
-				</span>
-			</div>
-			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( $puesta ? 'hidden' : '' ); ?>>
-				<?php echo esc_html( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ); ?>
-			</p>
-
-			<?php if ( $can_load ) : ?>
-				<p class="evt-media-drop"><?php echo esc_html( $pdf ? 'Arrastre el PDF hasta este campo o selecciónelo en la biblioteca.' : 'Arrastre una imagen hasta este campo o selecciónela en la biblioteca.' ); ?></p>
-				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
-			<?php endif; ?>
-
-			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
-				<?php if ( $can_load ) : ?>
-					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						data-evt-media-pick aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir PDF para: ' : 'Elegir imagen para: ' ) . $rotulo ); ?>">
-						Seleccionar o subir
-					</button>
-				<?php endif; ?>
-				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					data-evt-media-clear aria-label="<?php echo esc_attr( ( $pdf ? 'Quitar el PDF de: ' : 'Quitar la imagen de: ' ) . $rotulo ); ?>"
-					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-					Eliminar del campo
-				</button>
-			</p>
-
-			<noscript>
-				<?php if ( $puesta ) : ?>
-					<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
-						<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $campo . '_clear' ); ?>" value="1" />
-						<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
-					</label>
-				<?php endif; ?>
-				<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
-				<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $campo . '_file' ); ?>"
-					accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
-			</noscript>
-
-			<small><?php echo esc_html( $ayuda ); ?></small>
-		</div>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::media_field(
+			array(
+				'name'      => $campo . '_id',
+				'id'        => $campo,
+				'label'     => $rotulo,
+				'help'      => $ayuda,
+				'file'      => $imagen,
+				'can_load'  => $can_load,
+				'can_clear' => true,
+				'min_width' => $min_width,
+				'type'      => $type,
+				'fallback'  => $campo,
+			)
+		);
 	}
 }

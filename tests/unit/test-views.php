@@ -190,9 +190,12 @@ class Test_Views extends WP_UnitTestCase {
 			$this->assertStringContainsString( 'name="' . $campo . '"', $html, $campo );
 		}
 		$this->assertStringContainsString( 'data-evt-media-value', $html );
-		$this->assertStringContainsString( 'Seleccionar o subir', $html );
 		$this->assertStringContainsString( 'data-evt-media-type="image"', $html );
-		$this->assertStringContainsString( 'Arrastre una imagen hasta este campo', $html );
+		$this->assertStringContainsString( 'o arrástrela aquí', $html, 'la zona vacía invita a soltar' );
+		$this->assertStringContainsString( 'Reemplazar', $html );
+		$this->assertStringContainsString( 'aria-label="Quitar la imagen de: Cartel del evento"', $html, 'el aspa dice qué quita' );
+		$this->assertStringContainsString( 'data-evt-media-undo', $html );
+		$this->assertStringContainsString( 'al menos 1920 px de ancho', $html, 'el banner avisa de su límite en la zona' );
 		$this->assertStringContainsString( 'data-evt-media-status', $html );
 		$this->assertStringContainsString( 'data-evt-media-min-width="1920"', $html, 'el banner publica su límite también al cargador directo' );
 		$this->assertStringContainsString( 'cartel-jornadas.jpg', $html, 'el nombre del fichero que hay puesto' );
@@ -213,9 +216,9 @@ class Test_Views extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="evt_sp_photo"', $html );
 		$this->assertStringContainsString( 'data-evt-media-value', $html );
 		$this->assertStringContainsString( 'data-evt-media-pick', $html );
-		$this->assertStringContainsString( 'Seleccionar o subir', $html );
-		$this->assertStringContainsString( 'Eliminar del campo', $html );
-		$this->assertStringContainsString( 'arrastrar una nueva', $html );
+		$this->assertStringContainsString( 'data-evt-media-clear', $html );
+		$this->assertStringContainsString( 'o arrástrela aquí', $html );
+		$this->assertStringContainsString( 'Sin foto. La ficha se ve igual, con las iniciales.', $html );
 		$this->assertStringContainsString( 'data-evt-media-status', $html );
 	}
 

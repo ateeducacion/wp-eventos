@@ -827,40 +827,205 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 
 /* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
    adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
-   está es lo que llena la biblioteca de duplicados. La ficha de arriba enseña
-   lo que hay puesto —miniatura, nombre de fichero y dimensiones—, porque el
-   campo de fichero no enseñaba nada y no se sabía qué había. */
+   está es lo que llena la biblioteca de duplicados.
+
+   La pieza se comporta como en cualquier aplicación web: vacía, una zona de
+   puntos que se pulsa o recibe el fichero; puesta, la imagen grande, entera y
+   con su proporción, un aspa arriba a la derecha y «Reemplazar» encima. */
 .evt-media {
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
   border: 1px solid var(--evt-linea);
-  border-radius: 10px;
+  border-radius: var(--evt-r);
   background: var(--evt-sup);
 }
-.evt-media.supports-drag-drop { border-style: dashed; }
-.evt-media.supports-drag-drop.drag-over {
-  border-color: var(--evt-pri);
-  box-shadow: 0 0 0 3px rgba(27, 79, 138, .25);
-  background: var(--evt-sup-2);
-}
 .evt-media + .evt-media { margin-top: 12px; }
-.evt-media-rotulo { display: block; margin-bottom: 10px; font-weight: 600; }
-.evt-media-ficha { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.evt-media-miniatura {
-  flex: 0 0 auto;
-  width: 88px;
-  height: 88px;
-  object-fit: contain;
-  border: 1px solid var(--evt-linea);
+/* Los logos corporativos llevan su enlace al lado: la caja es la del hueco. */
+.evt-imagenes > div > .evt-media { padding: 0; border: 0; }
+.evt-media-rotulo { display: block; font-weight: 600; }
+.evt-media-ayuda { display: block; margin-top: -6px; font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-media-marco { position: relative; }
+
+/* Puesta. */
+.evt-media-ficha { display: flex; flex-direction: column; gap: 8px; }
+.evt-media-lienzo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 10px;
+  /* Un damero, para que se vea el contorno de un PNG transparente. */
+  background: repeating-conic-gradient(var(--evt-sup-2) 0% 25%, var(--evt-sup) 0% 50%) 0 0 / 16px 16px;
+}
+.evt-media-miniatura { max-width: 100%; max-height: 100%; object-fit: contain; }
+.evt-media-quitar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 24, 30, .72);
+  color: #fff;
+  cursor: pointer;
+}
+.evt-media-quitar:hover { background: var(--evt-mal); }
+.evt-media-quitar svg { width: 16px; height: 16px; }
+.evt-media-sobre {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .45));
+  opacity: 0;
+  transition: opacity .15s;
+}
+/* En escritorio aparece al pasar por encima o al llegar con el tabulador;
+   en una pantalla táctil no hay «encima», así que está siempre. */
+.evt-media-lienzo:hover .evt-media-sobre,
+.evt-media-lienzo:focus-within .evt-media-sobre { opacity: 1; }
+@media (hover: none) { .evt-media-sobre { opacity: 1; } }
+.evt-media-reemplazar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
   border-radius: 8px;
+  background: rgba(255, 255, 255, .95);
+  color: var(--evt-texto);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+.evt-media-reemplazar svg { width: 16px; height: 16px; }
+.evt-media-datos { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.evt-media-datos strong { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-media-datos small { flex: none; font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Un PDF no se mira: es una ficha de fichero, en una fila, con el aspa al
+   final y «Reemplazar» debajo como un enlace. */
+.evt-media--fichero .evt-media-ficha {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas: "img datos x" "sobre sobre sobre";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--evt-linea);
+  border-radius: 10px;
   background: var(--evt-sup-2);
 }
-.evt-media-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.evt-media-datos strong { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
-.evt-media-datos small { font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.evt-media-vacia { margin: 0 0 10px; font-size: 13.5px; color: var(--evt-texto-2); }
-.evt-media-drop { margin: 0 0 8px; font-size: 13.5px; color: var(--evt-texto-2); }
-.evt-media-estado { min-height: 1.4em; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
-.evt-media-botones { margin: 0 0 4px; }
+.evt-media--fichero .evt-media-lienzo { display: contents; }
+.evt-media--fichero .evt-media-miniatura { grid-area: img; width: 40px; height: 48px; }
+.evt-media--fichero .evt-media-datos { grid-area: datos; flex-direction: column; gap: 2px; }
+.evt-media--fichero .evt-media-quitar { grid-area: x; position: static; background: transparent; color: var(--evt-texto-2); }
+.evt-media--fichero .evt-media-quitar:hover { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-media--fichero .evt-media-sobre { grid-area: sobre; position: static; justify-content: flex-start; padding: 0; background: none; opacity: 1; }
+.evt-media--fichero .evt-media-reemplazar { height: auto; padding: 0; background: none; box-shadow: none; color: var(--evt-pri); }
+
+/* Vacía. */
+.evt-media-zona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 2px dashed #c3cad3;
+  border-radius: 10px;
+  background: var(--evt-fondo);
+  color: var(--evt-texto);
+  font: inherit;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.evt-media-zona strong { color: var(--evt-pri); }
+.evt-media-zona small { font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-media-zona:hover,
+.evt-media-zona:focus-visible { border-color: var(--evt-pri); background: var(--evt-pri-cont); }
+.evt-media-zona-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--evt-pri-cont);
+  color: var(--evt-pri);
+}
+/* Con la zona a la vista, el texto de «todavía no hay nada» sobra: es lo que
+   se lee sin guion o sin permiso para subir. */
+.evt-media-zona:not([hidden]) + .evt-media-vacia { display: none; }
+.evt-media-vacia { margin: 0; font-size: 13.5px; color: var(--evt-texto-2); }
+
+/* Arrastrando un fichero encima: `drag-over` lo pone el cargador de WordPress. */
+.evt-media.drag-over .evt-media-zona {
+  border-style: solid;
+  border-color: var(--evt-pri);
+  background: var(--evt-pri-cont);
+  box-shadow: 0 0 0 4px rgba(27, 79, 138, .15);
+}
+.evt-media.drag-over .evt-media-lienzo { box-shadow: inset 0 0 0 3px var(--evt-pri); }
+
+/* No vale: el borde en rojo y el motivo debajo. */
+.evt-media--error .evt-media-zona { border-color: var(--evt-mal); background: var(--evt-mal-cont); }
+.evt-media--error .evt-media-estado { color: var(--evt-mal); }
+
+/* Subiendo. */
+.evt-media-progreso {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(27, 79, 138, .2);
+}
+.evt-media-progreso > span { display: block; width: 0; height: 100%; background: var(--evt-pri); transition: width .2s; }
+
+.evt-media-estado { margin: 0; font-size: 13px; font-weight: 600; }
+.evt-media-estado:empty { display: none; }
+
+/* Recién quitada: nada se borra hasta guardar, así que se puede deshacer. */
+.evt-media-deshacer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--evt-texto);
+  color: #fff;
+  font-size: 13px;
+}
+.evt-media-deshacer button {
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: #9cc3f0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
 .evt-media noscript > label { display: block; margin-top: 8px; }
 /* `hidden` lo pone y lo quita el guion, y `display:flex` le gana al valor por
    defecto del navegador: hay que decirlo aquí. */
