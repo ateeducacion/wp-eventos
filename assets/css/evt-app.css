@@ -836,6 +836,9 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Solo en su fila —el PDF del programa, la foto del ponente— no se estira
+     a todo el ancho: una zona de soltar de un metro no ayuda a nadie. */
+  max-width: 30rem;
   padding: 16px;
   border: 1px solid var(--evt-linea);
   border-radius: var(--evt-r);
@@ -1521,8 +1524,10 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-apariencia { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
 .evt-apariencia__muestra { position: sticky; top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px); }
 .evt-apariencia__muestra .evt-preview { margin: 0; }
-.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px; }
+/* `auto-fill` y no `auto-fit`: un campo solo en su cuadrícula ocupa una columna, no la fila entera. */
+.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 12px; }
 .evt-imagenes > * { margin: 0; padding: 12px; border: 1px solid var(--evt-linea); border-radius: 10px; }
+.evt-imagenes + .evt-ayuda { margin-top: 12px; }
 
 /* Plazas de un taller, dentro de su fila del programa. */
 .evt-plazas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12.5px; color: var(--evt-texto-2); }
