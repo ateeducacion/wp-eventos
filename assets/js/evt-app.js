@@ -321,50 +321,123 @@
 	/* --- 4. Elegir un archivo de la biblioteca ---------------------------- */
 
 	/*
-	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`. La
-	 * ventana nativa de WordPress aporta biblioteca, subida por arrastre y la
-	 * previsualización del adjunto; la ficha conserva una vista rápida fuera.
+	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`
+	 * (`PanelParts::media_field()`). Vacío es una zona que se pulsa o recibe
+	 * el fichero arrastrado; puesto, la imagen grande con un aspa para quitarla
+	 * y «Reemplazar» encima. La ventana nativa de WordPress aporta biblioteca,
+	 * subida y previsualización.
 	 *
-	 *   [data-evt-media-value]   el `hidden` con el ID del adjunto: lo único que viaja
-	 *   [data-evt-media-card]    la ficha de lo que hay puesto ahora
-	 *   [data-evt-media-thumb]   su miniatura
-	 *   [data-evt-media-name]    su nombre de fichero
-	 *   [data-evt-media-size]    sus dimensiones
-	 *   [data-evt-media-empty]   la línea de «todavía no hay nada»
-	 *   [data-evt-media-actions] la fila de botones, oculta hasta que este guion llega
-	 *   [data-evt-media-pick]    «Elegir imagen»
-	 *   [data-evt-media-clear]   «Quitar»
+	 *   [data-evt-media-value]    el `hidden` con el ID del adjunto: lo único que viaja
+	 *   [data-evt-media-card]     lo que hay puesto ahora: imagen, nombre y medidas
+	 *   [data-evt-media-thumb]    la imagen
+	 *   [data-evt-media-name]     su nombre de fichero
+	 *   [data-evt-media-size]     sus dimensiones
+	 *   [data-evt-media-empty]    el hueco cuando no hay nada
+	 *   [data-evt-media-actions]  todo lo que solo sirve con guion: nace oculto
+	 *   [data-evt-media-pick]     la zona vacía y «Reemplazar»: abren la biblioteca
+	 *   [data-evt-media-clear]    el aspa
+	 *   [data-evt-media-undo]     «Se quitará al guardar · Deshacer»
+	 *   [data-evt-media-restore]  su botón
+	 *   [data-evt-media-progress] la barra de subida, con [data-evt-media-bar] dentro
+	 *   [data-evt-media-status]   lo que se anuncia: progreso, éxito o error
+	 *
+	 * Quitar no borra nada: deja el hueco y el `hidden` a cero, y hasta
+	 * guardar se puede deshacer. Por eso se guarda aparte lo que había.
 	 *
 	 * Sin guion no se ve ningún botón —uno que no abre nada solo estorba— y el
 	 * respaldo del `<noscript>` sigue siendo la forma de subir o de quitar. Y
 	 * el ID que se escribe aquí no autoriza nada: el servidor comprueba que
-	 * sea un adjunto de imagen y que quien lo manda edite el evento.
+	 * sea un adjunto del tipo pedido y que quien lo manda edite el evento.
 	 */
-	function poner( caja, adjunto ) {
-		var oculto = caja.querySelector( '[data-evt-media-value]' );
-		var ficha = caja.querySelector( '[data-evt-media-card]' );
-		var vacia = caja.querySelector( '[data-evt-media-empty]' );
-		var quitar = caja.querySelector( '[data-evt-media-clear]' );
-		var mini = caja.querySelector( '[data-evt-media-thumb]' );
-		var nombre = caja.querySelector( '[data-evt-media-name]' );
-		var medidas = caja.querySelector( '[data-evt-media-size]' );
-		var hay = !! ( adjunto && adjunto.id );
+	var previos = typeof WeakMap === 'function' ? new WeakMap() : null;
+	var iniciales = typeof WeakMap === 'function' ? new WeakMap() : null;
 
+	function pieza( caja, nombre ) {
+		return caja.querySelector( '[data-evt-media-' + nombre + ']' );
+	}
+
+	/* Lo que el campo enseña ahora: para deshacer y para «Descartar». */
+	function foto( caja ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		return {
+			id: oculto ? oculto.value : '0',
+			src: mini ? mini.getAttribute( 'src' ) || '' : '',
+			alt: mini ? mini.alt : '',
+			name: nombre ? nombre.textContent : '',
+			size: medidas ? medidas.textContent : ''
+		};
+	}
+
+	function hayAlgo( id ) {
+		return '' !== id && '0' !== id;
+	}
+
+	/* El `hidden` cambia por guion y no avisa a nadie: sin este aviso, la barra
+	 * de guardar no se entera de que hay un cambio y salir no lo pregunta. */
+	function avisar( caja ) {
+		var oculto = pieza( caja, 'value' );
 		if ( oculto ) {
-			oculto.value = hay ? String( adjunto.id ) : '0';
+			oculto.dispatchEvent( new Event( 'change', { bubbles: true } ) );
 		}
+	}
+
+	function verDeshacer( caja, ver ) {
+		var deshacer = pieza( caja, 'undo' );
+		if ( deshacer ) {
+			deshacer.hidden = ! ver;
+		}
+		if ( ! ver && previos ) {
+			previos.delete( caja );
+		}
+	}
+
+	function marcarError( caja, error ) {
+		caja.classList.toggle( 'evt-media--error', !! error );
+	}
+
+	/* Un mensaje viejo no sobrevive a lo siguiente que se haga en el campo. */
+	function limpiarEstado( caja ) {
+		var estado = pieza( caja, 'status' );
+		if ( estado ) {
+			estado.textContent = '';
+		}
+		marcarError( caja, false );
+		progreso( caja, null );
+	}
+
+	function mostrar( caja, hay ) {
+		var ficha = pieza( caja, 'card' );
+		var vacia = pieza( caja, 'empty' );
+		var aspa = pieza( caja, 'clear' );
 		if ( ficha ) {
 			ficha.hidden = ! hay;
 		}
 		if ( vacia ) {
 			vacia.hidden = hay;
 		}
-		if ( quitar ) {
-			quitar.hidden = ! hay;
+		if ( aspa ) {
+			aspa.hidden = ! hay;
 		}
+	}
+
+	function poner( caja, adjunto ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		var hay = !! ( adjunto && adjunto.id );
+
+		if ( oculto ) {
+			oculto.value = hay ? String( adjunto.id ) : '0';
+		}
+		mostrar( caja, hay );
 		if ( ! hay ) {
 			return;
 		}
+		verDeshacer( caja, false );
 
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
 		var chica = adjunto.sizes && ( adjunto.sizes.medium || adjunto.sizes.thumbnail );
@@ -379,6 +452,60 @@
 			medidas.textContent = adjunto.width && adjunto.height
 				? adjunto.width + ' × ' + adjunto.height + ' px'
 				: '';
+		}
+	}
+
+	function restaurar( caja, estado ) {
+		var oculto = pieza( caja, 'value' );
+		var mini = pieza( caja, 'thumb' );
+		var nombre = pieza( caja, 'name' );
+		var medidas = pieza( caja, 'size' );
+		if ( oculto ) {
+			oculto.value = estado.id;
+		}
+		if ( mini ) {
+			mini.setAttribute( 'src', estado.src );
+			mini.alt = estado.alt;
+		}
+		if ( nombre ) {
+			nombre.textContent = estado.name;
+		}
+		if ( medidas ) {
+			medidas.textContent = estado.size;
+		}
+		mostrar( caja, hayAlgo( estado.id ) );
+	}
+
+	/* El aspa: se apunta lo que había, se deja el hueco y el foco pasa a
+	 * «Deshacer», porque el aspa acaba de desaparecer debajo del dedo. */
+	function quitar( caja ) {
+		var antes = foto( caja );
+		if ( previos && hayAlgo( antes.id ) ) {
+			previos.set( caja, antes );
+		}
+		limpiarEstado( caja );
+		poner( caja, null );
+		var hay = !! previos && previos.has( caja );
+		verDeshacer( caja, hay );
+		avisar( caja );
+		var boton = hay ? pieza( caja, 'restore' ) : pieza( caja, 'pick' );
+		if ( boton && ! boton.hidden && boton.focus ) {
+			boton.focus();
+		}
+	}
+
+	function deshacer( caja ) {
+		var antes = previos && previos.get( caja );
+		verDeshacer( caja, false );
+		if ( ! antes ) {
+			return;
+		}
+		limpiarEstado( caja );
+		restaurar( caja, antes );
+		avisar( caja );
+		var aspa = pieza( caja, 'clear' );
+		if ( aspa && aspa.focus ) {
+			aspa.focus();
 		}
 	}
 
@@ -399,7 +526,9 @@
 		marco.on( 'select', function () {
 			var elegido = marco.state().get( 'selection' ).first();
 			if ( elegido ) {
+				limpiarEstado( caja );
 				poner( caja, elegido.toJSON() );
+				avisar( caja );
 			}
 		} );
 		marco.open();
@@ -407,7 +536,7 @@
 
 	document.addEventListener( 'click', function ( e ) {
 		var boton = e.target && e.target.closest
-			? e.target.closest( '[data-evt-media-pick], [data-evt-media-clear]' )
+			? e.target.closest( '[data-evt-media-pick], [data-evt-media-clear], [data-evt-media-restore]' )
 			: null;
 		var caja = boton && boton.closest( '[data-evt-media]' );
 		if ( ! caja ) {
@@ -415,15 +544,29 @@
 		}
 		e.preventDefault();
 		if ( boton.hasAttribute( 'data-evt-media-clear' ) ) {
-			poner( caja, null );
+			quitar( caja );
+		} else if ( boton.hasAttribute( 'data-evt-media-restore' ) ) {
+			deshacer( caja );
 		} else {
 			elegir( caja );
 		}
 	} );
 
 	function mostrarBotones() {
-		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media-actions]' ), function ( fila ) {
-			fila.hidden = false;
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
+			if ( iniciales && ! iniciales.has( caja ) ) {
+				iniciales.set( caja, foto( caja ) );
+			}
+		} );
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media-actions]' ), function ( boton ) {
+			// El aspa solo cuando hay algo que quitar.
+			if ( boton.hasAttribute( 'data-evt-media-clear' ) ) {
+				var caja = boton.closest( '[data-evt-media]' );
+				var oculto = caja && pieza( caja, 'value' );
+				boton.hidden = ! oculto || ! hayAlgo( oculto.value );
+				return;
+			}
+			boton.hidden = false;
 		} );
 	}
 
@@ -431,6 +574,57 @@
 	// es por si algún día sube a la cabecera.
 	mostrarBotones();
 	document.addEventListener( 'DOMContentLoaded', mostrarBotones );
+
+	/* «Descartar» es un `reset` del formulario, y un `reset` no devuelve un
+	 * `hidden` a su valor de origen: el valor de un `hidden` ES su atributo.
+	 * Así que cada campo vuelve a como lo pintó el servidor. El `reset` llega
+	 * antes de vaciar el formulario: se espera a que termine. */
+	document.addEventListener( 'reset', function ( e ) {
+		var form = e.target;
+		if ( ! iniciales || ! form || ! form.querySelectorAll ) {
+			return;
+		}
+		window.setTimeout( function () {
+			Array.prototype.forEach.call( form.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
+				var inicial = iniciales.get( caja );
+				if ( ! inicial ) {
+					return;
+				}
+				verDeshacer( caja, false );
+				limpiarEstado( caja );
+				restaurar( caja, inicial );
+			} );
+		}, 0 );
+	} );
+
+	function progreso( caja, porcentaje ) {
+		var barra = pieza( caja, 'progress' );
+		var relleno = pieza( caja, 'bar' );
+		if ( barra ) {
+			barra.hidden = null === porcentaje;
+		}
+		if ( relleno && null !== porcentaje ) {
+			relleno.style.width = Math.max( 0, Math.min( 100, porcentaje ) ) + '%';
+		}
+	}
+
+	/* Lo que sube tiene que ser del tipo del campo: soltar un JPG en el del
+	 * programa lo sube igual, pero no se puede usar. Devuelve el motivo. */
+	function motivoRechazo( archivo, tipo, minimo ) {
+		if ( 'application/pdf' === tipo && 'application/pdf' !== archivo.mime ) {
+			return 'Aquí solo vale un PDF. El fichero se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( 'image' === tipo && archivo.type && 'image' !== archivo.type ) {
+			return 'Aquí solo vale una imagen. El fichero se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( minimo > 0 && ! archivo.width ) {
+			return 'No se ha podido leer el ancho de la imagen, y aquí hacen falta al menos ' + minimo + ' px. Se ha quedado en la biblioteca, pero no se usa.';
+		}
+		if ( minimo > 0 && archivo.width < minimo ) {
+			return 'La imagen mide ' + archivo.width + ' px de ancho y aquí hacen falta al menos ' + minimo + '. Se ha quedado en la biblioteca, pero no se usa.';
+		}
+		return '';
+	}
 
 	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
 	 * soltado. La subida crea el adjunto en WordPress inmediatamente; elegirlo
@@ -440,49 +634,56 @@
 			return;
 		}
 		Array.prototype.forEach.call( document.querySelectorAll( '[data-evt-media]' ), function ( caja ) {
-			if ( '1' === caja.dataset.evtUploader ) {
+			if ( '1' === caja.dataset.evtUploader || ! pieza( caja, 'pick' ) ) {
 				return;
 			}
 			caja.dataset.evtUploader = '1';
-			var estado = caja.querySelector( '[data-evt-media-status]' );
+			var estado = pieza( caja, 'status' );
 			var tipo = caja.getAttribute( 'data-evt-media-type' );
 			var minimo = parseInt( caja.getAttribute( 'data-evt-media-min-width' ) || '0', 10 );
+			function decir( texto, error ) {
+				if ( estado ) {
+					estado.textContent = texto;
+				}
+				marcarError( caja, error );
+			}
 			var opciones = {
 				container: caja,
 				dropzone: caja,
 				plupload: { multi_selection: false },
 				added: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = 'Subiendo ' + ( adjunto.get( 'filename' ) || 'el archivo' ) + '…';
-					}
+					progreso( caja, 0 );
+					decir( 'Subiendo ' + ( adjunto.get( 'filename' ) || 'el archivo' ) + '…', false );
 				},
 				progress: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = 'Subiendo… ' + ( adjunto.get( 'percent' ) || 0 ) + '%';
-					}
+					var por = adjunto.get( 'percent' ) || 0;
+					progreso( caja, por );
+					decir( 'Subiendo… ' + por + '%', false );
 				},
 				success: function ( adjunto ) {
 					var archivo = adjunto.toJSON();
-					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
-						if ( estado ) {
-							estado.textContent = 'La imagen se subió a la biblioteca, pero no se puede usar aquí: necesita al menos ' + minimo + ' px de ancho.';
-						}
+					var motivo = motivoRechazo( archivo, tipo, minimo );
+					progreso( caja, null );
+					if ( motivo ) {
+						decir( motivo, true );
 						return;
 					}
 					poner( caja, archivo );
-					if ( estado ) {
-						estado.textContent = 'Archivo subido. Guarde el formulario para aplicar el cambio.';
-					}
+					avisar( caja );
+					decir( 'Archivo subido. Guarde el formulario para aplicar el cambio.', false );
 				},
 				error: function ( mensaje ) {
-					if ( estado ) {
-						estado.textContent = mensaje || 'No se pudo subir el archivo.';
-					}
+					progreso( caja, null );
+					decir( mensaje || 'No se pudo subir el archivo.', true );
 				}
 			};
 			if ( 'image' === tipo ) {
 				opciones.plupload.filters = {
 					mime_types: [ { title: 'Imágenes', extensions: 'jpg,jpeg,png,gif,webp' } ]
+				};
+			} else if ( 'application/pdf' === tipo ) {
+				opciones.plupload.filters = {
+					mime_types: [ { title: 'PDF', extensions: 'pdf' } ]
 				};
 			}
 			new window.wp.Uploader( opciones );

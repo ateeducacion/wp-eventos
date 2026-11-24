@@ -7579,6 +7579,12 @@ final class Shell {
 			'lista'      => '<path fill="currentColor" d="M4 5h3v3H4V5Zm5 0h11v3H9V5Zm-5 5.5h3v3H4v-3Zm5 0h11v3H9v-3ZM4 16h3v3H4v-3Zm5 0h11v3H9v-3Z"/>',
 
 			'restaurar'  => '<path fill="currentColor" d="M12 5a7 7 0 1 1-6.7 9h2.2A4.8 4.8 0 1 0 12 7.2V10L7.5 6 12 2v3Z"/>',
+
+			'cerrar'     => '<path fill="currentColor" d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/>',
+
+			'reemplazar' => '<path fill="currentColor" d="M17 3l4 4-4 4V8H8a3 3 0 0 0-3 3H3a5 5 0 0 1 5-5h9V3ZM7 21l-4-4 4-4v3h9a3 3 0 0 0 3-3h2a5 5 0 0 1-5 5H7v3Z"/>',
+
+			'cargar'     => '<path fill="currentColor" d="M12 3l5 5h-3.5v6h-3V8H7l5-5ZM4 15h2v4h12v-4h2v6H4v-6Z"/>',
 		);
 		if ( ! isset( $caminos[ $nombre ] ) ) {
 			return '';
@@ -17396,6 +17402,273 @@ final class PanelParts {
 		}
 		return '' === $end ? $start : $start . ' – ' . $end;
 	}
+
+
+
+
+
+
+
+
+
+	private const MEDIA_IMAGE = array(
+		'class'   => '',
+		'what'    => 'la imagen',
+		'button'  => 'Usar esta imagen',
+		'choose'  => 'Elija una imagen',
+		'drag'    => 'arrástrela',
+		'formats' => 'JPG, PNG, WEBP o GIF',
+		'empty'   => 'Todavía no hay ninguna imagen puesta.',
+		'clear'   => 'Quitar esta imagen al guardar',
+		'upload'  => 'Subir una imagen desde su equipo',
+		'accept'  => 'image/jpeg,image/png,image/webp,image/gif',
+	);
+
+
+
+
+
+
+	private const MEDIA_PDF = array(
+		'class'   => ' evt-media--fichero',
+		'what'    => 'el PDF',
+		'button'  => 'Usar este PDF',
+		'choose'  => 'Elija un PDF',
+		'drag'    => 'arrástrelo',
+		'formats' => 'Un fichero PDF',
+		'empty'   => 'Todavía no hay ningún PDF puesto.',
+		'clear'   => 'Quitar este PDF al guardar',
+		'upload'  => 'Subir el PDF desde su equipo',
+		'accept'  => 'application/pdf',
+	);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	public static function media_field( array $args ): string {
+		$f = self::media_settings( $args );
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( 'evt-form-campo evt-media' . $f['t']['class'] ); ?>" data-evt-media data-evt-media-type="<?php echo esc_attr( $f['type'] ); ?>"
+			data-evt-media-min-width="<?php echo esc_attr( (string) $f['min_width'] ); ?>"
+			data-evt-media-title="<?php echo esc_attr( $f['title'] ); ?>" data-evt-media-button="<?php echo esc_attr( $f['t']['button'] ); ?>">
+			<span class="evt-media-rotulo"><?php echo esc_html( $f['label'] ); ?></span>
+			<?php if ( '' !== $f['help'] ) : ?>
+				<small class="evt-media-ayuda"><?php echo esc_html( $f['help'] ); ?></small>
+			<?php endif; ?>
+
+			<?php ?>
+			<input type="hidden" id="<?php echo esc_attr( $f['id'] ); ?>" name="<?php echo esc_attr( $f['name'] ); ?>"
+				value="<?php echo esc_attr( (string) $f['file_id'] ); ?>" autocomplete="off" data-evt-media-value />
+
+			<div class="evt-media-marco">
+				<?php echo self::media_card( $f ); ?>
+				<?php echo self::media_empty( $f ); ?>
+				<?php if ( $f['can_load'] ) : ?>
+					<span class="evt-media-progreso" data-evt-media-progress hidden><span data-evt-media-bar></span></span>
+				<?php endif; ?>
+			</div>
+
+			<?php if ( $f['can_load'] ) : ?>
+				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
+			<?php endif; ?>
+			<?php if ( $f['can_clear'] ) : ?>
+				<p class="evt-media-deshacer" data-evt-media-undo hidden>
+					<span id="<?php echo esc_attr( $f['id'] . '-deshacer' ); ?>">Se quitará al guardar.</span>
+					<button type="button" data-evt-media-restore aria-describedby="<?php echo esc_attr( $f['id'] . '-deshacer' ); ?>">Deshacer</button>
+				</p>
+			<?php endif; ?>
+
+			<?php echo self::media_fallback( $f ); ?>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function media_settings( array $args ): array {
+		$f    = wp_parse_args(
+			$args,
+			array(
+				'name'      => '',
+				'id'        => '',
+				'label'     => '',
+				'help'      => '',
+				'file'      => array(),
+				'can_load'  => false,
+				'can_clear' => false,
+				'min_width' => 0,
+				'type'      => 'image',
+				'title'     => '',
+				'empty'     => '',
+				'fallback'  => '',
+			)
+		);
+		$file = wp_parse_args(
+			(array) $f['file'],
+			array(
+				'id'     => 0,
+				'url'    => '',
+				'name'   => '',
+				'width'  => 0,
+				'height' => 0,
+			)
+		);
+
+		$t = 'application/pdf' === $f['type'] ? self::MEDIA_PDF : self::MEDIA_IMAGE;
+		if ( (int) $f['min_width'] > 0 ) {
+			$t['formats'] .= ' · al menos ' . (int) $f['min_width'] . ' px de ancho';
+		}
+		$own_empty = '' !== (string) $f['empty'];
+		if ( $own_empty ) {
+			$t['empty'] = (string) $f['empty'];
+		}
+
+		$size = '';
+		if ( (int) $file['width'] > 0 && (int) $file['height'] > 0 ) {
+			$size = (int) $file['width'] . ' × ' . (int) $file['height'] . ' px';
+		}
+		$id = '' !== (string) $f['id'] ? (string) $f['id'] : (string) $f['name'];
+
+		return array(
+			'name'      => (string) $f['name'],
+			'id'        => sanitize_html_class( $id ),
+			'label'     => (string) $f['label'],
+			'help'      => (string) $f['help'],
+			'title'     => '' !== (string) $f['title'] ? (string) $f['title'] : (string) $f['label'],
+			'type'      => (string) $f['type'],
+			'min_width' => (int) $f['min_width'],
+			'can_load'  => (bool) $f['can_load'],
+			'can_clear' => (bool) $f['can_clear'],
+			'fallback'  => (string) $f['fallback'],
+			'file_id'   => (int) $file['id'],
+			'url'       => (string) $file['url'],
+			'file_name' => (string) $file['name'],
+			'size'      => $size,
+			'set'       => '' !== (string) $file['url'],
+			'own_empty' => $own_empty,
+			't'         => $t,
+		);
+	}
+
+
+
+
+
+
+
+	private static function media_card( array $f ): string {
+		$what = $f['t']['what'];
+
+		ob_start();
+		?>
+		<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $f['set'] ? '' : 'hidden' ); ?>>
+			<span class="evt-media-lienzo">
+				<img class="evt-media-miniatura" data-evt-media-thumb src="<?php echo esc_url( $f['url'] ); ?>" alt="" />
+				<?php if ( $f['can_clear'] ) : ?>
+					<button type="button" class="evt-media-quitar" data-evt-media-clear data-evt-media-actions hidden
+						title="<?php echo esc_attr( 'Quitar ' . $what ); ?>" aria-label="<?php echo esc_attr( 'Quitar ' . $what . ' de: ' . $f['label'] ); ?>">
+						<?php echo wp_kses( Shell::icon( 'cerrar' ), self::SVG ); ?>
+					</button>
+				<?php endif; ?>
+				<?php if ( $f['can_load'] ) : ?>
+					<span class="evt-media-sobre">
+						<button type="button" class="evt-media-reemplazar" data-evt-media-pick data-evt-media-actions hidden
+							aria-label="<?php echo esc_attr( 'Reemplazar ' . $what . ' de: ' . $f['label'] ); ?>">
+							<?php echo wp_kses( Shell::icon( 'reemplazar' ), self::SVG ); ?>
+							Reemplazar
+						</button>
+					</span>
+				<?php endif; ?>
+			</span>
+			<span class="evt-media-datos">
+				<strong data-evt-media-name><?php echo esc_html( $f['file_name'] ); ?></strong>
+				<small data-evt-media-size><?php echo esc_html( $f['size'] ); ?></small>
+			</span>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function media_empty( array $f ): string {
+		ob_start();
+		?>
+		<div class="evt-media-hueco" data-evt-media-empty <?php echo esc_attr( $f['set'] ? 'hidden' : '' ); ?>>
+			<?php if ( $f['can_load'] ) : ?>
+				<?php ?>
+				<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden>
+					<span class="evt-media-zona-icono"><?php echo wp_kses( Shell::icon( 'cargar' ), self::SVG ); ?></span>
+					<span><strong><?php echo esc_html( $f['t']['choose'] ); ?></strong> <?php echo esc_html( 'o ' . $f['t']['drag'] . ' aquí' ); ?><span class="screen-reader-text"><?php echo esc_html( ' (' . $f['label'] . ')' ); ?></span></span>
+					<small><?php echo esc_html( $f['t']['formats'] ); ?></small>
+				</button>
+			<?php endif; ?>
+			<p class="<?php echo esc_attr( 'evt-media-vacia' . ( $f['own_empty'] ? ' evt-media-vacia--propia' : '' ) ); ?>"><?php echo esc_html( $f['t']['empty'] ); ?></p>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+
+
+
+
+
+
+	private static function media_fallback( array $f ): string {
+		if ( '' === $f['fallback'] ) {
+			return '';
+		}
+		$id = $f['id'];
+
+		ob_start();
+		?>
+		<noscript>
+			<?php if ( $f['set'] && $f['can_clear'] ) : ?>
+				<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
+					<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $f['fallback'] . '_clear' ); ?>" value="1" />
+					<?php echo esc_html( $f['t']['clear'] ); ?>
+				</label>
+			<?php endif; ?>
+			<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $f['t']['upload'] ); ?></label>
+			<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $f['fallback'] . '_file' ); ?>"
+				accept="<?php echo esc_attr( $f['t']['accept'] ); ?>" <?php disabled( ! $f['can_load'], true ); ?> />
+		</noscript>
+		<?php
+		return (string) ob_get_clean();
+	}
 }
 
 
@@ -17566,31 +17839,23 @@ final class EventSpeakersPanel {
 
 	private static function photo( array $m, array $valores ): string {
 		$url = (string) ( $valores['photo'] ?? '' );
-		$id  = (int) ( $valores['photo_id'] ?? 0 );
 
-		ob_start();
-		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="image"
-			data-evt-media-title="Elegir la foto del ponente" data-evt-media-button="Usar esta imagen">
-			<span class="evt-media-rotulo">Foto</span>
-			<input type="hidden" id="evt-sp-photo" name="evt_sp_photo" value="<?php echo esc_attr( (string) $id ); ?>" data-evt-media-value />
-			<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>
-				<img class="evt-media-miniatura" src="<?php echo esc_url( $url ); ?>" alt="" width="96" height="96" data-evt-media-thumb />
-				<span class="evt-media-datos"><strong data-evt-media-name>Foto del ponente</strong><small data-evt-media-size></small></span>
-			</div>
-			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( '' !== $url ? 'hidden' : '' ); ?>>Sin foto. La ficha se ve igual, con las iniciales.</p>
-			<?php if ( true === $m['can_upload'] ) : ?>
-				<p class="evt-media-drop">Arrastre una imagen hasta este campo o selecciónela en la biblioteca.</p>
-				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
-				<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
-					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-pick>Seleccionar o subir</button>
-					<button type="button" class="<?php echo esc_attr( Assets::button_class() . ' evt-mini' ); ?>" data-evt-media-clear <?php echo esc_attr( '' !== $url ? '' : 'hidden' ); ?>>Eliminar del campo</button>
-				</p>
-			<?php endif; ?>
-			<small>La ventana de WordPress permite elegir una imagen existente, previsualizarla o arrastrar una nueva desde su equipo.</small>
-		</div>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::media_field(
+			array(
+				'name'      => 'evt_sp_photo',
+				'id'        => 'evt-sp-photo',
+				'label'     => 'Foto',
+				'file'      => array(
+					'id'   => (int) ( $valores['photo_id'] ?? 0 ),
+					'url'  => $url,
+					'name' => '' !== $url ? 'Foto del ponente' : '',
+				),
+				'can_load'  => true === $m['can_upload'],
+				'can_clear' => true === $m['can_upload'],
+				'title'     => 'Elegir la foto del ponente',
+				'empty'     => 'Sin foto. La ficha se ve igual, con las iniciales.',
+			)
+		);
 	}
 
 
@@ -20506,71 +20771,20 @@ final class EventAppearancePanel {
 
 
 	public static function image_field( string $campo, string $rotulo, array $imagen, string $ayuda, bool $can_load, int $min_width = 0, string $type = 'image' ): string {
-		$pdf    = 'application/pdf' === $type;
-		$url    = (string) ( $imagen['url'] ?? '' );
-		$id     = sanitize_html_class( $campo );
-		$puesta = '' !== $url;
-		$ancho  = (int) ( $imagen['width'] ?? 0 );
-		$alto   = (int) ( $imagen['height'] ?? 0 );
-
-		ob_start();
-		?>
-		<div class="evt-form-campo evt-media" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
-			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( $rotulo ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
-			<span class="evt-media-rotulo"><?php echo esc_html( $rotulo ); ?></span>
-
-			<?php ?>
-			<input type="hidden" name="<?php echo esc_attr( $campo . '_id' ); ?>"
-				value="<?php echo esc_attr( (string) (int) ( $imagen['id'] ?? 0 ) ); ?>" data-evt-media-value />
-
-			<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-				<img class="evt-media-miniatura" data-evt-media-thumb width="88" height="88"
-					src="<?php echo esc_url( $url ); ?>" alt="" />
-				<span class="evt-media-datos">
-					<strong data-evt-media-name><?php echo esc_html( (string) ( $imagen['name'] ?? '' ) ); ?></strong>
-					<small data-evt-media-size><?php echo esc_html( $ancho > 0 && $alto > 0 ? $ancho . ' × ' . $alto . ' px' : '' ); ?></small>
-				</span>
-			</div>
-			<p class="evt-media-vacia" data-evt-media-empty <?php echo esc_attr( $puesta ? 'hidden' : '' ); ?>>
-				<?php echo esc_html( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ); ?>
-			</p>
-
-			<?php if ( $can_load ) : ?>
-				<p class="evt-media-drop"><?php echo esc_html( $pdf ? 'Arrastre el PDF hasta este campo o selecciónelo en la biblioteca.' : 'Arrastre una imagen hasta este campo o selecciónela en la biblioteca.' ); ?></p>
-				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
-			<?php endif; ?>
-
-			<p class="evt-acciones evt-media-botones" data-evt-media-actions hidden>
-				<?php if ( $can_load ) : ?>
-					<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-						data-evt-media-pick aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir PDF para: ' : 'Elegir imagen para: ' ) . $rotulo ); ?>">
-						Seleccionar o subir
-					</button>
-				<?php endif; ?>
-				<button type="button" class="<?php echo esc_attr( Assets::button_class() ); ?>"
-					data-evt-media-clear aria-label="<?php echo esc_attr( ( $pdf ? 'Quitar el PDF de: ' : 'Quitar la imagen de: ' ) . $rotulo ); ?>"
-					<?php echo esc_attr( $puesta ? '' : 'hidden' ); ?>>
-					Eliminar del campo
-				</button>
-			</p>
-
-			<noscript>
-				<?php if ( $puesta ) : ?>
-					<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
-						<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $campo . '_clear' ); ?>" value="1" />
-						<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
-					</label>
-				<?php endif; ?>
-				<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
-				<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $campo . '_file' ); ?>"
-					accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
-			</noscript>
-
-			<small><?php echo esc_html( $ayuda ); ?></small>
-		</div>
-		<?php
-		return (string) ob_get_clean();
+		return PanelParts::media_field(
+			array(
+				'name'      => $campo . '_id',
+				'id'        => $campo,
+				'label'     => $rotulo,
+				'help'      => $ayuda,
+				'file'      => $imagen,
+				'can_load'  => $can_load,
+				'can_clear' => true,
+				'min_width' => $min_width,
+				'type'      => $type,
+				'fallback'  => $campo,
+			)
+		);
 	}
 }
 
@@ -29202,42 +29416,220 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 
 /* --- archivos gestionados con la biblioteca de medios -------------------- */
 
-/* El selector de medios en vez de un `file` pelado: el sitio tiene 4.597
-   adjuntos, y volver a subir el mismo cartel por no poder elegir el que ya
-   está es lo que llena la biblioteca de duplicados. La ficha de arriba enseña
-   lo que hay puesto —miniatura, nombre de fichero y dimensiones—, porque el
-   campo de fichero no enseñaba nada y no se sabía qué había. */
+/* El selector de medios en vez de un `file` pelado: en una biblioteca
+   grande, volver a subir el mismo cartel por no poder elegir el que ya está
+   es lo que la llena de duplicados.
+
+   La pieza se comporta como en cualquier aplicación web: vacía, una zona de
+   puntos que se pulsa o recibe el fichero; puesta, la imagen grande, entera y
+   con su proporción, un aspa arriba a la derecha y «Reemplazar» encima. */
 .evt-media {
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Solo en su fila —el PDF del programa, la foto del ponente— no se estira
+     a todo el ancho: una zona de soltar de un metro no ayuda a nadie. */
+  max-width: 30rem;
+  padding: 16px;
   border: 1px solid var(--evt-linea);
-  border-radius: 10px;
+  border-radius: var(--evt-r);
   background: var(--evt-sup);
 }
-.evt-media.supports-drag-drop { border-style: dashed; }
-.evt-media.supports-drag-drop.drag-over {
-  border-color: var(--evt-pri);
-  box-shadow: 0 0 0 3px rgba(27, 79, 138, .25);
-  background: var(--evt-sup-2);
-}
 .evt-media + .evt-media { margin-top: 12px; }
-.evt-media-rotulo { display: block; margin-bottom: 10px; font-weight: 600; }
-.evt-media-ficha { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.evt-media-miniatura {
-  flex: 0 0 auto;
-  width: 88px;
-  height: 88px;
-  object-fit: contain;
-  border: 1px solid var(--evt-linea);
+/* Los logos corporativos llevan su enlace al lado: la caja es la del hueco. */
+.evt-imagenes > div > .evt-media { padding: 0; border: 0; }
+.evt-media-rotulo { display: block; font-weight: 600; }
+.evt-media-ayuda { display: block; margin-top: -6px; font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-media-marco { position: relative; }
+
+/* Puesta. */
+.evt-media-ficha { display: flex; flex-direction: column; gap: 8px; }
+.evt-media-lienzo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 10px;
+  /* Un damero, para que se vea el contorno de un PNG transparente. */
+  background: repeating-conic-gradient(var(--evt-sup-2) 0% 25%, var(--evt-sup) 0% 50%) 0 0 / 16px 16px;
+}
+.evt-media-miniatura { max-width: 100%; max-height: 100%; object-fit: contain; }
+.evt-media-quitar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 24, 30, .72);
+  color: #fff;
+  cursor: pointer;
+}
+.evt-media-quitar:hover { background: var(--evt-mal); }
+.evt-media-quitar svg { width: 16px; height: 16px; }
+.evt-media-sobre {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .45));
+  opacity: 0;
+  transition: opacity .15s;
+}
+/* En escritorio aparece al pasar por encima o al llegar con el tabulador;
+   en una pantalla táctil no hay «encima», así que está siempre. */
+.evt-media-lienzo:hover .evt-media-sobre,
+.evt-media-lienzo:focus-within .evt-media-sobre { opacity: 1; }
+@media (hover: none) { .evt-media-sobre { opacity: 1; } }
+/* Sin guion el botón sigue oculto: sin él, la franja oscura sobraría. */
+.evt-media-sobre:has(> [hidden]) { display: none; }
+.evt-media-reemplazar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
   border-radius: 8px;
+  background: rgba(255, 255, 255, .95);
+  color: var(--evt-texto);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+.evt-media-reemplazar svg { width: 16px; height: 16px; }
+.evt-media-datos { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.evt-media-datos strong { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-media-datos small { flex: none; font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Un PDF no se mira: es una ficha de fichero, en una fila, con el aspa al
+   final y «Reemplazar» debajo como un enlace. */
+.evt-media--fichero .evt-media-ficha {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas: "img datos x" "sobre sobre sobre";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--evt-linea);
+  border-radius: 10px;
   background: var(--evt-sup-2);
 }
-.evt-media-datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.evt-media-datos strong { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
-.evt-media-datos small { font-size: 12.5px; color: var(--evt-texto-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.evt-media-vacia { margin: 0 0 10px; font-size: 13.5px; color: var(--evt-texto-2); }
-.evt-media-drop { margin: 0 0 8px; font-size: 13.5px; color: var(--evt-texto-2); }
-.evt-media-estado { min-height: 1.4em; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
-.evt-media-botones { margin: 0 0 4px; }
+.evt-media--fichero .evt-media-lienzo { display: contents; }
+.evt-media--fichero .evt-media-miniatura { grid-area: img; width: 40px; height: 48px; }
+.evt-media--fichero .evt-media-datos { grid-area: datos; flex-direction: column; gap: 2px; }
+.evt-media--fichero .evt-media-quitar { grid-area: x; position: static; background: transparent; color: var(--evt-texto-2); }
+.evt-media--fichero .evt-media-quitar:hover { background: var(--evt-mal-cont); color: var(--evt-mal); }
+.evt-media--fichero .evt-media-sobre { grid-area: sobre; position: static; justify-content: flex-start; padding: 0; background: none; opacity: 1; }
+.evt-media--fichero .evt-media-reemplazar { height: auto; padding: 0; background: none; box-shadow: none; color: var(--evt-pri); }
+
+/* Vacía. */
+.evt-media-zona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 2px dashed #c3cad3;
+  border-radius: 10px;
+  background: var(--evt-fondo);
+  color: var(--evt-texto);
+  font: inherit;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.evt-media-zona strong { color: var(--evt-pri); }
+.evt-media-zona small { font-size: 12.5px; color: var(--evt-texto-2); }
+.evt-media-zona:hover,
+.evt-media-zona:focus-visible { border-color: var(--evt-pri); background: var(--evt-pri-cont); }
+.evt-media-zona-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--evt-pri-cont);
+  color: var(--evt-pri);
+}
+/* Con la zona a la vista, el texto de «todavía no hay nada» sobra: es lo que
+   se lee sin guion o sin permiso para subir. */
+.evt-media-zona:not([hidden]) + .evt-media-vacia:not(.evt-media-vacia--propia) { display: none; }
+/* Un texto propio del campo —«Sin foto. La ficha se ve igual, con las
+   iniciales.»— sí dice algo: se queda, como ayuda debajo de la zona. */
+.evt-media-zona:not([hidden]) + .evt-media-vacia--propia { margin-top: 8px; font-size: 12.5px; }
+.evt-media-vacia { margin: 0; font-size: 13.5px; color: var(--evt-texto-2); }
+
+/* Arrastrando un fichero encima: `drag-over` lo pone el cargador de WordPress. */
+.evt-media.drag-over .evt-media-zona {
+  border-style: solid;
+  border-color: var(--evt-pri);
+  background: var(--evt-pri-cont);
+  box-shadow: 0 0 0 4px rgba(27, 79, 138, .15);
+}
+/* Con algo puesto, el aviso va en el marco: la imagen taparía un borde
+   interior, y la ficha de un PDF no tiene lienzo propio. */
+.evt-media.drag-over .evt-media-ficha { outline: 3px solid var(--evt-pri); outline-offset: 3px; border-radius: 10px; }
+
+/* No vale: el borde en rojo y el motivo debajo. */
+.evt-media--error .evt-media-zona { border-color: var(--evt-mal); background: var(--evt-mal-cont); }
+.evt-media--error .evt-media-estado { color: var(--evt-mal); }
+
+/* Subiendo. */
+.evt-media-progreso {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(27, 79, 138, .2);
+}
+.evt-media-progreso > span { display: block; width: 0; height: 100%; background: var(--evt-pri); transition: width .2s; }
+
+.evt-media-estado { margin: 0; font-size: 13px; font-weight: 600; }
+/* Sin `display: none` aunque esté vacía: una región `aria-live` que no se
+   pinta cuando le llega el texto no se anuncia, y el primer aviso —a veces
+   el único, como «fichero no admitido»— se perdería. */
+.evt-media-estado:empty { margin-top: -8px; }
+
+/* Recién quitada: nada se borra hasta guardar, así que se puede deshacer. */
+.evt-media-deshacer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--evt-texto);
+  color: #fff;
+  font-size: 13px;
+}
+.evt-media-deshacer button {
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: #9cc3f0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
 .evt-media noscript > label { display: block; margin-top: 8px; }
 /* `hidden` lo pone y lo quita el guion, y `display:flex` le gana al valor por
    defecto del navegador: hay que decirlo aquí. */
@@ -29733,8 +30125,10 @@ body.evt-app .evt-btn-borrar { --bs-btn-bg: var(--evt-mal-cont); --bs-btn-border
 .evt-apariencia { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
 .evt-apariencia__muestra { position: sticky; top: calc(var(--wp-admin--admin-bar--height, 0px) + 16px); }
 .evt-apariencia__muestra .evt-preview { margin: 0; }
-.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px; }
+/* `auto-fill` y no `auto-fit`: un campo solo en su cuadrícula ocupa una columna, no la fila entera. */
+.evt-imagenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 12px; }
 .evt-imagenes > * { margin: 0; padding: 12px; border: 1px solid var(--evt-linea); border-radius: 10px; }
+.evt-imagenes + .evt-ayuda { margin-top: 12px; }
 
 /* Plazas de un taller, dentro de su fila del programa. */
 .evt-plazas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12.5px; color: var(--evt-texto-2); }
@@ -31960,50 +32354,123 @@ body .swal2-container { z-index: 100010; }
 	/* --- 4. Elegir un archivo de la biblioteca ---------------------------- */
 
 	/*
-	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`. La
-	 * ventana nativa de WordPress aporta biblioteca, subida por arrastre y la
-	 * previsualización del adjunto; la ficha conserva una vista rápida fuera.
+	 * Cada archivo gestionado con la biblioteca es un `[data-evt-media]`
+	 * (`PanelParts::media_field()`). Vacío es una zona que se pulsa o recibe
+	 * el fichero arrastrado; puesto, la imagen grande con un aspa para quitarla
+	 * y «Reemplazar» encima. La ventana nativa de WordPress aporta biblioteca,
+	 * subida y previsualización.
 	 *
-	 *   [data-evt-media-value]   el `hidden` con el ID del adjunto: lo único que viaja
-	 *   [data-evt-media-card]    la ficha de lo que hay puesto ahora
-	 *   [data-evt-media-thumb]   su miniatura
-	 *   [data-evt-media-name]    su nombre de fichero
-	 *   [data-evt-media-size]    sus dimensiones
-	 *   [data-evt-media-empty]   la línea de «todavía no hay nada»
-	 *   [data-evt-media-actions] la fila de botones, oculta hasta que este guion llega
-	 *   [data-evt-media-pick]    «Elegir imagen»
-	 *   [data-evt-media-clear]   «Quitar»
+	 *   [data-evt-media-value]    el `hidden` con el ID del adjunto: lo único que viaja
+	 *   [data-evt-media-card]     lo que hay puesto ahora: imagen, nombre y medidas
+	 *   [data-evt-media-thumb]    la imagen
+	 *   [data-evt-media-name]     su nombre de fichero
+	 *   [data-evt-media-size]     sus dimensiones
+	 *   [data-evt-media-empty]    el hueco cuando no hay nada
+	 *   [data-evt-media-actions]  todo lo que solo sirve con guion: nace oculto
+	 *   [data-evt-media-pick]     la zona vacía y «Reemplazar»: abren la biblioteca
+	 *   [data-evt-media-clear]    el aspa
+	 *   [data-evt-media-undo]     «Se quitará al guardar · Deshacer»
+	 *   [data-evt-media-restore]  su botón
+	 *   [data-evt-media-progress] la barra de subida, con [data-evt-media-bar] dentro
+	 *   [data-evt-media-status]   lo que se anuncia: progreso, éxito o error
+	 *
+	 * Quitar no borra nada: deja el hueco y el `hidden` a cero, y hasta
+	 * guardar se puede deshacer. Por eso se guarda aparte lo que había.
 	 *
 	 * Sin guion no se ve ningún botón —uno que no abre nada solo estorba— y el
 	 * respaldo del `<noscript>` sigue siendo la forma de subir o de quitar. Y
 	 * el ID que se escribe aquí no autoriza nada: el servidor comprueba que
-	 * sea un adjunto de imagen y que quien lo manda edite el evento.
+	 * sea un adjunto del tipo pedido y que quien lo manda edite el evento.
 	 */
-	function poner( caja, adjunto ) {
-		var oculto = caja.querySelector( \'[data-evt-media-value]\' );
-		var ficha = caja.querySelector( \'[data-evt-media-card]\' );
-		var vacia = caja.querySelector( \'[data-evt-media-empty]\' );
-		var quitar = caja.querySelector( \'[data-evt-media-clear]\' );
-		var mini = caja.querySelector( \'[data-evt-media-thumb]\' );
-		var nombre = caja.querySelector( \'[data-evt-media-name]\' );
-		var medidas = caja.querySelector( \'[data-evt-media-size]\' );
-		var hay = !! ( adjunto && adjunto.id );
+	var previos = typeof WeakMap === \'function\' ? new WeakMap() : null;
+	var iniciales = typeof WeakMap === \'function\' ? new WeakMap() : null;
 
+	function pieza( caja, nombre ) {
+		return caja.querySelector( \'[data-evt-media-\' + nombre + \']\' );
+	}
+
+	/* Lo que el campo enseña ahora: para deshacer y para «Descartar». */
+	function foto( caja ) {
+		var oculto = pieza( caja, \'value\' );
+		var mini = pieza( caja, \'thumb\' );
+		var nombre = pieza( caja, \'name\' );
+		var medidas = pieza( caja, \'size\' );
+		return {
+			id: oculto ? oculto.value : \'0\',
+			src: mini ? mini.getAttribute( \'src\' ) || \'\' : \'\',
+			alt: mini ? mini.alt : \'\',
+			name: nombre ? nombre.textContent : \'\',
+			size: medidas ? medidas.textContent : \'\'
+		};
+	}
+
+	function hayAlgo( id ) {
+		return \'\' !== id && \'0\' !== id;
+	}
+
+	/* El `hidden` cambia por guion y no avisa a nadie: sin este aviso, la barra
+	 * de guardar no se entera de que hay un cambio y salir no lo pregunta. */
+	function avisar( caja ) {
+		var oculto = pieza( caja, \'value\' );
 		if ( oculto ) {
-			oculto.value = hay ? String( adjunto.id ) : \'0\';
+			oculto.dispatchEvent( new Event( \'change\', { bubbles: true } ) );
 		}
+	}
+
+	function verDeshacer( caja, ver ) {
+		var deshacer = pieza( caja, \'undo\' );
+		if ( deshacer ) {
+			deshacer.hidden = ! ver;
+		}
+		if ( ! ver && previos ) {
+			previos.delete( caja );
+		}
+	}
+
+	function marcarError( caja, error ) {
+		caja.classList.toggle( \'evt-media--error\', !! error );
+	}
+
+	/* Un mensaje viejo no sobrevive a lo siguiente que se haga en el campo. */
+	function limpiarEstado( caja ) {
+		var estado = pieza( caja, \'status\' );
+		if ( estado ) {
+			estado.textContent = \'\';
+		}
+		marcarError( caja, false );
+		progreso( caja, null );
+	}
+
+	function mostrar( caja, hay ) {
+		var ficha = pieza( caja, \'card\' );
+		var vacia = pieza( caja, \'empty\' );
+		var aspa = pieza( caja, \'clear\' );
 		if ( ficha ) {
 			ficha.hidden = ! hay;
 		}
 		if ( vacia ) {
 			vacia.hidden = hay;
 		}
-		if ( quitar ) {
-			quitar.hidden = ! hay;
+		if ( aspa ) {
+			aspa.hidden = ! hay;
 		}
+	}
+
+	function poner( caja, adjunto ) {
+		var oculto = pieza( caja, \'value\' );
+		var mini = pieza( caja, \'thumb\' );
+		var nombre = pieza( caja, \'name\' );
+		var medidas = pieza( caja, \'size\' );
+		var hay = !! ( adjunto && adjunto.id );
+
+		if ( oculto ) {
+			oculto.value = hay ? String( adjunto.id ) : \'0\';
+		}
+		mostrar( caja, hay );
 		if ( ! hay ) {
 			return;
 		}
+		verDeshacer( caja, false );
 
 		// La miniatura de la biblioteca si la hay, y si no el fichero entero.
 		var chica = adjunto.sizes && ( adjunto.sizes.medium || adjunto.sizes.thumbnail );
@@ -32018,6 +32485,60 @@ body .swal2-container { z-index: 100010; }
 			medidas.textContent = adjunto.width && adjunto.height
 				? adjunto.width + \' × \' + adjunto.height + \' px\'
 				: \'\';
+		}
+	}
+
+	function restaurar( caja, estado ) {
+		var oculto = pieza( caja, \'value\' );
+		var mini = pieza( caja, \'thumb\' );
+		var nombre = pieza( caja, \'name\' );
+		var medidas = pieza( caja, \'size\' );
+		if ( oculto ) {
+			oculto.value = estado.id;
+		}
+		if ( mini ) {
+			mini.setAttribute( \'src\', estado.src );
+			mini.alt = estado.alt;
+		}
+		if ( nombre ) {
+			nombre.textContent = estado.name;
+		}
+		if ( medidas ) {
+			medidas.textContent = estado.size;
+		}
+		mostrar( caja, hayAlgo( estado.id ) );
+	}
+
+	/* El aspa: se apunta lo que había, se deja el hueco y el foco pasa a
+	 * «Deshacer», porque el aspa acaba de desaparecer debajo del dedo. */
+	function quitar( caja ) {
+		var antes = foto( caja );
+		if ( previos && hayAlgo( antes.id ) ) {
+			previos.set( caja, antes );
+		}
+		limpiarEstado( caja );
+		poner( caja, null );
+		var hay = !! previos && previos.has( caja );
+		verDeshacer( caja, hay );
+		avisar( caja );
+		var boton = hay ? pieza( caja, \'restore\' ) : pieza( caja, \'pick\' );
+		if ( boton && ! boton.hidden && boton.focus ) {
+			boton.focus();
+		}
+	}
+
+	function deshacer( caja ) {
+		var antes = previos && previos.get( caja );
+		verDeshacer( caja, false );
+		if ( ! antes ) {
+			return;
+		}
+		limpiarEstado( caja );
+		restaurar( caja, antes );
+		avisar( caja );
+		var aspa = pieza( caja, \'clear\' );
+		if ( aspa && aspa.focus ) {
+			aspa.focus();
 		}
 	}
 
@@ -32038,7 +32559,9 @@ body .swal2-container { z-index: 100010; }
 		marco.on( \'select\', function () {
 			var elegido = marco.state().get( \'selection\' ).first();
 			if ( elegido ) {
+				limpiarEstado( caja );
 				poner( caja, elegido.toJSON() );
+				avisar( caja );
 			}
 		} );
 		marco.open();
@@ -32046,7 +32569,7 @@ body .swal2-container { z-index: 100010; }
 
 	document.addEventListener( \'click\', function ( e ) {
 		var boton = e.target && e.target.closest
-			? e.target.closest( \'[data-evt-media-pick], [data-evt-media-clear]\' )
+			? e.target.closest( \'[data-evt-media-pick], [data-evt-media-clear], [data-evt-media-restore]\' )
 			: null;
 		var caja = boton && boton.closest( \'[data-evt-media]\' );
 		if ( ! caja ) {
@@ -32054,15 +32577,29 @@ body .swal2-container { z-index: 100010; }
 		}
 		e.preventDefault();
 		if ( boton.hasAttribute( \'data-evt-media-clear\' ) ) {
-			poner( caja, null );
+			quitar( caja );
+		} else if ( boton.hasAttribute( \'data-evt-media-restore\' ) ) {
+			deshacer( caja );
 		} else {
 			elegir( caja );
 		}
 	} );
 
 	function mostrarBotones() {
-		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-media-actions]\' ), function ( fila ) {
-			fila.hidden = false;
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-media]\' ), function ( caja ) {
+			if ( iniciales && ! iniciales.has( caja ) ) {
+				iniciales.set( caja, foto( caja ) );
+			}
+		} );
+		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-media-actions]\' ), function ( boton ) {
+			// El aspa solo cuando hay algo que quitar.
+			if ( boton.hasAttribute( \'data-evt-media-clear\' ) ) {
+				var caja = boton.closest( \'[data-evt-media]\' );
+				var oculto = caja && pieza( caja, \'value\' );
+				boton.hidden = ! oculto || ! hayAlgo( oculto.value );
+				return;
+			}
+			boton.hidden = false;
 		} );
 	}
 
@@ -32070,6 +32607,57 @@ body .swal2-container { z-index: 100010; }
 	// es por si algún día sube a la cabecera.
 	mostrarBotones();
 	document.addEventListener( \'DOMContentLoaded\', mostrarBotones );
+
+	/* «Descartar» es un `reset` del formulario, y un `reset` no devuelve un
+	 * `hidden` a su valor de origen: el valor de un `hidden` ES su atributo.
+	 * Así que cada campo vuelve a como lo pintó el servidor. El `reset` llega
+	 * antes de vaciar el formulario: se espera a que termine. */
+	document.addEventListener( \'reset\', function ( e ) {
+		var form = e.target;
+		if ( ! iniciales || ! form || ! form.querySelectorAll ) {
+			return;
+		}
+		window.setTimeout( function () {
+			Array.prototype.forEach.call( form.querySelectorAll( \'[data-evt-media]\' ), function ( caja ) {
+				var inicial = iniciales.get( caja );
+				if ( ! inicial ) {
+					return;
+				}
+				verDeshacer( caja, false );
+				limpiarEstado( caja );
+				restaurar( caja, inicial );
+			} );
+		}, 0 );
+	} );
+
+	function progreso( caja, porcentaje ) {
+		var barra = pieza( caja, \'progress\' );
+		var relleno = pieza( caja, \'bar\' );
+		if ( barra ) {
+			barra.hidden = null === porcentaje;
+		}
+		if ( relleno && null !== porcentaje ) {
+			relleno.style.width = Math.max( 0, Math.min( 100, porcentaje ) ) + \'%\';
+		}
+	}
+
+	/* Lo que sube tiene que ser del tipo del campo: soltar un JPG en el del
+	 * programa lo sube igual, pero no se puede usar. Devuelve el motivo. */
+	function motivoRechazo( archivo, tipo, minimo ) {
+		if ( \'application/pdf\' === tipo && \'application/pdf\' !== archivo.mime ) {
+			return \'Aquí solo vale un PDF. El fichero se ha quedado en la biblioteca, pero no se usa.\';
+		}
+		if ( \'image\' === tipo && archivo.type && \'image\' !== archivo.type ) {
+			return \'Aquí solo vale una imagen. El fichero se ha quedado en la biblioteca, pero no se usa.\';
+		}
+		if ( minimo > 0 && ! archivo.width ) {
+			return \'No se ha podido leer el ancho de la imagen, y aquí hacen falta al menos \' + minimo + \' px. Se ha quedado en la biblioteca, pero no se usa.\';
+		}
+		if ( minimo > 0 && archivo.width < minimo ) {
+			return \'La imagen mide \' + archivo.width + \' px de ancho y aquí hacen falta al menos \' + minimo + \'. Se ha quedado en la biblioteca, pero no se usa.\';
+		}
+		return \'\';
+	}
 
 	/* El mismo cargador que usa «Medios» convierte cada campo en una zona de
 	 * soltado. La subida crea el adjunto en WordPress inmediatamente; elegirlo
@@ -32079,49 +32667,56 @@ body .swal2-container { z-index: 100010; }
 			return;
 		}
 		Array.prototype.forEach.call( document.querySelectorAll( \'[data-evt-media]\' ), function ( caja ) {
-			if ( \'1\' === caja.dataset.evtUploader ) {
+			if ( \'1\' === caja.dataset.evtUploader || ! pieza( caja, \'pick\' ) ) {
 				return;
 			}
 			caja.dataset.evtUploader = \'1\';
-			var estado = caja.querySelector( \'[data-evt-media-status]\' );
+			var estado = pieza( caja, \'status\' );
 			var tipo = caja.getAttribute( \'data-evt-media-type\' );
 			var minimo = parseInt( caja.getAttribute( \'data-evt-media-min-width\' ) || \'0\', 10 );
+			function decir( texto, error ) {
+				if ( estado ) {
+					estado.textContent = texto;
+				}
+				marcarError( caja, error );
+			}
 			var opciones = {
 				container: caja,
 				dropzone: caja,
 				plupload: { multi_selection: false },
 				added: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = \'Subiendo \' + ( adjunto.get( \'filename\' ) || \'el archivo\' ) + \'…\';
-					}
+					progreso( caja, 0 );
+					decir( \'Subiendo \' + ( adjunto.get( \'filename\' ) || \'el archivo\' ) + \'…\', false );
 				},
 				progress: function ( adjunto ) {
-					if ( estado ) {
-						estado.textContent = \'Subiendo… \' + ( adjunto.get( \'percent\' ) || 0 ) + \'%\';
-					}
+					var por = adjunto.get( \'percent\' ) || 0;
+					progreso( caja, por );
+					decir( \'Subiendo… \' + por + \'%\', false );
 				},
 				success: function ( adjunto ) {
 					var archivo = adjunto.toJSON();
-					if ( minimo > 0 && ( ! archivo.width || archivo.width < minimo ) ) {
-						if ( estado ) {
-							estado.textContent = \'La imagen se subió a la biblioteca, pero no se puede usar aquí: necesita al menos \' + minimo + \' px de ancho.\';
-						}
+					var motivo = motivoRechazo( archivo, tipo, minimo );
+					progreso( caja, null );
+					if ( motivo ) {
+						decir( motivo, true );
 						return;
 					}
 					poner( caja, archivo );
-					if ( estado ) {
-						estado.textContent = \'Archivo subido. Guarde el formulario para aplicar el cambio.\';
-					}
+					avisar( caja );
+					decir( \'Archivo subido. Guarde el formulario para aplicar el cambio.\', false );
 				},
 				error: function ( mensaje ) {
-					if ( estado ) {
-						estado.textContent = mensaje || \'No se pudo subir el archivo.\';
-					}
+					progreso( caja, null );
+					decir( mensaje || \'No se pudo subir el archivo.\', true );
 				}
 			};
 			if ( \'image\' === tipo ) {
 				opciones.plupload.filters = {
 					mime_types: [ { title: \'Imágenes\', extensions: \'jpg,jpeg,png,gif,webp\' } ]
+				};
+			} else if ( \'application/pdf\' === tipo ) {
+				opciones.plupload.filters = {
+					mime_types: [ { title: \'PDF\', extensions: \'pdf\' } ]
 				};
 			}
 			new window.wp.Uploader( opciones );
