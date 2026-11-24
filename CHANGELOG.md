@@ -8,6 +8,19 @@ lee de la cabecera superior y la escribe en el `@version` del bundle.
 `make release` crea el tag y la release en GitHub; el despliegue de los snippets
 en el subsitio `eventos` se hace después.
 
+## [0.2.5] — 2026-11-24
+
+### Cambiado
+
+- **Apariencia y ponentes: el campo de imagen es una zona donde se pulsa o se suelta la imagen.** Ya puesta, se ve grande y entera, con un aspa para quitarla y «Reemplazar» encima —al pasar el ratón, y siempre en pantallas táctiles—. El PDF del programa se ve como una ficha de fichero. La subida enseña una barra de progreso, y una imagen que no vale pone la zona en rojo con el motivo (#139)
+- Quitar una imagen no la borra hasta guardar: sale «Se quitará al guardar» con «Deshacer» (#139)
+- En pantallas anchas el campo ya no se estira a todo el ancho (#139)
+
+### Corregido
+
+- Quitar o cambiar una imagen cuenta como cambio sin guardar: la barra lo avisa, salir lo pregunta y «Descartar» la devuelve a como estaba (#139)
+- El campo del programa en PDF solo acepta un PDF (#139)
+
 ## [0.2.4] — 2026-11-18
 
 ### Añadido
