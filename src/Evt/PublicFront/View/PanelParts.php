@@ -306,6 +306,45 @@ final class PanelParts {
 	}
 
 	/**
+	 * The words of a media field that holds an image.
+	 *
+	 * Los textos de imagen y de PDF van en dos listas fijas y no en un
+	 * condicional por cadena: así la pieza que pinta no tiene que decidir nada.
+	 *
+	 * @var array<string, string>
+	 */
+	private const MEDIA_IMAGE = array(
+		'class'   => '',
+		'what'    => 'la imagen',
+		'button'  => 'Usar esta imagen',
+		'choose'  => 'Elija una imagen',
+		'pick'    => 'Elegir la imagen de: ',
+		'formats' => 'JPG, PNG, WEBP o GIF',
+		'empty'   => 'Todavía no hay ninguna imagen puesta.',
+		'clear'   => 'Quitar esta imagen al guardar',
+		'upload'  => 'Subir una imagen desde su equipo',
+		'accept'  => 'image/jpeg,image/png,image/webp,image/gif',
+	);
+
+	/**
+	 * The words of a media field that holds a PDF.
+	 *
+	 * @var array<string, string>
+	 */
+	private const MEDIA_PDF = array(
+		'class'   => ' evt-media--fichero',
+		'what'    => 'el PDF',
+		'button'  => 'Usar este PDF',
+		'choose'  => 'Elija un PDF',
+		'pick'    => 'Elegir el PDF de: ',
+		'formats' => 'Un fichero PDF',
+		'empty'   => 'Todavía no hay ningún PDF puesto.',
+		'clear'   => 'Quitar este PDF al guardar',
+		'upload'  => 'Subir el PDF desde su equipo',
+		'accept'  => 'application/pdf',
+	);
+
+	/**
 	 * One file from the media library: a drop zone when empty, a big preview when set.
 	 *
 	 * Es la misma pieza para las imágenes de «Apariencia» y para la foto del
@@ -330,109 +369,203 @@ final class PanelParts {
 	 * @return string
 	 */
 	public static function media_field( array $args ): string {
-		$name      = (string) ( $args['name'] ?? '' );
-		$id        = sanitize_html_class( (string) ( $args['id'] ?? $name ) );
-		$label     = (string) ( $args['label'] ?? '' );
-		$help      = (string) ( $args['help'] ?? '' );
-		$file      = (array) ( $args['file'] ?? array() );
-		$can_load  = ! empty( $args['can_load'] );
-		$can_clear = ! empty( $args['can_clear'] );
-		$min_width = (int) ( $args['min_width'] ?? 0 );
-		$type      = (string) ( $args['type'] ?? 'image' );
-		$fallback  = (string) ( $args['fallback'] ?? '' );
-		$pdf       = 'application/pdf' === $type;
-		$url       = (string) ( $file['url'] ?? '' );
-		$set       = '' !== $url;
-		$width     = (int) ( $file['width'] ?? 0 );
-		$height    = (int) ( $file['height'] ?? 0 );
-		$what      = $pdf ? 'el PDF' : 'la imagen';
-		$empty     = (string) ( $args['empty'] ?? ( $pdf ? 'Todavía no hay ningún PDF puesto.' : 'Todavía no hay ninguna imagen puesta.' ) );
-		$formats   = $pdf ? 'Un fichero PDF' : 'JPG, PNG, WEBP o GIF';
-		if ( $min_width > 0 ) {
-			$formats .= ' · al menos ' . $min_width . ' px de ancho';
-		}
+		$f = self::media_settings( $args );
 
 		ob_start();
 		?>
-		<div class="<?php echo esc_attr( 'evt-form-campo evt-media' . ( $pdf ? ' evt-media--fichero' : '' ) ); ?>" data-evt-media data-evt-media-type="<?php echo esc_attr( $type ); ?>"
-			data-evt-media-min-width="<?php echo esc_attr( (string) $min_width ); ?>"
-			data-evt-media-title="<?php echo esc_attr( (string) ( $args['title'] ?? $label ) ); ?>" data-evt-media-button="<?php echo esc_attr( $pdf ? 'Usar este PDF' : 'Usar esta imagen' ); ?>">
-			<span class="evt-media-rotulo"><?php echo esc_html( $label ); ?></span>
-			<?php if ( '' !== $help ) : ?>
-				<small class="evt-media-ayuda"><?php echo esc_html( $help ); ?></small>
+		<div class="<?php echo esc_attr( 'evt-form-campo evt-media' . $f['t']['class'] ); ?>" data-evt-media data-evt-media-type="<?php echo esc_attr( $f['type'] ); ?>"
+			data-evt-media-min-width="<?php echo esc_attr( (string) $f['min_width'] ); ?>"
+			data-evt-media-title="<?php echo esc_attr( $f['title'] ); ?>" data-evt-media-button="<?php echo esc_attr( $f['t']['button'] ); ?>">
+			<span class="evt-media-rotulo"><?php echo esc_html( $f['label'] ); ?></span>
+			<?php if ( '' !== $f['help'] ) : ?>
+				<small class="evt-media-ayuda"><?php echo esc_html( $f['help'] ); ?></small>
 			<?php endif; ?>
 
 			<?php // Lo único que se envía: el identificador del adjunto. El servidor lo vuelve a comprobar. ?>
-			<input type="hidden" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"
-				value="<?php echo esc_attr( (string) (int) ( $file['id'] ?? 0 ) ); ?>" data-evt-media-value />
+			<input type="hidden" id="<?php echo esc_attr( $f['id'] ); ?>" name="<?php echo esc_attr( $f['name'] ); ?>"
+				value="<?php echo esc_attr( (string) $f['file_id'] ); ?>" data-evt-media-value />
 
 			<div class="evt-media-marco">
-				<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $set ? '' : 'hidden' ); ?>>
-					<span class="evt-media-lienzo">
-						<img class="evt-media-miniatura" data-evt-media-thumb src="<?php echo esc_url( $url ); ?>" alt="" />
-						<?php if ( $can_clear ) : ?>
-							<button type="button" class="evt-media-quitar" data-evt-media-clear data-evt-media-actions hidden
-								title="<?php echo esc_attr( 'Quitar ' . $what ); ?>" aria-label="<?php echo esc_attr( 'Quitar ' . $what . ' de: ' . $label ); ?>">
-								<?php echo wp_kses( Shell::icon( 'cerrar' ), self::SVG ); ?>
-							</button>
-						<?php endif; ?>
-						<?php if ( $can_load ) : ?>
-							<span class="evt-media-sobre">
-								<button type="button" class="evt-media-reemplazar" data-evt-media-pick data-evt-media-actions hidden
-									aria-label="<?php echo esc_attr( 'Reemplazar ' . $what . ' de: ' . $label ); ?>">
-									<?php echo wp_kses( Shell::icon( 'reemplazar' ), self::SVG ); ?>
-									Reemplazar
-								</button>
-							</span>
-						<?php endif; ?>
-					</span>
-					<span class="evt-media-datos">
-						<strong data-evt-media-name><?php echo esc_html( (string) ( $file['name'] ?? '' ) ); ?></strong>
-						<small data-evt-media-size><?php echo esc_html( $width > 0 && $height > 0 ? $width . ' × ' . $height . ' px' : '' ); ?></small>
-					</span>
-				</div>
-
-				<div class="evt-media-hueco" data-evt-media-empty <?php echo esc_attr( $set ? 'hidden' : '' ); ?>>
-					<?php if ( $can_load ) : ?>
-						<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden
-							aria-label="<?php echo esc_attr( ( $pdf ? 'Elegir el PDF de: ' : 'Elegir la imagen de: ' ) . $label ); ?>">
-							<span class="evt-media-zona-icono"><?php echo wp_kses( Shell::icon( 'cargar' ), self::SVG ); ?></span>
-							<span><strong><?php echo esc_html( $pdf ? 'Elija un PDF' : 'Elija una imagen' ); ?></strong> o arrástrela aquí</span>
-							<small><?php echo esc_html( $formats ); ?></small>
-						</button>
-					<?php endif; ?>
-					<p class="evt-media-vacia"><?php echo esc_html( $empty ); ?></p>
-				</div>
-
-				<?php if ( $can_load ) : ?>
+				<?php echo self::media_card( $f ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php echo self::media_empty( $f ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
+				<?php if ( $f['can_load'] ) : ?>
 					<span class="evt-media-progreso" data-evt-media-progress hidden><span data-evt-media-bar></span></span>
 				<?php endif; ?>
 			</div>
 
-			<?php if ( $can_load ) : ?>
+			<?php if ( $f['can_load'] ) : ?>
 				<p class="evt-media-estado" data-evt-media-status aria-live="polite"></p>
 			<?php endif; ?>
-			<?php if ( $can_clear ) : ?>
+			<?php if ( $f['can_clear'] ) : ?>
 				<p class="evt-media-deshacer" data-evt-media-undo hidden>
 					<span>Se quitará al guardar.</span>
 					<button type="button" data-evt-media-restore>Deshacer</button>
 				</p>
 			<?php endif; ?>
 
-			<?php if ( '' !== $fallback ) : ?>
-				<noscript>
-					<?php if ( $set && $can_clear ) : ?>
-						<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
-							<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $fallback . '_clear' ); ?>" value="1" />
-							<?php echo esc_html( $pdf ? 'Quitar este PDF al guardar' : 'Quitar esta imagen al guardar' ); ?>
-						</label>
-					<?php endif; ?>
-					<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $pdf ? 'Subir el PDF desde su equipo' : 'Subir una imagen desde su equipo' ); ?></label>
-					<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $fallback . '_file' ); ?>"
-						accept="<?php echo esc_attr( $pdf ? 'application/pdf' : 'image/jpeg,image/png,image/webp,image/gif' ); ?>" <?php disabled( ! $can_load, true ); ?> />
-				</noscript>
-			<?php endif; ?>
+			<?php echo self::media_fallback( $f ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- construido escapado. ?>
 		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Media field settings with every key filled in and every word chosen.
+	 *
+	 * @param array<string, mixed> $args What the caller passed.
+	 * @return array<string, mixed>
+	 */
+	private static function media_settings( array $args ): array {
+		$f    = wp_parse_args(
+			$args,
+			array(
+				'name'      => '',
+				'id'        => '',
+				'label'     => '',
+				'help'      => '',
+				'file'      => array(),
+				'can_load'  => false,
+				'can_clear' => false,
+				'min_width' => 0,
+				'type'      => 'image',
+				'title'     => '',
+				'empty'     => '',
+				'fallback'  => '',
+			)
+		);
+		$file = wp_parse_args(
+			(array) $f['file'],
+			array(
+				'id'     => 0,
+				'url'    => '',
+				'name'   => '',
+				'width'  => 0,
+				'height' => 0,
+			)
+		);
+
+		$t = 'application/pdf' === $f['type'] ? self::MEDIA_PDF : self::MEDIA_IMAGE;
+		if ( (int) $f['min_width'] > 0 ) {
+			$t['formats'] .= ' · al menos ' . (int) $f['min_width'] . ' px de ancho';
+		}
+		if ( '' !== (string) $f['empty'] ) {
+			$t['empty'] = (string) $f['empty'];
+		}
+
+		$size = '';
+		if ( (int) $file['width'] > 0 && (int) $file['height'] > 0 ) {
+			$size = (int) $file['width'] . ' × ' . (int) $file['height'] . ' px';
+		}
+		$id = '' !== (string) $f['id'] ? (string) $f['id'] : (string) $f['name'];
+
+		return array(
+			'name'      => (string) $f['name'],
+			'id'        => sanitize_html_class( $id ),
+			'label'     => (string) $f['label'],
+			'help'      => (string) $f['help'],
+			'title'     => '' !== (string) $f['title'] ? (string) $f['title'] : (string) $f['label'],
+			'type'      => (string) $f['type'],
+			'min_width' => (int) $f['min_width'],
+			'can_load'  => (bool) $f['can_load'],
+			'can_clear' => (bool) $f['can_clear'],
+			'fallback'  => (string) $f['fallback'],
+			'file_id'   => (int) $file['id'],
+			'url'       => (string) $file['url'],
+			'file_name' => (string) $file['name'],
+			'size'      => $size,
+			'set'       => '' !== (string) $file['url'],
+			't'         => $t,
+		);
+	}
+
+	/**
+	 * What there is now: the big preview, the cross and «Reemplazar».
+	 *
+	 * @param array<string, mixed> $f Settings from {@see self::media_settings()}.
+	 * @return string
+	 */
+	private static function media_card( array $f ): string {
+		$what = $f['t']['what'];
+
+		ob_start();
+		?>
+		<div class="evt-media-ficha" data-evt-media-card <?php echo esc_attr( $f['set'] ? '' : 'hidden' ); ?>>
+			<span class="evt-media-lienzo">
+				<img class="evt-media-miniatura" data-evt-media-thumb src="<?php echo esc_url( $f['url'] ); ?>" alt="" />
+				<?php if ( $f['can_clear'] ) : ?>
+					<button type="button" class="evt-media-quitar" data-evt-media-clear data-evt-media-actions hidden
+						title="<?php echo esc_attr( 'Quitar ' . $what ); ?>" aria-label="<?php echo esc_attr( 'Quitar ' . $what . ' de: ' . $f['label'] ); ?>">
+						<?php echo wp_kses( Shell::icon( 'cerrar' ), self::SVG ); ?>
+					</button>
+				<?php endif; ?>
+				<?php if ( $f['can_load'] ) : ?>
+					<span class="evt-media-sobre">
+						<button type="button" class="evt-media-reemplazar" data-evt-media-pick data-evt-media-actions hidden
+							aria-label="<?php echo esc_attr( 'Reemplazar ' . $what . ' de: ' . $f['label'] ); ?>">
+							<?php echo wp_kses( Shell::icon( 'reemplazar' ), self::SVG ); ?>
+							Reemplazar
+						</button>
+					</span>
+				<?php endif; ?>
+			</span>
+			<span class="evt-media-datos">
+				<strong data-evt-media-name><?php echo esc_html( $f['file_name'] ); ?></strong>
+				<small data-evt-media-size><?php echo esc_html( $f['size'] ); ?></small>
+			</span>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The empty slot: the drop zone with script, the plain sentence without.
+	 *
+	 * @param array<string, mixed> $f Settings from {@see self::media_settings()}.
+	 * @return string
+	 */
+	private static function media_empty( array $f ): string {
+		ob_start();
+		?>
+		<div class="evt-media-hueco" data-evt-media-empty <?php echo esc_attr( $f['set'] ? 'hidden' : '' ); ?>>
+			<?php if ( $f['can_load'] ) : ?>
+				<button type="button" class="evt-media-zona" data-evt-media-pick data-evt-media-actions hidden
+					aria-label="<?php echo esc_attr( $f['t']['pick'] . $f['label'] ); ?>">
+					<span class="evt-media-zona-icono"><?php echo wp_kses( Shell::icon( 'cargar' ), self::SVG ); ?></span>
+					<span><strong><?php echo esc_html( $f['t']['choose'] ); ?></strong> o arrástrela aquí</span>
+					<small><?php echo esc_html( $f['t']['formats'] ); ?></small>
+				</button>
+			<?php endif; ?>
+			<p class="evt-media-vacia"><?php echo esc_html( $f['t']['empty'] ); ?></p>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The `<noscript>` way: upload a file, or tick to remove it.
+	 *
+	 * @param array<string, mixed> $f Settings from {@see self::media_settings()}.
+	 * @return string Empty when the field asks for no fallback.
+	 */
+	private static function media_fallback( array $f ): string {
+		if ( '' === $f['fallback'] ) {
+			return '';
+		}
+		$id = $f['id'];
+
+		ob_start();
+		?>
+		<noscript>
+			<?php if ( $f['set'] && $f['can_clear'] ) : ?>
+				<label for="<?php echo esc_attr( $id . '-clear' ); ?>">
+					<input type="checkbox" id="<?php echo esc_attr( $id . '-clear' ); ?>" name="<?php echo esc_attr( $f['fallback'] . '_clear' ); ?>" value="1" />
+					<?php echo esc_html( $f['t']['clear'] ); ?>
+				</label>
+			<?php endif; ?>
+			<label for="<?php echo esc_attr( $id . '-file' ); ?>"><?php echo esc_html( $f['t']['upload'] ); ?></label>
+			<input type="file" id="<?php echo esc_attr( $id . '-file' ); ?>" name="<?php echo esc_attr( $f['fallback'] . '_file' ); ?>"
+				accept="<?php echo esc_attr( $f['t']['accept'] ); ?>" <?php disabled( ! $f['can_load'], true ); ?> />
+		</noscript>
 		<?php
 		return (string) ob_get_clean();
 	}
